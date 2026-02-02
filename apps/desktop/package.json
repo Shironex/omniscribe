@@ -1,0 +1,28 @@
+{
+  "name": "@omniscribe/desktop",
+  "private": true,
+  "main": "dist/main/index.js",
+  "scripts": {
+    "dev": "electron .",
+    "build": "tsc",
+    "package": "electron-builder"
+  },
+  "dependencies": {
+    "@nestjs/core": "^10.0.0",
+    "@nestjs/common": "^10.0.0",
+    "@nestjs/websockets": "^10.0.0",
+    "@nestjs/platform-socket.io": "^10.0.0",
+    "@nestjs/event-emitter": "^2.0.0",
+    "node-pty": "^1.0.0",
+    "electron-store": "^8.2.0",
+    "socket.io": "^4.7.0",
+    "reflect-metadata": "^0.2.0",
+    "rxjs": "^7.8.0",
+    "@omniscribe/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.0.0",
+    "@types/node": "^20.0.0"
+  }
+}

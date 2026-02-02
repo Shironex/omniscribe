@@ -1,0 +1,159 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Theme CSS Variables */
+:root {
+  /* Dark theme (default) */
+  --omniscribe-bg: #0a0a0f;
+  --omniscribe-surface: #12121a;
+  --omniscribe-card: #1a1a24;
+  --omniscribe-border: #2a2a3a;
+
+  --omniscribe-text-primary: #f0f0f5;
+  --omniscribe-text-secondary: #a0a0b0;
+  --omniscribe-text-muted: #606070;
+
+  --omniscribe-accent-primary: #6366f1;
+  --omniscribe-accent-secondary: #8b5cf6;
+  --omniscribe-accent-success: #22c55e;
+  --omniscribe-accent-warning: #f59e0b;
+  --omniscribe-accent-error: #ef4444;
+
+  /* Terminal colors */
+  --omniscribe-terminal-bg: #0d0d12;
+  --omniscribe-terminal-cursor: #6366f1;
+  --omniscribe-terminal-selection: rgba(99, 102, 241, 0.3);
+}
+
+/* Light theme */
+.light {
+  --omniscribe-bg: #f8f9fa;
+  --omniscribe-surface: #ffffff;
+  --omniscribe-card: #f0f1f3;
+  --omniscribe-border: #e0e2e6;
+
+  --omniscribe-text-primary: #1a1a2e;
+  --omniscribe-text-secondary: #4a4a5e;
+  --omniscribe-text-muted: #8a8a9e;
+
+  --omniscribe-accent-primary: #4f46e5;
+  --omniscribe-accent-secondary: #7c3aed;
+  --omniscribe-accent-success: #16a34a;
+  --omniscribe-accent-warning: #d97706;
+  --omniscribe-accent-error: #dc2626;
+
+  --omniscribe-terminal-bg: #1e1e2e;
+  --omniscribe-terminal-cursor: #4f46e5;
+  --omniscribe-terminal-selection: rgba(79, 70, 229, 0.3);
+}
+
+/* Base styles */
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+    background-color: var(--omniscribe-bg);
+    color: var(--omniscribe-text-primary);
+    overflow: hidden;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: var(--omniscribe-surface);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--omniscribe-border);
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--omniscribe-text-muted);
+  }
+
+  /* Selection */
+  ::selection {
+    background-color: var(--omniscribe-accent-primary);
+    color: white;
+  }
+}
+
+/* Component utilities */
+@layer components {
+  .drag {
+    -webkit-app-region: drag;
+  }
+
+  .no-drag {
+    -webkit-app-region: no-drag;
+  }
+
+  .glass {
+    background: rgba(18, 18, 26, 0.8);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .glass-light {
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+}
+
+/* Utility classes */
+@layer utilities {
+  .text-gradient {
+    background: linear-gradient(
+      135deg,
+      var(--omniscribe-accent-primary),
+      var(--omniscribe-accent-secondary)
+    );
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .border-gradient {
+    border-image: linear-gradient(
+        135deg,
+        var(--omniscribe-accent-primary),
+        var(--omniscribe-accent-secondary)
+      )
+      1;
+  }
+
+  .animate-in {
+    animation: fadeIn 0.2s ease-out;
+  }
+
+  .truncate-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .truncate-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
