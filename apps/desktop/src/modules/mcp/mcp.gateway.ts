@@ -1,12 +1,260 @@
-import { WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
-import { Server } from 'socket.io';
+import {
+  WebSocketGateway,
+  WebSocketServer,
+  SubscribeMessage,
+  MessageBody,
+  ConnectedSocket,
+  OnGatewayInit,
+} from '@nestjs/websockets';
+import { Server, Socket } from 'socket.io';
+import { OnEvent } from '@nestjs/event-emitter';
+import { McpService } from './mcp.service';
+import { McpConfigService } from './mcp-config.service';
+import { McpMonitorService, SessionStatusEvent } from './mcp-monitor.service';
+import { McpServerConfig } from '@omniscribe/shared';
+
+/**
+ * Payload for discovering MCP servers
+ */
+interface DiscoverPayload {
+  projectPath: string;
+}
+
+/**
+ * Payload for setting enabled servers
+ */
+interface SetEnabledPayload {
+  projectPath: string;
+  sessionId: string;
+  serverIds: string[];
+}
+
+/**
+ * Payload for writing MCP config
+ */
+interface WriteConfigPayload {
+  workingDir: string;
+  sessionId: string;
+  projectPath: string;
+  servers: McpServerConfig[];
+}
+
+/**
+ * Result of discovery operation
+ */
+interface DiscoverResult {
+  servers: McpServerConfig[];
+  error?: string;
+}
+
+/**
+ * Result of set-enabled operation
+ */
+interface SetEnabledResult {
+  success: boolean;
+  error?: string;
+}
+
+/**
+ * Result of write-config operation
+ */
+interface WriteConfigResult {
+  success: boolean;
+  configPath?: string;
+  error?: string;
+}
 
 @WebSocketGateway({
-  cors: { origin: '*' },
+  cors: {
+    origin: '*',
+  },
 })
-export class McpGateway {
+export class McpGateway implements OnGatewayInit {
   @WebSocketServer()
   server!: Server;
 
-  // TODO: Implement MCP WebSocket handlers
+  /** Map of project paths to their discovered servers */
+  private projectServers = new Map<string, McpServerConfig[]>();
+
+  /** Map of session keys to enabled server IDs */
+  private sessionEnabled = new Map<string, string[]>();
+
+  constructor(
+    private readonly mcpService: McpService,
+    private readonly configService: McpConfigService,
+    private readonly monitorService: McpMonitorService
+  ) {}
+
+  afterInit(): void {
+    console.log('[McpGateway] Initialized');
+  }
+
+  /**
+   * Handle MCP server discovery request
+   */
+  @SubscribeMessage('mcp:discover')
+  async handleDiscover(
+    @MessageBody() payload: DiscoverPayload,
+    @ConnectedSocket() _client: Socket
+  ): Promise<DiscoverResult> {
+    try {
+      const servers = await this.mcpService.discoverServers(payload.projectPath);
+
+      // Cache the discovered servers
+      this.projectServers.set(payload.projectPath, servers);
+
+      // Start monitoring this project
+      this.monitorService.addProject(payload.projectPath);
+
+      console.log(
+        `[McpGateway] Discovered ${servers.length} MCP servers for ${payload.projectPath}`
+      );
+
+      return { servers };
+    } catch (error) {
+      console.error('[McpGateway] Error discovering servers:', error);
+      return {
+        servers: [],
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
+  /**
+   * Handle setting enabled servers for a session
+   */
+  @SubscribeMessage('mcp:set-enabled')
+  handleSetEnabled(
+    @MessageBody() payload: SetEnabledPayload,
+    @ConnectedSocket() _client: Socket
+  ): SetEnabledResult {
+    try {
+      const sessionKey = `${payload.projectPath}:${payload.sessionId}`;
+
+      // Store the enabled servers for this session
+      this.sessionEnabled.set(sessionKey, payload.serverIds);
+
+      console.log(
+        `[McpGateway] Set ${payload.serverIds.length} enabled servers for session ${payload.sessionId}`
+      );
+
+      // Broadcast the change to all clients
+      this.server.emit('mcp:enabled-changed', {
+        projectPath: payload.projectPath,
+        sessionId: payload.sessionId,
+        serverIds: payload.serverIds,
+      });
+
+      return { success: true };
+    } catch (error) {
+      console.error('[McpGateway] Error setting enabled servers:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
+  /**
+   * Handle writing MCP config for a session
+   */
+  @SubscribeMessage('mcp:write-config')
+  async handleWriteConfig(
+    @MessageBody() payload: WriteConfigPayload,
+    @ConnectedSocket() _client: Socket
+  ): Promise<WriteConfigResult> {
+    try {
+      // Filter to only enabled servers
+      const enabledServers = payload.servers.filter((s) => s.enabled);
+
+      const configPath = await this.configService.writeConfig(
+        payload.workingDir,
+        payload.sessionId,
+        payload.projectPath,
+        enabledServers
+      );
+
+      console.log(
+        `[McpGateway] Wrote MCP config for session ${payload.sessionId} to ${configPath}`
+      );
+
+      return { success: true, configPath };
+    } catch (error) {
+      console.error('[McpGateway] Error writing config:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
+  /**
+   * Handle getting enabled servers for a session
+   */
+  @SubscribeMessage('mcp:get-enabled')
+  handleGetEnabled(
+    @MessageBody() payload: { projectPath: string; sessionId: string },
+    @ConnectedSocket() _client: Socket
+  ): { serverIds: string[] } {
+    const sessionKey = `${payload.projectPath}:${payload.sessionId}`;
+    const serverIds = this.sessionEnabled.get(sessionKey) ?? [];
+    return { serverIds };
+  }
+
+  /**
+   * Handle getting cached servers for a project
+   */
+  @SubscribeMessage('mcp:get-servers')
+  handleGetServers(
+    @MessageBody() payload: { projectPath: string },
+    @ConnectedSocket() _client: Socket
+  ): { servers: McpServerConfig[] } {
+    const servers = this.projectServers.get(payload.projectPath) ?? [];
+    return { servers };
+  }
+
+  /**
+   * Handle removing config when session ends
+   */
+  @SubscribeMessage('mcp:remove-config')
+  async handleRemoveConfig(
+    @MessageBody() payload: { workingDir: string; sessionId: string; projectPath: string },
+    @ConnectedSocket() _client: Socket
+  ): Promise<{ success: boolean }> {
+    try {
+      const success = await this.configService.removeConfig(
+        payload.workingDir,
+        payload.sessionId
+      );
+
+      // Clean up enabled state
+      const sessionKey = `${payload.projectPath}:${payload.sessionId}`;
+      this.sessionEnabled.delete(sessionKey);
+
+      // Clean up monitor tracking
+      this.monitorService.removeSessionStatus(payload.projectPath, payload.sessionId);
+
+      // Clean up config tracking
+      const hash = this.configService.generateProjectHash(payload.projectPath);
+      await this.configService.cleanupTracking(hash, payload.sessionId);
+
+      return { success };
+    } catch (error) {
+      console.error('[McpGateway] Error removing config:', error);
+      return { success: false };
+    }
+  }
+
+  /**
+   * Broadcast session status events from the monitor
+   */
+  @OnEvent('session.status')
+  onSessionStatus(event: SessionStatusEvent): void {
+    this.server.emit('session:status', {
+      sessionId: event.sessionId,
+      status: event.status,
+      message: event.message,
+      mcpConnections: event.mcpConnections,
+    });
+  }
 }

@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage, StateStorage } from 'zustand/middleware';
-import { WorkspaceTab } from '@omniscribe/shared';
 
 /**
  * Project tab represents an open project in the workspace

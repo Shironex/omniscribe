@@ -14,6 +14,23 @@ export interface ElectronAPI {
     delete: (key: string) => Promise<void>;
     clear: () => Promise<void>;
   };
+  dialog: {
+    openDirectory: (options?: unknown) => Promise<string | null>;
+    openFile: (options?: unknown) => Promise<string | null>;
+    message: (options: {
+      type?: 'none' | 'info' | 'error' | 'question' | 'warning';
+      title?: string;
+      message: string;
+      detail?: string;
+      buttons?: string[];
+    }) => Promise<number>;
+  };
+  app: {
+    getPath: (name: string) => Promise<string>;
+    getVersion: () => Promise<string>;
+    checkCli: (tool: string) => Promise<boolean>;
+    isValidProject: (projectPath: string) => Promise<{ valid: boolean; reason?: string }>;
+  };
   platform: NodeJS.Platform;
 }
 
@@ -22,7 +39,7 @@ const electronAPI: ElectronAPI = {
     minimize: () => ipcRenderer.send('window:minimize'),
     maximize: () => ipcRenderer.send('window:maximize'),
     close: () => ipcRenderer.send('window:close'),
-    isMaximized: () => ipcRenderer.invoke('window:isMaximized'),
+    isMaximized: () => ipcRenderer.invoke('window:is-maximized'),
     onMaximizedChange: (callback: (maximized: boolean) => void) => {
       const listener = (_event: Electron.IpcRendererEvent, maximized: boolean) => {
         callback(maximized);
@@ -38,6 +55,17 @@ const electronAPI: ElectronAPI = {
     set: <T>(key: string, value: T) => ipcRenderer.invoke('store:set', key, value),
     delete: (key: string) => ipcRenderer.invoke('store:delete', key),
     clear: () => ipcRenderer.invoke('store:clear'),
+  },
+  dialog: {
+    openDirectory: (options?: unknown) => ipcRenderer.invoke('dialog:open-directory', options),
+    openFile: (options?: unknown) => ipcRenderer.invoke('dialog:open-file', options),
+    message: (options) => ipcRenderer.invoke('dialog:message', options),
+  },
+  app: {
+    getPath: (name: string) => ipcRenderer.invoke('app:get-path', name),
+    getVersion: () => ipcRenderer.invoke('app:get-version'),
+    checkCli: (tool: string) => ipcRenderer.invoke('app:check-cli', tool),
+    isValidProject: (projectPath: string) => ipcRenderer.invoke('app:is-valid-project', projectPath),
   },
   platform: process.platform,
 };
