@@ -1,7 +1,7 @@
 import { app, BrowserWindow } from 'electron';
 import { createMainWindow } from './window';
 
-let mainWindow: BrowserWindow | null = null;
+export let mainWindow: BrowserWindow | null = null;
 
 async function bootstrap(): Promise<void> {
   mainWindow = await createMainWindow();

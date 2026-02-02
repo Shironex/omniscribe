@@ -68,7 +68,7 @@ export class SessionGateway implements OnGatewayInit {
   @SubscribeMessage('session:create')
   handleCreate(
     @MessageBody() payload: CreateSessionPayload,
-    @ConnectedSocket() client: Socket
+    @ConnectedSocket() _client: Socket
   ): ExtendedSessionConfig {
     const session = this.sessionService.create(payload.mode, payload.projectPath, {
       name: payload.name,
@@ -92,7 +92,7 @@ export class SessionGateway implements OnGatewayInit {
   @SubscribeMessage('session:update')
   handleUpdate(
     @MessageBody() payload: UpdateSessionPayload,
-    @ConnectedSocket() client: Socket
+    @ConnectedSocket() _client: Socket
   ): ExtendedSessionConfig | { error: string } {
     const session = this.sessionService.get(payload.sessionId);
 
@@ -143,7 +143,7 @@ export class SessionGateway implements OnGatewayInit {
   @SubscribeMessage('session:remove')
   handleRemove(
     @MessageBody() payload: RemoveSessionPayload,
-    @ConnectedSocket() client: Socket
+    @ConnectedSocket() _client: Socket
   ): { success: boolean; error?: string } {
     const success = this.sessionService.remove(payload.sessionId);
 
@@ -160,7 +160,7 @@ export class SessionGateway implements OnGatewayInit {
   @SubscribeMessage('session:list')
   handleList(
     @MessageBody() payload: ListSessionsPayload,
-    @ConnectedSocket() client: Socket
+    @ConnectedSocket() _client: Socket
   ): ExtendedSessionConfig[] {
     if (payload.projectPath) {
       return this.sessionService.getForProject(payload.projectPath);

@@ -1,8 +1,6 @@
-import { BrowserWindow, ipcMain, shell } from 'electron';
+import { BrowserWindow, shell } from 'electron';
 import * as path from 'path';
-import Store from 'electron-store';
-
-const store = new Store();
+import { registerIpcHandlers } from './ipc-handlers';
 
 export async function createMainWindow(): Promise<BrowserWindow> {
   const mainWindow = new BrowserWindow({
@@ -21,51 +19,8 @@ export async function createMainWindow(): Promise<BrowserWindow> {
     },
   });
 
-  // Window control handlers
-  ipcMain.on('window:minimize', () => {
-    mainWindow.minimize();
-  });
-
-  ipcMain.on('window:maximize', () => {
-    if (mainWindow.isMaximized()) {
-      mainWindow.unmaximize();
-    } else {
-      mainWindow.maximize();
-    }
-  });
-
-  ipcMain.on('window:close', () => {
-    mainWindow.close();
-  });
-
-  ipcMain.handle('window:isMaximized', () => {
-    return mainWindow.isMaximized();
-  });
-
-  mainWindow.on('maximize', () => {
-    mainWindow.webContents.send('window:maximized-change', true);
-  });
-
-  mainWindow.on('unmaximize', () => {
-    mainWindow.webContents.send('window:maximized-change', false);
-  });
-
-  // Store handlers
-  ipcMain.handle('store:get', (_event, key: string) => {
-    return store.get(key);
-  });
-
-  ipcMain.handle('store:set', (_event, key: string, value: unknown) => {
-    store.set(key, value);
-  });
-
-  ipcMain.handle('store:delete', (_event, key: string) => {
-    store.delete(key);
-  });
-
-  ipcMain.handle('store:clear', () => {
-    store.clear();
-  });
+  // Register all IPC handlers
+  registerIpcHandlers(mainWindow);
 
   // Open external links in browser
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {

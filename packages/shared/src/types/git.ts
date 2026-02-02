@@ -230,3 +230,37 @@ export interface GitFileDiff {
   /** Total deletions */
   deletions: number;
 }
+
+/**
+ * Git user configuration
+ */
+export interface GitUserConfig {
+  /** User name */
+  name?: string;
+
+  /** User email */
+  email?: string;
+}
+
+/**
+ * Git worktree information
+ */
+export interface WorktreeInfo {
+  /** Worktree path */
+  path: string;
+
+  /** HEAD commit hash */
+  head: string;
+
+  /** Branch name */
+  branch: string;
+
+  /** Whether this is the main worktree */
+  isMain: boolean;
+
+  /** Whether the worktree is locked */
+  isLocked: boolean;
+
+  /** Whether the worktree is prunable */
+  isPrunable: boolean;
+}
