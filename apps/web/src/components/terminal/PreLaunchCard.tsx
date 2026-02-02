@@ -51,18 +51,30 @@ export function PreLaunchCard({
   // Connect to Git store for branches (fallback if not provided via props)
   const gitBranches = useGitStore(selectBranches);
   const currentGitBranch = useGitStore(selectCurrentBranch);
+  const gitProjectPath = useGitStore((state) => state.projectPath);
+  const fetchBranches = useGitStore((state) => state.fetchBranches);
 
   // Use prop branches or fall back to store branches
   const branches: Branch[] = useMemo(() => {
     if (propBranches && propBranches.length > 0) {
+      console.log('[PreLaunchCard] Using prop branches:', propBranches.length);
       return propBranches;
     }
+    console.log('[PreLaunchCard] Using gitBranches from store:', gitBranches.length);
     return gitBranches.map((b) => ({
       name: b.name,
       isRemote: b.isRemote,
       isCurrent: currentGitBranch?.name === b.name,
     }));
   }, [propBranches, gitBranches, currentGitBranch]);
+
+  // Fetch branches if empty and we have a project path
+  useEffect(() => {
+    if (branches.length === 0 && gitProjectPath) {
+      console.log('[PreLaunchCard] Branches empty, triggering fetch for:', gitProjectPath);
+      fetchBranches(gitProjectPath);
+    }
+  }, [branches.length, gitProjectPath, fetchBranches]);
 
   // Get selected MCP servers (default to enabled servers if not set)
   const selectedMcpServers = slot.mcpServers ?? Array.from(enabledServers);

@@ -12,6 +12,8 @@ export interface TerminalSession {
   status: SessionStatus;
   branch?: string;
   statusMessage?: string;
+  /** Terminal PTY session ID - required for the terminal to connect */
+  terminalSessionId?: number;
 }
 
 interface TerminalHeaderProps {

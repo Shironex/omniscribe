@@ -46,3 +46,4 @@ Thumbs.db
 *.tmp
 *.temp
 .cache/
+.mcp.json

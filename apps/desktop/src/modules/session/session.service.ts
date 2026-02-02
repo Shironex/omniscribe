@@ -1,6 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import * as os from 'os';
+import * as path from 'path';
+import * as fs from 'fs';
+import { execFileSync } from 'child_process';
 import {
   SessionConfig,
   SessionStatus,
@@ -194,13 +197,21 @@ export class SessionService {
   }
 
   /**
-   * Remove a session
+   * Remove a session and kill its terminal if running
    */
-  remove(sessionId: string): boolean {
+  async remove(sessionId: string): Promise<boolean> {
     const session = this.sessions.get(sessionId);
 
     if (!session) {
       return false;
+    }
+
+    // Kill the terminal if it's running
+    if (session.terminalSessionId !== undefined) {
+      if (this.terminalService.hasSession(session.terminalSessionId)) {
+        await this.terminalService.kill(session.terminalSessionId);
+      }
+      session.terminalSessionId = undefined;
     }
 
     this.sessions.delete(sessionId);
@@ -236,11 +247,11 @@ export class SessionService {
   /**
    * Remove all sessions for a project
    */
-  removeForProject(projectPath: string): number {
+  async removeForProject(projectPath: string): Promise<number> {
     const sessionsToRemove = this.getForProject(projectPath);
 
     for (const session of sessionsToRemove) {
-      this.remove(session.id);
+      await this.remove(session.id);
     }
 
     return sessionsToRemove.length;
@@ -439,6 +450,158 @@ export class SessionService {
   }
 
   /**
+   * Find an executable in the system PATH using 'where' (Windows) or 'which' (Unix)
+   * @param command The command name to find
+   * @returns The full path to the executable, or null if not found
+   */
+  private findInPath(command: string): string | null {
+    try {
+      const whichCmd = os.platform() === 'win32' ? 'where' : 'which';
+      const result = execFileSync(whichCmd, [command], {
+        encoding: 'utf-8',
+        stdio: ['pipe', 'pipe', 'pipe'],
+      });
+      // 'where' on Windows may return multiple lines, take the first
+      const firstLine = result.trim().split(/\r?\n/)[0];
+      return firstLine || null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Get common paths where Claude CLI might be installed on Windows
+   */
+  private getClaudeCliPaths(): string[] {
+    const homeDir = os.homedir();
+    const appData =
+      process.env.APPDATA || path.join(homeDir, 'AppData', 'Roaming');
+    const localAppData =
+      process.env.LOCALAPPDATA || path.join(homeDir, 'AppData', 'Local');
+
+    return [
+      // npm global installations
+      path.join(appData, 'npm', 'claude.cmd'),
+      path.join(appData, 'npm', 'claude'),
+      path.join(appData, '.npm-global', 'bin', 'claude.cmd'),
+      path.join(appData, '.npm-global', 'bin', 'claude'),
+      // Local bin
+      path.join(homeDir, '.local', 'bin', 'claude.exe'),
+      path.join(homeDir, '.local', 'bin', 'claude'),
+      // pnpm global
+      path.join(localAppData, 'pnpm', 'claude.cmd'),
+      path.join(localAppData, 'pnpm', 'claude'),
+      // Volta
+      path.join(homeDir, '.volta', 'bin', 'claude.exe'),
+    ];
+  }
+
+  /**
+   * Get common paths where Gemini CLI might be installed on Windows
+   */
+  private getGeminiCliPaths(): string[] {
+    const homeDir = os.homedir();
+    const appData =
+      process.env.APPDATA || path.join(homeDir, 'AppData', 'Roaming');
+    const localAppData =
+      process.env.LOCALAPPDATA || path.join(homeDir, 'AppData', 'Local');
+
+    return [
+      // npm global installations
+      path.join(appData, 'npm', 'gemini.cmd'),
+      path.join(appData, 'npm', 'gemini'),
+      path.join(appData, '.npm-global', 'bin', 'gemini.cmd'),
+      path.join(appData, '.npm-global', 'bin', 'gemini'),
+      // Local bin
+      path.join(homeDir, '.local', 'bin', 'gemini.exe'),
+      path.join(homeDir, '.local', 'bin', 'gemini'),
+      // pnpm global
+      path.join(localAppData, 'pnpm', 'gemini.cmd'),
+      path.join(localAppData, 'pnpm', 'gemini'),
+      // Volta
+      path.join(homeDir, '.volta', 'bin', 'gemini.exe'),
+    ];
+  }
+
+  /**
+   * Get common paths where Codex CLI might be installed on Windows
+   */
+  private getCodexCliPaths(): string[] {
+    const homeDir = os.homedir();
+    const appData =
+      process.env.APPDATA || path.join(homeDir, 'AppData', 'Roaming');
+    const localAppData =
+      process.env.LOCALAPPDATA || path.join(homeDir, 'AppData', 'Local');
+
+    return [
+      // npm global installations
+      path.join(appData, 'npm', 'codex.cmd'),
+      path.join(appData, 'npm', 'codex'),
+      path.join(appData, '.npm-global', 'bin', 'codex.cmd'),
+      path.join(appData, '.npm-global', 'bin', 'codex'),
+      // Local bin
+      path.join(homeDir, '.local', 'bin', 'codex.exe'),
+      path.join(homeDir, '.local', 'bin', 'codex'),
+      // pnpm global
+      path.join(localAppData, 'pnpm', 'codex.cmd'),
+      path.join(localAppData, 'pnpm', 'codex'),
+      // Volta
+      path.join(homeDir, '.volta', 'bin', 'codex.exe'),
+    ];
+  }
+
+  /**
+   * Find the first existing path from a list of paths
+   */
+  private findFirstExistingPath(paths: string[]): string | null {
+    for (const p of paths) {
+      try {
+        if (fs.existsSync(p)) {
+          return p;
+        }
+      } catch {
+        // Ignore errors, try next path
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Find a CLI command, checking PATH first, then known installation locations
+   * @param command The base command name (e.g., 'claude', 'gemini', 'codex')
+   * @param knownPaths Platform-specific known installation paths
+   * @returns The resolved command path
+   */
+  private findCliCommand(command: string, knownPaths: string[]): string {
+    // First, try to find in PATH
+    const pathResult = this.findInPath(command);
+    if (pathResult) {
+      return pathResult;
+    }
+
+    // On Windows, also try with .cmd and .exe extensions
+    if (os.platform() === 'win32') {
+      const cmdResult = this.findInPath(`${command}.cmd`);
+      if (cmdResult) {
+        return cmdResult;
+      }
+      const exeResult = this.findInPath(`${command}.exe`);
+      if (exeResult) {
+        return exeResult;
+      }
+    }
+
+    // Check known installation paths
+    const knownPath = this.findFirstExistingPath(knownPaths);
+    if (knownPath) {
+      return knownPath;
+    }
+
+    // Fall back to the bare command (will likely fail, but provides clear error)
+    return command;
+  }
+
+  /**
    * Get the CLI configuration for a given AI mode
    */
   private getAiCliConfig(
@@ -478,8 +641,14 @@ export class SessionService {
       args.push('--system-prompt', session.systemPrompt);
     }
 
+    // Find the Claude CLI command with proper path resolution
+    const command =
+      os.platform() === 'win32'
+        ? this.findCliCommand('claude', this.getClaudeCliPaths())
+        : 'claude';
+
     return {
-      command: 'claude',
+      command,
       args,
     };
   }
@@ -495,8 +664,14 @@ export class SessionService {
       args.push('--model', session.model);
     }
 
+    // Find the Gemini CLI command with proper path resolution
+    const command =
+      os.platform() === 'win32'
+        ? this.findCliCommand('gemini', this.getGeminiCliPaths())
+        : 'gemini';
+
     return {
-      command: 'gemini',
+      command,
       args,
     };
   }
@@ -512,8 +687,14 @@ export class SessionService {
       args.push('--model', session.model);
     }
 
+    // Find the Codex CLI command with proper path resolution
+    const command =
+      os.platform() === 'win32'
+        ? this.findCliCommand('codex', this.getCodexCliPaths())
+        : 'codex';
+
     return {
-      command: 'codex',
+      command,
       args,
     };
   }

@@ -6,9 +6,11 @@ import {
   ConnectedSocket,
   OnGatewayInit,
 } from '@nestjs/websockets';
+import { Inject, forwardRef } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 import { OnEvent } from '@nestjs/event-emitter';
 import { SessionService, ExtendedSessionConfig, SessionStatusUpdate } from './session.service';
+import { TerminalGateway } from '../terminal/terminal.gateway';
 import { AiMode, UpdateSessionOptions } from '@omniscribe/shared';
 
 /**
@@ -56,7 +58,11 @@ export class SessionGateway implements OnGatewayInit {
   @WebSocketServer()
   server!: Server;
 
-  constructor(private readonly sessionService: SessionService) {}
+  constructor(
+    private readonly sessionService: SessionService,
+    @Inject(forwardRef(() => TerminalGateway))
+    private readonly terminalGateway: TerminalGateway,
+  ) {}
 
   afterInit(): void {
     console.log('[SessionGateway] Initialized');
@@ -68,8 +74,8 @@ export class SessionGateway implements OnGatewayInit {
   @SubscribeMessage('session:create')
   handleCreate(
     @MessageBody() payload: CreateSessionPayload,
-    @ConnectedSocket() _client: Socket
-  ): ExtendedSessionConfig {
+    @ConnectedSocket() client: Socket
+  ): ExtendedSessionConfig | { error: string } {
     const session = this.sessionService.create(payload.mode, payload.projectPath, {
       name: payload.name,
       workingDirectory: payload.workingDirectory,
@@ -83,7 +89,30 @@ export class SessionGateway implements OnGatewayInit {
       this.sessionService.assignBranch(session.id, payload.branch);
     }
 
-    return session;
+    // Launch the terminal session to spawn the PTY
+    const workingDir = session.worktreePath ?? session.workingDirectory;
+    const launchResult = this.sessionService.launchSession(
+      session.id,
+      payload.projectPath,
+      workingDir,
+      payload.mode
+    );
+
+    if (!launchResult.success) {
+      return { error: launchResult.error ?? 'Failed to launch session' };
+    }
+
+    // Join the client to the terminal room so they receive terminal output
+    // Also register the client as owner so they can send input
+    if (launchResult.terminalSessionId !== undefined) {
+      client.join(`terminal:${launchResult.terminalSessionId}`);
+      // Register client ownership in TerminalGateway so terminal:input works
+      this.terminalGateway.registerClientSession(client.id, launchResult.terminalSessionId);
+      console.log(`[SessionGateway] Client ${client.id} joined terminal room terminal:${launchResult.terminalSessionId}`);
+    }
+
+    // Return the updated session with terminalSessionId populated
+    return this.sessionService.get(session.id) ?? session;
   }
 
   /**
@@ -141,11 +170,11 @@ export class SessionGateway implements OnGatewayInit {
    * Handle session removal request
    */
   @SubscribeMessage('session:remove')
-  handleRemove(
+  async handleRemove(
     @MessageBody() payload: RemoveSessionPayload,
     @ConnectedSocket() _client: Socket
-  ): { success: boolean; error?: string } {
-    const success = this.sessionService.remove(payload.sessionId);
+  ): Promise<{ success: boolean; error?: string }> {
+    const success = await this.sessionService.remove(payload.sessionId);
 
     if (!success) {
       return { success: false, error: `Session not found: ${payload.sessionId}` };

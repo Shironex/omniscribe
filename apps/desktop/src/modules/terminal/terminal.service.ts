@@ -1,4 +1,4 @@
-import { Injectable, OnModuleDestroy } from '@nestjs/common';
+import { Injectable, OnModuleDestroy, Logger } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import * as pty from 'node-pty';
 import * as os from 'os';
@@ -13,9 +13,11 @@ interface PtySession {
 
 @Injectable()
 export class TerminalService implements OnModuleDestroy {
+  private readonly logger = new Logger(TerminalService.name);
   private sessions = new Map<number, PtySession>();
   private nextSessionId = 1;
   private readonly BATCH_INTERVAL_MS = 16; // ~60fps
+  private readonly isWindows = os.platform() === 'win32';
 
   constructor(private readonly eventEmitter: EventEmitter2) {}
 
@@ -26,15 +28,39 @@ export class TerminalService implements OnModuleDestroy {
    * @returns Session ID for the new terminal
    */
   spawn(cwd?: string, env?: Record<string, string>): number {
-    // Determine shell based on platform
-    const shell =
-      os.platform() === 'win32'
-        ? process.env.COMSPEC || 'cmd.exe'
-        : process.env.SHELL || '/bin/bash';
+    // Determine shell based on platform - match automaker's approach
+    const shell = this.isWindows
+      ? process.env.COMSPEC || 'cmd.exe'
+      : process.env.SHELL || '/bin/bash';
 
-    const shellArgs = os.platform() === 'win32' ? [] : [];
+    // Shell args - cmd.exe and PowerShell don't need --login
+    // bash and zsh use --login for login shell behavior
+    const shellArgs = this.getShellArgs(shell);
+
+    this.logger.log(`[spawn] Detected shell: "${shell}"`);
+    this.logger.log(`[spawn] Shell args: ${JSON.stringify(shellArgs)}`);
+    this.logger.log(`[spawn] COMSPEC: ${process.env.COMSPEC}`);
+    this.logger.log(`[spawn] SHELL: ${process.env.SHELL}`);
 
     return this.spawnCommand(shell, shellArgs, cwd, env);
+  }
+
+  /**
+   * Get appropriate shell arguments based on shell type
+   */
+  private getShellArgs(shell: string): string[] {
+    const shellName = shell.toLowerCase().replace(/\\/g, '/').split('/').pop()?.replace('.exe', '') || '';
+
+    // PowerShell and cmd don't need --login
+    if (shellName === 'powershell' || shellName === 'pwsh' || shellName === 'cmd') {
+      return [];
+    }
+    // sh doesn't support --login in all implementations
+    if (shellName === 'sh') {
+      return [];
+    }
+    // bash, zsh, and other POSIX shells support --login
+    return ['--login'];
   }
 
   /**
@@ -54,18 +80,65 @@ export class TerminalService implements OnModuleDestroy {
     externalId?: string
   ): number {
     const sessionId = this.nextSessionId++;
+    const resolvedCwd = cwd || process.cwd();
 
-    const ptyProcess = pty.spawn(command, args, {
+    this.logger.log(`[spawnCommand] Starting session ${sessionId}`);
+    this.logger.log(`[spawnCommand] Command: "${command}"`);
+    this.logger.log(`[spawnCommand] Args: ${JSON.stringify(args)}`);
+    this.logger.log(`[spawnCommand] CWD: "${resolvedCwd}"`);
+    this.logger.log(`[spawnCommand] Platform: ${os.platform()}`);
+    this.logger.log(`[spawnCommand] ExternalId: ${externalId}`);
+
+    // Build environment - match automaker's approach
+    const cleanEnv: Record<string, string> = {};
+    for (const [key, value] of Object.entries(process.env)) {
+      if (value !== undefined) {
+        cleanEnv[key] = value;
+      }
+    }
+
+    const finalEnv: Record<string, string> = {
+      ...cleanEnv,
+      TERM: 'xterm-256color',
+      COLORTERM: 'truecolor',
+      TERM_PROGRAM: 'omniscribe-terminal',
+      LANG: process.env.LANG || 'en_US.UTF-8',
+      LC_ALL: process.env.LC_ALL || process.env.LANG || 'en_US.UTF-8',
+      ...env,
+    };
+
+    // Build pty options with Windows-specific settings
+    const ptyOptions: pty.IPtyForkOptions = {
       name: 'xterm-256color',
       cols: 80,
       rows: 24,
-      cwd: cwd || process.cwd(),
-      env: {
-        ...process.env,
-        ...env,
-        TERM: 'xterm-256color',
-      } as Record<string, string>,
-    });
+      cwd: resolvedCwd,
+      env: finalEnv,
+    };
+
+    // On Windows, always use winpty instead of ConPTY
+    // ConPTY requires AttachConsole which fails in many contexts:
+    // - Electron apps without a console
+    // - VS Code integrated terminal
+    // - Spawned from other applications
+    // The error happens in a subprocess so we can't catch it - must proactively disable
+    if (this.isWindows) {
+      (ptyOptions as pty.IWindowsPtyForkOptions).useConpty = false;
+      this.logger.log(`[spawnCommand] Using winpty (ConPTY disabled for Windows compatibility)`);
+    }
+
+    this.logger.log(`[spawnCommand] PTY options: cols=${ptyOptions.cols}, rows=${ptyOptions.rows}, name=${ptyOptions.name}`);
+
+    let ptyProcess: pty.IPty;
+    try {
+      this.logger.log(`[spawnCommand] Calling pty.spawn()...`);
+      ptyProcess = pty.spawn(command, args, ptyOptions);
+      this.logger.log(`[spawnCommand] pty.spawn() succeeded, PID: ${ptyProcess.pid}`);
+    } catch (spawnError) {
+      const errorMessage = spawnError instanceof Error ? spawnError.message : String(spawnError);
+      this.logger.error(`[spawnCommand] pty.spawn() FAILED: ${errorMessage}`);
+      throw spawnError;
+    }
 
     const session: PtySession = {
       pty: ptyProcess,
@@ -75,20 +148,38 @@ export class TerminalService implements OnModuleDestroy {
     };
 
     this.sessions.set(sessionId, session);
+    this.logger.log(`[spawnCommand] Session ${sessionId} stored in sessions map`);
 
     // Handle output with batching for performance
     ptyProcess.onData((data: string) => {
-      session.outputBuffer += data;
+      // Log first few data events to debug
+      if (session.outputBuffer.length < 500) {
+        this.logger.debug(`[onData] Session ${sessionId}: received ${data.length} bytes`);
+      }
 
-      if (!session.flushTimer) {
-        session.flushTimer = setTimeout(() => {
-          this.flushOutput(sessionId);
-        }, this.BATCH_INTERVAL_MS);
+      try {
+        session.outputBuffer += data;
+
+        if (!session.flushTimer) {
+          session.flushTimer = setTimeout(() => {
+            this.flushOutput(sessionId);
+          }, this.BATCH_INTERVAL_MS);
+        }
+      } catch (dataError) {
+        const errorMessage = dataError instanceof Error ? dataError.message : String(dataError);
+        this.logger.error(`[onData] Error handling data for session ${sessionId}: ${errorMessage}`);
       }
     });
 
     // Handle terminal exit
     ptyProcess.onExit(({ exitCode, signal }) => {
+      this.logger.warn(`[onExit] Session ${sessionId} EXITED: exitCode=${exitCode}, signal=${signal}`);
+      this.logger.warn(`[onExit] Session was alive for: PID was ${ptyProcess.pid}`);
+
+      // Log stack trace to see what triggered the exit
+      const stack = new Error().stack;
+      this.logger.warn(`[onExit] Stack trace:\n${stack}`);
+
       this.cleanup(sessionId);
       this.eventEmitter.emit('terminal.closed', {
         sessionId,
@@ -98,6 +189,7 @@ export class TerminalService implements OnModuleDestroy {
       });
     });
 
+    this.logger.log(`[spawnCommand] Session ${sessionId} fully initialized, returning`);
     return sessionId;
   }
 
@@ -154,11 +246,23 @@ export class TerminalService implements OnModuleDestroy {
    * @param sessionId The session to kill
    */
   async kill(sessionId: number): Promise<void> {
+    this.logger.log(`[kill] Called for session ${sessionId}`);
+
+    // Log stack trace to see who called kill
+    const stack = new Error().stack;
+    this.logger.log(`[kill] Stack trace:\n${stack}`);
+
     const session = this.sessions.get(sessionId);
-    if (!session) return;
+    if (!session) {
+      this.logger.warn(`[kill] Session ${sessionId} not found`);
+      return;
+    }
+
+    this.logger.log(`[kill] Killing session ${sessionId}, PID: ${session.pty.pid}`);
 
     // Try graceful termination first (SIGTERM)
-    if (os.platform() !== 'win32') {
+    if (!this.isWindows) {
+      this.logger.log(`[kill] Sending SIGTERM to session ${sessionId}`);
       session.pty.kill('SIGTERM');
 
       // Wait for graceful shutdown, then force kill if needed
@@ -180,10 +284,12 @@ export class TerminalService implements OnModuleDestroy {
 
       if (!gracefullyTerminated && this.sessions.has(sessionId)) {
         // Force kill with SIGKILL
+        this.logger.log(`[kill] Sending SIGKILL to session ${sessionId}`);
         session.pty.kill('SIGKILL');
       }
     } else {
       // On Windows, just kill the process
+      this.logger.log(`[kill] Windows kill for session ${sessionId}`);
       session.pty.kill();
     }
 

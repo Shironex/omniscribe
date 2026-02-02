@@ -5,16 +5,17 @@
     "module": "CommonJS",
     "moduleResolution": "node",
     "outDir": "./dist",
+    "rootDir": "./src",
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "lib": ["ES2022"],
     "types": ["node"],
     "baseUrl": ".",
     "paths": {
-      "@omniscribe/shared": ["../../packages/shared/src"],
-      "@omniscribe/shared/*": ["../../packages/shared/src/*"]
+      "@omniscribe/shared": ["../../packages/shared/dist"],
+      "@omniscribe/shared/*": ["../../packages/shared/dist/*"]
     }
   },
-  "include": ["src/**/*", "../../packages/shared/src/**/*"],
+  "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]
 }

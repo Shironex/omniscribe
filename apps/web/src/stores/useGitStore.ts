@@ -101,47 +101,85 @@ export const useGitStore = create<GitStore>((set, get) => ({
 
   // Actions
   fetchBranches: (projectPath: string) => {
+    console.log('[GitStore] fetchBranches called for:', projectPath);
     set({ isLoading: true, error: null, projectPath });
-    socket.emit('git:branches', { projectPath }, (response: { success: boolean; branches?: BranchInfo[]; error?: string }) => {
-      if (response.success && response.branches) {
-        set({ branches: response.branches, isLoading: false });
+    socket.emit('git:branches', { projectPath }, (response: { branches: BranchInfo[]; currentBranch: string | BranchInfo; error?: string }) => {
+      console.log('[GitStore] fetchBranches response:', response);
+      // Backend returns { branches, currentBranch, error? } - no success field
+      if (response.error) {
+        console.error('[GitStore] fetchBranches error:', response.error);
+        set({ error: response.error, isLoading: false });
       } else {
-        set({ error: response.error ?? 'Failed to fetch branches', isLoading: false });
+        const branches = response.branches ?? [];
+
+        // Handle currentBranch which can be either a string or a BranchInfo object
+        let currentBranchInfo: BranchInfo | null = null;
+        if (response.currentBranch) {
+          if (typeof response.currentBranch === 'string') {
+            // currentBranch is a string - try to find it in branches array first
+            currentBranchInfo = branches.find(b => b.name === response.currentBranch) ?? null;
+            // If not found in branches array, create a BranchInfo object from the string
+            if (!currentBranchInfo) {
+              currentBranchInfo = { name: response.currentBranch, isRemote: false, isCurrent: true };
+              // Add to branches array if not already there
+              if (!branches.some(b => b.name === response.currentBranch)) {
+                branches.push(currentBranchInfo);
+              }
+            }
+          } else {
+            // currentBranch is already a BranchInfo object
+            currentBranchInfo = response.currentBranch;
+            // Ensure it's in the branches array
+            if (!branches.some(b => b.name === currentBranchInfo!.name)) {
+              branches.push(currentBranchInfo);
+            }
+          }
+        }
+
+        console.log('[GitStore] Setting branches:', branches.length, 'currentBranch:', currentBranchInfo?.name);
+        set({ branches, currentBranch: currentBranchInfo, isLoading: false, error: null });
       }
     });
   },
 
   fetchCurrentBranch: (projectPath: string) => {
     set({ isLoading: true, error: null, projectPath });
-    socket.emit('git:current-branch', { projectPath }, (response: { success: boolean; branch?: BranchInfo; error?: string }) => {
-      if (response.success && response.branch) {
-        set({ currentBranch: response.branch, isLoading: false });
+    socket.emit('git:current-branch', { projectPath }, (response: { currentBranch: string; error?: string }) => {
+      // Backend returns { currentBranch: string, error? } - no success field, no BranchInfo
+      if (response.error) {
+        set({ error: response.error, isLoading: false });
       } else {
-        set({ error: response.error ?? 'Failed to fetch current branch', isLoading: false });
+        // Create a minimal BranchInfo from the branch name
+        const branchInfo: BranchInfo | null = response.currentBranch
+          ? { name: response.currentBranch, isRemote: false, isCurrent: true }
+          : null;
+        set({ currentBranch: branchInfo, isLoading: false, error: null });
       }
     });
   },
 
   checkout: (projectPath: string, branchName: string) => {
     set({ isLoading: true, error: null });
-    socket.emit('git:checkout', { projectPath, branchName }, (response: { success: boolean; error?: string }) => {
-      if (response.success) {
+    socket.emit('git:checkout', { projectPath, branch: branchName }, (response: { success: boolean; currentBranch?: string; error?: string }) => {
+      // Backend returns { success, currentBranch?, error? }
+      if (response.error || !response.success) {
+        set({ error: response.error ?? 'Failed to checkout branch', isLoading: false });
+      } else {
         // Refresh branches and current branch after checkout
         get().fetchBranches(projectPath);
         get().fetchCurrentBranch(projectPath);
-      } else {
-        set({ error: response.error ?? 'Failed to checkout branch', isLoading: false });
       }
     });
   },
 
   fetchCommits: (projectPath: string, limit: number = 50) => {
     set({ isLoading: true, error: null, projectPath });
-    socket.emit('git:commits', { projectPath, limit }, (response: { success: boolean; commits?: CommitInfo[]; error?: string }) => {
-      if (response.success && response.commits) {
-        set({ commits: response.commits, isLoading: false });
+    socket.emit('git:commits', { projectPath, limit }, (response: { commits: CommitInfo[]; error?: string }) => {
+      // Backend returns { commits, error? } - no success field
+      if (response.error) {
+        set({ error: response.error, isLoading: false });
       } else {
-        set({ error: response.error ?? 'Failed to fetch commits', isLoading: false });
+        set({ commits: response.commits ?? [], isLoading: false, error: null });
       }
     });
   },

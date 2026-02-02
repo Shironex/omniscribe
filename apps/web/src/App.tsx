@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import {
   ProjectTabs,
   TopBar,
@@ -99,6 +99,7 @@ function App() {
 
   // Session store
   const sessions = useSessionStore((state) => state.sessions);
+  const updateSession = useSessionStore((state) => state.updateSession);
   const initSessionListeners = useSessionStore((state) => state.initListeners);
   const cleanupSessionListeners = useSessionStore((state) => state.cleanupListeners);
 
@@ -116,12 +117,14 @@ function App() {
   const initGitListeners = useGitStore((state) => state.initListeners);
   const cleanupGitListeners = useGitStore((state) => state.cleanupListeners);
   const fetchBranches = useGitStore((state) => state.fetchBranches);
-  const fetchCurrentBranch = useGitStore((state) => state.fetchCurrentBranch);
-  const setGitProjectPath = useGitStore((state) => state.setProjectPath);
+  const clearGitState = useGitStore((state) => state.clear);
 
   // Get active project path
   const activeTab = getActiveTab();
   const activeProjectPath = activeTab?.projectPath ?? null;
+
+  // Track previous project path for change detection
+  const prevProjectPathRef = useRef<string | null>(null);
 
   // Convert workspace tabs to UI tabs format
   const tabs: Tab[] = useMemo(() => {
@@ -155,6 +158,7 @@ function App() {
       status: mapSessionStatus(session.status),
       branch: session.branch,
       statusMessage: session.statusMessage,
+      terminalSessionId: session.terminalSessionId,
     }));
   }, [activeProjectSessions]);
 
@@ -214,12 +218,19 @@ function App() {
 
   // Fetch git data when active project changes
   useEffect(() => {
-    if (activeProjectPath) {
-      setGitProjectPath(activeProjectPath);
-      fetchBranches(activeProjectPath);
-      fetchCurrentBranch(activeProjectPath);
+    const prevProjectPath = prevProjectPathRef.current;
+    prevProjectPathRef.current = activeProjectPath;
+
+    // If project path changed, clear old state and fetch new data
+    if (activeProjectPath !== prevProjectPath) {
+      // Clear old git data first to avoid showing stale branch in top bar
+      clearGitState();
+      if (activeProjectPath) {
+        // Fetch fresh data for the new project
+        fetchBranches(activeProjectPath);
+      }
     }
-  }, [activeProjectPath, setGitProjectPath, fetchBranches, fetchCurrentBranch]);
+  }, [activeProjectPath, clearGitState, fetchBranches]);
 
   // Apply theme to document
   useEffect(() => {
@@ -351,9 +362,15 @@ function App() {
       try {
         // Create the session via socket (map UI aiMode to backend AiMode)
         const backendAiMode = mapAiModeToBackend(slot.aiMode);
-        await createSession(backendAiMode, activeProjectPath, slot.branch, {
+        const session = await createSession(backendAiMode, activeProjectPath, slot.branch, {
           mcpServers: slot.mcpServers,
         });
+
+        // The session:created event arrives before terminalSessionId is set,
+        // so we update the store with the complete session from the response
+        if (session.terminalSessionId !== undefined) {
+          updateSession(session.id, { terminalSessionId: session.terminalSessionId });
+        }
 
         // Remove the pre-launch slot
         setPreLaunchSlots((prev) => prev.filter((s) => s.id !== slotId));
@@ -361,7 +378,7 @@ function App() {
         console.error('Failed to launch session:', error);
       }
     },
-    [activeProjectPath, preLaunchSlots]
+    [activeProjectPath, preLaunchSlots, updateSession]
   );
 
   // Launch all pre-launch slots

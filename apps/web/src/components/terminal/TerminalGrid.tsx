@@ -94,13 +94,19 @@ export function TerminalGrid({
             onClose={() => onKill(session.id)}
           />
 
-          {/* Terminal */}
+          {/* Terminal - only render if terminalSessionId is available */}
           <div className="flex-1 min-h-0">
-            <TerminalView
-              sessionId={parseInt(session.id, 10)}
-              isFocused={focusedSessionId === session.id}
-              onClose={(exitCode) => onSessionClose?.(session.id, exitCode)}
-            />
+            {session.terminalSessionId !== undefined ? (
+              <TerminalView
+                sessionId={session.terminalSessionId}
+                isFocused={focusedSessionId === session.id}
+                onClose={(exitCode) => onSessionClose?.(session.id, exitCode)}
+              />
+            ) : (
+              <div className="flex items-center justify-center h-full bg-omniscribe-surface text-omniscribe-text-muted text-sm">
+                Connecting to terminal...
+              </div>
+            )}
           </div>
         </div>
       ))}

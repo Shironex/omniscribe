@@ -1,3 +1,4 @@
+import { useCallback, useMemo } from 'react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import {
@@ -12,7 +13,7 @@ import {
   Navigation,
   LucideIcon,
 } from 'lucide-react';
-import { useQuickActionStore, selectEnabledActions } from '../../stores';
+import { useQuickActionStore, selectActions } from '../../stores';
 import { QuickAction } from '@omniscribe/shared';
 
 interface QuickActionsSectionProps {
@@ -67,16 +68,25 @@ export function QuickActionsSection({
   className,
   onActionExecute,
 }: QuickActionsSectionProps) {
-  const actions = useQuickActionStore(selectEnabledActions);
+  // Select the raw actions array (stable reference) and filter with useMemo
+  // to avoid infinite loop from creating new array on every render
+  const allActions = useQuickActionStore(selectActions);
+  const actions = useMemo(
+    () => allActions.filter((action) => action.enabled !== false),
+    [allActions]
+  );
 
-  const handleActionClick = (action: QuickAction) => {
-    if (onActionExecute) {
-      onActionExecute(action);
-    } else {
-      // Default behavior: log the action
-      console.log('[QuickAction] Executing:', action.id, action.handler, action.params);
-    }
-  };
+  const handleActionClick = useCallback(
+    (action: QuickAction) => {
+      if (onActionExecute) {
+        onActionExecute(action);
+      } else {
+        // Default behavior: log the action
+        console.log('[QuickAction] Executing:', action.id, action.handler, action.params);
+      }
+    },
+    [onActionExecute]
+  );
 
   if (actions.length === 0) {
     return (

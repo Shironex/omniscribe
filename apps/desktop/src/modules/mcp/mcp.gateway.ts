@@ -98,6 +98,12 @@ export class McpGateway implements OnGatewayInit {
     @ConnectedSocket() _client: Socket
   ): Promise<DiscoverResult> {
     try {
+      // Validate payload has required projectPath
+      if (!payload?.projectPath) {
+        console.warn('[McpGateway] mcp:discover called without projectPath');
+        return { servers: [], error: 'projectPath is required' };
+      }
+
       const servers = await this.mcpService.discoverServers(payload.projectPath);
 
       // Cache the discovered servers

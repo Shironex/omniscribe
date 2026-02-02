@@ -6,7 +6,6 @@ import {
   connectTerminal,
   writeToTerminal,
   resizeTerminal,
-  killTerminal,
 } from '../../lib/terminal';
 import '@xterm/xterm/css/xterm.css';
 
@@ -19,6 +18,43 @@ export interface TerminalViewProps {
 
 type TerminalStatus = 'connecting' | 'connected' | 'disconnected' | 'error';
 
+// Helper to safely check if terminal is ready for operations
+const isTerminalReady = (terminal: Terminal | null): terminal is Terminal => {
+  if (!terminal) return false;
+  try {
+    // Check if terminal has been disposed or is not fully initialized
+    // Access the element property which will be null/undefined if disposed
+    const element = terminal.element;
+    if (!element) return false;
+    // Check if dimensions are available (required for fit operations)
+    const dims = (terminal as unknown as { _core?: { _renderService?: { dimensions?: unknown } } })._core?._renderService?.dimensions;
+    return dims !== undefined;
+  } catch {
+    return false;
+  }
+};
+
+// Helper to safely call fitAddon.fit()
+const safeFit = (fitAddon: FitAddon | null, terminal: Terminal | null, container: HTMLDivElement | null): { cols: number; rows: number } | null => {
+  if (!fitAddon || !terminal || !container) return null;
+
+  // Check container has dimensions
+  const { offsetWidth, offsetHeight } = container;
+  if (offsetWidth <= 0 || offsetHeight <= 0) return null;
+
+  // Check terminal is ready
+  if (!isTerminalReady(terminal)) return null;
+
+  try {
+    fitAddon.fit();
+    return { cols: terminal.cols, rows: terminal.rows };
+  } catch (error) {
+    // Silently handle - terminal may be in transition state
+    console.debug('[TerminalView] safeFit skipped:', error);
+    return null;
+  }
+};
+
 export const TerminalView: React.FC<TerminalViewProps> = ({
   sessionId,
   onClose,
@@ -30,144 +66,250 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
   const fitAddonRef = useRef<FitAddon | null>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
   const connectionRef = useRef<ReturnType<typeof connectTerminal> | null>(null);
+  // Track if the terminal has been disposed to prevent post-cleanup operations
+  const isDisposedRef = useRef<boolean>(false);
+  // Track if terminal is fully ready (opened and first fit completed)
+  const isReadyRef = useRef<boolean>(false);
+
+  // Store callbacks in refs to prevent re-initialization when they change
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   const [status, setStatus] = useState<TerminalStatus>('connecting');
 
-  // Handle terminal output
+  // Handle terminal output - use ref to avoid dependency on sessionId for logging
+  const sessionIdRef = useRef(sessionId);
+  sessionIdRef.current = sessionId;
+
   const handleOutput = useCallback((data: string) => {
-    if (xtermRef.current) {
-      xtermRef.current.write(data);
+    console.log(`[TerminalView] Received output for session ${sessionIdRef.current}:`, data.substring(0, 100));
+    if (isDisposedRef.current) return;
+    if (xtermRef.current && isTerminalReady(xtermRef.current)) {
+      try {
+        xtermRef.current.write(data);
+      } catch (error) {
+        console.debug('[TerminalView] Write error (terminal may be disposed):', error);
+      }
     }
   }, []);
 
-  // Handle terminal close
+  // Handle terminal close - use ref to avoid re-initialization
   const handleClose = useCallback(
     (exitCode: number, signal?: number) => {
+      if (isDisposedRef.current) return;
       setStatus('disconnected');
-      onClose?.(exitCode, signal);
+      onCloseRef.current?.(exitCode, signal);
     },
-    [onClose],
+    [],
   );
 
-  // Handle resize
+  // Handle resize - only fit if container has dimensions and terminal is ready
   const handleResize = useCallback(() => {
-    if (fitAddonRef.current && xtermRef.current) {
-      try {
-        fitAddonRef.current.fit();
-        const { cols, rows } = xtermRef.current;
-        resizeTerminal(sessionId, cols, rows);
-      } catch (error) {
-        console.error('[TerminalView] Resize error:', error);
-      }
+    // Guard against post-disposal calls
+    if (isDisposedRef.current || !isReadyRef.current) return;
+
+    const result = safeFit(fitAddonRef.current, xtermRef.current, terminalRef.current);
+    if (result) {
+      resizeTerminal(sessionIdRef.current, result.cols, result.rows);
     }
-  }, [sessionId]);
+  }, []);
 
   // Initialize terminal
   useEffect(() => {
     if (!terminalRef.current) return;
 
-    // Create terminal instance
-    const terminal = new Terminal({
-      fontSize: 13,
-      fontFamily: '"JetBrains Mono", "Fira Code", "Cascadia Code", Menlo, Monaco, "Courier New", monospace',
-      cursorBlink: true,
-      cursorStyle: 'block',
-      scrollback: 10000,
-      theme: {
-        background: '#1a1b26',
-        foreground: '#c0caf5',
-        cursor: '#c0caf5',
-        cursorAccent: '#1a1b26',
-        selectionBackground: '#33467c',
-        selectionForeground: '#c0caf5',
-        black: '#15161e',
-        red: '#f7768e',
-        green: '#9ece6a',
-        yellow: '#e0af68',
-        blue: '#7aa2f7',
-        magenta: '#bb9af7',
-        cyan: '#7dcfff',
-        white: '#a9b1d6',
-        brightBlack: '#414868',
-        brightRed: '#f7768e',
-        brightGreen: '#9ece6a',
-        brightYellow: '#e0af68',
-        brightBlue: '#7aa2f7',
-        brightMagenta: '#bb9af7',
-        brightCyan: '#7dcfff',
-        brightWhite: '#c0caf5',
-      },
-      allowProposedApi: true,
-    });
+    // Reset disposal state on mount
+    isDisposedRef.current = false;
+    isReadyRef.current = false;
 
-    // Create and load addons
-    const fitAddon = new FitAddon();
-    const webLinksAddon = new WebLinksAddon();
+    const container = terminalRef.current;
+    let terminal: Terminal | null = null;
+    let fitAddon: FitAddon | null = null;
+    let isInitialized = false;
+    let initRetryTimeout: ReturnType<typeof setTimeout> | null = null;
 
-    terminal.loadAddon(fitAddon);
-    terminal.loadAddon(webLinksAddon);
+    // Function to initialize terminal once container has dimensions
+    const initializeTerminal = () => {
+      // Guard against multiple initializations or post-disposal calls
+      if (isInitialized || isDisposedRef.current || !container) return;
 
-    // Open terminal in container
-    terminal.open(terminalRef.current);
+      // Check that container has actual dimensions
+      const { offsetWidth, offsetHeight } = container;
+      if (offsetWidth === 0 || offsetHeight === 0) {
+        return; // Container not ready yet
+      }
 
-    // Store refs
-    xtermRef.current = terminal;
-    fitAddonRef.current = fitAddon;
+      isInitialized = true;
 
-    // Initial fit
-    setTimeout(() => {
-      fitAddon.fit();
-      const { cols, rows } = terminal;
-      resizeTerminal(sessionId, cols, rows);
-    }, 0);
+      // Create terminal instance
+      terminal = new Terminal({
+        fontSize: 13,
+        fontFamily: '"JetBrains Mono", "Fira Code", "Cascadia Code", Menlo, Monaco, "Courier New", monospace',
+        cursorBlink: true,
+        cursorStyle: 'block',
+        scrollback: 10000,
+        theme: {
+          background: '#1a1b26',
+          foreground: '#c0caf5',
+          cursor: '#c0caf5',
+          cursorAccent: '#1a1b26',
+          selectionBackground: '#33467c',
+          selectionForeground: '#c0caf5',
+          black: '#15161e',
+          red: '#f7768e',
+          green: '#9ece6a',
+          yellow: '#e0af68',
+          blue: '#7aa2f7',
+          magenta: '#bb9af7',
+          cyan: '#7dcfff',
+          white: '#a9b1d6',
+          brightBlack: '#414868',
+          brightRed: '#f7768e',
+          brightGreen: '#9ece6a',
+          brightYellow: '#e0af68',
+          brightBlue: '#7aa2f7',
+          brightMagenta: '#bb9af7',
+          brightCyan: '#7dcfff',
+          brightWhite: '#c0caf5',
+        },
+        allowProposedApi: true,
+      });
 
-    // Handle user input
-    terminal.onData((data) => {
-      writeToTerminal(sessionId, data);
-    });
+      // Create and load addons
+      fitAddon = new FitAddon();
+      const webLinksAddon = new WebLinksAddon();
 
-    // Connect to terminal session
-    connectionRef.current = connectTerminal(sessionId, handleOutput, handleClose);
-    setStatus('connected');
+      terminal.loadAddon(fitAddon);
+      terminal.loadAddon(webLinksAddon);
 
-    // Set up ResizeObserver for auto-fit
+      // Open terminal in container
+      terminal.open(container);
+
+      // Store refs AFTER opening (terminal is now attached to DOM)
+      xtermRef.current = terminal;
+      fitAddonRef.current = fitAddon;
+
+      // Delayed initial fit - wait for terminal to be fully rendered
+      // Use multiple frames to ensure xterm's internal render service is ready
+      const performInitialFit = (retriesLeft: number) => {
+        if (isDisposedRef.current || !terminal || !fitAddon) return;
+
+        const result = safeFit(fitAddon, terminal, container);
+        if (result) {
+          // Success - terminal is ready
+          isReadyRef.current = true;
+          resizeTerminal(sessionId, result.cols, result.rows);
+
+          // Now connect to terminal session (after terminal is fully ready)
+          // Guard against double-connection from React StrictMode's double-mounting
+          if (!isDisposedRef.current && !connectionRef.current) {
+            console.log(`[TerminalView] Connecting to terminal session ${sessionId}`);
+            connectionRef.current = connectTerminal(sessionId, handleOutput, handleClose);
+            setStatus('connected');
+          }
+        } else if (retriesLeft > 0) {
+          // Retry after a short delay
+          initRetryTimeout = setTimeout(() => {
+            requestAnimationFrame(() => performInitialFit(retriesLeft - 1));
+          }, 50);
+        } else {
+          // Give up on retries, try to connect anyway
+          console.warn('[TerminalView] Initial fit failed after retries, connecting anyway');
+          isReadyRef.current = true;
+          // Guard against double-connection from React StrictMode's double-mounting
+          if (!isDisposedRef.current && !connectionRef.current) {
+            connectionRef.current = connectTerminal(sessionId, handleOutput, handleClose);
+            setStatus('connected');
+          }
+        }
+      };
+
+      // Start fit attempts after next frame
+      requestAnimationFrame(() => performInitialFit(5));
+
+      // Handle user input
+      terminal.onData((data) => {
+        if (!isDisposedRef.current) {
+          writeToTerminal(sessionId, data);
+        }
+      });
+    };
+
+    // Set up ResizeObserver to detect when container gets dimensions and for auto-fit
     resizeObserverRef.current = new ResizeObserver(() => {
-      handleResize();
+      // Guard against post-disposal calls
+      if (isDisposedRef.current) return;
+
+      // Try to initialize if not yet done
+      if (!isInitialized) {
+        initializeTerminal();
+      } else if (isReadyRef.current) {
+        // Already initialized and ready, just handle resize
+        handleResize();
+      }
     });
-    resizeObserverRef.current.observe(terminalRef.current);
+    resizeObserverRef.current.observe(container);
+
+    // Try immediate initialization in case container already has dimensions
+    initializeTerminal();
 
     // Cleanup
     return () => {
+      // Mark as disposed FIRST to prevent any new operations
+      isDisposedRef.current = true;
+      isReadyRef.current = false;
+
+      // Clear any pending retry timeout
+      if (initRetryTimeout) {
+        clearTimeout(initRetryTimeout);
+        initRetryTimeout = null;
+      }
+
+      // Disconnect resize observer BEFORE disposing terminal
       if (resizeObserverRef.current) {
         resizeObserverRef.current.disconnect();
         resizeObserverRef.current = null;
       }
 
+      // Cleanup connection
       if (connectionRef.current) {
         connectionRef.current.cleanup();
         connectionRef.current = null;
       }
 
+      // Dispose terminal last
       if (xtermRef.current) {
-        xtermRef.current.dispose();
+        try {
+          xtermRef.current.dispose();
+        } catch (error) {
+          console.debug('[TerminalView] Dispose error (safe to ignore):', error);
+        }
         xtermRef.current = null;
       }
 
       fitAddonRef.current = null;
     };
-  }, [sessionId, handleOutput, handleClose, handleResize]);
+    // Only re-initialize when sessionId changes - callbacks are stored in refs
+  }, [sessionId]);
 
   // Handle focus changes
   useEffect(() => {
-    if (isFocused && xtermRef.current) {
-      xtermRef.current.focus();
+    if (isFocused && xtermRef.current && !isDisposedRef.current && isReadyRef.current) {
+      try {
+        xtermRef.current.focus();
+      } catch (error) {
+        console.debug('[TerminalView] Focus error (safe to ignore):', error);
+      }
     }
   }, [isFocused]);
 
   // Handle window resize
   useEffect(() => {
     const handleWindowResize = () => {
-      handleResize();
+      // Guard against post-disposal calls
+      if (!isDisposedRef.current && isReadyRef.current) {
+        handleResize();
+      }
     };
 
     window.addEventListener('resize', handleWindowResize);
@@ -176,12 +318,9 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
     };
   }, [handleResize]);
 
-  // Kill terminal on unmount
-  useEffect(() => {
-    return () => {
-      killTerminal(sessionId);
-    };
-  }, [sessionId]);
+  // NOTE: We intentionally do NOT kill the terminal on unmount.
+  // The terminal is a backend resource that should persist even if the view unmounts.
+  // Terminal lifecycle is controlled by explicit user actions (close button) or session deletion.
 
   // Get border color based on status
   const getBorderStyle = (): React.CSSProperties => {

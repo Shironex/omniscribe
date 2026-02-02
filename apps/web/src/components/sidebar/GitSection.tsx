@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import {
@@ -20,29 +20,45 @@ export function GitSection({ className }: GitSectionProps) {
   const currentBranch = useGitStore(selectCurrentBranch);
   const isLoading = useGitStore((state) => state.isLoading);
   const error = useGitStore((state) => state.error);
-  const projectPath = useGitStore((state) => state.projectPath);
-  const fetchCurrentBranch = useGitStore((state) => state.fetchCurrentBranch);
+  const fetchBranches = useGitStore((state) => state.fetchBranches);
+  const clear = useGitStore((state) => state.clear);
   const initListeners = useGitStore((state) => state.initListeners);
 
   const activeTab = useWorkspaceStore(selectActiveTab);
+
+  // Track the previous project path to detect changes
+  const prevProjectPathRef = useRef<string | null>(null);
 
   // Initialize listeners on mount
   useEffect(() => {
     initListeners();
   }, [initListeners]);
 
-  // Fetch branch info when active project changes
+  // Fetch branches when active project changes
   useEffect(() => {
-    if (activeTab?.projectPath && activeTab.projectPath !== projectPath) {
-      fetchCurrentBranch(activeTab.projectPath);
-    }
-  }, [activeTab?.projectPath, projectPath, fetchCurrentBranch]);
+    const currentProjectPath = activeTab?.projectPath ?? null;
+    const prevProjectPath = prevProjectPathRef.current;
 
-  const handleRefresh = () => {
-    if (activeTab?.projectPath) {
-      fetchCurrentBranch(activeTab.projectPath);
+    // Update ref for next comparison
+    prevProjectPathRef.current = currentProjectPath;
+
+    // If project path changed, clear old state and fetch new data
+    if (currentProjectPath !== prevProjectPath) {
+      // Clear old data first to avoid showing stale data
+      clear();
+      if (currentProjectPath) {
+        // Fetch fresh data for the new project
+        fetchBranches(currentProjectPath);
+      }
     }
-  };
+  }, [activeTab?.projectPath, clear, fetchBranches]);
+
+  const handleRefresh = useCallback(() => {
+    if (activeTab?.projectPath) {
+      console.log('[GitSection] Refresh clicked, fetching branches for:', activeTab.projectPath);
+      fetchBranches(activeTab.projectPath);
+    }
+  }, [activeTab?.projectPath, fetchBranches]);
 
   const ahead = currentBranch?.ahead ?? 0;
   const behind = currentBranch?.behind ?? 0;

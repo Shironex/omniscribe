@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import {
@@ -94,31 +94,34 @@ export function Sidebar({
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
 
-  // Get sessions for the Processes tab
+  // Get sessions for the Processes tab - use stable selector
   const sessions = useSessionStore((state) => state.sessions);
-  const activeSessionCount = sessions.filter(
-    (s) => s.status === 'active' || s.status === 'thinking' || s.status === 'executing'
-  ).length;
+  const activeSessionCount = useMemo(() =>
+    sessions.filter(
+      (s) => s.status === 'active' || s.status === 'thinking' || s.status === 'executing'
+    ).length,
+    [sessions]
+  );
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     setIsResizing(true);
   }, []);
 
-  const handleSessionClick = (sessionId: string) => {
+  const handleSessionClick = useCallback((sessionId: string) => {
     // TODO: Implement session focus - emit event or call workspace store
     console.log('[Sidebar] Focus session:', sessionId);
-  };
+  }, []);
 
-  const handleNewSession = () => {
+  const handleNewSession = useCallback(() => {
     // TODO: Implement new session creation
     console.log('[Sidebar] Create new session');
-  };
+  }, []);
 
-  const handleActionExecute = (action: QuickAction) => {
+  const handleActionExecute = useCallback((action: QuickAction) => {
     // TODO: Implement action execution via socket or IPC
     console.log('[Sidebar] Execute action:', action.id, action.handler, action.params);
-  };
+  }, []);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {

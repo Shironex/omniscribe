@@ -43,6 +43,12 @@ export class McpService {
    * @returns Array of discovered MCP server configurations
    */
   async discoverServers(projectPath: string): Promise<McpServerConfig[]> {
+    // Validate projectPath before using it with path.join
+    if (!projectPath || typeof projectPath !== 'string') {
+      console.warn('[McpService] discoverServers called with invalid projectPath:', projectPath);
+      return [];
+    }
+
     const servers: McpServerConfig[] = [];
 
     for (const configFile of MCP_CONFIG_FILES) {

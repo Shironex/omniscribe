@@ -62,13 +62,17 @@ export function connectTerminal(
   onOutput: (data: string) => void,
   onClose: (exitCode: number, signal?: number) => void,
 ): TerminalConnection {
+  console.log(`[Terminal] Setting up listeners for session ${sessionId}, socket connected: ${socket.connected}`);
+
   const handleOutput = (event: TerminalOutputEvent) => {
+    console.log(`[Terminal] Received terminal:output event, sessionId: ${event.sessionId}, target: ${sessionId}, match: ${event.sessionId === sessionId}`);
     if (event.sessionId === sessionId) {
       onOutput(event.data);
     }
   };
 
   const handleClosed = (event: TerminalClosedEvent) => {
+    console.log(`[Terminal] Received terminal:closed event for session ${event.sessionId}`);
     if (event.sessionId === sessionId) {
       onClose(event.exitCode, event.signal);
     }
@@ -78,6 +82,7 @@ export function connectTerminal(
   socket.on('terminal:closed', handleClosed);
 
   const cleanup = () => {
+    console.log(`[Terminal] Cleaning up listeners for session ${sessionId}`);
     socket.off('terminal:output', handleOutput);
     socket.off('terminal:closed', handleClosed);
   };
@@ -101,6 +106,7 @@ export function writeToTerminal(sessionId: number, data: string): void {
     return;
   }
 
+  console.log(`[Terminal] Sending input to session ${sessionId}: ${JSON.stringify(data.substring(0, 50))}`);
   socket.emit('terminal:input', { sessionId, data });
 }
 

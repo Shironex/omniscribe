@@ -95,6 +95,7 @@ export function ConnectedTerminalGrid({ className }: ConnectedTerminalGridProps)
 
   // Session store
   const sessions = useSessionStore((state) => state.sessions);
+  const updateSession = useSessionStore((state) => state.updateSession);
   const initSessionListeners = useSessionStore((state) => state.initListeners);
   const cleanupSessionListeners = useSessionStore((state) => state.cleanupListeners);
 
@@ -106,7 +107,6 @@ export function ConnectedTerminalGrid({ className }: ConnectedTerminalGridProps)
   const gitBranches = useGitStore(selectBranches);
   const currentGitBranch = useGitStore(selectCurrentBranch);
   const fetchBranches = useGitStore((state) => state.fetchBranches);
-  const fetchCurrentBranch = useGitStore((state) => state.fetchCurrentBranch);
   const setGitProjectPath = useGitStore((state) => state.setProjectPath);
   const initGitListeners = useGitStore((state) => state.initListeners);
   const cleanupGitListeners = useGitStore((state) => state.cleanupListeners);
@@ -145,11 +145,12 @@ export function ConnectedTerminalGrid({ className }: ConnectedTerminalGridProps)
   // Fetch git data when active project changes
   useEffect(() => {
     if (activeProjectPath) {
+      console.log('[ConnectedTerminalGrid] Active project changed, fetching git data for:', activeProjectPath);
       setGitProjectPath(activeProjectPath);
       fetchBranches(activeProjectPath);
-      fetchCurrentBranch(activeProjectPath);
+      // Note: fetchCurrentBranch is redundant since fetchBranches already sets currentBranch
     }
-  }, [activeProjectPath, setGitProjectPath, fetchBranches, fetchCurrentBranch]);
+  }, [activeProjectPath, setGitProjectPath, fetchBranches]);
 
   // Filter sessions for the active project
   const activeProjectSessions = useMemo(() => {
@@ -166,6 +167,7 @@ export function ConnectedTerminalGrid({ className }: ConnectedTerminalGridProps)
       status: mapSessionStatus(session.status),
       branch: session.branch,
       statusMessage: session.statusMessage,
+      terminalSessionId: session.terminalSessionId,
     }));
   }, [activeProjectSessions]);
 
@@ -221,9 +223,15 @@ export function ConnectedTerminalGrid({ className }: ConnectedTerminalGridProps)
       try {
         // Create the session via socket
         const backendAiMode = mapAiModeToBackend(slot.aiMode);
-        await createSession(backendAiMode, activeProjectPath, slot.branch, {
+        const session = await createSession(backendAiMode, activeProjectPath, slot.branch, {
           mcpServers: slot.mcpServers,
         });
+
+        // The session:created event arrives before terminalSessionId is set,
+        // so we update the store with the complete session from the response
+        if (session.terminalSessionId !== undefined) {
+          updateSession(session.id, { terminalSessionId: session.terminalSessionId });
+        }
 
         // Remove the pre-launch slot
         setPreLaunchSlots((prev) => prev.filter((s) => s.id !== slotId));
@@ -231,7 +239,7 @@ export function ConnectedTerminalGrid({ className }: ConnectedTerminalGridProps)
         console.error('Failed to launch session:', error);
       }
     },
-    [activeProjectPath, preLaunchSlots]
+    [activeProjectPath, preLaunchSlots, updateSession]
   );
 
   // Kill a session handler

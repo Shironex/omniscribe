@@ -12,6 +12,8 @@ export interface ExtendedSessionConfig extends SessionConfig {
   status: SessionStatus;
   statusMessage?: string;
   needsInputPrompt?: boolean;
+  /** Terminal PTY session ID - set after session is launched */
+  terminalSessionId?: number;
 }
 
 /**

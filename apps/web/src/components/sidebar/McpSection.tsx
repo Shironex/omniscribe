@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useCallback, useMemo, useRef } from 'react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import {
@@ -11,7 +11,7 @@ import {
   Loader2,
   XCircle,
 } from 'lucide-react';
-import { useMcpStore, selectServers } from '../../stores';
+import { useMcpStore, selectServers, useWorkspaceStore, selectActiveTab } from '../../stores';
 import { McpServerStatus } from '@omniscribe/shared';
 
 interface McpSectionProps {
@@ -76,20 +76,47 @@ export function McpSection({ className }: McpSectionProps) {
   const discoverServers = useMcpStore((state) => state.discoverServers);
   const connectServer = useMcpStore((state) => state.connectServer);
   const disconnectServer = useMcpStore((state) => state.disconnectServer);
+  const clear = useMcpStore((state) => state.clear);
   const initListeners = useMcpStore((state) => state.initListeners);
 
-  // Initialize listeners and discover servers on mount
+  const activeTab = useWorkspaceStore(selectActiveTab);
+
+  // Track the previous project path to detect changes
+  const prevProjectPathRef = useRef<string | null>(null);
+
+  // Initialize listeners on mount
   useEffect(() => {
     initListeners();
-    discoverServers();
-  }, [initListeners, discoverServers]);
+  }, [initListeners]);
+
+  // Discover servers when active project changes
+  useEffect(() => {
+    const currentProjectPath = activeTab?.projectPath ?? null;
+    const prevProjectPath = prevProjectPathRef.current;
+
+    // Update ref for next comparison
+    prevProjectPathRef.current = currentProjectPath;
+
+    // If project path changed, clear old state and discover new servers
+    if (currentProjectPath !== prevProjectPath) {
+      // Clear old data first to avoid showing stale servers
+      clear();
+      if (currentProjectPath) {
+        // Discover servers for the new project
+        discoverServers(currentProjectPath);
+      }
+    }
+  }, [activeTab?.projectPath, clear, discoverServers]);
 
   const serverCount = servers.length;
-  const connectedCount = Array.from(serverStates.values()).filter(
-    (s) => s.status === 'connected'
-  ).length;
+  const connectedCount = useMemo(() =>
+    Array.from(serverStates.values()).filter(
+      (s) => s.status === 'connected'
+    ).length,
+    [serverStates]
+  );
 
-  const handleToggle = (serverId: string, currentlyEnabled: boolean) => {
+  const handleToggle = useCallback((serverId: string, currentlyEnabled: boolean) => {
     setEnabled(serverId, !currentlyEnabled);
 
     // If enabling, also connect
@@ -98,11 +125,11 @@ export function McpSection({ className }: McpSectionProps) {
     } else {
       disconnectServer(serverId);
     }
-  };
+  }, [setEnabled, connectServer, disconnectServer]);
 
-  const handleRefresh = () => {
-    discoverServers();
-  };
+  const handleRefresh = useCallback(() => {
+    discoverServers(activeTab?.projectPath);
+  }, [discoverServers, activeTab?.projectPath]);
 
   return (
     <div className={twMerge(clsx('space-y-2', className))}>

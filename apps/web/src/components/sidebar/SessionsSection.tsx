@@ -1,8 +1,8 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { Terminal, Plus, AlertCircle } from 'lucide-react';
-import { useSessionStore, selectSessionsForProject } from '../../stores';
+import { useSessionStore } from '../../stores';
 import { useWorkspaceStore, selectActiveTab } from '../../stores';
 import { StatusDot, SessionStatus } from '../shared/StatusLegend';
 
@@ -41,24 +41,33 @@ export function SessionsSection({
   onNewSession,
 }: SessionsSectionProps) {
   const activeTab = useWorkspaceStore(selectActiveTab);
-  const sessions = useSessionStore((state) =>
-    activeTab?.projectPath
-      ? selectSessionsForProject(activeTab.projectPath)(state)
-      : state.sessions
-  );
+
+  // Get stable references from stores - avoid selectors that create new arrays
+  const allSessions = useSessionStore((state) => state.sessions);
   const isLoading = useSessionStore((state) => state.isLoading);
   const error = useSessionStore((state) => state.error);
   const initListeners = useSessionStore((state) => state.initListeners);
+
+  // Memoize filtered sessions to avoid creating new arrays on every render
+  const sessions = useMemo(() => {
+    if (activeTab?.projectPath) {
+      return allSessions.filter((session) => session.projectPath === activeTab.projectPath);
+    }
+    return allSessions;
+  }, [allSessions, activeTab?.projectPath]);
 
   // Initialize listeners on mount
   useEffect(() => {
     initListeners();
   }, [initListeners]);
 
-  const sessionCount = sessions.length;
-  const activeCount = sessions.filter(
-    (s) => s.status === 'active' || s.status === 'thinking' || s.status === 'executing'
-  ).length;
+  // Memoize derived counts to avoid recalculation on every render
+  const { sessionCount, activeCount } = useMemo(() => ({
+    sessionCount: sessions.length,
+    activeCount: sessions.filter(
+      (s) => s.status === 'active' || s.status === 'thinking' || s.status === 'executing'
+    ).length,
+  }), [sessions]);
 
   return (
     <div className={twMerge(clsx('space-y-2', className))}>

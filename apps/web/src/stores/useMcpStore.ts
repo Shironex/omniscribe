@@ -49,7 +49,7 @@ interface McpState {
  */
 interface McpActions {
   /** Discover available MCP servers */
-  discoverServers: () => void;
+  discoverServers: (projectPath?: string) => void;
   /** Set server enabled/disabled */
   setEnabled: (serverId: string, enabled: boolean) => void;
   /** Get enabled servers for a session */
@@ -94,23 +94,25 @@ export const useMcpStore = create<McpStore>((set, get) => ({
   listenersInitialized: false,
 
   // Actions
-  discoverServers: () => {
+  discoverServers: (projectPath?: string) => {
     set({ isDiscovering: true, error: null });
-    socket.emit('mcp:discover', {}, (response: { success: boolean; servers?: McpServerConfig[]; error?: string }) => {
-      if (response.success && response.servers) {
-        // Update servers list
-        set({ servers: response.servers, isDiscovering: false });
+    socket.emit('mcp:discover', { projectPath }, (response: { servers: McpServerConfig[]; error?: string }) => {
+      // Backend returns { servers, error? } - no success field
+      // Check for error first, then check if we have servers
+      if (response.error) {
+        set({ error: response.error, isDiscovering: false });
+      } else {
+        // Update servers list (may be empty array, which is valid)
+        set({ servers: response.servers ?? [], isDiscovering: false, error: null });
 
         // Initialize enabled set with servers that have enabled: true
         const enabledSet = new Set<string>();
-        for (const server of response.servers) {
+        for (const server of response.servers ?? []) {
           if (server.enabled) {
             enabledSet.add(server.id);
           }
         }
         set({ enabledServers: enabledSet });
-      } else {
-        set({ error: response.error ?? 'Failed to discover servers', isDiscovering: false });
       }
     });
   },
