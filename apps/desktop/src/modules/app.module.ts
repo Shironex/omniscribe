@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { TerminalModule } from './terminal';
 
 @Module({
   imports: [
@@ -9,6 +10,7 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
       maxListeners: 20,
       verboseMemoryLeak: true,
     }),
+    TerminalModule,
   ],
   controllers: [],
   providers: [],

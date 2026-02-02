@@ -1,6 +1,9 @@
 {
   "name": "omniscribe",
   "private": true,
+  "pnpm": {
+    "onlyBuiltDependencies": ["@nestjs/core", "electron", "esbuild", "node-pty"]
+  },
   "scripts": {
     "dev": "pnpm --filter @omniscribe/web dev",
     "dev:desktop": "pnpm --filter @omniscribe/desktop dev",
