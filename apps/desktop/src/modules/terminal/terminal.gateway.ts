@@ -66,7 +66,6 @@ export class TerminalGateway
 
   constructor(private readonly terminalService: TerminalService) {
     TerminalGateway.instanceCount++;
-    console.log(`[TerminalGateway] Constructor called, instance: ${this.instanceId}, total instances: ${TerminalGateway.instanceCount}`);
   }
 
   // Getters for the static Maps (for convenience)
@@ -79,36 +78,25 @@ export class TerminalGateway
   }
 
   afterInit(): void {
-    console.log(`[TerminalGateway] WebSocket gateway initialized (instance ${TerminalGateway.instanceCount})`);
+    // Gateway initialized
   }
 
   handleConnection(client: Socket): void {
-    console.log(`[TerminalGateway] Client connected: ${client.id}`);
-
     // Only create a new Set if client doesn't already have sessions registered
     // This prevents clearing sessions on reconnection
     if (!this.clientSessions.has(client.id)) {
       this.clientSessions.set(client.id, new Set());
-    } else {
-      const existingSessions = Array.from(this.clientSessions.get(client.id)!);
-      console.log(`[TerminalGateway] Client ${client.id} reconnected, preserving ${existingSessions.length} sessions: [${existingSessions.join(', ')}]`);
     }
     this.connectedClients.set(client.id, client);
   }
 
   handleDisconnect(client: Socket): void {
-    console.log(`[TerminalGateway] Client disconnected: ${client.id}`);
-
     // Only clean up tracking, do NOT kill terminal sessions
     // Terminals should persist across WebSocket disconnections because:
     // 1. WebSocket connections can be flaky and reconnect
     // 2. Users may navigate away and return
     // 3. Important processes may be running in the terminal
     // Terminals are killed explicitly via terminal:kill or session:remove
-    const sessions = this.clientSessions.get(client.id);
-    if (sessions && sessions.size > 0) {
-      console.log(`[TerminalGateway] Client ${client.id} had ${sessions.size} sessions, keeping them alive: [${Array.from(sessions).join(', ')}]`);
-    }
     this.clientSessions.delete(client.id);
     this.connectedClients.delete(client.id);
   }
@@ -118,12 +106,7 @@ export class TerminalGateway
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: SpawnPayload,
   ): { sessionId: number } {
-    console.log(`[TerminalGateway] terminal:spawn received from client ${client.id}`);
-    console.log(`[TerminalGateway] Payload: ${JSON.stringify(payload)}`);
-
     const sessionId = this.terminalService.spawn(payload?.cwd, payload?.env);
-
-    console.log(`[TerminalGateway] TerminalService.spawn() returned sessionId: ${sessionId}`);
 
     // Track session ownership
     const sessions = this.clientSessions.get(client.id);
@@ -133,19 +116,6 @@ export class TerminalGateway
 
     // Join room for this session
     client.join(`terminal:${sessionId}`);
-
-    console.log(`[TerminalGateway] Spawned terminal session ${sessionId} for client ${client.id}`);
-
-    // Check if session still exists after spawn (debugging immediate exit)
-    setTimeout(() => {
-      const stillExists = this.terminalService.hasSession(sessionId);
-      console.log(`[TerminalGateway] After 100ms: session ${sessionId} still exists? ${stillExists}`);
-    }, 100);
-
-    setTimeout(() => {
-      const stillExists = this.terminalService.hasSession(sessionId);
-      console.log(`[TerminalGateway] After 500ms: session ${sessionId} still exists? ${stillExists}`);
-    }, 500);
 
     return { sessionId };
   }
@@ -161,8 +131,6 @@ export class TerminalGateway
     // No ownership checking - if you're connected to the session, you can write to it
     if (this.terminalService.hasSession(sessionId)) {
       this.terminalService.write(sessionId, data);
-    } else {
-      console.warn(`[TerminalGateway] Session ${sessionId} does not exist`);
     }
   }
 
@@ -177,8 +145,6 @@ export class TerminalGateway
       this.clientSessions.set(clientId, sessions);
     }
     sessions.add(sessionId);
-
-    console.log(`[TerminalGateway] Registered client ${clientId} as owner of session ${sessionId}. Client now owns sessions: [${Array.from(sessions).join(', ')}]`);
   }
 
   /**
@@ -252,14 +218,11 @@ export class TerminalGateway
 
     // Prefer using the server if available
     if (this.server) {
-      const roomSize = this.server.sockets?.adapter?.rooms?.get(room)?.size ?? 0;
-      console.log(`[TerminalGateway] Emitting terminal:output to room ${room} (${roomSize} clients)`);
       this.server.to(room).emit('terminal:output', payload);
       return;
     }
 
     // Fallback: emit directly to clients that own this session
-    console.log(`[TerminalGateway] Server not ready, using direct client emit for session ${event.sessionId}`);
     for (const [clientId, sessions] of this.clientSessions.entries()) {
       if (sessions.has(event.sessionId)) {
         const client = this.connectedClients.get(clientId);
@@ -272,9 +235,6 @@ export class TerminalGateway
 
   @OnEvent('terminal.closed')
   handleTerminalClosed(event: TerminalClosedEvent): void {
-    console.log(`[TerminalGateway] terminal.closed event received for session ${event.sessionId}`);
-    console.log(`[TerminalGateway] exitCode: ${event.exitCode}, signal: ${event.signal}`);
-
     const room = `terminal:${event.sessionId}`;
     const payload = {
       sessionId: event.sessionId,
@@ -289,7 +249,6 @@ export class TerminalGateway
     }
 
     // Fallback: emit directly to clients that own this session
-    console.log(`[TerminalGateway] Server not ready, using direct client emit for terminal:closed session ${event.sessionId}`);
     for (const [clientId, sessions] of this.clientSessions.entries()) {
       if (sessions.has(event.sessionId)) {
         const client = this.connectedClients.get(clientId);

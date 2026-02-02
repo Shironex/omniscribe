@@ -57,10 +57,8 @@ export function PreLaunchCard({
   // Use prop branches or fall back to store branches
   const branches: Branch[] = useMemo(() => {
     if (propBranches && propBranches.length > 0) {
-      console.log('[PreLaunchCard] Using prop branches:', propBranches.length);
       return propBranches;
     }
-    console.log('[PreLaunchCard] Using gitBranches from store:', gitBranches.length);
     return gitBranches.map((b) => ({
       name: b.name,
       isRemote: b.isRemote,
@@ -71,7 +69,6 @@ export function PreLaunchCard({
   // Fetch branches if empty and we have a project path
   useEffect(() => {
     if (branches.length === 0 && gitProjectPath) {
-      console.log('[PreLaunchCard] Branches empty, triggering fetch for:', gitProjectPath);
       fetchBranches(gitProjectPath);
     }
   }, [branches.length, gitProjectPath, fetchBranches]);

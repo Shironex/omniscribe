@@ -41,12 +41,6 @@ export class GitService {
   ): Promise<ExecResult> {
     const command = `git ${args.join(' ')}`;
 
-    // Debug logging for git commands
-    const isDebugCommand = args[0] === 'for-each-ref' || args[0] === 'rev-parse';
-    if (isDebugCommand) {
-      console.log('[GitService] execGit:', { command, repoPath, args });
-    }
-
     try {
       const result = await execAsync(command, {
         cwd: repoPath,
@@ -57,15 +51,6 @@ export class GitService {
         },
         maxBuffer: 10 * 1024 * 1024, // 10MB buffer for large outputs
       });
-
-      if (isDebugCommand) {
-        console.log('[GitService] execGit result:', {
-          command,
-          stdoutLength: result.stdout.length,
-          stderrLength: result.stderr.length,
-          stdoutPreview: result.stdout.substring(0, 200),
-        });
-      }
 
       return {
         stdout: result.stdout,
@@ -99,11 +84,8 @@ export class GitService {
   async getBranches(repoPath: string): Promise<BranchInfo[]> {
     const branches: BranchInfo[] = [];
 
-    console.log('[GitService] getBranches called for:', repoPath);
-
     // Get current branch first
     const currentBranch = await this.getCurrentBranch(repoPath);
-    console.log('[GitService] getBranches currentBranch:', currentBranch);
 
     // Try using git branch -a with format (like maestro does)
     // Format: %(HEAD)|%(refname:short)|%(refname:rstrip=-2)
@@ -111,19 +93,12 @@ export class GitService {
     // %(refname:short) = branch name
     // %(refname:rstrip=-2) = "remotes" for remote branches, empty for local
     // Note: Double quotes around format string for Windows compatibility (prevents % variable expansion)
-    const { stdout: branchOutput, stderr: branchStderr } = await this.execGit(repoPath, [
+    const { stdout: branchOutput } = await this.execGit(repoPath, [
       'branch',
       '-a',
       '--no-color',
       '--format="%(HEAD)|%(refname:short)|%(refname:rstrip=-2)"',
     ]);
-
-    console.log('[GitService] getBranches git branch -a output:', {
-      stdout: branchOutput,
-      stderr: branchStderr,
-      stdoutLength: branchOutput.length,
-      lines: branchOutput.split('\n').filter(l => l.trim()).length,
-    });
 
     // Parse branches from git branch -a output
     for (const line of branchOutput.split('\n')) {
@@ -135,7 +110,6 @@ export class GitService {
 
       const parts = cleanLine.split('|');
       if (parts.length < 2) {
-        console.log('[GitService] getBranches skipping malformed line:', line);
         continue;
       }
 
@@ -176,17 +150,9 @@ export class GitService {
       await this.enrichBranchesWithTrackingInfo(repoPath, branches, currentBranch);
     } else {
       // Fallback: try for-each-ref directly
-      console.log('[GitService] getBranches: git branch -a returned empty, trying for-each-ref fallback');
       const fallbackBranches = await this.getBranchesWithForEachRef(repoPath, currentBranch);
       branches.push(...fallbackBranches);
     }
-
-    console.log('[GitService] getBranches returning:', {
-      totalBranches: branches.length,
-      localBranches: branches.filter(b => !b.isRemote).length,
-      remoteBranches: branches.filter(b => b.isRemote).length,
-      branchNames: branches.map(b => b.name),
-    });
 
     return branches;
   }
@@ -285,8 +251,7 @@ export class GitService {
           }
         }
       }
-    } catch (error) {
-      console.log('[GitService] enrichBranchesWithTrackingInfo failed:', error);
+    } catch {
       // Continue without enrichment - basic branch info is still useful
     }
   }
@@ -307,8 +272,6 @@ export class GitService {
       '--format="%(refname:short)|%(objectname:short)|%(subject)|%(upstream:short)|%(upstream:track)"',
       'refs/heads/',
     ]);
-
-    console.log('[GitService] getBranchesWithForEachRef local output:', localOutput);
 
     for (const line of localOutput.split('\n')) {
       if (!line.trim()) continue;
@@ -353,8 +316,6 @@ export class GitService {
       '--format="%(refname:short)|%(objectname:short)|%(subject)"',
       'refs/remotes/',
     ]);
-
-    console.log('[GitService] getBranchesWithForEachRef remote output:', remoteOutput);
 
     for (const line of remoteOutput.split('\n')) {
       if (!line.trim() || line.includes('/HEAD')) continue;

@@ -48,9 +48,8 @@ const safeFit = (fitAddon: FitAddon | null, terminal: Terminal | null, container
   try {
     fitAddon.fit();
     return { cols: terminal.cols, rows: terminal.rows };
-  } catch (error) {
+  } catch {
     // Silently handle - terminal may be in transition state
-    console.debug('[TerminalView] safeFit skipped:', error);
     return null;
   }
 };
@@ -82,13 +81,12 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
   sessionIdRef.current = sessionId;
 
   const handleOutput = useCallback((data: string) => {
-    console.log(`[TerminalView] Received output for session ${sessionIdRef.current}:`, data.substring(0, 100));
     if (isDisposedRef.current) return;
     if (xtermRef.current && isTerminalReady(xtermRef.current)) {
       try {
         xtermRef.current.write(data);
-      } catch (error) {
-        console.debug('[TerminalView] Write error (terminal may be disposed):', error);
+      } catch {
+        // Terminal may be disposed - ignore
       }
     }
   }, []);
@@ -203,7 +201,6 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
           // Now connect to terminal session (after terminal is fully ready)
           // Guard against double-connection from React StrictMode's double-mounting
           if (!isDisposedRef.current && !connectionRef.current) {
-            console.log(`[TerminalView] Connecting to terminal session ${sessionId}`);
             connectionRef.current = connectTerminal(sessionId, handleOutput, handleClose);
             setStatus('connected');
           }
@@ -214,7 +211,6 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
           }, 50);
         } else {
           // Give up on retries, try to connect anyway
-          console.warn('[TerminalView] Initial fit failed after retries, connecting anyway');
           isReadyRef.current = true;
           // Guard against double-connection from React StrictMode's double-mounting
           if (!isDisposedRef.current && !connectionRef.current) {
@@ -281,8 +277,8 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
       if (xtermRef.current) {
         try {
           xtermRef.current.dispose();
-        } catch (error) {
-          console.debug('[TerminalView] Dispose error (safe to ignore):', error);
+        } catch {
+          // Safe to ignore - terminal may already be disposed
         }
         xtermRef.current = null;
       }
@@ -297,8 +293,8 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
     if (isFocused && xtermRef.current && !isDisposedRef.current && isReadyRef.current) {
       try {
         xtermRef.current.focus();
-      } catch (error) {
-        console.debug('[TerminalView] Focus error (safe to ignore):', error);
+      } catch {
+        // Safe to ignore - terminal may be in transition
       }
     }
   }, [isFocused]);

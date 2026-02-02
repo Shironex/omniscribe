@@ -145,10 +145,8 @@ export function ConnectedTerminalGrid({ className }: ConnectedTerminalGridProps)
   // Fetch git data when active project changes
   useEffect(() => {
     if (activeProjectPath) {
-      console.log('[ConnectedTerminalGrid] Active project changed, fetching git data for:', activeProjectPath);
       setGitProjectPath(activeProjectPath);
       fetchBranches(activeProjectPath);
-      // Note: fetchCurrentBranch is redundant since fetchBranches already sets currentBranch
     }
   }, [activeProjectPath, setGitProjectPath, fetchBranches]);
 
@@ -256,8 +254,7 @@ export function ConnectedTerminalGrid({ className }: ConnectedTerminalGridProps)
   }, []);
 
   // Handle session close from terminal
-  const handleSessionClose = useCallback((sessionId: string, exitCode: number) => {
-    console.log(`Session ${sessionId} closed with exit code ${exitCode}`);
+  const handleSessionClose = useCallback((_sessionId: string, _exitCode: number) => {
     // Session will be removed by the socket event handler
   }, []);
 

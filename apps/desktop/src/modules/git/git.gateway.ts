@@ -82,10 +82,8 @@ export class GitGateway {
   ): Promise<BranchesResponse> {
     try {
       const { projectPath } = payload;
-      console.log('[GitGateway] handleBranches called for:', projectPath);
 
       if (!projectPath) {
-        console.log('[GitGateway] handleBranches: No project path provided');
         return {
           branches: [],
           currentBranch: '',
@@ -97,12 +95,6 @@ export class GitGateway {
         this.gitService.getBranches(projectPath),
         this.gitService.getCurrentBranch(projectPath),
       ]);
-
-      console.log('[GitGateway] handleBranches response:', {
-        branchCount: branches.length,
-        currentBranch,
-        branchNames: branches.map((b) => b.name).slice(0, 5),
-      });
 
       // Emit to all clients watching this project
       client.join(`git:${projectPath}`);
