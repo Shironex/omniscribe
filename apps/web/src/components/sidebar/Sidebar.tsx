@@ -11,7 +11,15 @@ import {
   Moon,
   Sun,
   GripVertical,
+  ChevronDown,
+  ChevronRight,
 } from 'lucide-react';
+import { GitSection } from './GitSection';
+import { SessionsSection } from './SessionsSection';
+import { McpSection } from './McpSection';
+import { QuickActionsSection } from './QuickActionsSection';
+import { useSessionStore } from '../../stores';
+import { QuickAction } from '@omniscribe/shared';
 
 type Theme = 'dark' | 'light';
 type SidebarTab = 'config' | 'processes';
@@ -28,28 +36,48 @@ interface SidebarProps {
 const MIN_WIDTH = 180;
 const MAX_WIDTH = 320;
 
-function SidebarCard({
-  icon: Icon,
-  title,
-  children,
-}: {
+interface CollapsibleSectionProps {
   icon: React.ComponentType<{ size?: number | string; className?: string }>;
   title: string;
   children?: React.ReactNode;
-}) {
+  defaultExpanded?: boolean;
+}
+
+function CollapsibleSection({
+  icon: Icon,
+  title,
+  children,
+  defaultExpanded = true,
+}: CollapsibleSectionProps) {
+  const [isExpanded, setIsExpanded] = useState(defaultExpanded);
+
   return (
     <div className="bg-omniscribe-card rounded-lg border border-omniscribe-border overflow-hidden">
-      <div className="flex items-center gap-2 px-3 py-2 border-b border-omniscribe-border">
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className={clsx(
+          'w-full flex items-center gap-2 px-3 py-2',
+          'hover:bg-omniscribe-surface/50 transition-colors',
+          isExpanded && 'border-b border-omniscribe-border'
+        )}
+      >
         <Icon size={14} className="text-omniscribe-text-muted" />
-        <span className="text-xs font-medium text-omniscribe-text-secondary uppercase tracking-wide">
+        <span className="text-xs font-medium text-omniscribe-text-secondary uppercase tracking-wide flex-1 text-left">
           {title}
         </span>
-      </div>
-      <div className="p-3">
-        {children || (
-          <p className="text-xs text-omniscribe-text-muted">No items configured</p>
+        {isExpanded ? (
+          <ChevronDown size={14} className="text-omniscribe-text-muted" />
+        ) : (
+          <ChevronRight size={14} className="text-omniscribe-text-muted" />
         )}
-      </div>
+      </button>
+      {isExpanded && (
+        <div className="p-3">
+          {children || (
+            <p className="text-xs text-omniscribe-text-muted">No items configured</p>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -66,10 +94,31 @@ export function Sidebar({
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
 
+  // Get sessions for the Processes tab
+  const sessions = useSessionStore((state) => state.sessions);
+  const activeSessionCount = sessions.filter(
+    (s) => s.status === 'active' || s.status === 'thinking' || s.status === 'executing'
+  ).length;
+
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     setIsResizing(true);
   }, []);
+
+  const handleSessionClick = (sessionId: string) => {
+    // TODO: Implement session focus - emit event or call workspace store
+    console.log('[Sidebar] Focus session:', sessionId);
+  };
+
+  const handleNewSession = () => {
+    // TODO: Implement new session creation
+    console.log('[Sidebar] Create new session');
+  };
+
+  const handleActionExecute = (action: QuickAction) => {
+    // TODO: Implement action execution via socket or IPC
+    console.log('[Sidebar] Execute action:', action.id, action.handler, action.params);
+  };
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -137,21 +186,38 @@ export function Sidebar({
       <div className="flex-1 overflow-y-auto p-3 space-y-3">
         {activeTab === 'config' ? (
           <>
-            <SidebarCard icon={GitBranch} title="Git Repository">
-              <div className="text-xs text-omniscribe-text-secondary font-mono">
-                main
-              </div>
-            </SidebarCard>
+            {/* Git Repository Section */}
+            <CollapsibleSection icon={GitBranch} title="Git Repository">
+              <GitSection />
+            </CollapsibleSection>
 
-            <SidebarCard icon={FileText} title="Project Context" />
+            {/* Project Context Section */}
+            <CollapsibleSection icon={FileText} title="Project Context" defaultExpanded={false}>
+              <p className="text-xs text-omniscribe-text-muted">
+                Project context files will be shown here.
+              </p>
+            </CollapsibleSection>
 
-            <SidebarCard icon={Layers} title="Sessions" />
+            {/* Sessions Section */}
+            <CollapsibleSection icon={Layers} title="Sessions">
+              <SessionsSection
+                onSessionClick={handleSessionClick}
+                onNewSession={handleNewSession}
+              />
+            </CollapsibleSection>
 
-            <SidebarCard icon={Server} title="MCP Servers" />
+            {/* MCP Servers Section */}
+            <CollapsibleSection icon={Server} title="MCP Servers">
+              <McpSection />
+            </CollapsibleSection>
 
-            <SidebarCard icon={Zap} title="Quick Actions" />
+            {/* Quick Actions Section */}
+            <CollapsibleSection icon={Zap} title="Quick Actions">
+              <QuickActionsSection onActionExecute={handleActionExecute} />
+            </CollapsibleSection>
 
-            <SidebarCard icon={Palette} title="Appearance">
+            {/* Appearance Section */}
+            <CollapsibleSection icon={Palette} title="Appearance" defaultExpanded={false}>
               <button
                 onClick={onToggleTheme}
                 className={clsx(
@@ -164,11 +230,22 @@ export function Sidebar({
                 {theme === 'dark' ? <Moon size={14} /> : <Sun size={14} />}
                 <span>{theme === 'dark' ? 'Dark' : 'Light'} Theme</span>
               </button>
-            </SidebarCard>
+            </CollapsibleSection>
           </>
         ) : (
-          <div className="text-xs text-omniscribe-text-muted text-center py-8">
-            No active processes
+          /* Processes Tab */
+          <div className="space-y-3">
+            {activeSessionCount > 0 ? (
+              <CollapsibleSection icon={Layers} title={`Active Sessions (${activeSessionCount})`}>
+                <SessionsSection
+                  onSessionClick={handleSessionClick}
+                />
+              </CollapsibleSection>
+            ) : (
+              <div className="text-xs text-omniscribe-text-muted text-center py-8">
+                No active processes
+              </div>
+            )}
           </div>
         )}
       </div>

@@ -9,8 +9,11 @@ import { WorktreeInfo } from '@omniscribe/shared';
 
 const execAsync = promisify(exec);
 
-/** Base directory for worktrees */
-const BASE_DIR = path.join(os.homedir(), '.omniscribe', 'worktrees');
+/** Base directory for worktrees (follows XDG spec on Linux, .omniscribe on Windows/macOS) */
+const BASE_DIR =
+  process.platform === 'linux'
+    ? path.join(os.homedir(), '.local', 'share', 'omniscribe', 'worktrees')
+    : path.join(os.homedir(), '.omniscribe', 'worktrees');
 
 /** Default timeout for git commands (30 seconds) */
 const GIT_TIMEOUT_MS = 30000;
@@ -51,19 +54,21 @@ export class WorktreeService {
 
   /**
    * Compute the worktree path for a given project and branch
-   * Uses SHA256 hash to create a unique, filesystem-safe path
+   * Uses SHA256 hash of repo path (first 16 hex chars) to create a unique, filesystem-safe path
+   * Structure: {BASE_DIR}/{repo-hash}/{sanitized-branch}/
    */
   getWorktreePath(projectPath: string, branch: string): string {
-    const hash = crypto
+    // Hash the repository path only (not combined with branch)
+    const repoHash = crypto
       .createHash('sha256')
-      .update(`${projectPath}:${branch}`)
+      .update(projectPath)
       .digest('hex')
       .substring(0, 16);
 
-    // Sanitize branch name for use in path
-    const safeBranch = branch.replace(/[^a-zA-Z0-9-_]/g, '_');
+    // Sanitize branch name - remove /, \, :, and other unsafe chars
+    const safeBranch = branch.replace(/[/\\:*?"<>|]/g, '_');
 
-    return path.join(BASE_DIR, `${safeBranch}-${hash}`);
+    return path.join(BASE_DIR, repoHash, safeBranch);
   }
 
   /**
@@ -94,8 +99,9 @@ export class WorktreeService {
 
     const worktreePath = this.getWorktreePath(projectPath, branch);
 
-    // Ensure the base directory exists
-    await fs.mkdir(BASE_DIR, { recursive: true });
+    // Ensure the parent directory exists (BASE_DIR/repo-hash/)
+    const parentDir = path.dirname(worktreePath);
+    await fs.mkdir(parentDir, { recursive: true });
 
     // Check if worktree already exists
     const existingWorktrees = await this.list(projectPath);

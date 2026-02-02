@@ -1,7 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import { exec, ExecException } from 'child_process';
 import { promisify } from 'util';
-import { BranchInfo, CommitInfo, RemoteInfo, GitUserConfig } from '@omniscribe/shared';
+import {
+  BranchInfo,
+  CommitInfo,
+  RemoteInfo,
+  GitUserConfig,
+} from '@omniscribe/shared';
+import type {
+  GitRepoStatus,
+  GitFileChange,
+  GitFileStatus,
+} from '@omniscribe/shared';
 
 const execAsync = promisify(exec);
 
@@ -395,5 +405,330 @@ export class GitService {
       '--show-toplevel',
     ]);
     return stdout.trim();
+  }
+
+  /**
+   * Get full repository status including staged, unstaged, and untracked files
+   */
+  async getStatus(projectPath: string): Promise<GitRepoStatus> {
+    const isRepo = await this.isGitRepository(projectPath);
+
+    if (!isRepo) {
+      return {
+        isRepo: false,
+        isClean: true,
+        staged: [],
+        unstaged: [],
+        untracked: [],
+        hasConflicts: false,
+        isRebasing: false,
+        isMerging: false,
+        stashCount: 0,
+      };
+    }
+
+    const rootPath = await this.getRepositoryRoot(projectPath);
+    const currentBranchName = await this.getCurrentBranch(projectPath);
+
+    // Get status using porcelain v2 format
+    const { stdout: statusOutput } = await this.execGit(projectPath, [
+      'status',
+      '--porcelain=v2',
+      '--branch',
+      '--untracked-files=all',
+    ]);
+
+    const staged: GitFileChange[] = [];
+    const unstaged: GitFileChange[] = [];
+    const untracked: string[] = [];
+    const conflictedFiles: string[] = [];
+    let ahead = 0;
+    let behind = 0;
+    let upstream: string | undefined;
+
+    for (const line of statusOutput.split('\n')) {
+      if (!line) continue;
+
+      if (line.startsWith('# branch.ab')) {
+        // Parse ahead/behind info: # branch.ab +1 -2
+        const match = line.match(/\+(\d+)\s+-(\d+)/);
+        if (match) {
+          ahead = parseInt(match[1], 10);
+          behind = parseInt(match[2], 10);
+        }
+      } else if (line.startsWith('# branch.upstream')) {
+        upstream = line.split(' ')[1];
+      } else if (line.startsWith('1 ') || line.startsWith('2 ')) {
+        // Ordinary changed entries (1) or renamed/copied entries (2)
+        const parts = line.split(' ');
+        const xy = parts[1]; // XY status codes
+        const stagedStatus = xy[0];
+        const unstagedStatus = xy[1];
+
+        // For renamed entries (line starts with 2), path format is different
+        let filePath: string;
+        let oldPath: string | undefined;
+
+        if (line.startsWith('2 ')) {
+          // Renamed entry format: 2 XY sub mH mI mW hH hI path\torigPath
+          const pathPart = parts.slice(9).join(' ');
+          const [newPath, origPath] = pathPart.split('\t');
+          filePath = newPath;
+          oldPath = origPath;
+        } else {
+          // Ordinary entry format: 1 XY sub mH mI mW hH hI path
+          filePath = parts.slice(8).join(' ');
+        }
+
+        // Parse staged changes
+        if (stagedStatus !== '.') {
+          staged.push({
+            path: filePath,
+            oldPath,
+            status: this.parseStatusCode(stagedStatus),
+            staged: true,
+          });
+        }
+
+        // Parse unstaged changes
+        if (unstagedStatus !== '.') {
+          unstaged.push({
+            path: filePath,
+            status: this.parseStatusCode(unstagedStatus),
+            staged: false,
+          });
+        }
+      } else if (line.startsWith('u ')) {
+        // Unmerged entries (conflicts)
+        const parts = line.split(' ');
+        const filePath = parts.slice(10).join(' ');
+        conflictedFiles.push(filePath);
+      } else if (line.startsWith('? ')) {
+        // Untracked files
+        const filePath = line.substring(2);
+        untracked.push(filePath);
+      }
+    }
+
+    // Check for rebase/merge state
+    const isRebasing = await this.checkRebaseState(projectPath);
+    const isMerging = await this.checkMergeState(projectPath);
+
+    // Get stash count
+    const stashCount = await this.getStashCount(projectPath);
+
+    // Build current branch info
+    const currentBranch: BranchInfo = {
+      name: currentBranchName,
+      isCurrent: true,
+      isRemote: false,
+      ahead,
+      behind,
+      upstream,
+    };
+
+    if (upstream) {
+      const remoteParts = upstream.split('/');
+      currentBranch.remote = remoteParts[0];
+    }
+
+    return {
+      isRepo: true,
+      currentBranch,
+      rootPath,
+      isClean: staged.length === 0 && unstaged.length === 0 && untracked.length === 0,
+      staged,
+      unstaged,
+      untracked,
+      hasConflicts: conflictedFiles.length > 0,
+      conflictedFiles: conflictedFiles.length > 0 ? conflictedFiles : undefined,
+      isRebasing,
+      isMerging,
+      stashCount,
+    };
+  }
+
+  /**
+   * Parse git status code to GitFileStatus
+   */
+  private parseStatusCode(code: string): GitFileStatus {
+    switch (code) {
+      case 'M':
+        return 'modified';
+      case 'A':
+        return 'added';
+      case 'D':
+        return 'deleted';
+      case 'R':
+        return 'renamed';
+      case 'C':
+        return 'copied';
+      case 'U':
+        return 'conflicted';
+      default:
+        return 'modified';
+    }
+  }
+
+  /**
+   * Check if rebase is in progress
+   */
+  private async checkRebaseState(projectPath: string): Promise<boolean> {
+    try {
+      const { stdout } = await this.execGit(projectPath, [
+        'rev-parse',
+        '--git-path',
+        'rebase-merge',
+      ]);
+      const rebaseMergePath = stdout.trim();
+
+      const { stdout: rebaseApplyOutput } = await this.execGit(projectPath, [
+        'rev-parse',
+        '--git-path',
+        'rebase-apply',
+      ]);
+      const rebaseApplyPath = rebaseApplyOutput.trim();
+
+      // Check if either rebase directory exists
+      const { stdout: lsOutput } = await this.execGit(projectPath, [
+        'ls-files',
+        '--error-unmatch',
+        rebaseMergePath,
+      ]).catch(() => ({ stdout: '' }));
+
+      if (lsOutput) return true;
+
+      const { stdout: lsApplyOutput } = await this.execGit(projectPath, [
+        'ls-files',
+        '--error-unmatch',
+        rebaseApplyPath,
+      ]).catch(() => ({ stdout: '' }));
+
+      return !!lsApplyOutput;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Check if merge is in progress
+   */
+  private async checkMergeState(projectPath: string): Promise<boolean> {
+    try {
+      const { stdout } = await this.execGit(projectPath, [
+        'rev-parse',
+        '--git-path',
+        'MERGE_HEAD',
+      ]);
+      const mergePath = stdout.trim();
+
+      // Try to read MERGE_HEAD - if it exists, merge is in progress
+      await this.execGit(projectPath, ['cat-file', '-e', `HEAD:${mergePath}`]);
+      return true;
+    } catch {
+      // MERGE_HEAD doesn't exist, no merge in progress
+      return false;
+    }
+  }
+
+  /**
+   * Get stash count
+   */
+  private async getStashCount(projectPath: string): Promise<number> {
+    try {
+      const { stdout } = await this.execGit(projectPath, ['stash', 'list']);
+      if (!stdout.trim()) return 0;
+      return stdout.trim().split('\n').filter(Boolean).length;
+    } catch {
+      return 0;
+    }
+  }
+
+  /**
+   * Stage files for commit
+   */
+  async stage(projectPath: string, files: string[]): Promise<void> {
+    if (files.length === 0) return;
+
+    await this.execGit(projectPath, ['add', '--', ...files]);
+  }
+
+  /**
+   * Unstage files from the index
+   */
+  async unstage(projectPath: string, files: string[]): Promise<void> {
+    if (files.length === 0) return;
+
+    await this.execGit(projectPath, ['restore', '--staged', '--', ...files]);
+  }
+
+  /**
+   * Create a commit with the given message
+   * @returns The commit hash of the new commit
+   */
+  async commit(projectPath: string, message: string): Promise<string> {
+    await this.execGit(projectPath, ['commit', '-m', message]);
+
+    // Get the hash of the newly created commit
+    const { stdout } = await this.execGit(projectPath, ['rev-parse', 'HEAD']);
+    return stdout.trim();
+  }
+
+  /**
+   * Push commits to a remote repository
+   */
+  async push(
+    projectPath: string,
+    remote: string = 'origin',
+    branch?: string,
+  ): Promise<void> {
+    const args = ['push', remote];
+    if (branch) {
+      args.push(branch);
+    }
+    await this.execGit(projectPath, args);
+  }
+
+  /**
+   * Pull changes from a remote repository
+   */
+  async pull(
+    projectPath: string,
+    remote: string = 'origin',
+    branch?: string,
+  ): Promise<void> {
+    const args = ['pull', remote];
+    if (branch) {
+      args.push(branch);
+    }
+    await this.execGit(projectPath, args);
+  }
+
+  /**
+   * Fetch updates from a remote repository
+   */
+  async fetch(projectPath: string, remote?: string): Promise<void> {
+    const args = ['fetch'];
+    if (remote) {
+      args.push(remote);
+    } else {
+      args.push('--all');
+    }
+    await this.execGit(projectPath, args);
+  }
+
+  /**
+   * Get diff for the working tree or a specific file
+   * @param projectPath - Repository path
+   * @param file - Optional specific file to diff
+   * @returns The diff output as a string
+   */
+  async diff(projectPath: string, file?: string): Promise<string> {
+    const args = ['diff'];
+    if (file) {
+      args.push('--', file);
+    }
+    const { stdout } = await this.execGit(projectPath, args);
+    return stdout;
   }
 }

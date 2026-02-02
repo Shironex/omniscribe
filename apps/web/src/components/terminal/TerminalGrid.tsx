@@ -17,7 +17,7 @@ interface TerminalGridProps {
   onFocusSession: (sessionId: string) => void;
   onAddSlot: () => void;
   onRemoveSlot: (slotId: string) => void;
-  onUpdateSlot: (slotId: string, updates: Partial<Pick<PreLaunchSlot, 'aiMode' | 'branch'>>) => void;
+  onUpdateSlot: (slotId: string, updates: Partial<Pick<PreLaunchSlot, 'aiMode' | 'branch' | 'mcpServers'>>) => void;
   onLaunch: (slotId: string) => void;
   onKill: (sessionId: string) => void;
   onSessionClose?: (sessionId: string, exitCode: number) => void;

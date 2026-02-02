@@ -7,6 +7,8 @@ interface PtySession {
   pty: pty.IPty;
   outputBuffer: string;
   flushTimer: NodeJS.Timeout | null;
+  /** Session ID for external reference (e.g., Omniscribe session ID) */
+  externalId?: string;
 }
 
 @Injectable()
@@ -18,22 +20,42 @@ export class TerminalService implements OnModuleDestroy {
   constructor(private readonly eventEmitter: EventEmitter2) {}
 
   /**
-   * Spawn a new terminal session
+   * Spawn a new terminal session with a shell
    * @param cwd Working directory for the terminal
    * @param env Environment variables to pass to the terminal
    * @returns Session ID for the new terminal
    */
   spawn(cwd?: string, env?: Record<string, string>): number {
-    const sessionId = this.nextSessionId++;
-
     // Determine shell based on platform
-    const shell = os.platform() === 'win32'
-      ? process.env.COMSPEC || 'cmd.exe'
-      : process.env.SHELL || '/bin/bash';
+    const shell =
+      os.platform() === 'win32'
+        ? process.env.COMSPEC || 'cmd.exe'
+        : process.env.SHELL || '/bin/bash';
 
     const shellArgs = os.platform() === 'win32' ? [] : [];
 
-    const ptyProcess = pty.spawn(shell, shellArgs, {
+    return this.spawnCommand(shell, shellArgs, cwd, env);
+  }
+
+  /**
+   * Spawn a new terminal session with a specific command
+   * @param command The command/executable to run
+   * @param args Arguments for the command
+   * @param cwd Working directory for the terminal
+   * @param env Environment variables to pass to the terminal
+   * @param externalId Optional external session ID for reference
+   * @returns Session ID for the new terminal
+   */
+  spawnCommand(
+    command: string,
+    args: string[] = [],
+    cwd?: string,
+    env?: Record<string, string>,
+    externalId?: string
+  ): number {
+    const sessionId = this.nextSessionId++;
+
+    const ptyProcess = pty.spawn(command, args, {
       name: 'xterm-256color',
       cols: 80,
       rows: 24,
@@ -49,6 +71,7 @@ export class TerminalService implements OnModuleDestroy {
       pty: ptyProcess,
       outputBuffer: '',
       flushTimer: null,
+      externalId,
     };
 
     this.sessions.set(sessionId, session);
@@ -69,12 +92,36 @@ export class TerminalService implements OnModuleDestroy {
       this.cleanup(sessionId);
       this.eventEmitter.emit('terminal.closed', {
         sessionId,
+        externalId: session.externalId,
         exitCode,
         signal,
       });
     });
 
     return sessionId;
+  }
+
+  /**
+   * Get the external ID associated with a terminal session
+   * @param sessionId The terminal session ID
+   * @returns The external ID if set, undefined otherwise
+   */
+  getExternalId(sessionId: number): string | undefined {
+    return this.sessions.get(sessionId)?.externalId;
+  }
+
+  /**
+   * Find a terminal session by its external ID
+   * @param externalId The external session ID to search for
+   * @returns The terminal session ID if found, undefined otherwise
+   */
+  findByExternalId(externalId: string): number | undefined {
+    for (const [sessionId, session] of this.sessions.entries()) {
+      if (session.externalId === externalId) {
+        return sessionId;
+      }
+    }
+    return undefined;
   }
 
   /**

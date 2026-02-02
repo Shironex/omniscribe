@@ -30,6 +30,15 @@ interface CreateBranchPayload {
   startPoint?: string;
 }
 
+interface CurrentBranchPayload {
+  projectPath: string;
+}
+
+interface CurrentBranchResponse {
+  currentBranch: string;
+  error?: string;
+}
+
 interface BranchesResponse {
   branches: BranchInfo[];
   currentBranch: string;
@@ -146,7 +155,7 @@ export class GitGateway {
 
   @SubscribeMessage('git:checkout')
   async handleCheckout(
-    @ConnectedSocket() client: Socket,
+    @ConnectedSocket() _client: Socket,
     @MessageBody() payload: CheckoutPayload,
   ): Promise<CheckoutResponse> {
     try {
@@ -185,7 +194,7 @@ export class GitGateway {
 
   @SubscribeMessage('git:create-branch')
   async handleCreateBranch(
-    @ConnectedSocket() client: Socket,
+    @ConnectedSocket() _client: Socket,
     @MessageBody() payload: CreateBranchPayload,
   ): Promise<CreateBranchResponse> {
     try {
@@ -221,6 +230,40 @@ export class GitGateway {
 
       return {
         success: false,
+        error: message,
+      };
+    }
+  }
+
+  @SubscribeMessage('git:current-branch')
+  async handleCurrentBranch(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() payload: CurrentBranchPayload,
+  ): Promise<CurrentBranchResponse> {
+    try {
+      const { projectPath } = payload;
+
+      if (!projectPath) {
+        return {
+          currentBranch: '',
+          error: 'Project path is required',
+        };
+      }
+
+      const currentBranch = await this.gitService.getCurrentBranch(projectPath);
+
+      // Join the project room for updates
+      client.join(`git:${projectPath}`);
+
+      return {
+        currentBranch,
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      console.error('[GitGateway] Error getting current branch:', message);
+
+      return {
+        currentBranch: '',
         error: message,
       };
     }
