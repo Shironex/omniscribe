@@ -1,8 +1,8 @@
+import { useCallback, useMemo } from 'react';
 import {
   ProjectTabs,
   TopBar,
   BottomBar,
-  Sidebar,
 } from './components';
 import { TerminalGrid } from './components/terminal/TerminalGrid';
 import { IdleLandingView } from './components/shared/IdleLandingView';
@@ -16,10 +16,15 @@ import {
   useProjectGit,
   useSessionLifecycle,
 } from './hooks';
+import { useQuickActionStore } from './stores';
+import { writeToTerminal } from './lib/terminal';
 
 function App() {
   // Initialize app (socket and store listeners)
   useAppInitialization();
+
+  // Theme synchronization between project tabs and settings
+  useWorkspacePreferences();
 
   // Workspace tabs (must come first as other hooks depend on activeProjectPath)
   const {
@@ -32,16 +37,8 @@ function App() {
     handleSelectDirectory,
   } = useWorkspaceTabs();
 
-  // Workspace preferences (sidebar and theme sync)
-  const {
-    sidebarOpen,
-    sidebarWidth,
-    handleToggleSidebar,
-    handleSidebarWidthChange,
-  } = useWorkspacePreferences();
-
   // Project git (branches and MCP discovery on project change)
-  const { branches, currentBranch, handleBranchClick } = useProjectGit(activeProjectPath);
+  const { branches, currentBranch } = useProjectGit(activeProjectPath);
 
   // Pre-launch slots (needs currentBranch from git hook)
   // Note: updateSession is passed from sessions hook, but we need to call useProjectSessions first
@@ -73,6 +70,58 @@ function App() {
   // Session lifecycle (stop all, kill session)
   const { handleStopAll, handleKillSession } = useSessionLifecycle(activeProjectSessions);
 
+  // Quick actions - use raw actions and filter with useMemo to avoid infinite loop
+  const allQuickActions = useQuickActionStore((state) => state.actions);
+  const quickActions = useMemo(() =>
+    allQuickActions.filter((a) => a.enabled !== false),
+    [allQuickActions]
+  );
+  const quickActionsForTopBar = useMemo(() =>
+    quickActions.map(a => ({ id: a.id, title: a.title, icon: a.icon, shortcut: a.shortcut })),
+    [quickActions]
+  );
+
+  // Handle quick action execution (writes command to terminal)
+  const handleQuickAction = useCallback((sessionId: string, actionId: string) => {
+    const action = quickActions.find(a => a.id === actionId);
+    if (!action) return;
+
+    // Find the session to get terminalSessionId
+    const session = terminalSessions.find(s => s.id === sessionId);
+    if (!session?.terminalSessionId) {
+      console.warn('[App] No terminal session for quick action');
+      return;
+    }
+
+    // Build command based on handler type
+    const params = action.params ?? {};
+    let command = '';
+    if (action.handler === 'terminal:execute' || action.handler === 'shell') {
+      command = String(params.command ?? params.cmd ?? '');
+    } else if (action.handler === 'script') {
+      command = String(params.path ?? params.script ?? '');
+    } else {
+      // For other handlers, use command param or action id
+      command = String(params.command ?? params.cmd ?? action.id);
+    }
+
+    if (command) {
+      writeToTerminal(session.terminalSessionId, command + '\n');
+    }
+  }, [quickActions, terminalSessions]);
+
+  // Handle quick action from TopBar (uses focused session)
+  const handleTopBarQuickAction = useCallback((actionId: string) => {
+    // Use focused session or first active session
+    const targetSession = focusedSessionId
+      ? terminalSessions.find(s => s.id === focusedSessionId)
+      : terminalSessions.find(s => s.terminalSessionId !== undefined);
+
+    if (targetSession) {
+      handleQuickAction(targetSession.id, actionId);
+    }
+  }, [focusedSessionId, terminalSessions, handleQuickAction]);
+
   // Determine whether to show IdleLandingView or TerminalGrid
   const hasContent = terminalSessions.length > 0 || preLaunchSlots.length > 0;
 
@@ -85,51 +134,41 @@ function App() {
         onSelectTab={handleSelectTab}
         onCloseTab={handleCloseTab}
         onNewTab={handleNewTab}
-        sidebarOpen={sidebarOpen}
-        onToggleSidebar={handleToggleSidebar}
       />
 
       {/* Top bar with branch and status */}
       <TopBar
         currentBranch={currentBranch}
-        onBranchClick={handleBranchClick}
         statusCounts={statusCounts}
+        quickActions={quickActionsForTopBar}
+        onQuickAction={handleTopBarQuickAction}
       />
 
-      {/* Main content area with sidebar */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Sidebar */}
-        <Sidebar
-          collapsed={!sidebarOpen}
-          width={sidebarWidth}
-          onWidthChange={handleSidebarWidthChange}
-        />
-
-        {/* Main content */}
-        <main className="flex-1 flex overflow-hidden bg-background">
-          {activeProjectPath ? (
-            hasContent ? (
-              <TerminalGrid
-                sessions={terminalSessions}
-                preLaunchSlots={preLaunchSlots}
-                branches={branches}
-                focusedSessionId={focusedSessionId}
-                onFocusSession={handleFocusSession}
-                onAddSlot={handleAddSession}
-                onRemoveSlot={handleRemoveSlot}
-                onUpdateSlot={handleUpdateSlot}
-                onLaunch={handleLaunchSlot}
-                onKill={handleKillSession}
-                onSessionClose={handleSessionClose}
-              />
-            ) : (
-              <IdleLandingView onAddSession={handleAddSession} />
-            )
+      {/* Main content */}
+      <main className="flex-1 flex overflow-hidden bg-background">
+        {activeProjectPath ? (
+          hasContent ? (
+            <TerminalGrid
+              sessions={terminalSessions}
+              preLaunchSlots={preLaunchSlots}
+              branches={branches}
+              focusedSessionId={focusedSessionId}
+              onFocusSession={handleFocusSession}
+              onAddSlot={handleAddSession}
+              onRemoveSlot={handleRemoveSlot}
+              onUpdateSlot={handleUpdateSlot}
+              onLaunch={handleLaunchSlot}
+              onKill={handleKillSession}
+              onSessionClose={handleSessionClose}
+              onQuickAction={handleQuickAction}
+            />
           ) : (
-            <IdleLandingView onAddSession={handleSelectDirectory} />
-          )}
-        </main>
-      </div>
+            <IdleLandingView onAddSession={handleAddSession} />
+          )
+        ) : (
+          <IdleLandingView onAddSession={handleSelectDirectory} />
+        )}
+      </main>
 
       {/* Bottom bar */}
       <BottomBar

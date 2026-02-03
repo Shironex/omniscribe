@@ -1,6 +1,6 @@
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { PanelLeft, X, Plus, Minus, Square, XIcon } from 'lucide-react';
+import { X, Plus, Minus, Square, XIcon } from 'lucide-react';
 import { StatusDot, SessionStatus } from './StatusLegend';
 
 export interface Tab {
@@ -15,8 +15,6 @@ interface ProjectTabsProps {
   onSelectTab: (tabId: string) => void;
   onCloseTab: (tabId: string) => void;
   onNewTab: () => void;
-  sidebarOpen: boolean;
-  onToggleSidebar: () => void;
   className?: string;
 }
 
@@ -26,8 +24,6 @@ export function ProjectTabs({
   onSelectTab,
   onCloseTab,
   onNewTab,
-  sidebarOpen,
-  onToggleSidebar,
   className,
 }: ProjectTabsProps) {
   const isElectron = typeof window !== 'undefined' && !!window.electronAPI;
@@ -42,22 +38,6 @@ export function ProjectTabs({
         )
       )}
     >
-      {/* Sidebar toggle */}
-      <button
-        onClick={onToggleSidebar}
-        className={clsx(
-          'no-drag h-full px-3 flex items-center justify-center',
-          'hover:bg-card transition-colors',
-          'text-foreground-secondary hover:text-foreground'
-        )}
-        aria-label={sidebarOpen ? 'Close sidebar' : 'Open sidebar'}
-      >
-        <PanelLeft size={18} />
-      </button>
-
-      {/* Divider */}
-      <div className="w-px h-5 bg-border" />
-
       {/* Tab list */}
       <div className="flex-1 flex items-center overflow-x-auto no-scrollbar">
         {tabs.map((tab) => (

@@ -1,9 +1,16 @@
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { Bot, Sparkles, X, Settings, GitBranch } from 'lucide-react';
+import { Bot, Sparkles, X, Settings, GitBranch, Zap, MoreVertical, ArrowUp, ArrowDown } from 'lucide-react';
 import { SessionStatus, StatusDot } from '../shared/StatusLegend';
+import { useState, useRef, useEffect } from 'react';
 
 export type AIMode = 'claude' | 'gemini' | 'codex' | 'plain';
+
+export interface GitBranchInfo {
+  name: string;
+  ahead?: number;
+  behind?: number;
+}
 
 export interface TerminalSession {
   id: string;
@@ -16,10 +23,25 @@ export interface TerminalSession {
   terminalSessionId?: number;
 }
 
+interface QuickAction {
+  id: string;
+  label: string;
+  icon?: React.ReactNode;
+}
+
+const defaultQuickActions: QuickAction[] = [
+  { id: 'commit', label: 'Git Commit' },
+  { id: 'push', label: 'Git Push' },
+  { id: 'pull', label: 'Git Pull' },
+  { id: 'status', label: 'Git Status' },
+];
+
 interface TerminalHeaderProps {
   session: TerminalSession;
+  gitBranch?: GitBranchInfo;
   onSettingsClick?: () => void;
   onClose: () => void;
+  onQuickAction?: (actionId: string) => void;
   className?: string;
 }
 
@@ -32,84 +54,179 @@ const aiModeConfig: Record<AIMode, { icon: typeof Bot; label: string; color: str
 
 export function TerminalHeader({
   session,
+  gitBranch,
   onSettingsClick,
   onClose,
+  onQuickAction,
   className,
 }: TerminalHeaderProps) {
   const modeConfig = aiModeConfig[session.aiMode];
   const ModeIcon = modeConfig.icon;
 
+  const [quickActionsOpen, setQuickActionsOpen] = useState(false);
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
+  const quickActionsRef = useRef<HTMLDivElement>(null);
+  const moreMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (quickActionsRef.current && !quickActionsRef.current.contains(event.target as Node)) {
+        setQuickActionsOpen(false);
+      }
+      if (moreMenuRef.current && !moreMenuRef.current.contains(event.target as Node)) {
+        setMoreMenuOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Use gitBranch prop if available, otherwise fall back to session.branch
+  const branchName = gitBranch?.name ?? session.branch;
+  const ahead = gitBranch?.ahead;
+  const behind = gitBranch?.behind;
+
+  const handleQuickAction = (actionId: string) => {
+    setQuickActionsOpen(false);
+    onQuickAction?.(actionId);
+  };
+
   return (
     <div
       className={twMerge(
         clsx(
-          'h-7 bg-muted border-b border-border',
+          'h-8 bg-muted border-b border-border',
           'flex items-center justify-between px-2 gap-2',
           'select-none',
           className
         )
       )}
     >
-      {/* Left section: AI mode + label + status */}
+      {/* Left section: Status dot + AI mode + label + git branch + status message */}
       <div className="flex items-center gap-2 min-w-0 flex-1">
-        {/* AI Mode icon */}
-        <ModeIcon size={14} className={clsx('shrink-0', modeConfig.color)} />
-
-        {/* Session label */}
-        <span className="text-xs font-medium text-foreground truncate">
-          {modeConfig.label} #{session.sessionNumber}
-        </span>
-
-        {/* Status badge */}
-        <div className="flex items-center gap-1 shrink-0">
-          <StatusDot status={session.status} className="w-1.5 h-1.5" />
+        {/* Status dot */}
+        <div className="flex items-center shrink-0">
+          <StatusDot status={session.status} className="w-2 h-2" />
         </div>
 
-        {/* Branch display */}
-        {session.branch && (
-          <div className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
-            <GitBranch size={10} />
-            <span className="truncate max-w-20">{session.branch}</span>
+        {/* AI Mode icon + Session label */}
+        <div className="flex items-center gap-1 shrink-0">
+          <ModeIcon size={14} className={clsx('shrink-0', modeConfig.color)} />
+          <span className="text-xs font-medium text-foreground">
+            {modeConfig.label} #{session.sessionNumber}
+          </span>
+        </div>
+
+        {/* Git branch with ahead/behind indicators */}
+        {branchName && (
+          <div className="flex items-center gap-1 text-xs text-muted-foreground shrink-0 px-1.5 py-0.5 rounded bg-card/50">
+            <GitBranch size={11} className="text-muted-foreground" />
+            <span className="truncate max-w-24">{branchName}</span>
+            {(ahead !== undefined && ahead > 0) && (
+              <span className="flex items-center gap-0.5 text-green-500 text-2xs">
+                <ArrowUp size={9} />
+                {ahead}
+              </span>
+            )}
+            {(behind !== undefined && behind > 0) && (
+              <span className="flex items-center gap-0.5 text-orange-500 text-2xs">
+                <ArrowDown size={9} />
+                {behind}
+              </span>
+            )}
           </div>
         )}
 
-        {/* Status message (truncated) */}
+        {/* Status message (truncated) with better styling */}
         {session.statusMessage && (
-          <span className="text-2xs text-muted-foreground truncate">
+          <span className="text-2xs text-muted-foreground truncate px-1.5 py-0.5 rounded bg-card/30 max-w-[200px]">
             {session.statusMessage}
           </span>
         )}
       </div>
 
-      {/* Right section: actions */}
+      {/* Right section: Quick actions + More menu + Close */}
       <div className="flex items-center gap-0.5 shrink-0">
-        {/* Settings button */}
-        {onSettingsClick && (
+        {/* Quick Actions dropdown */}
+        {onQuickAction && (
+          <div className="relative" ref={quickActionsRef}>
+            <button
+              onClick={() => {
+                setQuickActionsOpen(!quickActionsOpen);
+                setMoreMenuOpen(false);
+              }}
+              className={clsx(
+                'p-1 rounded',
+                'text-muted-foreground hover:text-yellow-400',
+                'hover:bg-yellow-400/10 transition-colors',
+                quickActionsOpen && 'bg-yellow-400/10 text-yellow-400'
+              )}
+              aria-label="Quick actions"
+            >
+              <Zap size={12} />
+            </button>
+            {quickActionsOpen && (
+              <div className="absolute right-0 top-full mt-1 z-50 min-w-[140px] bg-popover border border-border rounded-md shadow-lg py-1">
+                {defaultQuickActions.map((action) => (
+                  <button
+                    key={action.id}
+                    onClick={() => handleQuickAction(action.id)}
+                    className="w-full text-left px-3 py-1.5 text-xs text-foreground hover:bg-accent transition-colors"
+                  >
+                    {action.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* More options menu */}
+        <div className="relative" ref={moreMenuRef}>
           <button
-            onClick={onSettingsClick}
+            onClick={() => {
+              setMoreMenuOpen(!moreMenuOpen);
+              setQuickActionsOpen(false);
+            }}
             className={clsx(
               'p-1 rounded',
               'text-muted-foreground hover:text-foreground',
-              'hover:bg-card transition-colors'
+              'hover:bg-card transition-colors',
+              moreMenuOpen && 'bg-card text-foreground'
             )}
-            aria-label="Session settings"
+            aria-label="More options"
           >
-            <Settings size={12} />
+            <MoreVertical size={12} />
           </button>
-        )}
-
-        {/* Close button */}
-        <button
-          onClick={onClose}
-          className={clsx(
-            'p-1 rounded',
-            'text-muted-foreground hover:text-red-400',
-            'hover:bg-red-400/10 transition-colors'
+          {moreMenuOpen && (
+            <div className="absolute right-0 top-full mt-1 z-50 min-w-[120px] bg-popover border border-border rounded-md shadow-lg py-1">
+              {onSettingsClick && (
+                <button
+                  onClick={() => {
+                    setMoreMenuOpen(false);
+                    onSettingsClick();
+                  }}
+                  className="w-full text-left px-3 py-1.5 text-xs text-foreground hover:bg-accent transition-colors flex items-center gap-2"
+                >
+                  <Settings size={11} />
+                  Settings
+                </button>
+              )}
+              <button
+                onClick={() => {
+                  setMoreMenuOpen(false);
+                  onClose();
+                }}
+                className="w-full text-left px-3 py-1.5 text-xs text-red-400 hover:bg-red-400/10 transition-colors flex items-center gap-2"
+              >
+                <X size={11} />
+                Kill Session
+              </button>
+            </div>
           )}
-          aria-label="Close session"
-        >
-          <X size={12} />
-        </button>
+        </div>
+
       </div>
     </div>
   );

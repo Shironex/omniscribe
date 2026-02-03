@@ -7,6 +7,7 @@ export type { TerminalSession, AIMode, PreLaunchSlot } from './TerminalGrid';
 export { ConnectedTerminalGrid } from './ConnectedTerminalGrid';
 
 export { TerminalHeader } from './TerminalHeader';
+export type { GitBranchInfo } from './TerminalHeader';
 
 export { PreLaunchBar } from './PreLaunchBar';
 

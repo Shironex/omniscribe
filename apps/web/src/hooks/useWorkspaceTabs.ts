@@ -34,13 +34,15 @@ export function useWorkspaceTabs(): UseWorkspaceTabsReturn {
   const openProject = useWorkspaceStore((state) => state.openProject);
   const closeWorkspaceTab = useWorkspaceStore((state) => state.closeTab);
   const selectWorkspaceTab = useWorkspaceStore((state) => state.selectTab);
-  const getActiveTab = useWorkspaceStore((state) => state.getActiveTab);
 
   // Session store for status
   const sessions = useSessionStore((state) => state.sessions);
 
-  // Get active tab and project path
-  const activeTab = getActiveTab();
+  // Get active tab and project path using useMemo to avoid recalculating on every render
+  const activeTab = useMemo(() => {
+    if (!activeWorkspaceTabId) return undefined;
+    return workspaceTabs.find((tab) => tab.id === activeWorkspaceTabId);
+  }, [workspaceTabs, activeWorkspaceTabId]);
   const activeProjectPath = activeTab?.projectPath ?? null;
 
   // Convert workspace tabs to UI tabs format

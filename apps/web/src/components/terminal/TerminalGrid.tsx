@@ -22,6 +22,7 @@ interface TerminalGridProps {
   onLaunch: (slotId: string) => void;
   onKill: (sessionId: string) => void;
   onSessionClose?: (sessionId: string, exitCode: number) => void;
+  onQuickAction?: (sessionId: string, actionId: string) => void;
   className?: string;
 }
 
@@ -37,6 +38,7 @@ export function TerminalGrid({
   onLaunch,
   onKill,
   onSessionClose,
+  onQuickAction,
   className,
 }: TerminalGridProps) {
   // Grid layout based on number of active sessions only
@@ -91,6 +93,7 @@ export function TerminalGrid({
             <TerminalHeader
               session={session}
               onClose={() => onKill(session.id)}
+              onQuickAction={onQuickAction ? (actionId) => onQuickAction(session.id, actionId) : undefined}
             />
 
             {/* Terminal - only render if terminalSessionId is available */}
