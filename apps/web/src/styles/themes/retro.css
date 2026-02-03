@@ -1,0 +1,249 @@
+/* Retro Theme */
+
+:root.retro {
+  /* Retro / Cyberpunk Theme */
+  --background: oklch(0 0 0); /* Pure Black */
+  --background-50: oklch(0 0 0 / 0.5);
+  --background-80: oklch(0 0 0 / 0.8);
+
+  /* Neon Green Text */
+  --foreground: oklch(0.85 0.25 145); /* Neon Green */
+  --foreground-secondary: oklch(0.7 0.2 145);
+  --foreground-muted: oklch(0.5 0.15 145);
+
+  /* Hard Edges */
+  --radius: 0px;
+
+  /* UI Elements */
+  --card: oklch(0 0 0); /* Black card */
+  --card-foreground: oklch(0.85 0.25 145);
+  --popover: oklch(0.05 0.05 145);
+  --popover-foreground: oklch(0.85 0.25 145);
+
+  --primary: oklch(0.85 0.25 145); /* Neon Green */
+  --primary-foreground: oklch(0 0 0); /* Black text on green */
+
+  --brand-400: oklch(0.85 0.25 145);
+  --brand-500: oklch(0.85 0.25 145);
+  --brand-600: oklch(0.75 0.25 145);
+
+  --secondary: oklch(0.1 0.1 145); /* Dark Green bg */
+  --secondary-foreground: oklch(0.85 0.25 145);
+
+  --muted: oklch(0.1 0.05 145);
+  --muted-foreground: oklch(0.5 0.15 145);
+
+  --accent: oklch(0.2 0.2 145); /* Brighter green accent */
+  --accent-foreground: oklch(0.85 0.25 145);
+
+  --destructive: oklch(0.6 0.25 25); /* Keep red for destructive */
+
+  --border: oklch(0.3 0.15 145); /* Visible Green Border */
+  --border-glass: oklch(0.85 0.25 145 / 0.3);
+
+  --input: oklch(0.1 0.1 145);
+  --ring: oklch(0.85 0.25 145);
+
+  /* Charts - various neons */
+  --chart-1: oklch(0.85 0.25 145); /* Green */
+  --chart-2: oklch(0.8 0.25 300); /* Purple Neon */
+  --chart-3: oklch(0.8 0.25 200); /* Cyan Neon */
+  --chart-4: oklch(0.8 0.25 60); /* Yellow Neon */
+  --chart-5: oklch(0.8 0.25 20); /* Red Neon */
+
+  /* Sidebar */
+  --sidebar: oklch(0 0 0);
+  --sidebar-foreground: oklch(0.85 0.25 145);
+  --sidebar-primary: oklch(0.85 0.25 145);
+  --sidebar-primary-foreground: oklch(0 0 0);
+  --sidebar-accent: oklch(0.1 0.1 145);
+  --sidebar-accent-foreground: oklch(0.85 0.25 145);
+  --sidebar-border: oklch(0.3 0.15 145);
+  --sidebar-ring: oklch(0.85 0.25 145);
+
+  /* Fonts */
+  --font-sans: var(--font-geist-mono); /* Force Mono everywhere */
+
+  /* Action button colors - All green neon for retro theme */
+  --action-view: oklch(0.85 0.25 145); /* Neon Green */
+  --action-view-hover: oklch(0.9 0.25 145);
+  --action-followup: oklch(0.85 0.25 145); /* Neon Green */
+  --action-followup-hover: oklch(0.9 0.25 145);
+  --action-commit: oklch(0.85 0.25 145); /* Neon Green */
+  --action-commit-hover: oklch(0.9 0.25 145);
+  --action-verify: oklch(0.85 0.25 145); /* Neon Green */
+  --action-verify-hover: oklch(0.9 0.25 145);
+
+  /* Running indicator - Neon Green for retro */
+  --running-indicator: oklch(0.85 0.25 145);
+  --running-indicator-text: oklch(0.85 0.25 145);
+}
+
+/* ========================================
+   DRACULA THEME
+   Inspired by the popular Dracula VS Code theme
+   ======================================== */
+
+/* Theme-specific overrides */
+
+/* Retro Scrollbar - sharp edges with neon green */
+.retro ::-webkit-scrollbar-thumb {
+  background: var(--primary);
+  border-radius: 0;
+}
+
+.retro ::-webkit-scrollbar-track {
+  background: var(--background);
+}
+
+.retro .scrollbar-visible::-webkit-scrollbar-thumb {
+  background: var(--primary);
+  border-radius: 0;
+}
+
+.retro .scrollbar-visible::-webkit-scrollbar-track {
+  background: var(--background);
+  border-radius: 0;
+}
+
+.retro .scrollbar-styled::-webkit-scrollbar-thumb {
+  background: var(--primary);
+  border-radius: 0;
+}
+
+.retro .scrollbar-styled::-webkit-scrollbar-track {
+  background: var(--background);
+  border-radius: 0;
+}
+
+.retro .glass,
+.retro .glass-subtle,
+.retro .glass-strong,
+.retro .bg-glass,
+.retro .bg-glass-80 {
+  backdrop-filter: none;
+  background: var(--background);
+  border: 1px solid var(--border);
+}
+
+.retro .gradient-brand {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.retro .content-bg {
+  background:
+    linear-gradient(rgba(0, 255, 65, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 255, 65, 0.03) 1px, transparent 1px), var(--background);
+  background-size: 20px 20px;
+}
+
+.retro .animated-outline-gradient {
+  background: conic-gradient(
+    from 90deg at 50% 50%,
+    #00ff41 0%,
+    #00ffff 25%,
+    #ff00ff 50%,
+    #00ffff 75%,
+    #00ff41 100%
+  );
+  animation:
+    spin 2s linear infinite,
+    retro-glow 1s ease-in-out infinite alternate;
+}
+
+.retro [data-slot='button'][class*='animated-outline'] {
+  border-radius: 0 !important;
+}
+
+.retro .animated-outline-inner {
+  background: oklch(0 0 0) !important;
+  color: #00ff41 !important;
+  border-radius: 0 !important;
+  text-shadow: 0 0 5px #00ff41;
+  font-family: var(--font-geist-mono), monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.retro [data-slot='button'][class*='animated-outline']:hover .animated-outline-inner {
+  background: oklch(0.1 0.1 145) !important;
+  color: #00ff41 !important;
+  box-shadow:
+    0 0 10px #00ff41,
+    0 0 20px #00ff41,
+    inset 0 0 10px rgba(0, 255, 65, 0.1);
+  text-shadow:
+    0 0 10px #00ff41,
+    0 0 20px #00ff41;
+}
+
+.retro .slider-track {
+  background: oklch(0.15 0.05 145);
+  border: 1px solid #00ff41;
+  border-radius: 0 !important;
+}
+
+.retro .slider-range {
+  background: #00ff41;
+  box-shadow:
+    0 0 10px #00ff41,
+    0 0 5px #00ff41;
+  border-radius: 0 !important;
+}
+
+.retro .slider-thumb {
+  background: oklch(0 0 0);
+  border: 2px solid #00ff41;
+  border-radius: 0 !important;
+  box-shadow: 0 0 8px #00ff41;
+}
+
+.retro .slider-thumb:hover {
+  background: oklch(0.1 0.1 145);
+  box-shadow:
+    0 0 12px #00ff41,
+    0 0 20px #00ff41;
+}
+
+.retro .xml-highlight {
+  color: oklch(0.85 0.25 145); /* Neon green default */
+}
+
+.retro .xml-tag-bracket {
+  color: oklch(0.8 0.25 200); /* Cyan for brackets */
+}
+
+.retro .xml-tag-name {
+  color: oklch(0.85 0.25 145); /* Bright green for tags */
+  text-shadow: 0 0 5px oklch(0.85 0.25 145 / 0.5);
+}
+
+.retro .xml-attribute-name {
+  color: oklch(0.8 0.25 300); /* Purple neon for attrs */
+}
+
+.retro .xml-attribute-equals {
+  color: oklch(0.6 0.15 145); /* Dim green for = */
+}
+
+.retro .xml-attribute-value {
+  color: oklch(0.8 0.25 60); /* Yellow neon for strings */
+}
+
+.retro .xml-comment {
+  color: oklch(0.5 0.15 145); /* Dim green for comments */
+  font-style: italic;
+}
+
+.retro .xml-cdata {
+  color: oklch(0.75 0.2 200); /* Cyan for CDATA */
+}
+
+.retro .xml-doctype {
+  color: oklch(0.75 0.2 300); /* Purple for DOCTYPE */
+}
+
+.retro .xml-text {
+  color: oklch(0.7 0.2 145); /* Green text */
+}

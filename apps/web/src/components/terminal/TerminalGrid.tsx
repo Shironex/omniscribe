@@ -81,9 +81,9 @@ export function TerminalGrid({
           key={session.id}
           className={clsx(
             'flex flex-col rounded-lg overflow-hidden',
-            'border border-omniscribe-border',
-            'bg-omniscribe-card',
-            focusedSessionId === session.id && 'ring-2 ring-omniscribe-accent-primary',
+            'border border-border',
+            'bg-card',
+            focusedSessionId === session.id && 'ring-2 ring-primary',
             'transition-all duration-150'
           )}
           onClick={() => onFocusSession(session.id)}
@@ -103,7 +103,7 @@ export function TerminalGrid({
                 onClose={(exitCode) => onSessionClose?.(session.id, exitCode)}
               />
             ) : (
-              <div className="flex items-center justify-center h-full bg-omniscribe-surface text-omniscribe-text-muted text-sm">
+              <div className="flex items-center justify-center h-full bg-muted text-muted-foreground text-sm">
                 Connecting to terminal...
               </div>
             )}
@@ -129,11 +129,11 @@ export function TerminalGrid({
           onClick={onAddSlot}
           className={clsx(
             'flex flex-col items-center justify-center',
-            'rounded-lg border-2 border-dashed border-omniscribe-border',
-            'bg-omniscribe-card/30 hover:bg-omniscribe-card/50',
-            'text-omniscribe-text-muted hover:text-omniscribe-text-secondary',
+            'rounded-lg border-2 border-dashed border-border',
+            'bg-card/30 hover:bg-card/50',
+            'text-muted-foreground hover:text-foreground-secondary',
             'transition-all duration-150',
-            'hover:border-omniscribe-accent-primary/50',
+            'hover:border-primary/50',
             'group'
           )}
           aria-label="Add session"
@@ -141,12 +141,12 @@ export function TerminalGrid({
           <div
             className={clsx(
               'w-12 h-12 rounded-full',
-              'bg-omniscribe-card group-hover:bg-omniscribe-border',
+              'bg-card group-hover:bg-border',
               'flex items-center justify-center',
               'transition-colors'
             )}
           >
-            <Plus size={24} className="group-hover:text-omniscribe-accent-primary transition-colors" />
+            <Plus size={24} className="group-hover:text-primary transition-colors" />
           </div>
           <span className="mt-2 text-sm">Add Session</span>
         </button>

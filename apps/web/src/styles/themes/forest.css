@@ -1,0 +1,98 @@
+/* Forest Theme - Deep green dark theme */
+
+:root.forest {
+  --background: oklch(0.12 0.02 150);
+  --background-50: oklch(0.12 0.02 150 / 0.5);
+  --background-80: oklch(0.12 0.02 150 / 0.8);
+
+  --foreground: oklch(0.95 0.02 150);
+  --foreground-secondary: oklch(0.7 0.03 150);
+  --foreground-muted: oklch(0.6 0.03 150);
+
+  --card: oklch(0.16 0.025 150);
+  --card-foreground: oklch(0.95 0.02 150);
+  --popover: oklch(0.14 0.022 150);
+  --popover-foreground: oklch(0.95 0.02 150);
+
+  --primary: oklch(0.6 0.18 145);
+  --primary-foreground: oklch(0.12 0.02 150);
+  --brand-400: oklch(0.65 0.16 145);
+  --brand-500: oklch(0.6 0.18 145);
+  --brand-600: oklch(0.55 0.2 145);
+
+  --secondary: oklch(1 0 0 / 0.05);
+  --secondary-foreground: oklch(0.95 0.02 150);
+  --muted: oklch(0.2 0.03 150);
+  --muted-foreground: oklch(0.65 0.03 150);
+  --accent: oklch(1 0 0 / 0.08);
+  --accent-foreground: oklch(0.95 0.02 150);
+
+  --destructive: oklch(0.6 0.22 25);
+  --border: oklch(0.25 0.04 150);
+  --border-glass: oklch(1 0 0 / 0.1);
+  --input: oklch(0.14 0.022 150);
+  --ring: oklch(0.6 0.18 145);
+
+  --chart-1: oklch(0.6 0.18 145);
+  --chart-2: oklch(0.65 0.15 100);
+  --chart-3: oklch(0.7 0.12 180);
+  --chart-4: oklch(0.6 0.2 200);
+  --chart-5: oklch(0.55 0.15 50);
+
+  --sidebar: oklch(0.1 0.02 150 / 0.8);
+  --sidebar-foreground: oklch(0.95 0.02 150);
+  --sidebar-primary: oklch(0.6 0.18 145);
+  --sidebar-primary-foreground: oklch(0.12 0.02 150);
+  --sidebar-accent: oklch(1 0 0 / 0.05);
+  --sidebar-accent-foreground: oklch(0.95 0.02 150);
+  --sidebar-border: oklch(1 0 0 / 0.1);
+  --sidebar-ring: oklch(0.6 0.18 145);
+
+  --action-view: oklch(0.6 0.18 145);
+  --action-view-hover: oklch(0.55 0.2 145);
+  --action-followup: oklch(0.6 0.15 180);
+  --action-followup-hover: oklch(0.55 0.17 180);
+  --action-commit: oklch(0.6 0.18 145);
+  --action-commit-hover: oklch(0.55 0.2 145);
+  --action-verify: oklch(0.6 0.18 145);
+  --action-verify-hover: oklch(0.55 0.2 145);
+
+  --running-indicator: oklch(0.6 0.18 145);
+  --running-indicator-text: oklch(0.65 0.16 145);
+
+  --status-success: oklch(0.65 0.18 145);
+  --status-success-bg: oklch(0.65 0.18 145 / 0.2);
+  --status-warning: oklch(0.7 0.15 80);
+  --status-warning-bg: oklch(0.7 0.15 80 / 0.2);
+  --status-error: oklch(0.6 0.22 25);
+  --status-error-bg: oklch(0.6 0.22 25 / 0.2);
+  --status-info: oklch(0.6 0.15 180);
+  --status-info-bg: oklch(0.6 0.15 180 / 0.2);
+  --status-backlog: oklch(0.55 0.03 150);
+  --status-in-progress: oklch(0.7 0.15 80);
+  --status-waiting: oklch(0.65 0.12 60);
+
+  --shadow-xs: 0 1px 2px rgba(0, 20, 10, 0.3);
+  --shadow-sm: 0 1px 3px rgba(0, 20, 10, 0.4), 0 1px 2px rgba(0, 20, 10, 0.3);
+  --shadow-md: 0 4px 6px -1px rgba(0, 20, 10, 0.4), 0 2px 4px -1px rgba(0, 20, 10, 0.3);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 20, 10, 0.4), 0 4px 6px -2px rgba(0, 20, 10, 0.2);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 20, 10, 0.5), 0 10px 10px -5px rgba(0, 20, 10, 0.3);
+}
+
+.forest .content-bg {
+  background: linear-gradient(
+    135deg,
+    oklch(0.12 0.02 150),
+    oklch(0.15 0.025 150),
+    oklch(0.12 0.02 150)
+  );
+}
+
+.forest .animated-outline-gradient {
+  background: conic-gradient(from 90deg at 50% 50%, #22c55e 0%, #16a34a 50%, #22c55e 100%);
+}
+
+.forest .animated-outline-inner {
+  background: oklch(0.16 0.025 150) !important;
+  color: #86efac !important;
+}

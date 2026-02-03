@@ -36,7 +36,7 @@ export function ProjectTabs({
     <div
       className={twMerge(
         clsx(
-          'h-10 bg-omniscribe-surface border-b border-omniscribe-border',
+          'h-10 bg-muted border-b border-border',
           'flex items-center select-none drag',
           className
         )
@@ -47,8 +47,8 @@ export function ProjectTabs({
         onClick={onToggleSidebar}
         className={clsx(
           'no-drag h-full px-3 flex items-center justify-center',
-          'hover:bg-omniscribe-card transition-colors',
-          'text-omniscribe-text-secondary hover:text-omniscribe-text-primary'
+          'hover:bg-card transition-colors',
+          'text-foreground-secondary hover:text-foreground'
         )}
         aria-label={sidebarOpen ? 'Close sidebar' : 'Open sidebar'}
       >
@@ -56,7 +56,7 @@ export function ProjectTabs({
       </button>
 
       {/* Divider */}
-      <div className="w-px h-5 bg-omniscribe-border" />
+      <div className="w-px h-5 bg-border" />
 
       {/* Tab list */}
       <div className="flex-1 flex items-center overflow-x-auto no-scrollbar">
@@ -65,10 +65,10 @@ export function ProjectTabs({
             key={tab.id}
             className={clsx(
               'no-drag group flex items-center gap-2 px-3 h-full min-w-0',
-              'cursor-pointer transition-colors border-r border-omniscribe-border',
+              'cursor-pointer transition-colors border-r border-border',
               activeTabId === tab.id
-                ? 'bg-omniscribe-card text-omniscribe-text-primary'
-                : 'text-omniscribe-text-secondary hover:bg-omniscribe-card/50 hover:text-omniscribe-text-primary'
+                ? 'bg-card text-foreground'
+                : 'text-foreground-secondary hover:bg-card/50 hover:text-foreground'
             )}
             onClick={() => onSelectTab(tab.id)}
           >
@@ -81,8 +81,8 @@ export function ProjectTabs({
               }}
               className={clsx(
                 'p-0.5 rounded opacity-0 group-hover:opacity-100',
-                'hover:bg-omniscribe-border transition-all',
-                'text-omniscribe-text-muted hover:text-omniscribe-text-primary'
+                'hover:bg-border transition-all',
+                'text-muted-foreground hover:text-foreground'
               )}
               aria-label={`Close ${tab.label}`}
             >
@@ -96,8 +96,8 @@ export function ProjectTabs({
           onClick={onNewTab}
           className={clsx(
             'no-drag flex items-center justify-center px-3 h-full',
-            'text-omniscribe-text-muted hover:text-omniscribe-text-primary',
-            'hover:bg-omniscribe-card/50 transition-colors'
+            'text-muted-foreground hover:text-foreground',
+            'hover:bg-card/50 transition-colors'
           )}
           aria-label="New tab"
         >
@@ -112,8 +112,8 @@ export function ProjectTabs({
             onClick={() => window.electronAPI?.window.minimize()}
             className={clsx(
               'w-7 h-7 flex items-center justify-center rounded',
-              'hover:bg-omniscribe-card transition-colors',
-              'text-omniscribe-text-muted hover:text-omniscribe-text-primary'
+              'hover:bg-card transition-colors',
+              'text-muted-foreground hover:text-foreground'
             )}
             aria-label="Minimize"
           >
@@ -123,8 +123,8 @@ export function ProjectTabs({
             onClick={() => window.electronAPI?.window.maximize()}
             className={clsx(
               'w-7 h-7 flex items-center justify-center rounded',
-              'hover:bg-omniscribe-card transition-colors',
-              'text-omniscribe-text-muted hover:text-omniscribe-text-primary'
+              'hover:bg-card transition-colors',
+              'text-muted-foreground hover:text-foreground'
             )}
             aria-label="Maximize"
           >
@@ -135,7 +135,7 @@ export function ProjectTabs({
             className={clsx(
               'w-7 h-7 flex items-center justify-center rounded',
               'hover:bg-red-500/20 transition-colors',
-              'text-omniscribe-text-muted hover:text-red-500'
+              'text-muted-foreground hover:text-red-500'
             )}
             aria-label="Close"
           >

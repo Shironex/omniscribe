@@ -1,0 +1,160 @@
+/* Synthwave Theme */
+
+:root.synthwave {
+  --background: oklch(0.15 0.05 290); /* #262335 */
+  --background-50: oklch(0.15 0.05 290 / 0.5);
+  --background-80: oklch(0.15 0.05 290 / 0.8);
+
+  --foreground: oklch(0.95 0.02 320); /* #ffffff with warm tint */
+  --foreground-secondary: oklch(0.75 0.05 320);
+  --foreground-muted: oklch(0.55 0.08 290);
+
+  --card: oklch(0.2 0.06 290); /* #34294f */
+  --card-foreground: oklch(0.95 0.02 320);
+  --popover: oklch(0.18 0.05 290);
+  --popover-foreground: oklch(0.95 0.02 320);
+
+  --primary: oklch(0.7 0.28 350); /* #f97e72 hot pink */
+  --primary-foreground: oklch(0.15 0.05 290);
+
+  --brand-400: oklch(0.75 0.28 350);
+  --brand-500: oklch(0.7 0.28 350); /* Hot pink */
+  --brand-600: oklch(0.65 0.3 350);
+
+  --secondary: oklch(0.25 0.07 290);
+  --secondary-foreground: oklch(0.95 0.02 320);
+
+  --muted: oklch(0.25 0.07 290);
+  --muted-foreground: oklch(0.55 0.08 290);
+
+  --accent: oklch(0.3 0.08 290);
+  --accent-foreground: oklch(0.95 0.02 320);
+
+  --destructive: oklch(0.6 0.25 15);
+
+  --border: oklch(0.4 0.1 290);
+  --border-glass: oklch(0.7 0.28 350 / 0.3);
+
+  --input: oklch(0.2 0.06 290);
+  --ring: oklch(0.7 0.28 350);
+
+  --chart-1: oklch(0.7 0.28 350); /* Hot pink */
+  --chart-2: oklch(0.8 0.25 200); /* Cyan #72f1b8 */
+  --chart-3: oklch(0.85 0.2 60); /* Yellow #fede5d */
+  --chart-4: oklch(0.7 0.25 280); /* Purple #ff7edb */
+  --chart-5: oklch(0.7 0.2 30); /* Orange #f97e72 */
+
+  --sidebar: oklch(0.13 0.05 290);
+  --sidebar-foreground: oklch(0.95 0.02 320);
+  --sidebar-primary: oklch(0.7 0.28 350);
+  --sidebar-primary-foreground: oklch(0.15 0.05 290);
+  --sidebar-accent: oklch(0.25 0.07 290);
+  --sidebar-accent-foreground: oklch(0.95 0.02 320);
+  --sidebar-border: oklch(0.4 0.1 290);
+  --sidebar-ring: oklch(0.7 0.28 350);
+
+  /* Action button colors - Synthwave hot pink/cyan theme */
+  --action-view: oklch(0.7 0.28 350); /* Hot pink */
+  --action-view-hover: oklch(0.65 0.3 350);
+  --action-followup: oklch(0.8 0.25 200); /* Cyan */
+  --action-followup-hover: oklch(0.75 0.27 200);
+  --action-commit: oklch(0.85 0.2 60); /* Yellow */
+  --action-commit-hover: oklch(0.8 0.22 60);
+  --action-verify: oklch(0.85 0.2 60); /* Yellow */
+  --action-verify-hover: oklch(0.8 0.22 60);
+
+  /* Running indicator - Hot pink */
+  --running-indicator: oklch(0.7 0.28 350);
+  --running-indicator-text: oklch(0.75 0.26 350);
+}
+
+/* Red Theme - Bold crimson/red aesthetic */
+
+/* Theme-specific overrides */
+
+.synthwave .animated-outline-gradient {
+  background: conic-gradient(
+    from 90deg at 50% 50%,
+    #f97e72 0%,
+    #72f1b8 25%,
+    #ff7edb 50%,
+    #72f1b8 75%,
+    #f97e72 100%
+  );
+  animation:
+    spin 2s linear infinite,
+    synthwave-glow 1.5s ease-in-out infinite alternate;
+}
+
+.synthwave .animated-outline-inner {
+  background: oklch(0.15 0.05 290) !important;
+  color: #f97e72 !important;
+  text-shadow: 0 0 8px #f97e72;
+}
+
+.synthwave [data-slot='button'][class*='animated-outline']:hover .animated-outline-inner {
+  background: oklch(0.22 0.07 290) !important;
+  color: #72f1b8 !important;
+  text-shadow: 0 0 12px #72f1b8;
+  box-shadow: 0 0 15px rgba(114, 241, 184, 0.3);
+}
+
+.synthwave .slider-track {
+  background: oklch(0.25 0.07 290);
+}
+
+.synthwave .slider-range {
+  background: linear-gradient(to right, #f97e72, #ff7edb);
+  box-shadow:
+    0 0 10px #f97e72,
+    0 0 5px #ff7edb;
+}
+
+.synthwave .slider-thumb {
+  background: oklch(0.2 0.06 290);
+  border-color: #f97e72;
+  box-shadow: 0 0 8px #f97e72;
+}
+
+.synthwave .xml-highlight {
+  color: oklch(0.95 0.02 320); /* Warm white */
+}
+
+.synthwave .xml-tag-bracket {
+  color: oklch(0.7 0.28 350); /* #f97e72 hot pink */
+}
+
+.synthwave .xml-tag-name {
+  color: oklch(0.7 0.28 350); /* Hot pink */
+  text-shadow: 0 0 8px oklch(0.7 0.28 350 / 0.5);
+}
+
+.synthwave .xml-attribute-name {
+  color: oklch(0.7 0.25 280); /* #ff7edb purple */
+}
+
+.synthwave .xml-attribute-equals {
+  color: oklch(0.8 0.02 320); /* White-ish */
+}
+
+.synthwave .xml-attribute-value {
+  color: oklch(0.85 0.2 60); /* #fede5d yellow */
+  text-shadow: 0 0 5px oklch(0.85 0.2 60 / 0.3);
+}
+
+.synthwave .xml-comment {
+  color: oklch(0.55 0.08 290); /* Dim purple */
+  font-style: italic;
+}
+
+.synthwave .xml-cdata {
+  color: oklch(0.8 0.25 200); /* #72f1b8 cyan */
+}
+
+.synthwave .xml-doctype {
+  color: oklch(0.8 0.25 200); /* Cyan */
+}
+
+.synthwave .xml-text {
+  color: oklch(0.95 0.02 320); /* White */
+}

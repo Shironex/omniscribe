@@ -68,9 +68,9 @@ export function GitSection({ className }: GitSectionProps) {
       {/* Branch info */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 min-w-0 flex-1">
-          <GitBranch size={14} className="text-omniscribe-text-muted flex-shrink-0" />
+          <GitBranch size={14} className="text-muted-foreground flex-shrink-0" />
           {isLoading ? (
-            <span className="text-xs text-omniscribe-text-muted animate-pulse">
+            <span className="text-xs text-muted-foreground animate-pulse">
               Loading...
             </span>
           ) : error ? (
@@ -79,11 +79,11 @@ export function GitSection({ className }: GitSectionProps) {
               <span className="text-xs truncate">Error</span>
             </div>
           ) : currentBranch ? (
-            <span className="text-xs text-omniscribe-text-secondary font-mono truncate">
+            <span className="text-xs text-foreground-secondary font-mono truncate">
               {currentBranch.name}
             </span>
           ) : (
-            <span className="text-xs text-omniscribe-text-muted">
+            <span className="text-xs text-muted-foreground">
               No repository
             </span>
           )}
@@ -94,13 +94,13 @@ export function GitSection({ className }: GitSectionProps) {
           disabled={isLoading || !activeTab?.projectPath}
           className={clsx(
             'p-1 rounded transition-colors flex-shrink-0',
-            'hover:bg-omniscribe-surface',
+            'hover:bg-muted',
             'disabled:opacity-50 disabled:cursor-not-allowed',
             isLoading && 'animate-spin'
           )}
           title="Refresh"
         >
-          <RefreshCw size={12} className="text-omniscribe-text-muted" />
+          <RefreshCw size={12} className="text-muted-foreground" />
         </button>
       </div>
 
@@ -110,13 +110,13 @@ export function GitSection({ className }: GitSectionProps) {
           {ahead > 0 && (
             <div className="flex items-center gap-1" title={`${ahead} commit(s) ahead`}>
               <ArrowUp size={12} className="text-green-400" />
-              <span className="text-xs text-omniscribe-text-muted">{ahead}</span>
+              <span className="text-xs text-muted-foreground">{ahead}</span>
             </div>
           )}
           {behind > 0 && (
             <div className="flex items-center gap-1" title={`${behind} commit(s) behind`}>
               <ArrowDown size={12} className="text-orange-400" />
-              <span className="text-xs text-omniscribe-text-muted">{behind}</span>
+              <span className="text-xs text-muted-foreground">{behind}</span>
             </div>
           )}
         </div>
@@ -125,8 +125,8 @@ export function GitSection({ className }: GitSectionProps) {
       {/* Last commit */}
       {currentBranch?.lastCommitMessage && (
         <div className="flex items-start gap-2 pl-5">
-          <GitCommit size={12} className="text-omniscribe-text-muted flex-shrink-0 mt-0.5" />
-          <span className="text-xs text-omniscribe-text-muted line-clamp-2">
+          <GitCommit size={12} className="text-muted-foreground flex-shrink-0 mt-0.5" />
+          <span className="text-xs text-muted-foreground line-clamp-2">
             {currentBranch.lastCommitMessage}
           </span>
         </div>

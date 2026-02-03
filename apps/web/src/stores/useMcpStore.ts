@@ -27,9 +27,9 @@ interface McpServerStateUpdate {
 }
 
 /**
- * Omniscribe MCP server info
+ * Internal MCP server info
  */
-interface OmniscribeMcpInfo {
+interface InternalMcpInfo {
   available: boolean;
   path: string | null;
 }
@@ -50,8 +50,8 @@ interface McpState {
   error: string | null;
   /** Whether listeners are initialized */
   listenersInitialized: boolean;
-  /** Omniscribe MCP server info */
-  omniscribeMcp: OmniscribeMcpInfo;
+  /** Internal MCP server info */
+  internalMcp: InternalMcpInfo;
 }
 
 /**
@@ -84,8 +84,8 @@ interface McpActions {
   disconnectServer: (serverId: string) => void;
   /** Clear store state */
   clear: () => void;
-  /** Fetch Omniscribe MCP status */
-  fetchOmniscribeMcpStatus: () => void;
+  /** Fetch internal MCP status */
+  fetchInternalMcpStatus: () => void;
 }
 
 /**
@@ -104,7 +104,7 @@ export const useMcpStore = create<McpStore>((set, get) => ({
   isDiscovering: false,
   error: null,
   listenersInitialized: false,
-  omniscribeMcp: { available: false, path: null },
+  internalMcp: { available: false, path: null },
 
   // Actions
   discoverServers: (projectPath?: string) => {
@@ -269,9 +269,9 @@ export const useMcpStore = create<McpStore>((set, get) => ({
     });
   },
 
-  fetchOmniscribeMcpStatus: () => {
-    socket.emit('mcp:get-omniscribe-status', {}, (response: OmniscribeMcpInfo) => {
-      set({ omniscribeMcp: response });
+  fetchInternalMcpStatus: () => {
+    socket.emit('mcp:get-internal-status', {}, (response: InternalMcpInfo) => {
+      set({ internalMcp: response });
     });
   },
 }));
@@ -358,6 +358,6 @@ export const selectMcpDiscovering = (state: McpStore) => state.isDiscovering;
 export const selectMcpError = (state: McpStore) => state.error;
 
 /**
- * Select Omniscribe MCP info
+ * Select internal MCP info
  */
-export const selectOmniscribeMcp = (state: McpStore) => state.omniscribeMcp;
+export const selectInternalMcp = (state: McpStore) => state.internalMcp;

@@ -1,0 +1,110 @@
+/* Sunset Theme */
+
+:root.sunset {
+  /* Sunset Theme - Mellow oranges and soft purples */
+  --background: oklch(0.15 0.02 280); /* Deep twilight blue-purple */
+  --background-50: oklch(0.15 0.02 280 / 0.5);
+  --background-80: oklch(0.15 0.02 280 / 0.8);
+
+  --foreground: oklch(0.95 0.01 80); /* Warm white */
+  --foreground-secondary: oklch(0.75 0.02 60);
+  --foreground-muted: oklch(0.6 0.02 60);
+
+  --card: oklch(0.2 0.025 280);
+  --card-foreground: oklch(0.95 0.01 80);
+  --popover: oklch(0.18 0.02 280);
+  --popover-foreground: oklch(0.95 0.01 80);
+
+  --primary: oklch(0.68 0.18 45); /* Mellow sunset orange */
+  --primary-foreground: oklch(0.15 0.02 280);
+
+  --brand-400: oklch(0.72 0.17 45);
+  --brand-500: oklch(0.68 0.18 45); /* Soft sunset orange */
+  --brand-600: oklch(0.64 0.19 42);
+
+  --secondary: oklch(0.25 0.03 280);
+  --secondary-foreground: oklch(0.95 0.01 80);
+
+  --muted: oklch(0.27 0.03 280);
+  --muted-foreground: oklch(0.6 0.02 60);
+
+  --accent: oklch(0.35 0.04 310);
+  --accent-foreground: oklch(0.95 0.01 80);
+
+  --destructive: oklch(0.6 0.2 25); /* Muted red */
+
+  --border: oklch(0.32 0.04 280);
+  --border-glass: oklch(0.68 0.18 45 / 0.3);
+
+  --input: oklch(0.2 0.025 280);
+  --ring: oklch(0.68 0.18 45);
+
+  --chart-1: oklch(0.68 0.18 45); /* Mellow orange */
+  --chart-2: oklch(0.75 0.16 340); /* Soft pink sunset */
+  --chart-3: oklch(0.78 0.18 70); /* Soft golden */
+  --chart-4: oklch(0.66 0.19 42); /* Subtle coral */
+  --chart-5: oklch(0.72 0.14 310); /* Pastel purple */
+
+  --sidebar: oklch(0.13 0.015 280);
+  --sidebar-foreground: oklch(0.95 0.01 80);
+  --sidebar-primary: oklch(0.68 0.18 45);
+  --sidebar-primary-foreground: oklch(0.15 0.02 280);
+  --sidebar-accent: oklch(0.25 0.03 280);
+  --sidebar-accent-foreground: oklch(0.95 0.01 80);
+  --sidebar-border: oklch(0.32 0.04 280);
+  --sidebar-ring: oklch(0.68 0.18 45);
+
+  /* Action button colors - Mellow sunset palette */
+  --action-view: oklch(0.68 0.18 45); /* Mellow orange */
+  --action-view-hover: oklch(0.64 0.19 42);
+  --action-followup: oklch(0.75 0.16 340); /* Soft pink */
+  --action-followup-hover: oklch(0.7 0.17 340);
+  --action-commit: oklch(0.65 0.16 140); /* Soft green */
+  --action-commit-hover: oklch(0.6 0.17 140);
+  --action-verify: oklch(0.65 0.16 140); /* Soft green */
+  --action-verify-hover: oklch(0.6 0.17 140);
+
+  /* Running indicator - Mellow orange */
+  --running-indicator: oklch(0.68 0.18 45);
+  --running-indicator-text: oklch(0.72 0.17 45);
+
+  /* Status colors - Sunset theme */
+  --status-success: oklch(0.65 0.16 140);
+  --status-success-bg: oklch(0.65 0.16 140 / 0.2);
+  --status-warning: oklch(0.78 0.18 70);
+  --status-warning-bg: oklch(0.78 0.18 70 / 0.2);
+  --status-error: oklch(0.65 0.2 25);
+  --status-error-bg: oklch(0.65 0.2 25 / 0.2);
+  --status-info: oklch(0.75 0.16 340);
+  --status-info-bg: oklch(0.75 0.16 340 / 0.2);
+  --status-backlog: oklch(0.65 0.02 280);
+  --status-in-progress: oklch(0.78 0.18 70);
+  --status-waiting: oklch(0.72 0.17 60);
+}
+
+/* Theme-specific overrides */
+
+/* Sunset theme scrollbar */
+.sunset ::-webkit-scrollbar-thumb,
+.sunset .scrollbar-visible::-webkit-scrollbar-thumb {
+  background: oklch(0.5 0.14 45);
+  border-radius: 4px;
+}
+
+.sunset ::-webkit-scrollbar-thumb:hover,
+.sunset .scrollbar-visible::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.58 0.16 45);
+}
+
+.sunset ::-webkit-scrollbar-track,
+.sunset .scrollbar-visible::-webkit-scrollbar-track {
+  background: oklch(0.18 0.03 280);
+}
+
+.sunset .scrollbar-styled::-webkit-scrollbar-thumb {
+  background: oklch(0.5 0.14 45);
+}
+
+.sunset .scrollbar-styled::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.58 0.16 45);
+}

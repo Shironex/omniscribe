@@ -1,0 +1,144 @@
+/* Onedark Theme */
+
+:root.onedark {
+  --background: oklch(0.19 0.01 250); /* #282c34 */
+  --background-50: oklch(0.19 0.01 250 / 0.5);
+  --background-80: oklch(0.19 0.01 250 / 0.8);
+
+  --foreground: oklch(0.85 0.02 240); /* #abb2bf */
+  --foreground-secondary: oklch(0.7 0.02 240);
+  --foreground-muted: oklch(0.5 0.03 240); /* #5c6370 */
+
+  --card: oklch(0.23 0.01 250); /* #21252b */
+  --card-foreground: oklch(0.85 0.02 240);
+  --popover: oklch(0.21 0.01 250);
+  --popover-foreground: oklch(0.85 0.02 240);
+
+  --primary: oklch(0.7 0.18 230); /* #61afef blue */
+  --primary-foreground: oklch(0.19 0.01 250);
+
+  --brand-400: oklch(0.75 0.18 230);
+  --brand-500: oklch(0.7 0.18 230); /* Blue */
+  --brand-600: oklch(0.65 0.2 230);
+
+  --secondary: oklch(0.25 0.01 250);
+  --secondary-foreground: oklch(0.85 0.02 240);
+
+  --muted: oklch(0.25 0.01 250);
+  --muted-foreground: oklch(0.5 0.03 240);
+
+  --accent: oklch(0.28 0.02 250);
+  --accent-foreground: oklch(0.85 0.02 240);
+
+  --destructive: oklch(0.6 0.2 20); /* #e06c75 red */
+
+  --border: oklch(0.35 0.02 250);
+  --border-glass: oklch(0.7 0.18 230 / 0.3);
+
+  --input: oklch(0.23 0.01 250);
+  --ring: oklch(0.7 0.18 230);
+
+  --chart-1: oklch(0.7 0.18 230); /* Blue */
+  --chart-2: oklch(0.75 0.15 320); /* Magenta #c678dd */
+  --chart-3: oklch(0.75 0.18 150); /* Green #98c379 */
+  --chart-4: oklch(0.8 0.15 80); /* Yellow #e5c07b */
+  --chart-5: oklch(0.7 0.15 180); /* Cyan #56b6c2 */
+
+  --sidebar: oklch(0.17 0.01 250);
+  --sidebar-foreground: oklch(0.85 0.02 240);
+  --sidebar-primary: oklch(0.7 0.18 230);
+  --sidebar-primary-foreground: oklch(0.19 0.01 250);
+  --sidebar-accent: oklch(0.25 0.01 250);
+  --sidebar-accent-foreground: oklch(0.85 0.02 240);
+  --sidebar-border: oklch(0.35 0.02 250);
+  --sidebar-ring: oklch(0.7 0.18 230);
+
+  /* Action button colors - One Dark blue/magenta theme */
+  --action-view: oklch(0.7 0.18 230); /* Blue */
+  --action-view-hover: oklch(0.65 0.2 230);
+  --action-followup: oklch(0.75 0.15 320); /* Magenta */
+  --action-followup-hover: oklch(0.7 0.17 320);
+  --action-commit: oklch(0.75 0.18 150); /* Green */
+  --action-commit-hover: oklch(0.7 0.2 150);
+  --action-verify: oklch(0.75 0.18 150); /* Green */
+  --action-verify-hover: oklch(0.7 0.2 150);
+
+  /* Running indicator - Blue */
+  --running-indicator: oklch(0.7 0.18 230);
+  --running-indicator-text: oklch(0.75 0.16 230);
+}
+
+/* ========================================
+   SYNTHWAVE '84 THEME
+   Neon dreams of the 80s
+   ======================================== */
+
+/* Theme-specific overrides */
+
+.onedark .animated-outline-gradient {
+  background: conic-gradient(from 90deg at 50% 50%, #61afef 0%, #c678dd 50%, #61afef 100%);
+}
+
+.onedark .animated-outline-inner {
+  background: oklch(0.19 0.01 250) !important;
+  color: #61afef !important;
+}
+
+.onedark [data-slot='button'][class*='animated-outline']:hover .animated-outline-inner {
+  background: oklch(0.25 0.02 250) !important;
+  color: #c678dd !important;
+}
+
+.onedark .slider-track {
+  background: oklch(0.25 0.01 250);
+}
+
+.onedark .slider-range {
+  background: linear-gradient(to right, #61afef, #c678dd);
+}
+
+.onedark .slider-thumb {
+  background: oklch(0.23 0.01 250);
+  border-color: #61afef;
+}
+
+.onedark .xml-highlight {
+  color: oklch(0.85 0.02 240); /* #abb2bf */
+}
+
+.onedark .xml-tag-bracket {
+  color: oklch(0.6 0.2 20); /* #e06c75 red */
+}
+
+.onedark .xml-tag-name {
+  color: oklch(0.6 0.2 20); /* Red for tags */
+}
+
+.onedark .xml-attribute-name {
+  color: oklch(0.8 0.15 80); /* #e5c07b yellow */
+}
+
+.onedark .xml-attribute-equals {
+  color: oklch(0.7 0.02 240); /* Dim text */
+}
+
+.onedark .xml-attribute-value {
+  color: oklch(0.75 0.18 150); /* #98c379 green */
+}
+
+.onedark .xml-comment {
+  color: oklch(0.5 0.03 240); /* #5c6370 */
+  font-style: italic;
+}
+
+.onedark .xml-cdata {
+  color: oklch(0.7 0.15 180); /* #56b6c2 cyan */
+}
+
+.onedark .xml-doctype {
+  color: oklch(0.75 0.15 320); /* #c678dd magenta */
+}
+
+.onedark .xml-text {
+  color: oklch(0.85 0.02 240); /* Text */
+}

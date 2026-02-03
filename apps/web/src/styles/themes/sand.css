@@ -1,0 +1,92 @@
+/* Sand Theme - Sandy beige tones */
+
+:root.sand {
+  --background: oklch(0.96 0.02 80);
+  --background-50: oklch(0.96 0.02 80 / 0.5);
+  --background-80: oklch(0.96 0.02 80 / 0.8);
+
+  --foreground: oklch(0.25 0.03 70);
+  --foreground-secondary: oklch(0.45 0.03 70);
+  --foreground-muted: oklch(0.55 0.02 70);
+
+  --card: oklch(0.98 0.015 80);
+  --card-foreground: oklch(0.25 0.03 70);
+  --popover: oklch(0.97 0.015 80);
+  --popover-foreground: oklch(0.25 0.03 70);
+
+  --primary: oklch(0.55 0.12 60);
+  --primary-foreground: oklch(0.98 0.015 80);
+  --brand-400: oklch(0.6 0.1 60);
+  --brand-500: oklch(0.55 0.12 60);
+  --brand-600: oklch(0.5 0.14 60);
+
+  --secondary: oklch(0.93 0.025 80);
+  --secondary-foreground: oklch(0.25 0.03 70);
+  --muted: oklch(0.92 0.028 80);
+  --muted-foreground: oklch(0.5 0.03 70);
+  --accent: oklch(0.9 0.03 80);
+  --accent-foreground: oklch(0.25 0.03 70);
+
+  --destructive: oklch(0.55 0.2 25);
+  --border: oklch(0.87 0.03 80);
+  --border-glass: oklch(0.55 0.12 60 / 0.15);
+  --input: oklch(0.97 0.018 80);
+  --ring: oklch(0.55 0.12 60);
+
+  --chart-1: oklch(0.55 0.12 60);
+  --chart-2: oklch(0.6 0.1 40);
+  --chart-3: oklch(0.55 0.1 100);
+  --chart-4: oklch(0.5 0.08 30);
+  --chart-5: oklch(0.55 0.08 120);
+
+  --sidebar: oklch(0.95 0.022 80);
+  --sidebar-foreground: oklch(0.25 0.03 70);
+  --sidebar-primary: oklch(0.55 0.12 60);
+  --sidebar-primary-foreground: oklch(0.98 0.015 80);
+  --sidebar-accent: oklch(0.92 0.028 80);
+  --sidebar-accent-foreground: oklch(0.25 0.03 70);
+  --sidebar-border: oklch(0.87 0.03 80);
+  --sidebar-ring: oklch(0.55 0.12 60);
+
+  --action-view: oklch(0.55 0.12 60);
+  --action-view-hover: oklch(0.5 0.14 60);
+  --action-followup: oklch(0.55 0.1 40);
+  --action-followup-hover: oklch(0.5 0.12 40);
+  --action-commit: oklch(0.55 0.12 130);
+  --action-commit-hover: oklch(0.5 0.14 130);
+  --action-verify: oklch(0.55 0.12 130);
+  --action-verify-hover: oklch(0.5 0.14 130);
+
+  --running-indicator: oklch(0.55 0.12 60);
+  --running-indicator-text: oklch(0.5 0.14 60);
+
+  --status-success: oklch(0.55 0.12 130);
+  --status-success-bg: oklch(0.55 0.12 130 / 0.15);
+  --status-warning: oklch(0.6 0.12 70);
+  --status-warning-bg: oklch(0.6 0.12 70 / 0.15);
+  --status-error: oklch(0.55 0.18 25);
+  --status-error-bg: oklch(0.55 0.18 25 / 0.15);
+  --status-info: oklch(0.5 0.12 230);
+  --status-info-bg: oklch(0.5 0.12 230 / 0.15);
+  --status-backlog: oklch(0.6 0.03 70);
+  --status-in-progress: oklch(0.6 0.12 70);
+  --status-waiting: oklch(0.58 0.1 55);
+}
+
+.sand .content-bg {
+  background: linear-gradient(
+    135deg,
+    oklch(0.96 0.02 80),
+    oklch(0.95 0.025 80),
+    oklch(0.96 0.02 80)
+  );
+}
+
+.sand .animated-outline-gradient {
+  background: conic-gradient(from 90deg at 50% 50%, #d97706 0%, #b45309 50%, #d97706 100%);
+}
+
+.sand .animated-outline-inner {
+  background: oklch(0.98 0.015 80) !important;
+  color: #d97706 !important;
+}

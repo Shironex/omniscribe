@@ -1,0 +1,92 @@
+/* Mint Theme - Fresh mint green */
+
+:root.mint {
+  --background: oklch(0.98 0.015 160);
+  --background-50: oklch(0.98 0.015 160 / 0.5);
+  --background-80: oklch(0.98 0.015 160 / 0.8);
+
+  --foreground: oklch(0.2 0.03 160);
+  --foreground-secondary: oklch(0.4 0.03 160);
+  --foreground-muted: oklch(0.55 0.02 160);
+
+  --card: oklch(0.99 0.01 160);
+  --card-foreground: oklch(0.2 0.03 160);
+  --popover: oklch(0.99 0.01 160);
+  --popover-foreground: oklch(0.2 0.03 160);
+
+  --primary: oklch(0.55 0.15 165);
+  --primary-foreground: oklch(0.99 0.01 160);
+  --brand-400: oklch(0.6 0.13 165);
+  --brand-500: oklch(0.55 0.15 165);
+  --brand-600: oklch(0.5 0.17 165);
+
+  --secondary: oklch(0.95 0.018 160);
+  --secondary-foreground: oklch(0.2 0.03 160);
+  --muted: oklch(0.94 0.02 160);
+  --muted-foreground: oklch(0.5 0.03 160);
+  --accent: oklch(0.92 0.025 160);
+  --accent-foreground: oklch(0.2 0.03 160);
+
+  --destructive: oklch(0.55 0.2 25);
+  --border: oklch(0.88 0.02 160);
+  --border-glass: oklch(0.55 0.15 165 / 0.15);
+  --input: oklch(0.98 0.012 160);
+  --ring: oklch(0.55 0.15 165);
+
+  --chart-1: oklch(0.55 0.15 165);
+  --chart-2: oklch(0.6 0.12 200);
+  --chart-3: oklch(0.55 0.15 140);
+  --chart-4: oklch(0.6 0.12 180);
+  --chart-5: oklch(0.55 0.1 230);
+
+  --sidebar: oklch(0.97 0.015 160);
+  --sidebar-foreground: oklch(0.2 0.03 160);
+  --sidebar-primary: oklch(0.55 0.15 165);
+  --sidebar-primary-foreground: oklch(0.99 0.01 160);
+  --sidebar-accent: oklch(0.94 0.02 160);
+  --sidebar-accent-foreground: oklch(0.2 0.03 160);
+  --sidebar-border: oklch(0.88 0.02 160);
+  --sidebar-ring: oklch(0.55 0.15 165);
+
+  --action-view: oklch(0.55 0.15 165);
+  --action-view-hover: oklch(0.5 0.17 165);
+  --action-followup: oklch(0.55 0.12 200);
+  --action-followup-hover: oklch(0.5 0.14 200);
+  --action-commit: oklch(0.55 0.15 145);
+  --action-commit-hover: oklch(0.5 0.17 145);
+  --action-verify: oklch(0.55 0.15 145);
+  --action-verify-hover: oklch(0.5 0.17 145);
+
+  --running-indicator: oklch(0.55 0.15 165);
+  --running-indicator-text: oklch(0.5 0.17 165);
+
+  --status-success: oklch(0.55 0.15 145);
+  --status-success-bg: oklch(0.55 0.15 145 / 0.15);
+  --status-warning: oklch(0.65 0.15 70);
+  --status-warning-bg: oklch(0.65 0.15 70 / 0.15);
+  --status-error: oklch(0.55 0.2 25);
+  --status-error-bg: oklch(0.55 0.2 25 / 0.15);
+  --status-info: oklch(0.55 0.12 200);
+  --status-info-bg: oklch(0.55 0.12 200 / 0.15);
+  --status-backlog: oklch(0.6 0.02 160);
+  --status-in-progress: oklch(0.65 0.15 70);
+  --status-waiting: oklch(0.6 0.12 50);
+}
+
+.mint .content-bg {
+  background: linear-gradient(
+    135deg,
+    oklch(0.98 0.015 160),
+    oklch(0.97 0.018 160),
+    oklch(0.98 0.015 160)
+  );
+}
+
+.mint .animated-outline-gradient {
+  background: conic-gradient(from 90deg at 50% 50%, #10b981 0%, #14b8a6 50%, #10b981 100%);
+}
+
+.mint .animated-outline-inner {
+  background: oklch(0.99 0.01 160) !important;
+  color: #10b981 !important;
+}

@@ -9,15 +9,17 @@ import {
 import { Sidebar } from './components';
 import { TerminalGrid, TerminalSession, PreLaunchSlot } from './components/terminal/TerminalGrid';
 import { IdleLandingView } from './components/shared/IdleLandingView';
+import { SettingsModal } from './components/settings';
 import { useSessionStore } from './stores/useSessionStore';
 import { useWorkspaceStore } from './stores/useWorkspaceStore';
 import { useGitStore } from './stores/useGitStore';
+import { useSettingsStore } from './stores/useSettingsStore';
 import { connectSocket } from './lib/socket';
 import { createSession, removeSession } from './lib/session';
 import { killTerminal } from './lib/terminal';
 import type { Branch } from './components/shared/BranchSelector';
 import type { AIMode } from './components/terminal/TerminalHeader';
-import { mapSessionStatus, type AiMode, type UISessionStatus } from '@omniscribe/shared';
+import { mapSessionStatus, type AiMode, type UISessionStatus, type Theme } from '@omniscribe/shared';
 
 /**
  * Maps UI AIMode to backend AiMode
@@ -56,8 +58,6 @@ function mapAiModeToUI(backendMode: AiMode): AIMode {
   }
 }
 
-type Theme = 'dark' | 'light';
-
 function App() {
   // Note: Sidebar and theme state now come from workspace preferences
   // Local state is used as fallback and for immediate UI updates
@@ -86,6 +86,10 @@ function App() {
   const cleanupWorkspaceListeners = useWorkspaceStore((state) => state.cleanupListeners);
   const updatePreference = useWorkspaceStore((state) => state.updatePreference);
 
+  // Settings store
+  const settingsTheme = useSettingsStore((state) => state.theme);
+  const setSettingsTheme = useSettingsStore((state) => state.setTheme);
+
   // Git store
   const gitBranches = useGitStore((state) => state.branches);
   const currentGitBranch = useGitStore((state) => state.currentBranch);
@@ -98,13 +102,18 @@ function App() {
   const activeTab = getActiveTab();
   const activeProjectPath = activeTab?.projectPath ?? null;
 
-  // Derive sidebar and theme from workspace preferences
+  // Derive sidebar from workspace preferences
   const sidebarOpen = workspacePreferences.sidebarOpen ?? true;
   const sidebarWidth = workspacePreferences.sidebarWidth ?? 240;
-  const theme = (workspacePreferences.theme === 'light' ? 'light' : 'dark') as Theme;
+
+  // Use settings store theme (synced with workspace preferences below)
+  const theme = settingsTheme;
 
   // Track previous project path for change detection
   const prevProjectPathRef = useRef<string | null>(null);
+
+  // Track if initial theme sync from workspace has happened
+  const hasInitialThemeSyncRef = useRef(false);
 
   // Convert workspace tabs to UI tabs format
   const tabs: Tab[] = useMemo(() => {
@@ -214,20 +223,36 @@ function App() {
     }
   }, [activeProjectPath, clearGitState, fetchBranches]);
 
-  // Apply theme to document
-  useEffect(() => {
-    if (theme === 'light') {
-      document.documentElement.classList.add('light');
-    } else {
-      document.documentElement.classList.remove('light');
-    }
-  }, [theme]);
+  // Get workspace restored state
+  const isWorkspaceRestored = useWorkspaceStore((state) => state.isRestored);
 
-  // Theme toggle handler
-  const handleToggleTheme = useCallback(() => {
-    const newTheme = theme === 'dark' ? 'light' : 'dark';
-    updatePreference('theme', newTheme);
-  }, [theme, updatePreference]);
+  // Sync workspace theme preference with settings store (only on initial load after restore)
+  useEffect(() => {
+    // Only sync once after workspace state is restored from backend
+    if (hasInitialThemeSyncRef.current || !isWorkspaceRestored) {
+      return;
+    }
+
+    const workspaceTheme = workspacePreferences.theme;
+    if (workspaceTheme) {
+      hasInitialThemeSyncRef.current = true;
+      if (workspaceTheme !== settingsTheme) {
+        setSettingsTheme(workspaceTheme as Theme);
+      }
+    }
+  }, [workspacePreferences.theme, settingsTheme, setSettingsTheme, isWorkspaceRestored]);
+
+  // Sync settings theme changes back to workspace preferences
+  useEffect(() => {
+    // Skip initial sync - only persist user-initiated changes
+    if (!hasInitialThemeSyncRef.current) {
+      return;
+    }
+
+    if (settingsTheme !== workspacePreferences.theme) {
+      updatePreference('theme', settingsTheme);
+    }
+  }, [settingsTheme, workspacePreferences.theme, updatePreference]);
 
   // Tab handlers
   const handleSelectTab = useCallback((tabId: string) => {
@@ -402,7 +427,7 @@ function App() {
   const hasContent = terminalSessions.length > 0 || preLaunchSlots.length > 0;
 
   return (
-    <div className="h-screen w-screen bg-omniscribe-bg text-omniscribe-text-primary flex flex-col overflow-hidden">
+    <div className="h-screen w-screen bg-background text-foreground flex flex-col overflow-hidden">
       {/* Project tabs / title bar */}
       <ProjectTabs
         tabs={tabs}
@@ -428,12 +453,10 @@ function App() {
           collapsed={!sidebarOpen}
           width={sidebarWidth}
           onWidthChange={handleSidebarWidthChange}
-          theme={theme}
-          onToggleTheme={handleToggleTheme}
         />
 
         {/* Main content */}
-        <main className="flex-1 flex overflow-hidden bg-omniscribe-bg">
+        <main className="flex-1 flex overflow-hidden bg-background">
           {activeProjectPath ? (
             hasContent ? (
               <TerminalGrid
@@ -467,6 +490,9 @@ function App() {
         canLaunch={canLaunch}
         hasActiveSessions={hasActiveSessions}
       />
+
+      {/* Settings Modal */}
+      <SettingsModal />
     </div>
   );
 }

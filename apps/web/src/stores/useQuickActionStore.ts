@@ -182,7 +182,7 @@ export const useQuickActionStore = create<QuickActionStore>()(
       },
     }),
     {
-      name: 'omniscribe-quick-actions',
+      name: 'quick-actions',
       storage: createJSONStorage(() => electronStorage),
       partialize: (state) => ({
         actions: state.actions,

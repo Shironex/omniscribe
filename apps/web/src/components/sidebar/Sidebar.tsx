@@ -7,9 +7,7 @@ import {
   Layers,
   Server,
   Zap,
-  Palette,
-  Moon,
-  Sun,
+  Settings,
   GripVertical,
   ChevronDown,
   ChevronRight,
@@ -18,19 +16,16 @@ import { GitSection } from './GitSection';
 import { SessionsSection } from './SessionsSection';
 import { McpSection } from './McpSection';
 import { QuickActionsSection } from './QuickActionsSection';
-import { useSessionStore, useTerminalControlStore } from '../../stores';
+import { useSessionStore, useTerminalControlStore, useSettingsStore } from '../../stores';
 import { writeToTerminal } from '../../lib/terminal';
 import { QuickAction } from '@omniscribe/shared';
 
-type Theme = 'dark' | 'light';
 type SidebarTab = 'config' | 'processes';
 
 interface SidebarProps {
   collapsed: boolean;
   width: number;
   onWidthChange: (width: number) => void;
-  theme: Theme;
-  onToggleTheme: () => void;
   className?: string;
 }
 
@@ -53,29 +48,29 @@ function CollapsibleSection({
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
 
   return (
-    <div className="bg-omniscribe-card rounded-lg border border-omniscribe-border overflow-hidden">
+    <div className="bg-card rounded-lg border border-border overflow-hidden">
       <button
         onClick={() => setIsExpanded(!isExpanded)}
         className={clsx(
           'w-full flex items-center gap-2 px-3 py-2',
-          'hover:bg-omniscribe-surface/50 transition-colors',
-          isExpanded && 'border-b border-omniscribe-border'
+          'hover:bg-muted/50 transition-colors',
+          isExpanded && 'border-b border-border'
         )}
       >
-        <Icon size={14} className="text-omniscribe-text-muted" />
-        <span className="text-xs font-medium text-omniscribe-text-secondary uppercase tracking-wide flex-1 text-left">
+        <Icon size={14} className="text-muted-foreground" />
+        <span className="text-xs font-medium text-foreground-secondary uppercase tracking-wide flex-1 text-left">
           {title}
         </span>
         {isExpanded ? (
-          <ChevronDown size={14} className="text-omniscribe-text-muted" />
+          <ChevronDown size={14} className="text-muted-foreground" />
         ) : (
-          <ChevronRight size={14} className="text-omniscribe-text-muted" />
+          <ChevronRight size={14} className="text-muted-foreground" />
         )}
       </button>
       {isExpanded && (
         <div className="p-3">
           {children || (
-            <p className="text-xs text-omniscribe-text-muted">No items configured</p>
+            <p className="text-xs text-muted-foreground">No items configured</p>
           )}
         </div>
       )}
@@ -87,13 +82,14 @@ export function Sidebar({
   collapsed,
   width,
   onWidthChange,
-  theme,
-  onToggleTheme,
   className,
 }: SidebarProps) {
   const [activeTab, setActiveTab] = useState<SidebarTab>('config');
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
+
+  // Settings store
+  const openSettings = useSettingsStore((state) => state.openSettings);
 
   // Get sessions for the Processes tab - use stable selector
   const sessions = useSessionStore((state) => state.sessions);
@@ -187,7 +183,7 @@ export function Sidebar({
       ref={sidebarRef}
       className={twMerge(
         clsx(
-          'relative bg-omniscribe-surface border-r border-omniscribe-border',
+          'relative bg-muted border-r border-border',
           'flex flex-col overflow-hidden transition-all duration-200',
           collapsed ? 'w-0' : ''
         ),
@@ -196,14 +192,14 @@ export function Sidebar({
       style={{ width: collapsed ? 0 : width }}
     >
       {/* Tab switcher */}
-      <div className="flex border-b border-omniscribe-border">
+      <div className="flex border-b border-border">
         <button
           onClick={() => setActiveTab('config')}
           className={clsx(
             'flex-1 px-3 py-2 text-xs font-medium transition-colors',
             activeTab === 'config'
-              ? 'text-omniscribe-text-primary bg-omniscribe-card'
-              : 'text-omniscribe-text-muted hover:text-omniscribe-text-secondary'
+              ? 'text-foreground bg-card'
+              : 'text-muted-foreground hover:text-foreground-secondary'
           )}
         >
           Config
@@ -213,8 +209,8 @@ export function Sidebar({
           className={clsx(
             'flex-1 px-3 py-2 text-xs font-medium transition-colors',
             activeTab === 'processes'
-              ? 'text-omniscribe-text-primary bg-omniscribe-card'
-              : 'text-omniscribe-text-muted hover:text-omniscribe-text-secondary'
+              ? 'text-foreground bg-card'
+              : 'text-muted-foreground hover:text-foreground-secondary'
           )}
         >
           Processes
@@ -232,7 +228,7 @@ export function Sidebar({
 
             {/* Project Context Section */}
             <CollapsibleSection icon={FileText} title="Project Context" defaultExpanded={false}>
-              <p className="text-xs text-omniscribe-text-muted">
+              <p className="text-xs text-muted-foreground">
                 Project context files will be shown here.
               </p>
             </CollapsibleSection>
@@ -255,19 +251,19 @@ export function Sidebar({
               <QuickActionsSection onActionExecute={handleActionExecute} />
             </CollapsibleSection>
 
-            {/* Appearance Section */}
-            <CollapsibleSection icon={Palette} title="Appearance" defaultExpanded={false}>
+            {/* Settings Section */}
+            <CollapsibleSection icon={Settings} title="Settings" defaultExpanded={false}>
               <button
-                onClick={onToggleTheme}
+                onClick={() => openSettings('appearance')}
                 className={clsx(
                   'flex items-center gap-2 w-full px-2 py-1.5 rounded',
-                  'text-xs text-omniscribe-text-secondary',
-                  'bg-omniscribe-surface hover:bg-omniscribe-border',
+                  'text-xs text-foreground-secondary',
+                  'bg-muted hover:bg-border',
                   'transition-colors'
                 )}
               >
-                {theme === 'dark' ? <Moon size={14} /> : <Sun size={14} />}
-                <span>{theme === 'dark' ? 'Dark' : 'Light'} Theme</span>
+                <Settings size={14} />
+                <span>Open Settings</span>
               </button>
             </CollapsibleSection>
           </>
@@ -281,7 +277,7 @@ export function Sidebar({
                 />
               </CollapsibleSection>
             ) : (
-              <div className="text-xs text-omniscribe-text-muted text-center py-8">
+              <div className="text-xs text-muted-foreground text-center py-8">
                 No active processes
               </div>
             )}
@@ -294,12 +290,12 @@ export function Sidebar({
         onMouseDown={handleMouseDown}
         className={clsx(
           'absolute top-0 right-0 w-1 h-full cursor-ew-resize',
-          'hover:bg-omniscribe-accent-primary/50 transition-colors',
-          isResizing && 'bg-omniscribe-accent-primary'
+          'hover:bg-primary/50 transition-colors',
+          isResizing && 'bg-primary'
         )}
       >
         <div className="absolute top-1/2 right-0 -translate-y-1/2 -translate-x-1/2 opacity-0 hover:opacity-100 transition-opacity">
-          <GripVertical size={12} className="text-omniscribe-text-muted" />
+          <GripVertical size={12} className="text-muted-foreground" />
         </div>
       </div>
     </div>

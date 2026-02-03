@@ -1,0 +1,87 @@
+/* GitHub Light Theme */
+
+:root.github {
+  --background: oklch(0.99 0 0);
+  --background-50: oklch(0.99 0 0 / 0.5);
+  --background-80: oklch(0.99 0 0 / 0.8);
+
+  --foreground: oklch(0.2 0 0);
+  --foreground-secondary: oklch(0.4 0 0);
+  --foreground-muted: oklch(0.55 0 0);
+
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.2 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.2 0 0);
+
+  --primary: oklch(0.5 0.15 250);
+  --primary-foreground: oklch(1 0 0);
+  --brand-400: oklch(0.55 0.13 250);
+  --brand-500: oklch(0.5 0.15 250);
+  --brand-600: oklch(0.45 0.17 250);
+
+  --secondary: oklch(0.96 0 0);
+  --secondary-foreground: oklch(0.2 0 0);
+  --muted: oklch(0.96 0 0);
+  --muted-foreground: oklch(0.45 0 0);
+  --accent: oklch(0.94 0 0);
+  --accent-foreground: oklch(0.2 0 0);
+
+  --destructive: oklch(0.55 0.22 25);
+  --border: oklch(0.88 0 0);
+  --border-glass: oklch(0.2 0 0 / 0.1);
+  --input: oklch(0.98 0 0);
+  --ring: oklch(0.5 0.15 250);
+
+  --chart-1: oklch(0.5 0.15 250);
+  --chart-2: oklch(0.55 0.18 145);
+  --chart-3: oklch(0.6 0.15 45);
+  --chart-4: oklch(0.55 0.15 300);
+  --chart-5: oklch(0.55 0.18 25);
+
+  --sidebar: oklch(0.98 0 0);
+  --sidebar-foreground: oklch(0.2 0 0);
+  --sidebar-primary: oklch(0.5 0.15 250);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.94 0 0);
+  --sidebar-accent-foreground: oklch(0.2 0 0);
+  --sidebar-border: oklch(0.88 0 0);
+  --sidebar-ring: oklch(0.5 0.15 250);
+
+  --action-view: oklch(0.5 0.15 250);
+  --action-view-hover: oklch(0.45 0.17 250);
+  --action-followup: oklch(0.55 0.15 230);
+  --action-followup-hover: oklch(0.5 0.17 230);
+  --action-commit: oklch(0.55 0.18 145);
+  --action-commit-hover: oklch(0.5 0.2 145);
+  --action-verify: oklch(0.55 0.18 145);
+  --action-verify-hover: oklch(0.5 0.2 145);
+
+  --running-indicator: oklch(0.5 0.15 250);
+  --running-indicator-text: oklch(0.45 0.17 250);
+
+  --status-success: oklch(0.55 0.18 145);
+  --status-success-bg: oklch(0.55 0.18 145 / 0.15);
+  --status-warning: oklch(0.65 0.15 80);
+  --status-warning-bg: oklch(0.65 0.15 80 / 0.15);
+  --status-error: oklch(0.55 0.22 25);
+  --status-error-bg: oklch(0.55 0.22 25 / 0.15);
+  --status-info: oklch(0.5 0.15 250);
+  --status-info-bg: oklch(0.5 0.15 250 / 0.15);
+  --status-backlog: oklch(0.55 0 0);
+  --status-in-progress: oklch(0.65 0.15 80);
+  --status-waiting: oklch(0.6 0.12 50);
+}
+
+.github .content-bg {
+  background: linear-gradient(135deg, oklch(0.99 0 0), oklch(0.98 0 0), oklch(0.99 0 0));
+}
+
+.github .animated-outline-gradient {
+  background: conic-gradient(from 90deg at 50% 50%, #0969da 0%, #1f883d 50%, #0969da 100%);
+}
+
+.github .animated-outline-inner {
+  background: oklch(1 0 0) !important;
+  color: #0969da !important;
+}

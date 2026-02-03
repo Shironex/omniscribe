@@ -1,0 +1,92 @@
+/* Gruvbox Light Theme */
+
+:root.gruvboxlight {
+  --background: oklch(0.96 0.02 85);
+  --background-50: oklch(0.96 0.02 85 / 0.5);
+  --background-80: oklch(0.96 0.02 85 / 0.8);
+
+  --foreground: oklch(0.25 0.04 65);
+  --foreground-secondary: oklch(0.4 0.04 65);
+  --foreground-muted: oklch(0.55 0.03 65);
+
+  --card: oklch(0.98 0.015 85);
+  --card-foreground: oklch(0.25 0.04 65);
+  --popover: oklch(0.97 0.018 85);
+  --popover-foreground: oklch(0.25 0.04 65);
+
+  --primary: oklch(0.55 0.15 70);
+  --primary-foreground: oklch(0.98 0.015 85);
+  --brand-400: oklch(0.6 0.13 70);
+  --brand-500: oklch(0.55 0.15 70);
+  --brand-600: oklch(0.5 0.17 70);
+
+  --secondary: oklch(0.93 0.025 85);
+  --secondary-foreground: oklch(0.25 0.04 65);
+  --muted: oklch(0.92 0.028 85);
+  --muted-foreground: oklch(0.5 0.03 65);
+  --accent: oklch(0.9 0.032 85);
+  --accent-foreground: oklch(0.25 0.04 65);
+
+  --destructive: oklch(0.55 0.2 25);
+  --border: oklch(0.87 0.03 85);
+  --border-glass: oklch(0.55 0.15 70 / 0.15);
+  --input: oklch(0.97 0.018 85);
+  --ring: oklch(0.55 0.15 70);
+
+  --chart-1: oklch(0.55 0.15 70);
+  --chart-2: oklch(0.55 0.18 25);
+  --chart-3: oklch(0.5 0.15 145);
+  --chart-4: oklch(0.55 0.15 230);
+  --chart-5: oklch(0.55 0.15 300);
+
+  --sidebar: oklch(0.95 0.022 85);
+  --sidebar-foreground: oklch(0.25 0.04 65);
+  --sidebar-primary: oklch(0.55 0.15 70);
+  --sidebar-primary-foreground: oklch(0.98 0.015 85);
+  --sidebar-accent: oklch(0.92 0.028 85);
+  --sidebar-accent-foreground: oklch(0.25 0.04 65);
+  --sidebar-border: oklch(0.87 0.03 85);
+  --sidebar-ring: oklch(0.55 0.15 70);
+
+  --action-view: oklch(0.55 0.15 70);
+  --action-view-hover: oklch(0.5 0.17 70);
+  --action-followup: oklch(0.55 0.15 230);
+  --action-followup-hover: oklch(0.5 0.17 230);
+  --action-commit: oklch(0.5 0.15 145);
+  --action-commit-hover: oklch(0.45 0.17 145);
+  --action-verify: oklch(0.5 0.15 145);
+  --action-verify-hover: oklch(0.45 0.17 145);
+
+  --running-indicator: oklch(0.55 0.15 70);
+  --running-indicator-text: oklch(0.5 0.17 70);
+
+  --status-success: oklch(0.5 0.15 145);
+  --status-success-bg: oklch(0.5 0.15 145 / 0.15);
+  --status-warning: oklch(0.6 0.15 70);
+  --status-warning-bg: oklch(0.6 0.15 70 / 0.15);
+  --status-error: oklch(0.55 0.2 25);
+  --status-error-bg: oklch(0.55 0.2 25 / 0.15);
+  --status-info: oklch(0.55 0.15 230);
+  --status-info-bg: oklch(0.55 0.15 230 / 0.15);
+  --status-backlog: oklch(0.6 0.03 65);
+  --status-in-progress: oklch(0.6 0.15 70);
+  --status-waiting: oklch(0.58 0.12 55);
+}
+
+.gruvboxlight .content-bg {
+  background: linear-gradient(
+    135deg,
+    oklch(0.96 0.02 85),
+    oklch(0.95 0.025 85),
+    oklch(0.96 0.02 85)
+  );
+}
+
+.gruvboxlight .animated-outline-gradient {
+  background: conic-gradient(from 90deg at 50% 50%, #d79921 0%, #b57614 50%, #d79921 100%);
+}
+
+.gruvboxlight .animated-outline-inner {
+  background: oklch(0.98 0.015 85) !important;
+  color: #b57614 !important;
+}

@@ -47,10 +47,10 @@ export function StatusLegend({ counts, showCounts = true, className }: StatusLeg
           return (
             <div key={status} className="flex items-center gap-1.5">
               <span className={clsx('w-2 h-2 rounded-full', config.color)} />
-              <span className="text-xs text-omniscribe-text-secondary">
+              <span className="text-xs text-foreground-secondary">
                 {config.label}
                 {showCounts && count > 0 && (
-                  <span className="ml-1 text-omniscribe-text-muted">({count})</span>
+                  <span className="ml-1 text-muted-foreground">({count})</span>
                 )}
               </span>
             </div>

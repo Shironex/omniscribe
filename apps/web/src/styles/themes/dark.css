@@ -1,0 +1,166 @@
+/* Dark Theme */
+
+:root.dark {
+  /* Deep dark backgrounds - zinc-950 family */
+  --background: oklch(0.04 0 0); /* zinc-950 */
+  --background-50: oklch(0.04 0 0 / 0.5); /* zinc-950/50 */
+  --background-80: oklch(0.04 0 0 / 0.8); /* zinc-950/80 */
+
+  /* Text colors following hierarchy */
+  --foreground: oklch(1 0 0); /* text-white */
+  --foreground-secondary: oklch(0.588 0 0); /* text-zinc-400 */
+  --foreground-muted: oklch(0.525 0 0); /* text-zinc-500 */
+
+  /* Card and popover backgrounds */
+  --card: oklch(0.14 0 0); /* slightly lighter than background for contrast */
+  --card-foreground: oklch(1 0 0);
+  --popover: oklch(0.1 0 0); /* slightly lighter than background */
+  --popover-foreground: oklch(1 0 0);
+
+  /* Brand colors - purple/violet theme */
+  --primary: oklch(0.55 0.25 265); /* brand-500 */
+  --primary-foreground: oklch(1 0 0);
+  --brand-400: oklch(0.6 0.22 265);
+  --brand-500: oklch(0.55 0.25 265);
+  --brand-600: oklch(0.5 0.28 270); /* purple-600 for gradients */
+
+  /* Glass morphism borders and accents */
+  --secondary: oklch(1 0 0 / 0.05); /* bg-white/5 */
+  --secondary-foreground: oklch(1 0 0);
+  --muted: oklch(0.176 0 0); /* zinc-800 */
+  --muted-foreground: oklch(0.588 0 0); /* text-zinc-400 */
+  --accent: oklch(1 0 0 / 0.1); /* bg-white/10 for hover */
+  --accent-foreground: oklch(1 0 0);
+
+  /* Borders with transparency for glass effect */
+  --border: oklch(0.176 0 0); /* zinc-800 */
+  --border-glass: oklch(1 0 0 / 0.1); /* white/10 for glass morphism */
+  --destructive: oklch(0.6 0.25 25);
+  --input: oklch(0.04 0 0 / 0.8); /* Semi-transparent dark */
+  --ring: oklch(0.55 0.25 265);
+
+  /* Chart colors with brand theme */
+  --chart-1: oklch(0.55 0.25 265);
+  --chart-2: oklch(0.65 0.2 160);
+  --chart-3: oklch(0.75 0.2 70);
+  --chart-4: oklch(0.6 0.25 300);
+  --chart-5: oklch(0.6 0.25 20);
+
+  /* Sidebar with glass morphism */
+  --sidebar: oklch(0.04 0 0 / 0.5); /* zinc-950/50 with backdrop blur */
+  --sidebar-foreground: oklch(1 0 0);
+  --sidebar-primary: oklch(0.55 0.25 265);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(1 0 0 / 0.05); /* bg-white/5 */
+  --sidebar-accent-foreground: oklch(1 0 0);
+  --sidebar-border: oklch(1 0 0 / 0.1); /* white/10 for glass borders */
+  --sidebar-ring: oklch(0.55 0.25 265);
+
+  /* Action button colors */
+  --action-view: oklch(0.6 0.25 265); /* Purple */
+  --action-view-hover: oklch(0.55 0.27 270);
+  --action-followup: oklch(0.6 0.2 230); /* Blue */
+  --action-followup-hover: oklch(0.55 0.22 230);
+  --action-commit: oklch(0.55 0.2 140); /* Green */
+  --action-commit-hover: oklch(0.5 0.22 140);
+  --action-verify: oklch(0.55 0.2 140); /* Green */
+  --action-verify-hover: oklch(0.5 0.22 140);
+
+  /* Running indicator - Purple */
+  --running-indicator: oklch(0.6 0.25 265);
+  --running-indicator-text: oklch(0.65 0.22 265);
+
+  /* Status colors - Dark mode */
+  --status-success: oklch(0.65 0.2 140);
+  --status-success-bg: oklch(0.65 0.2 140 / 0.2);
+  --status-warning: oklch(0.75 0.15 70);
+  --status-warning-bg: oklch(0.75 0.15 70 / 0.2);
+  --status-error: oklch(0.65 0.22 25);
+  --status-error-bg: oklch(0.65 0.22 25 / 0.2);
+  --status-info: oklch(0.65 0.2 230);
+  --status-info-bg: oklch(0.65 0.2 230 / 0.2);
+  --status-backlog: oklch(0.6 0 0);
+  --status-in-progress: oklch(0.75 0.15 70);
+  --status-waiting: oklch(0.7 0.18 50);
+
+  /* Shadow tokens - darker for dark mode */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.3);
+}
+
+/* Theme-specific overrides */
+
+.dark .content-bg {
+  background: linear-gradient(135deg, oklch(0.04 0 0), oklch(0.08 0 0), oklch(0.04 0 0));
+}
+
+.dark .animated-outline-gradient {
+  background: conic-gradient(from 90deg at 50% 50%, #a855f7 0%, #3b82f6 50%, #a855f7 100%);
+}
+
+.dark .animated-outline-inner {
+  background: oklch(0.15 0 0) !important;
+  color: #c084fc !important;
+}
+
+.dark [data-slot='button'][class*='animated-outline']:hover .animated-outline-inner {
+  background: oklch(0.2 0.02 270) !important;
+  color: #e9d5ff !important;
+}
+
+.dark .slider-track {
+  background: oklch(0.2 0 0);
+}
+
+.dark .slider-range {
+  background: linear-gradient(to right, #a855f7, #3b82f6);
+}
+
+.dark .slider-thumb {
+  background: oklch(0.25 0 0);
+  border-color: oklch(0.4 0 0);
+}
+
+.dark .xml-highlight {
+  color: oklch(0.9 0 0); /* Default light text */
+}
+
+.dark .xml-tag-bracket {
+  color: oklch(0.7 0.12 220); /* Soft blue for < > */
+}
+
+.dark .xml-tag-name {
+  color: oklch(0.75 0.2 25); /* Coral/salmon for tag names */
+}
+
+.dark .xml-attribute-name {
+  color: oklch(0.8 0.15 280); /* Light purple for attributes */
+}
+
+.dark .xml-attribute-equals {
+  color: oklch(0.6 0 0); /* Gray for = */
+}
+
+.dark .xml-attribute-value {
+  color: oklch(0.8 0.18 145); /* Bright green for strings */
+}
+
+.dark .xml-comment {
+  color: oklch(0.55 0.05 100); /* Muted for comments */
+  font-style: italic;
+}
+
+.dark .xml-cdata {
+  color: oklch(0.7 0.12 200); /* Teal for CDATA */
+}
+
+.dark .xml-doctype {
+  color: oklch(0.7 0.15 280); /* Purple for DOCTYPE */
+}
+
+.dark .xml-text {
+  color: oklch(0.85 0 0); /* Off-white for text */
+}

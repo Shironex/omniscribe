@@ -90,20 +90,20 @@ export function BranchSelector({
         disabled={disabled}
         className={clsx(
           'flex items-center gap-2 px-3 py-1.5 rounded',
-          'bg-omniscribe-card border border-omniscribe-border',
-          'text-sm text-omniscribe-text-primary',
+          'bg-card border border-border',
+          'text-sm text-foreground',
           'transition-colors',
           disabled
             ? 'opacity-50 cursor-not-allowed'
-            : 'hover:bg-omniscribe-border hover:border-omniscribe-text-muted'
+            : 'hover:bg-border hover:border-muted-foreground'
         )}
       >
-        <GitBranch size={14} className="text-omniscribe-text-secondary" />
+        <GitBranch size={14} className="text-foreground-secondary" />
         <span className="truncate max-w-32">{currentBranch}</span>
         <ChevronDown
           size={14}
           className={clsx(
-            'text-omniscribe-text-muted transition-transform',
+            'text-muted-foreground transition-transform',
             isOpen && 'rotate-180'
           )}
         />
@@ -115,16 +115,16 @@ export function BranchSelector({
           className={clsx(
             'absolute top-full left-0 mt-1 z-50',
             'w-64 max-h-80 overflow-hidden',
-            'bg-omniscribe-surface border border-omniscribe-border rounded-lg shadow-xl',
+            'bg-muted border border-border rounded-lg shadow-xl',
             'animate-fade-in'
           )}
         >
           {/* Search input */}
-          <div className="p-2 border-b border-omniscribe-border">
+          <div className="p-2 border-b border-border">
             <div className="relative">
               <Search
                 size={14}
-                className="absolute left-2.5 top-1/2 -translate-y-1/2 text-omniscribe-text-muted"
+                className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"
               />
               <input
                 ref={inputRef}
@@ -134,9 +134,9 @@ export function BranchSelector({
                 placeholder="Search branches..."
                 className={clsx(
                   'w-full pl-8 pr-3 py-1.5 rounded',
-                  'bg-omniscribe-card border border-omniscribe-border',
-                  'text-sm text-omniscribe-text-primary placeholder:text-omniscribe-text-muted',
-                  'focus:outline-none focus:border-omniscribe-accent-primary'
+                  'bg-card border border-border',
+                  'text-sm text-foreground placeholder:text-muted-foreground',
+                  'focus:outline-none focus:border-primary'
                 )}
               />
             </div>
@@ -147,7 +147,7 @@ export function BranchSelector({
             {/* Local branches */}
             {localBranches.length > 0 && (
               <div>
-                <div className="px-3 py-1.5 text-2xs font-medium text-omniscribe-text-muted uppercase tracking-wide">
+                <div className="px-3 py-1.5 text-2xs font-medium text-muted-foreground uppercase tracking-wide">
                   Local
                 </div>
                 {localBranches.map((branch) => (
@@ -158,14 +158,14 @@ export function BranchSelector({
                       'w-full flex items-center gap-2 px-3 py-1.5',
                       'text-sm text-left transition-colors',
                       branch.name === currentBranch
-                        ? 'bg-omniscribe-accent-primary/10 text-omniscribe-accent-primary'
-                        : 'text-omniscribe-text-primary hover:bg-omniscribe-card'
+                        ? 'bg-primary/10 text-primary'
+                        : 'text-foreground hover:bg-card'
                     )}
                   >
                     <GitBranch size={14} className="shrink-0" />
                     <span className="truncate flex-1">{branch.name}</span>
                     {branch.name === currentBranch && (
-                      <Check size={14} className="shrink-0 text-omniscribe-accent-primary" />
+                      <Check size={14} className="shrink-0 text-primary" />
                     )}
                   </button>
                 ))}
@@ -175,7 +175,7 @@ export function BranchSelector({
             {/* Remote branches */}
             {remoteBranches.length > 0 && (
               <div>
-                <div className="px-3 py-1.5 text-2xs font-medium text-omniscribe-text-muted uppercase tracking-wide border-t border-omniscribe-border mt-1 pt-2">
+                <div className="px-3 py-1.5 text-2xs font-medium text-muted-foreground uppercase tracking-wide border-t border-border mt-1 pt-2">
                   Remote
                 </div>
                 {remoteBranches.map((branch) => (
@@ -186,14 +186,14 @@ export function BranchSelector({
                       'w-full flex items-center gap-2 px-3 py-1.5',
                       'text-sm text-left transition-colors',
                       branch.name === currentBranch
-                        ? 'bg-omniscribe-accent-primary/10 text-omniscribe-accent-primary'
-                        : 'text-omniscribe-text-secondary hover:bg-omniscribe-card hover:text-omniscribe-text-primary'
+                        ? 'bg-primary/10 text-primary'
+                        : 'text-foreground-secondary hover:bg-card hover:text-foreground'
                     )}
                   >
                     <GitBranch size={14} className="shrink-0" />
                     <span className="truncate flex-1">{branch.name}</span>
                     {branch.name === currentBranch && (
-                      <Check size={14} className="shrink-0 text-omniscribe-accent-primary" />
+                      <Check size={14} className="shrink-0 text-primary" />
                     )}
                   </button>
                 ))}
@@ -202,7 +202,7 @@ export function BranchSelector({
 
             {/* Empty state */}
             {localBranches.length === 0 && remoteBranches.length === 0 && !showCreateOption && (
-              <div className="px-3 py-4 text-center text-sm text-omniscribe-text-muted">
+              <div className="px-3 py-4 text-center text-sm text-muted-foreground">
                 No branches found
               </div>
             )}
@@ -210,13 +210,13 @@ export function BranchSelector({
 
           {/* Create new branch option */}
           {showCreateOption && (
-            <div className="border-t border-omniscribe-border">
+            <div className="border-t border-border">
               <button
                 onClick={handleCreateBranch}
                 className={clsx(
                   'w-full flex items-center gap-2 px-3 py-2',
-                  'text-sm text-omniscribe-accent-primary',
-                  'hover:bg-omniscribe-card transition-colors'
+                  'text-sm text-primary',
+                  'hover:bg-card transition-colors'
                 )}
               >
                 <Plus size={14} />

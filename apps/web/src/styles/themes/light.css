@@ -1,0 +1,182 @@
+/* Light Theme */
+
+:root.light {
+  /* Light mode - explicit selection to override system dark preference */
+  --background: oklch(1 0 0);
+  --background-50: oklch(1 0 0 / 0.5);
+  --background-80: oklch(1 0 0 / 0.8);
+  --foreground: oklch(0.145 0 0);
+  --foreground-secondary: oklch(0.4 0 0);
+  --foreground-muted: oklch(0.556 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.55 0.25 265);
+  --primary-foreground: oklch(1 0 0);
+  --brand-400: oklch(0.6 0.22 265);
+  --brand-500: oklch(0.55 0.25 265);
+  --brand-600: oklch(0.5 0.28 270);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.95 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(1 0 0);
+  --border: oklch(0.922 0 0);
+  --border-glass: oklch(0.145 0 0 / 0.1);
+  --input: oklch(1 0 0);
+  --ring: oklch(0.55 0.25 265);
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --sidebar: oklch(0.98 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.55 0.25 265);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.95 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.9 0 0);
+  --sidebar-ring: oklch(0.55 0.25 265);
+
+  /* Action button colors */
+  --action-view: oklch(0.55 0.25 265);
+  --action-view-hover: oklch(0.5 0.28 270);
+  --action-followup: oklch(0.55 0.2 230);
+  --action-followup-hover: oklch(0.5 0.22 230);
+  --action-commit: oklch(0.55 0.2 140);
+  --action-commit-hover: oklch(0.5 0.22 140);
+  --action-verify: oklch(0.55 0.2 140);
+  --action-verify-hover: oklch(0.5 0.22 140);
+
+  /* Running indicator */
+  --running-indicator: oklch(0.55 0.25 265);
+  --running-indicator-text: oklch(0.6 0.22 265);
+
+  /* Status colors */
+  --status-success: oklch(0.55 0.2 140);
+  --status-success-bg: oklch(0.55 0.2 140 / 0.15);
+  --status-warning: oklch(0.7 0.15 70);
+  --status-warning-bg: oklch(0.7 0.15 70 / 0.15);
+  --status-error: oklch(0.55 0.22 25);
+  --status-error-bg: oklch(0.55 0.22 25 / 0.15);
+  --status-info: oklch(0.55 0.2 230);
+  --status-info-bg: oklch(0.55 0.2 230 / 0.15);
+  --status-backlog: oklch(0.5 0 0);
+  --status-in-progress: oklch(0.7 0.15 70);
+  --status-waiting: oklch(0.65 0.18 50);
+
+  /* Shadow tokens */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+/* Light Theme Overrides */
+
+.light .scrollbar-visible::-webkit-scrollbar-track {
+  background: oklch(0.95 0 0);
+}
+
+.light .scrollbar-visible::-webkit-scrollbar-thumb {
+  background: oklch(0.7 0 0);
+}
+
+.light .scrollbar-visible::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.6 0 0);
+}
+
+.light .scrollbar-styled::-webkit-scrollbar-thumb {
+  background: oklch(0.75 0 0);
+}
+
+.light .scrollbar-styled::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.65 0 0);
+}
+
+.light .bg-glass {
+  background: oklch(1 0 0 / 0.8);
+}
+
+.light .bg-glass-80 {
+  background: oklch(1 0 0 / 0.95);
+}
+
+.light .content-bg {
+  background: linear-gradient(135deg, oklch(0.99 0 0), oklch(0.98 0 0), oklch(0.99 0 0));
+}
+
+.light .animated-outline-gradient {
+  background: conic-gradient(from 90deg at 50% 50%, #7c3aed 0%, #2563eb 50%, #7c3aed 100%);
+}
+
+.light .animated-outline-inner {
+  background: oklch(100% 0 0) !important;
+  color: #7c3aed !important;
+  border: 1px solid oklch(92% 0 0);
+}
+
+.light [data-slot='button'][class*='animated-outline']:hover .animated-outline-inner {
+  background: oklch(97% 0.02 270) !important;
+  color: #5b21b6 !important;
+}
+
+.light .slider-track {
+  background: oklch(90% 0 0);
+}
+
+.light .slider-range {
+  background: linear-gradient(to right, #7c3aed, #2563eb);
+}
+
+.light .slider-thumb {
+  background: oklch(100% 0 0);
+  border-color: oklch(80% 0 0);
+}
+
+.light .xml-highlight {
+  color: oklch(0.3 0 0); /* Default text */
+}
+
+.light .xml-tag-bracket {
+  color: oklch(0.45 0.15 250); /* Blue-gray for < > */
+}
+
+.light .xml-tag-name {
+  color: oklch(0.45 0.22 25); /* Red/maroon for tag names */
+}
+
+.light .xml-attribute-name {
+  color: oklch(0.45 0.18 280); /* Purple for attributes */
+}
+
+.light .xml-attribute-equals {
+  color: oklch(0.4 0 0); /* Dark gray for = */
+}
+
+.light .xml-attribute-value {
+  color: oklch(0.45 0.18 145); /* Green for string values */
+}
+
+.light .xml-comment {
+  color: oklch(0.55 0.05 100); /* Muted olive for comments */
+  font-style: italic;
+}
+
+.light .xml-cdata {
+  color: oklch(0.5 0.1 200); /* Teal for CDATA */
+}
+
+.light .xml-doctype {
+  color: oklch(0.5 0.15 280); /* Purple for DOCTYPE */
+}
+
+.light .xml-text {
+  color: oklch(0.25 0 0); /* Near-black for text content */
+}

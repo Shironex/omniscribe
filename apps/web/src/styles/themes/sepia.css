@@ -1,0 +1,92 @@
+/* Sepia Theme - Warm sepia/parchment tones */
+
+:root.sepia {
+  --background: oklch(0.95 0.025 70);
+  --background-50: oklch(0.95 0.025 70 / 0.5);
+  --background-80: oklch(0.95 0.025 70 / 0.8);
+
+  --foreground: oklch(0.25 0.04 50);
+  --foreground-secondary: oklch(0.45 0.03 50);
+  --foreground-muted: oklch(0.55 0.03 50);
+
+  --card: oklch(0.97 0.02 70);
+  --card-foreground: oklch(0.25 0.04 50);
+  --popover: oklch(0.96 0.022 70);
+  --popover-foreground: oklch(0.25 0.04 50);
+
+  --primary: oklch(0.5 0.12 50);
+  --primary-foreground: oklch(0.97 0.02 70);
+  --brand-400: oklch(0.55 0.1 50);
+  --brand-500: oklch(0.5 0.12 50);
+  --brand-600: oklch(0.45 0.14 50);
+
+  --secondary: oklch(0.92 0.028 70);
+  --secondary-foreground: oklch(0.25 0.04 50);
+  --muted: oklch(0.91 0.03 70);
+  --muted-foreground: oklch(0.5 0.03 50);
+  --accent: oklch(0.89 0.035 70);
+  --accent-foreground: oklch(0.25 0.04 50);
+
+  --destructive: oklch(0.55 0.18 25);
+  --border: oklch(0.86 0.035 70);
+  --border-glass: oklch(0.5 0.12 50 / 0.15);
+  --input: oklch(0.96 0.022 70);
+  --ring: oklch(0.5 0.12 50);
+
+  --chart-1: oklch(0.5 0.12 50);
+  --chart-2: oklch(0.55 0.1 35);
+  --chart-3: oklch(0.5 0.08 80);
+  --chart-4: oklch(0.45 0.1 30);
+  --chart-5: oklch(0.5 0.06 100);
+
+  --sidebar: oklch(0.94 0.026 70);
+  --sidebar-foreground: oklch(0.25 0.04 50);
+  --sidebar-primary: oklch(0.5 0.12 50);
+  --sidebar-primary-foreground: oklch(0.97 0.02 70);
+  --sidebar-accent: oklch(0.91 0.03 70);
+  --sidebar-accent-foreground: oklch(0.25 0.04 50);
+  --sidebar-border: oklch(0.86 0.035 70);
+  --sidebar-ring: oklch(0.5 0.12 50);
+
+  --action-view: oklch(0.5 0.12 50);
+  --action-view-hover: oklch(0.45 0.14 50);
+  --action-followup: oklch(0.5 0.1 35);
+  --action-followup-hover: oklch(0.45 0.12 35);
+  --action-commit: oklch(0.5 0.12 130);
+  --action-commit-hover: oklch(0.45 0.14 130);
+  --action-verify: oklch(0.5 0.12 130);
+  --action-verify-hover: oklch(0.45 0.14 130);
+
+  --running-indicator: oklch(0.5 0.12 50);
+  --running-indicator-text: oklch(0.45 0.14 50);
+
+  --status-success: oklch(0.5 0.12 130);
+  --status-success-bg: oklch(0.5 0.12 130 / 0.15);
+  --status-warning: oklch(0.58 0.12 70);
+  --status-warning-bg: oklch(0.58 0.12 70 / 0.15);
+  --status-error: oklch(0.55 0.18 25);
+  --status-error-bg: oklch(0.55 0.18 25 / 0.15);
+  --status-info: oklch(0.5 0.1 230);
+  --status-info-bg: oklch(0.5 0.1 230 / 0.15);
+  --status-backlog: oklch(0.58 0.03 50);
+  --status-in-progress: oklch(0.58 0.12 70);
+  --status-waiting: oklch(0.55 0.1 55);
+}
+
+.sepia .content-bg {
+  background: linear-gradient(
+    135deg,
+    oklch(0.95 0.025 70),
+    oklch(0.94 0.028 70),
+    oklch(0.95 0.025 70)
+  );
+}
+
+.sepia .animated-outline-gradient {
+  background: conic-gradient(from 90deg at 50% 50%, #92400e 0%, #a16207 50%, #92400e 100%);
+}
+
+.sepia .animated-outline-inner {
+  background: oklch(0.97 0.02 70) !important;
+  color: #92400e !important;
+}

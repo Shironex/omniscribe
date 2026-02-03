@@ -1,0 +1,144 @@
+/* Monokai Theme */
+
+:root.monokai {
+  --background: oklch(0.17 0.01 90); /* #272822 */
+  --background-50: oklch(0.17 0.01 90 / 0.5);
+  --background-80: oklch(0.17 0.01 90 / 0.8);
+
+  --foreground: oklch(0.95 0.02 100); /* #f8f8f2 */
+  --foreground-secondary: oklch(0.8 0.02 100);
+  --foreground-muted: oklch(0.55 0.04 100); /* #75715e */
+
+  --card: oklch(0.22 0.01 90); /* #3e3d32 */
+  --card-foreground: oklch(0.95 0.02 100);
+  --popover: oklch(0.2 0.01 90);
+  --popover-foreground: oklch(0.95 0.02 100);
+
+  --primary: oklch(0.8 0.2 350); /* #f92672 pink */
+  --primary-foreground: oklch(0.17 0.01 90);
+
+  --brand-400: oklch(0.85 0.2 350);
+  --brand-500: oklch(0.8 0.2 350); /* #f92672 */
+  --brand-600: oklch(0.75 0.22 350);
+
+  --secondary: oklch(0.25 0.02 90);
+  --secondary-foreground: oklch(0.95 0.02 100);
+
+  --muted: oklch(0.25 0.02 90);
+  --muted-foreground: oklch(0.55 0.04 100);
+
+  --accent: oklch(0.3 0.02 90);
+  --accent-foreground: oklch(0.95 0.02 100);
+
+  --destructive: oklch(0.65 0.25 15); /* red */
+
+  --border: oklch(0.35 0.03 90);
+  --border-glass: oklch(0.8 0.2 350 / 0.3);
+
+  --input: oklch(0.22 0.01 90);
+  --ring: oklch(0.8 0.2 350);
+
+  --chart-1: oklch(0.8 0.2 350); /* Pink #f92672 */
+  --chart-2: oklch(0.85 0.2 90); /* Yellow #e6db74 */
+  --chart-3: oklch(0.8 0.2 140); /* Green #a6e22e */
+  --chart-4: oklch(0.75 0.2 200); /* Cyan #66d9ef */
+  --chart-5: oklch(0.75 0.2 30); /* Orange #fd971f */
+
+  --sidebar: oklch(0.15 0.01 90);
+  --sidebar-foreground: oklch(0.95 0.02 100);
+  --sidebar-primary: oklch(0.8 0.2 350);
+  --sidebar-primary-foreground: oklch(0.17 0.01 90);
+  --sidebar-accent: oklch(0.25 0.02 90);
+  --sidebar-accent-foreground: oklch(0.95 0.02 100);
+  --sidebar-border: oklch(0.35 0.03 90);
+  --sidebar-ring: oklch(0.8 0.2 350);
+
+  /* Action button colors - Monokai pink/yellow theme */
+  --action-view: oklch(0.8 0.2 350); /* Pink */
+  --action-view-hover: oklch(0.75 0.22 350);
+  --action-followup: oklch(0.75 0.2 200); /* Cyan */
+  --action-followup-hover: oklch(0.7 0.22 200);
+  --action-commit: oklch(0.8 0.2 140); /* Green */
+  --action-commit-hover: oklch(0.75 0.22 140);
+  --action-verify: oklch(0.8 0.2 140); /* Green */
+  --action-verify-hover: oklch(0.75 0.22 140);
+
+  /* Running indicator - Pink */
+  --running-indicator: oklch(0.8 0.2 350);
+  --running-indicator-text: oklch(0.85 0.18 350);
+}
+
+/* ========================================
+   TOKYO NIGHT THEME
+   A clean dark theme celebrating Tokyo at night
+   ======================================== */
+
+/* Theme-specific overrides */
+
+.monokai .animated-outline-gradient {
+  background: conic-gradient(from 90deg at 50% 50%, #f92672 0%, #e6db74 50%, #f92672 100%);
+}
+
+.monokai .animated-outline-inner {
+  background: oklch(0.17 0.01 90) !important;
+  color: #f92672 !important;
+}
+
+.monokai [data-slot='button'][class*='animated-outline']:hover .animated-outline-inner {
+  background: oklch(0.22 0.02 90) !important;
+  color: #e6db74 !important;
+}
+
+.monokai .slider-track {
+  background: oklch(0.25 0.02 90);
+}
+
+.monokai .slider-range {
+  background: linear-gradient(to right, #f92672, #fd971f);
+}
+
+.monokai .slider-thumb {
+  background: oklch(0.22 0.01 90);
+  border-color: #f92672;
+}
+
+.monokai .xml-highlight {
+  color: oklch(0.95 0.02 100); /* #f8f8f2 */
+}
+
+.monokai .xml-tag-bracket {
+  color: oklch(0.95 0.02 100); /* White */
+}
+
+.monokai .xml-tag-name {
+  color: oklch(0.8 0.2 350); /* #f92672 pink */
+}
+
+.monokai .xml-attribute-name {
+  color: oklch(0.8 0.2 140); /* #a6e22e green */
+}
+
+.monokai .xml-attribute-equals {
+  color: oklch(0.95 0.02 100); /* White */
+}
+
+.monokai .xml-attribute-value {
+  color: oklch(0.85 0.2 90); /* #e6db74 yellow */
+}
+
+.monokai .xml-comment {
+  color: oklch(0.55 0.04 100); /* #75715e */
+  font-style: italic;
+}
+
+.monokai .xml-cdata {
+  color: oklch(0.75 0.2 200); /* Cyan #66d9ef */
+}
+
+.monokai .xml-doctype {
+  color: oklch(0.75 0.2 200); /* Cyan */
+}
+
+.monokai .xml-text {
+  color: oklch(0.95 0.02 100); /* White */
+}

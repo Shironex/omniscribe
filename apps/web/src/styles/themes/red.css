@@ -1,0 +1,83 @@
+/* Red Theme */
+
+:root.red {
+  --background: oklch(0.12 0.03 15); /* Deep dark red-tinted black */
+  --background-50: oklch(0.12 0.03 15 / 0.5);
+  --background-80: oklch(0.12 0.03 15 / 0.8);
+
+  --foreground: oklch(0.95 0.01 15); /* Off-white with warm tint */
+  --foreground-secondary: oklch(0.7 0.02 15);
+  --foreground-muted: oklch(0.5 0.03 15);
+
+  --card: oklch(0.18 0.04 15); /* Slightly lighter dark red */
+  --card-foreground: oklch(0.95 0.01 15);
+  --popover: oklch(0.15 0.035 15);
+  --popover-foreground: oklch(0.95 0.01 15);
+
+  --primary: oklch(0.55 0.25 25); /* Vibrant crimson red */
+  --primary-foreground: oklch(0.98 0 0);
+
+  --brand-400: oklch(0.6 0.23 25);
+  --brand-500: oklch(0.55 0.25 25); /* Crimson */
+  --brand-600: oklch(0.5 0.27 25);
+
+  --secondary: oklch(0.22 0.05 15);
+  --secondary-foreground: oklch(0.95 0.01 15);
+
+  --muted: oklch(0.22 0.05 15);
+  --muted-foreground: oklch(0.5 0.03 15);
+
+  --accent: oklch(0.28 0.06 15);
+  --accent-foreground: oklch(0.95 0.01 15);
+
+  --destructive: oklch(0.6 0.28 30); /* Bright orange-red for destructive */
+
+  --border: oklch(0.35 0.08 15);
+  --border-glass: oklch(0.55 0.25 25 / 0.3);
+
+  --input: oklch(0.18 0.04 15);
+  --ring: oklch(0.55 0.25 25);
+
+  --chart-1: oklch(0.55 0.25 25); /* Crimson */
+  --chart-2: oklch(0.7 0.2 50); /* Orange */
+  --chart-3: oklch(0.8 0.18 80); /* Gold */
+  --chart-4: oklch(0.6 0.22 0); /* Pure red */
+  --chart-5: oklch(0.65 0.2 350); /* Pink-red */
+
+  --sidebar: oklch(0.1 0.025 15);
+  --sidebar-foreground: oklch(0.95 0.01 15);
+  --sidebar-primary: oklch(0.55 0.25 25);
+  --sidebar-primary-foreground: oklch(0.98 0 0);
+  --sidebar-accent: oklch(0.22 0.05 15);
+  --sidebar-accent-foreground: oklch(0.95 0.01 15);
+  --sidebar-border: oklch(0.35 0.08 15);
+  --sidebar-ring: oklch(0.55 0.25 25);
+
+  /* Action button colors - Red theme */
+  --action-view: oklch(0.55 0.25 25); /* Crimson */
+  --action-view-hover: oklch(0.5 0.27 25);
+  --action-followup: oklch(0.7 0.2 50); /* Orange */
+  --action-followup-hover: oklch(0.65 0.22 50);
+  --action-commit: oklch(0.6 0.2 140); /* Green for positive actions */
+  --action-commit-hover: oklch(0.55 0.22 140);
+  --action-verify: oklch(0.6 0.2 140); /* Green */
+  --action-verify-hover: oklch(0.55 0.22 140);
+
+  /* Running indicator - Crimson */
+  --running-indicator: oklch(0.55 0.25 25);
+  --running-indicator-text: oklch(0.6 0.23 25);
+}
+
+/* Red theme scrollbar */
+.red ::-webkit-scrollbar-thumb {
+  background: oklch(0.35 0.15 25);
+  border-radius: 4px;
+}
+
+.red ::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.45 0.18 25);
+}
+
+.red ::-webkit-scrollbar-track {
+  background: oklch(0.15 0.05 25);
+}

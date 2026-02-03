@@ -1,3 +1,5 @@
+import type { ClaudeCliStatus } from '@omniscribe/shared';
+
 /**
  * Electron API exposed via contextBridge
  */
@@ -31,6 +33,9 @@ interface ElectronAPI {
     getVersion: () => Promise<string>;
     checkCli: (tool: string) => Promise<boolean>;
     isValidProject: (projectPath: string) => Promise<{ valid: boolean; reason?: string }>;
+  };
+  claude?: {
+    getStatus: () => Promise<ClaudeCliStatus>;
   };
   platform: NodeJS.Platform;
 }

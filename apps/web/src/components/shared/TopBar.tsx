@@ -20,7 +20,7 @@ export function TopBar({
     <div
       className={twMerge(
         clsx(
-          'h-9 bg-omniscribe-surface/50 border-b border-omniscribe-border',
+          'h-9 bg-muted/50 border-b border-border',
           'flex items-center justify-between px-4',
           className
         )
@@ -31,14 +31,14 @@ export function TopBar({
         onClick={onBranchClick}
         className={clsx(
           'flex items-center gap-2 px-2 py-1 rounded',
-          'text-sm text-omniscribe-text-secondary',
-          'hover:bg-omniscribe-card hover:text-omniscribe-text-primary',
+          'text-sm text-foreground-secondary',
+          'hover:bg-card hover:text-foreground',
           'transition-colors'
         )}
       >
         <GitBranch size={14} />
         <span className="font-mono text-xs">{currentBranch}</span>
-        <ChevronDown size={12} className="text-omniscribe-text-muted" />
+        <ChevronDown size={12} className="text-muted-foreground" />
       </button>
 
       {/* Status legend */}

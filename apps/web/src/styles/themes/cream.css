@@ -1,0 +1,115 @@
+/* Cream Theme */
+
+:root.cream {
+  /* Cream Theme - Warm, soft, easy on the eyes */
+  --background: oklch(0.95 0.01 70); /* Warm cream background */
+  --background-50: oklch(0.95 0.01 70 / 0.5);
+  --background-80: oklch(0.95 0.01 70 / 0.8);
+
+  --foreground: oklch(0.25 0.02 60); /* Dark warm brown */
+  --foreground-secondary: oklch(0.45 0.02 60); /* Medium brown */
+  --foreground-muted: oklch(0.55 0.02 60); /* Light brown */
+
+  --card: oklch(0.98 0.005 70); /* Slightly lighter cream */
+  --card-foreground: oklch(0.25 0.02 60);
+  --popover: oklch(0.97 0.008 70);
+  --popover-foreground: oklch(0.25 0.02 60);
+
+  --primary: oklch(0.5 0.12 45); /* Warm terracotta/rust */
+  --primary-foreground: oklch(0.98 0.005 70);
+
+  --brand-400: oklch(0.55 0.12 45);
+  --brand-500: oklch(0.5 0.12 45); /* Terracotta */
+  --brand-600: oklch(0.45 0.13 45);
+
+  --secondary: oklch(0.88 0.02 70);
+  --secondary-foreground: oklch(0.25 0.02 60);
+
+  --muted: oklch(0.9 0.015 70);
+  --muted-foreground: oklch(0.45 0.02 60);
+
+  --accent: oklch(0.85 0.025 70);
+  --accent-foreground: oklch(0.25 0.02 60);
+
+  --destructive: oklch(0.55 0.22 25); /* Warm red */
+
+  --border: oklch(0.85 0.015 70);
+  --border-glass: oklch(0.5 0.12 45 / 0.2);
+
+  --input: oklch(0.98 0.005 70);
+  --ring: oklch(0.5 0.12 45);
+
+  --chart-1: oklch(0.5 0.12 45); /* Terracotta */
+  --chart-2: oklch(0.55 0.15 35); /* Burnt orange */
+  --chart-3: oklch(0.6 0.12 100); /* Olive */
+  --chart-4: oklch(0.5 0.15 20); /* Deep rust */
+  --chart-5: oklch(0.65 0.1 80); /* Golden */
+
+  --sidebar: oklch(0.93 0.012 70);
+  --sidebar-foreground: oklch(0.25 0.02 60);
+  --sidebar-primary: oklch(0.5 0.12 45);
+  --sidebar-primary-foreground: oklch(0.98 0.005 70);
+  --sidebar-accent: oklch(0.88 0.02 70);
+  --sidebar-accent-foreground: oklch(0.25 0.02 60);
+  --sidebar-border: oklch(0.85 0.015 70);
+  --sidebar-ring: oklch(0.5 0.12 45);
+
+  /* Action button colors - Warm earth tones */
+  --action-view: oklch(0.5 0.12 45); /* Terracotta */
+  --action-view-hover: oklch(0.45 0.13 45);
+  --action-followup: oklch(0.55 0.15 35); /* Burnt orange */
+  --action-followup-hover: oklch(0.5 0.16 35);
+  --action-commit: oklch(0.55 0.12 130); /* Sage green */
+  --action-commit-hover: oklch(0.5 0.13 130);
+  --action-verify: oklch(0.55 0.12 130); /* Sage green */
+  --action-verify-hover: oklch(0.5 0.13 130);
+
+  /* Running indicator - Terracotta */
+  --running-indicator: oklch(0.5 0.12 45);
+  --running-indicator-text: oklch(0.55 0.12 45);
+
+  /* Status colors - Cream theme */
+  --status-success: oklch(0.55 0.15 130);
+  --status-success-bg: oklch(0.55 0.15 130 / 0.15);
+  --status-warning: oklch(0.6 0.15 70);
+  --status-warning-bg: oklch(0.6 0.15 70 / 0.15);
+  --status-error: oklch(0.55 0.22 25);
+  --status-error-bg: oklch(0.55 0.22 25 / 0.15);
+  --status-info: oklch(0.5 0.15 230);
+  --status-info-bg: oklch(0.5 0.15 230 / 0.15);
+  --status-backlog: oklch(0.6 0.02 60);
+  --status-in-progress: oklch(0.6 0.15 70);
+  --status-waiting: oklch(0.58 0.13 50);
+}
+
+/* Theme-specific overrides */
+
+/* Cream theme scrollbar */
+.cream ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.cream ::-webkit-scrollbar-thumb,
+.cream .scrollbar-visible::-webkit-scrollbar-thumb {
+  background: oklch(0.7 0.03 60);
+  border-radius: 4px;
+}
+
+.cream ::-webkit-scrollbar-thumb:hover,
+.cream .scrollbar-visible::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.6 0.04 60);
+}
+
+.cream ::-webkit-scrollbar-track,
+.cream .scrollbar-visible::-webkit-scrollbar-track {
+  background: oklch(0.9 0.015 70);
+}
+
+.cream .scrollbar-styled::-webkit-scrollbar-thumb {
+  background: oklch(0.7 0.03 60);
+}
+
+.cream .scrollbar-styled::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.6 0.04 60);
+}

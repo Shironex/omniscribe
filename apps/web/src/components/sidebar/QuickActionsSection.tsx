@@ -60,7 +60,7 @@ function getCategoryColor(category: QuickAction['category']): string {
     case 'settings':
       return 'text-gray-400';
     default:
-      return 'text-omniscribe-text-muted';
+      return 'text-muted-foreground';
   }
 }
 
@@ -91,7 +91,7 @@ export function QuickActionsSection({
   if (actions.length === 0) {
     return (
       <div className={twMerge(clsx('py-2', className))}>
-        <p className="text-xs text-omniscribe-text-muted">
+        <p className="text-xs text-muted-foreground">
           No quick actions configured
         </p>
       </div>
@@ -111,8 +111,8 @@ export function QuickActionsSection({
             className={clsx(
               'w-full flex items-center gap-2 px-2 py-1.5 rounded',
               'text-left transition-colors',
-              'hover:bg-omniscribe-surface',
-              'focus:outline-none focus:ring-1 focus:ring-omniscribe-accent-primary',
+              'hover:bg-muted',
+              'focus:outline-none focus:ring-1 focus:ring-primary',
               'group'
             )}
             title={action.description ?? action.title}
@@ -121,7 +121,7 @@ export function QuickActionsSection({
               size={14}
               className={clsx(
                 'flex-shrink-0 transition-colors',
-                'text-omniscribe-text-muted',
+                'text-muted-foreground',
                 'group-hover:' + categoryColor.replace('text-', '')
               )}
               style={{
@@ -129,12 +129,12 @@ export function QuickActionsSection({
               }}
             />
             <div className="min-w-0 flex-1">
-              <div className="text-xs text-omniscribe-text-secondary truncate group-hover:text-omniscribe-text-primary transition-colors">
+              <div className="text-xs text-foreground-secondary truncate group-hover:text-foreground transition-colors">
                 {action.title}
               </div>
             </div>
             {action.shortcut && (
-              <span className="text-xs text-omniscribe-text-muted font-mono flex-shrink-0 opacity-60 group-hover:opacity-100 transition-opacity">
+              <span className="text-xs text-muted-foreground font-mono flex-shrink-0 opacity-60 group-hover:opacity-100 transition-opacity">
                 {action.shortcut}
               </span>
             )}

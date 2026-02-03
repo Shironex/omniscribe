@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { socket } from '../lib/socket';
+import type { Theme } from '@omniscribe/shared';
 
 /**
  * Project tab represents an open project in the workspace
@@ -23,8 +24,8 @@ export interface ProjectTab {
  * User preferences
  */
 export interface UserPreferences {
-  /** Theme preference */
-  theme: 'light' | 'dark' | 'system';
+  /** Theme preference - supports all 40 themes */
+  theme: Theme;
   /** Sidebar width */
   sidebarWidth: number;
   /** Whether sidebar is open */

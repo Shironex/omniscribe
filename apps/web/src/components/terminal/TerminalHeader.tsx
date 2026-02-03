@@ -27,7 +27,7 @@ const aiModeConfig: Record<AIMode, { icon: typeof Bot; label: string; color: str
   claude: { icon: Bot, label: 'Claude', color: 'text-orange-400' },
   gemini: { icon: Sparkles, label: 'Gemini', color: 'text-blue-400' },
   codex: { icon: Sparkles, label: 'Codex', color: 'text-green-400' },
-  plain: { icon: Bot, label: 'Plain', color: 'text-omniscribe-text-muted' },
+  plain: { icon: Bot, label: 'Plain', color: 'text-muted-foreground' },
 };
 
 export function TerminalHeader({
@@ -43,7 +43,7 @@ export function TerminalHeader({
     <div
       className={twMerge(
         clsx(
-          'h-7 bg-omniscribe-surface border-b border-omniscribe-border',
+          'h-7 bg-muted border-b border-border',
           'flex items-center justify-between px-2 gap-2',
           'select-none',
           className
@@ -56,7 +56,7 @@ export function TerminalHeader({
         <ModeIcon size={14} className={clsx('shrink-0', modeConfig.color)} />
 
         {/* Session label */}
-        <span className="text-xs font-medium text-omniscribe-text-primary truncate">
+        <span className="text-xs font-medium text-foreground truncate">
           {modeConfig.label} #{session.sessionNumber}
         </span>
 
@@ -67,7 +67,7 @@ export function TerminalHeader({
 
         {/* Branch display */}
         {session.branch && (
-          <div className="flex items-center gap-1 text-xs text-omniscribe-text-muted shrink-0">
+          <div className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
             <GitBranch size={10} />
             <span className="truncate max-w-20">{session.branch}</span>
           </div>
@@ -75,7 +75,7 @@ export function TerminalHeader({
 
         {/* Status message (truncated) */}
         {session.statusMessage && (
-          <span className="text-2xs text-omniscribe-text-muted truncate">
+          <span className="text-2xs text-muted-foreground truncate">
             {session.statusMessage}
           </span>
         )}
@@ -89,8 +89,8 @@ export function TerminalHeader({
             onClick={onSettingsClick}
             className={clsx(
               'p-1 rounded',
-              'text-omniscribe-text-muted hover:text-omniscribe-text-primary',
-              'hover:bg-omniscribe-card transition-colors'
+              'text-muted-foreground hover:text-foreground',
+              'hover:bg-card transition-colors'
             )}
             aria-label="Session settings"
           >
@@ -103,7 +103,7 @@ export function TerminalHeader({
           onClick={onClose}
           className={clsx(
             'p-1 rounded',
-            'text-omniscribe-text-muted hover:text-red-400',
+            'text-muted-foreground hover:text-red-400',
             'hover:bg-red-400/10 transition-colors'
           )}
           aria-label="Close session"

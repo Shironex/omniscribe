@@ -25,7 +25,7 @@ export function BottomBar({
     <div
       className={twMerge(
         clsx(
-          'h-12 bg-omniscribe-surface border-t border-omniscribe-border',
+          'h-12 bg-muted border-t border-border',
           'flex items-center justify-between px-4',
           className
         )
@@ -37,8 +37,8 @@ export function BottomBar({
           onClick={onSelectDirectory}
           className={clsx(
             'flex items-center gap-2 px-3 py-1.5 rounded',
-            'text-sm text-omniscribe-text-secondary',
-            'bg-omniscribe-card hover:bg-omniscribe-border',
+            'text-sm text-foreground-secondary',
+            'bg-card hover:bg-border',
             'transition-colors'
           )}
         >
@@ -50,8 +50,8 @@ export function BottomBar({
           onClick={onAddSession}
           className={clsx(
             'flex items-center gap-2 px-3 py-1.5 rounded',
-            'text-sm text-omniscribe-text-secondary',
-            'bg-omniscribe-card hover:bg-omniscribe-border',
+            'text-sm text-foreground-secondary',
+            'bg-card hover:bg-border',
             'transition-colors'
           )}
         >
@@ -85,8 +85,8 @@ export function BottomBar({
             'text-sm font-medium text-white',
             'transition-colors',
             canLaunch
-              ? 'bg-omniscribe-accent-primary hover:bg-omniscribe-accent-primary/80'
-              : 'bg-omniscribe-accent-primary/50 cursor-not-allowed'
+              ? 'bg-primary hover:bg-primary/80'
+              : 'bg-primary/50 cursor-not-allowed'
           )}
         >
           <Play size={14} />

@@ -1,0 +1,144 @@
+/* Catppuccin Theme */
+
+:root.catppuccin {
+  --background: oklch(0.18 0.02 260); /* #1e1e2e base */
+  --background-50: oklch(0.18 0.02 260 / 0.5);
+  --background-80: oklch(0.18 0.02 260 / 0.8);
+
+  --foreground: oklch(0.9 0.01 280); /* #cdd6f4 text */
+  --foreground-secondary: oklch(0.75 0.02 280); /* #bac2de subtext1 */
+  --foreground-muted: oklch(0.6 0.03 280); /* #a6adc8 subtext0 */
+
+  --card: oklch(0.22 0.02 260); /* #313244 surface0 */
+  --card-foreground: oklch(0.9 0.01 280);
+  --popover: oklch(0.2 0.02 260);
+  --popover-foreground: oklch(0.9 0.01 280);
+
+  --primary: oklch(0.75 0.15 280); /* #cba6f7 mauve */
+  --primary-foreground: oklch(0.18 0.02 260);
+
+  --brand-400: oklch(0.8 0.15 280);
+  --brand-500: oklch(0.75 0.15 280); /* Mauve */
+  --brand-600: oklch(0.7 0.17 280);
+
+  --secondary: oklch(0.26 0.02 260); /* #45475a surface1 */
+  --secondary-foreground: oklch(0.9 0.01 280);
+
+  --muted: oklch(0.26 0.02 260);
+  --muted-foreground: oklch(0.6 0.03 280);
+
+  --accent: oklch(0.3 0.03 260); /* #585b70 surface2 */
+  --accent-foreground: oklch(0.9 0.01 280);
+
+  --destructive: oklch(0.65 0.2 15); /* #f38ba8 red */
+
+  --border: oklch(0.35 0.03 260);
+  --border-glass: oklch(0.75 0.15 280 / 0.3);
+
+  --input: oklch(0.22 0.02 260);
+  --ring: oklch(0.75 0.15 280);
+
+  --chart-1: oklch(0.75 0.15 280); /* Mauve */
+  --chart-2: oklch(0.75 0.15 220); /* Blue #89b4fa */
+  --chart-3: oklch(0.8 0.15 160); /* Green #a6e3a1 */
+  --chart-4: oklch(0.8 0.15 350); /* Pink #f5c2e7 */
+  --chart-5: oklch(0.85 0.12 90); /* Yellow #f9e2af */
+
+  --sidebar: oklch(0.16 0.02 260); /* #181825 mantle */
+  --sidebar-foreground: oklch(0.9 0.01 280);
+  --sidebar-primary: oklch(0.75 0.15 280);
+  --sidebar-primary-foreground: oklch(0.18 0.02 260);
+  --sidebar-accent: oklch(0.26 0.02 260);
+  --sidebar-accent-foreground: oklch(0.9 0.01 280);
+  --sidebar-border: oklch(0.35 0.03 260);
+  --sidebar-ring: oklch(0.75 0.15 280);
+
+  /* Action button colors - Catppuccin mauve/pink theme */
+  --action-view: oklch(0.75 0.15 280); /* Mauve */
+  --action-view-hover: oklch(0.7 0.17 280);
+  --action-followup: oklch(0.75 0.15 220); /* Blue */
+  --action-followup-hover: oklch(0.7 0.17 220);
+  --action-commit: oklch(0.8 0.15 160); /* Green */
+  --action-commit-hover: oklch(0.75 0.17 160);
+  --action-verify: oklch(0.8 0.15 160); /* Green */
+  --action-verify-hover: oklch(0.75 0.17 160);
+
+  /* Running indicator - Mauve */
+  --running-indicator: oklch(0.75 0.15 280);
+  --running-indicator-text: oklch(0.8 0.13 280);
+}
+
+/* ========================================
+   ONE DARK THEME
+   Atom's iconic One Dark theme
+   ======================================== */
+
+/* Theme-specific overrides */
+
+.catppuccin .animated-outline-gradient {
+  background: conic-gradient(from 90deg at 50% 50%, #cba6f7 0%, #f5c2e7 50%, #cba6f7 100%);
+}
+
+.catppuccin .animated-outline-inner {
+  background: oklch(0.18 0.02 260) !important;
+  color: #cba6f7 !important;
+}
+
+.catppuccin [data-slot='button'][class*='animated-outline']:hover .animated-outline-inner {
+  background: oklch(0.24 0.03 260) !important;
+  color: #f5c2e7 !important;
+}
+
+.catppuccin .slider-track {
+  background: oklch(0.26 0.02 260);
+}
+
+.catppuccin .slider-range {
+  background: linear-gradient(to right, #cba6f7, #89b4fa);
+}
+
+.catppuccin .slider-thumb {
+  background: oklch(0.22 0.02 260);
+  border-color: #cba6f7;
+}
+
+.catppuccin .xml-highlight {
+  color: oklch(0.9 0.01 280); /* #cdd6f4 */
+}
+
+.catppuccin .xml-tag-bracket {
+  color: oklch(0.65 0.2 15); /* #f38ba8 red */
+}
+
+.catppuccin .xml-tag-name {
+  color: oklch(0.65 0.2 15); /* Red for tags */
+}
+
+.catppuccin .xml-attribute-name {
+  color: oklch(0.75 0.15 280); /* #cba6f7 mauve */
+}
+
+.catppuccin .xml-attribute-equals {
+  color: oklch(0.75 0.02 280); /* Subtext */
+}
+
+.catppuccin .xml-attribute-value {
+  color: oklch(0.8 0.15 160); /* #a6e3a1 green */
+}
+
+.catppuccin .xml-comment {
+  color: oklch(0.5 0.04 280); /* Overlay */
+  font-style: italic;
+}
+
+.catppuccin .xml-cdata {
+  color: oklch(0.75 0.15 220); /* #89b4fa blue */
+}
+
+.catppuccin .xml-doctype {
+  color: oklch(0.8 0.15 350); /* #f5c2e7 pink */
+}
+
+.catppuccin .xml-text {
+  color: oklch(0.9 0.01 280); /* Text */
+}

@@ -246,11 +246,11 @@ export class McpGateway implements OnGatewayInit {
   }
 
   /**
-   * Get Omniscribe MCP server status
+   * Get internal MCP server status
    */
-  @SubscribeMessage('mcp:get-omniscribe-status')
-  handleGetOmniscribeStatus(): { available: boolean; path: string | null } {
-    return this.configService.getOmniscribeMcpInfo();
+  @SubscribeMessage('mcp:get-internal-status')
+  handleGetInternalStatus(): { available: boolean; path: string | null } {
+    return this.configService.getInternalMcpInfo();
   }
 
   /**

@@ -52,7 +52,7 @@ export function SessionsSection({
       {/* Header with count and new button */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="text-xs text-omniscribe-text-secondary">
+          <span className="text-xs text-foreground-secondary">
             {sessionCount} session{sessionCount !== 1 ? 's' : ''}
           </span>
           {activeCount > 0 && (
@@ -66,8 +66,8 @@ export function SessionsSection({
             onClick={onNewSession}
             className={clsx(
               'p-1 rounded transition-colors',
-              'hover:bg-omniscribe-surface',
-              'text-omniscribe-text-muted hover:text-omniscribe-text-secondary'
+              'hover:bg-muted',
+              'text-muted-foreground hover:text-foreground-secondary'
             )}
             title="New Session"
           >
@@ -78,7 +78,7 @@ export function SessionsSection({
 
       {/* Loading state */}
       {isLoading && (
-        <div className="text-xs text-omniscribe-text-muted animate-pulse py-2">
+        <div className="text-xs text-muted-foreground animate-pulse py-2">
           Loading sessions...
         </div>
       )}
@@ -93,7 +93,7 @@ export function SessionsSection({
 
       {/* Sessions list */}
       {!isLoading && sessions.length === 0 && !error && (
-        <div className="text-xs text-omniscribe-text-muted py-2">
+        <div className="text-xs text-muted-foreground py-2">
           No active sessions
         </div>
       )}
@@ -107,18 +107,18 @@ export function SessionsSection({
               className={clsx(
                 'w-full flex items-center gap-2 px-2 py-1.5 rounded',
                 'text-left transition-colors',
-                'hover:bg-omniscribe-surface',
-                'focus:outline-none focus:ring-1 focus:ring-omniscribe-accent-primary'
+                'hover:bg-muted',
+                'focus:outline-none focus:ring-1 focus:ring-primary'
               )}
             >
               <StatusDot status={mapSessionStatus(session.status)} />
-              <Terminal size={12} className="text-omniscribe-text-muted flex-shrink-0" />
+              <Terminal size={12} className="text-muted-foreground flex-shrink-0" />
               <div className="min-w-0 flex-1">
-                <div className="text-xs text-omniscribe-text-secondary truncate">
+                <div className="text-xs text-foreground-secondary truncate">
                   {session.name}
                 </div>
                 {session.statusMessage && (
-                  <div className="text-xs text-omniscribe-text-muted truncate">
+                  <div className="text-xs text-muted-foreground truncate">
                     {session.statusMessage}
                   </div>
                 )}

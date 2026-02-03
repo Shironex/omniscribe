@@ -1,0 +1,144 @@
+/* Gruvbox Theme */
+
+:root.gruvbox {
+  --background: oklch(0.18 0.02 60); /* #282828 bg */
+  --background-50: oklch(0.18 0.02 60 / 0.5);
+  --background-80: oklch(0.18 0.02 60 / 0.8);
+
+  --foreground: oklch(0.85 0.05 85); /* #ebdbb2 fg */
+  --foreground-secondary: oklch(0.7 0.04 85); /* #d5c4a1 */
+  --foreground-muted: oklch(0.55 0.04 85); /* #928374 */
+
+  --card: oklch(0.22 0.02 60); /* #3c3836 bg1 */
+  --card-foreground: oklch(0.85 0.05 85);
+  --popover: oklch(0.2 0.02 60);
+  --popover-foreground: oklch(0.85 0.05 85);
+
+  --primary: oklch(0.7 0.18 55); /* #fabd2f yellow */
+  --primary-foreground: oklch(0.18 0.02 60);
+
+  --brand-400: oklch(0.75 0.18 55);
+  --brand-500: oklch(0.7 0.18 55); /* Yellow */
+  --brand-600: oklch(0.65 0.2 55);
+
+  --secondary: oklch(0.26 0.02 60); /* #504945 bg2 */
+  --secondary-foreground: oklch(0.85 0.05 85);
+
+  --muted: oklch(0.26 0.02 60);
+  --muted-foreground: oklch(0.55 0.04 85);
+
+  --accent: oklch(0.3 0.03 60);
+  --accent-foreground: oklch(0.85 0.05 85);
+
+  --destructive: oklch(0.55 0.22 25); /* #fb4934 red */
+
+  --border: oklch(0.35 0.03 60);
+  --border-glass: oklch(0.7 0.18 55 / 0.3);
+
+  --input: oklch(0.22 0.02 60);
+  --ring: oklch(0.7 0.18 55);
+
+  --chart-1: oklch(0.7 0.18 55); /* Yellow */
+  --chart-2: oklch(0.65 0.2 140); /* Green #b8bb26 */
+  --chart-3: oklch(0.7 0.15 200); /* Aqua #8ec07c */
+  --chart-4: oklch(0.6 0.2 30); /* Orange #fe8019 */
+  --chart-5: oklch(0.6 0.2 320); /* Purple #d3869b */
+
+  --sidebar: oklch(0.16 0.02 60);
+  --sidebar-foreground: oklch(0.85 0.05 85);
+  --sidebar-primary: oklch(0.7 0.18 55);
+  --sidebar-primary-foreground: oklch(0.18 0.02 60);
+  --sidebar-accent: oklch(0.26 0.02 60);
+  --sidebar-accent-foreground: oklch(0.85 0.05 85);
+  --sidebar-border: oklch(0.35 0.03 60);
+  --sidebar-ring: oklch(0.7 0.18 55);
+
+  /* Action button colors - Gruvbox yellow/orange theme */
+  --action-view: oklch(0.7 0.18 55); /* Yellow */
+  --action-view-hover: oklch(0.65 0.2 55);
+  --action-followup: oklch(0.7 0.15 200); /* Aqua */
+  --action-followup-hover: oklch(0.65 0.17 200);
+  --action-commit: oklch(0.65 0.2 140); /* Green */
+  --action-commit-hover: oklch(0.6 0.22 140);
+  --action-verify: oklch(0.65 0.2 140); /* Green */
+  --action-verify-hover: oklch(0.6 0.22 140);
+
+  /* Running indicator - Yellow */
+  --running-indicator: oklch(0.7 0.18 55);
+  --running-indicator-text: oklch(0.75 0.16 55);
+}
+
+/* ========================================
+   CATPPUCCIN MOCHA THEME
+   Soothing pastel theme for the high-spirited
+   ======================================== */
+
+/* Theme-specific overrides */
+
+.gruvbox .animated-outline-gradient {
+  background: conic-gradient(from 90deg at 50% 50%, #fabd2f 0%, #fe8019 50%, #fabd2f 100%);
+}
+
+.gruvbox .animated-outline-inner {
+  background: oklch(0.18 0.02 60) !important;
+  color: #fabd2f !important;
+}
+
+.gruvbox [data-slot='button'][class*='animated-outline']:hover .animated-outline-inner {
+  background: oklch(0.24 0.03 60) !important;
+  color: #fe8019 !important;
+}
+
+.gruvbox .slider-track {
+  background: oklch(0.26 0.02 60);
+}
+
+.gruvbox .slider-range {
+  background: linear-gradient(to right, #fabd2f, #fe8019);
+}
+
+.gruvbox .slider-thumb {
+  background: oklch(0.22 0.02 60);
+  border-color: #fabd2f;
+}
+
+.gruvbox .xml-highlight {
+  color: oklch(0.85 0.05 85); /* #ebdbb2 */
+}
+
+.gruvbox .xml-tag-bracket {
+  color: oklch(0.55 0.22 25); /* #fb4934 red */
+}
+
+.gruvbox .xml-tag-name {
+  color: oklch(0.55 0.22 25); /* Red for tags */
+}
+
+.gruvbox .xml-attribute-name {
+  color: oklch(0.7 0.15 200); /* #8ec07c aqua */
+}
+
+.gruvbox .xml-attribute-equals {
+  color: oklch(0.7 0.04 85); /* Dim text */
+}
+
+.gruvbox .xml-attribute-value {
+  color: oklch(0.65 0.2 140); /* #b8bb26 green */
+}
+
+.gruvbox .xml-comment {
+  color: oklch(0.55 0.04 85); /* #928374 gray */
+  font-style: italic;
+}
+
+.gruvbox .xml-cdata {
+  color: oklch(0.7 0.15 200); /* Aqua */
+}
+
+.gruvbox .xml-doctype {
+  color: oklch(0.6 0.2 320); /* #d3869b purple */
+}
+
+.gruvbox .xml-text {
+  color: oklch(0.85 0.05 85); /* Foreground */
+}

@@ -1,0 +1,144 @@
+/* Tokyonight Theme */
+
+:root.tokyonight {
+  --background: oklch(0.16 0.03 260); /* #1a1b26 */
+  --background-50: oklch(0.16 0.03 260 / 0.5);
+  --background-80: oklch(0.16 0.03 260 / 0.8);
+
+  --foreground: oklch(0.85 0.02 250); /* #a9b1d6 */
+  --foreground-secondary: oklch(0.7 0.03 250);
+  --foreground-muted: oklch(0.5 0.04 250); /* #565f89 */
+
+  --card: oklch(0.2 0.03 260); /* #24283b */
+  --card-foreground: oklch(0.85 0.02 250);
+  --popover: oklch(0.18 0.03 260);
+  --popover-foreground: oklch(0.85 0.02 250);
+
+  --primary: oklch(0.7 0.18 280); /* #7aa2f7 blue */
+  --primary-foreground: oklch(0.16 0.03 260);
+
+  --brand-400: oklch(0.75 0.18 280);
+  --brand-500: oklch(0.7 0.18 280); /* #7aa2f7 */
+  --brand-600: oklch(0.65 0.2 280); /* #7dcfff */
+
+  --secondary: oklch(0.24 0.03 260); /* #292e42 */
+  --secondary-foreground: oklch(0.85 0.02 250);
+
+  --muted: oklch(0.24 0.03 260);
+  --muted-foreground: oklch(0.5 0.04 250);
+
+  --accent: oklch(0.28 0.04 260);
+  --accent-foreground: oklch(0.85 0.02 250);
+
+  --destructive: oklch(0.65 0.2 15); /* #f7768e */
+
+  --border: oklch(0.32 0.04 260);
+  --border-glass: oklch(0.7 0.18 280 / 0.3);
+
+  --input: oklch(0.2 0.03 260);
+  --ring: oklch(0.7 0.18 280);
+
+  --chart-1: oklch(0.7 0.18 280); /* Blue #7aa2f7 */
+  --chart-2: oklch(0.75 0.18 200); /* Cyan #7dcfff */
+  --chart-3: oklch(0.75 0.18 140); /* Green #9ece6a */
+  --chart-4: oklch(0.7 0.2 320); /* Magenta #bb9af7 */
+  --chart-5: oklch(0.8 0.18 70); /* Yellow #e0af68 */
+
+  --sidebar: oklch(0.14 0.03 260);
+  --sidebar-foreground: oklch(0.85 0.02 250);
+  --sidebar-primary: oklch(0.7 0.18 280);
+  --sidebar-primary-foreground: oklch(0.16 0.03 260);
+  --sidebar-accent: oklch(0.24 0.03 260);
+  --sidebar-accent-foreground: oklch(0.85 0.02 250);
+  --sidebar-border: oklch(0.32 0.04 260);
+  --sidebar-ring: oklch(0.7 0.18 280);
+
+  /* Action button colors - Tokyo Night blue/magenta theme */
+  --action-view: oklch(0.7 0.18 280); /* Blue */
+  --action-view-hover: oklch(0.65 0.2 280);
+  --action-followup: oklch(0.75 0.18 200); /* Cyan */
+  --action-followup-hover: oklch(0.7 0.2 200);
+  --action-commit: oklch(0.75 0.18 140); /* Green */
+  --action-commit-hover: oklch(0.7 0.2 140);
+  --action-verify: oklch(0.75 0.18 140); /* Green */
+  --action-verify-hover: oklch(0.7 0.2 140);
+
+  /* Running indicator - Blue */
+  --running-indicator: oklch(0.7 0.18 280);
+  --running-indicator-text: oklch(0.75 0.16 280);
+}
+
+/* ========================================
+   SOLARIZED DARK THEME
+   The classic color scheme by Ethan Schoonover
+   ======================================== */
+
+/* Theme-specific overrides */
+
+.tokyonight .animated-outline-gradient {
+  background: conic-gradient(from 90deg at 50% 50%, #7aa2f7 0%, #bb9af7 50%, #7aa2f7 100%);
+}
+
+.tokyonight .animated-outline-inner {
+  background: oklch(0.16 0.03 260) !important;
+  color: #7aa2f7 !important;
+}
+
+.tokyonight [data-slot='button'][class*='animated-outline']:hover .animated-outline-inner {
+  background: oklch(0.22 0.04 260) !important;
+  color: #bb9af7 !important;
+}
+
+.tokyonight .slider-track {
+  background: oklch(0.24 0.03 260);
+}
+
+.tokyonight .slider-range {
+  background: linear-gradient(to right, #7aa2f7, #bb9af7);
+}
+
+.tokyonight .slider-thumb {
+  background: oklch(0.2 0.03 260);
+  border-color: #7aa2f7;
+}
+
+.tokyonight .xml-highlight {
+  color: oklch(0.85 0.02 250); /* #a9b1d6 */
+}
+
+.tokyonight .xml-tag-bracket {
+  color: oklch(0.65 0.2 15); /* #f7768e red */
+}
+
+.tokyonight .xml-tag-name {
+  color: oklch(0.65 0.2 15); /* Red for tags */
+}
+
+.tokyonight .xml-attribute-name {
+  color: oklch(0.7 0.2 320); /* #bb9af7 purple */
+}
+
+.tokyonight .xml-attribute-equals {
+  color: oklch(0.75 0.02 250); /* Dim text */
+}
+
+.tokyonight .xml-attribute-value {
+  color: oklch(0.75 0.18 140); /* #9ece6a green */
+}
+
+.tokyonight .xml-comment {
+  color: oklch(0.5 0.04 250); /* #565f89 */
+  font-style: italic;
+}
+
+.tokyonight .xml-cdata {
+  color: oklch(0.75 0.18 200); /* #7dcfff cyan */
+}
+
+.tokyonight .xml-doctype {
+  color: oklch(0.7 0.18 280); /* #7aa2f7 blue */
+}
+
+.tokyonight .xml-text {
+  color: oklch(0.85 0.02 250); /* Text color */
+}

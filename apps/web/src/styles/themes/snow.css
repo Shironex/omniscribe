@@ -1,0 +1,92 @@
+/* Snow Theme - Clean white with cool blue tints */
+
+:root.snow {
+  --background: oklch(0.99 0.005 240);
+  --background-50: oklch(0.99 0.005 240 / 0.5);
+  --background-80: oklch(0.99 0.005 240 / 0.8);
+
+  --foreground: oklch(0.2 0.02 240);
+  --foreground-secondary: oklch(0.4 0.02 240);
+  --foreground-muted: oklch(0.55 0.015 240);
+
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.2 0.02 240);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.2 0.02 240);
+
+  --primary: oklch(0.5 0.15 240);
+  --primary-foreground: oklch(1 0 0);
+  --brand-400: oklch(0.55 0.13 240);
+  --brand-500: oklch(0.5 0.15 240);
+  --brand-600: oklch(0.45 0.17 240);
+
+  --secondary: oklch(0.97 0.008 240);
+  --secondary-foreground: oklch(0.2 0.02 240);
+  --muted: oklch(0.96 0.01 240);
+  --muted-foreground: oklch(0.5 0.015 240);
+  --accent: oklch(0.95 0.012 240);
+  --accent-foreground: oklch(0.2 0.02 240);
+
+  --destructive: oklch(0.55 0.2 25);
+  --border: oklch(0.92 0.008 240);
+  --border-glass: oklch(0.5 0.15 240 / 0.1);
+  --input: oklch(0.98 0.005 240);
+  --ring: oklch(0.5 0.15 240);
+
+  --chart-1: oklch(0.5 0.15 240);
+  --chart-2: oklch(0.55 0.12 200);
+  --chart-3: oklch(0.5 0.15 280);
+  --chart-4: oklch(0.55 0.12 180);
+  --chart-5: oklch(0.5 0.1 260);
+
+  --sidebar: oklch(0.98 0.006 240);
+  --sidebar-foreground: oklch(0.2 0.02 240);
+  --sidebar-primary: oklch(0.5 0.15 240);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.96 0.01 240);
+  --sidebar-accent-foreground: oklch(0.2 0.02 240);
+  --sidebar-border: oklch(0.92 0.008 240);
+  --sidebar-ring: oklch(0.5 0.15 240);
+
+  --action-view: oklch(0.5 0.15 240);
+  --action-view-hover: oklch(0.45 0.17 240);
+  --action-followup: oklch(0.5 0.12 200);
+  --action-followup-hover: oklch(0.45 0.14 200);
+  --action-commit: oklch(0.55 0.15 145);
+  --action-commit-hover: oklch(0.5 0.17 145);
+  --action-verify: oklch(0.55 0.15 145);
+  --action-verify-hover: oklch(0.5 0.17 145);
+
+  --running-indicator: oklch(0.5 0.15 240);
+  --running-indicator-text: oklch(0.45 0.17 240);
+
+  --status-success: oklch(0.55 0.15 145);
+  --status-success-bg: oklch(0.55 0.15 145 / 0.12);
+  --status-warning: oklch(0.65 0.15 70);
+  --status-warning-bg: oklch(0.65 0.15 70 / 0.12);
+  --status-error: oklch(0.55 0.2 25);
+  --status-error-bg: oklch(0.55 0.2 25 / 0.12);
+  --status-info: oklch(0.5 0.15 240);
+  --status-info-bg: oklch(0.5 0.15 240 / 0.12);
+  --status-backlog: oklch(0.6 0.015 240);
+  --status-in-progress: oklch(0.65 0.15 70);
+  --status-waiting: oklch(0.6 0.12 50);
+}
+
+.snow .content-bg {
+  background: linear-gradient(
+    135deg,
+    oklch(0.99 0.005 240),
+    oklch(0.98 0.008 240),
+    oklch(0.99 0.005 240)
+  );
+}
+
+.snow .animated-outline-gradient {
+  background: conic-gradient(from 90deg at 50% 50%, #6366f1 0%, #8b5cf6 50%, #6366f1 100%);
+}
+
+.snow .animated-outline-inner {
+  background: oklch(1 0 0) !important;
+  color: #6366f1 !important;
+}

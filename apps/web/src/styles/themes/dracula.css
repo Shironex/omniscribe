@@ -1,0 +1,144 @@
+/* Dracula Theme */
+
+:root.dracula {
+  --background: oklch(0.18 0.02 280); /* #282a36 */
+  --background-50: oklch(0.18 0.02 280 / 0.5);
+  --background-80: oklch(0.18 0.02 280 / 0.8);
+
+  --foreground: oklch(0.95 0.01 280); /* #f8f8f2 */
+  --foreground-secondary: oklch(0.7 0.05 280);
+  --foreground-muted: oklch(0.55 0.08 280); /* #6272a4 */
+
+  --card: oklch(0.22 0.02 280); /* #44475a */
+  --card-foreground: oklch(0.95 0.01 280);
+  --popover: oklch(0.2 0.02 280);
+  --popover-foreground: oklch(0.95 0.01 280);
+
+  --primary: oklch(0.7 0.2 320); /* #bd93f9 purple */
+  --primary-foreground: oklch(0.18 0.02 280);
+
+  --brand-400: oklch(0.75 0.2 320);
+  --brand-500: oklch(0.7 0.2 320); /* #bd93f9 */
+  --brand-600: oklch(0.65 0.22 320);
+
+  --secondary: oklch(0.28 0.03 280); /* #44475a */
+  --secondary-foreground: oklch(0.95 0.01 280);
+
+  --muted: oklch(0.28 0.03 280);
+  --muted-foreground: oklch(0.55 0.08 280); /* #6272a4 */
+
+  --accent: oklch(0.32 0.04 280);
+  --accent-foreground: oklch(0.95 0.01 280);
+
+  --destructive: oklch(0.65 0.25 15); /* #ff5555 */
+
+  --border: oklch(0.35 0.05 280);
+  --border-glass: oklch(0.7 0.2 320 / 0.3);
+
+  --input: oklch(0.22 0.02 280);
+  --ring: oklch(0.7 0.2 320);
+
+  --chart-1: oklch(0.7 0.2 320); /* Purple */
+  --chart-2: oklch(0.75 0.2 180); /* Cyan #8be9fd */
+  --chart-3: oklch(0.8 0.2 130); /* Green #50fa7b */
+  --chart-4: oklch(0.7 0.25 350); /* Pink #ff79c6 */
+  --chart-5: oklch(0.85 0.2 90); /* Yellow #f1fa8c */
+
+  --sidebar: oklch(0.16 0.02 280);
+  --sidebar-foreground: oklch(0.95 0.01 280);
+  --sidebar-primary: oklch(0.7 0.2 320);
+  --sidebar-primary-foreground: oklch(0.18 0.02 280);
+  --sidebar-accent: oklch(0.28 0.03 280);
+  --sidebar-accent-foreground: oklch(0.95 0.01 280);
+  --sidebar-border: oklch(0.35 0.05 280);
+  --sidebar-ring: oklch(0.7 0.2 320);
+
+  /* Action button colors - Dracula purple/pink theme */
+  --action-view: oklch(0.7 0.2 320); /* Purple */
+  --action-view-hover: oklch(0.65 0.22 320);
+  --action-followup: oklch(0.65 0.25 350); /* Pink */
+  --action-followup-hover: oklch(0.6 0.27 350);
+  --action-commit: oklch(0.75 0.2 130); /* Green */
+  --action-commit-hover: oklch(0.7 0.22 130);
+  --action-verify: oklch(0.75 0.2 130); /* Green */
+  --action-verify-hover: oklch(0.7 0.22 130);
+
+  /* Running indicator - Purple */
+  --running-indicator: oklch(0.7 0.2 320);
+  --running-indicator-text: oklch(0.75 0.18 320);
+}
+
+/* ========================================
+   NORD THEME
+   Inspired by the Arctic, north-bluish color palette
+   ======================================== */
+
+/* Theme-specific overrides */
+
+.dracula .animated-outline-gradient {
+  background: conic-gradient(from 90deg at 50% 50%, #bd93f9 0%, #ff79c6 50%, #bd93f9 100%);
+}
+
+.dracula .animated-outline-inner {
+  background: oklch(0.18 0.02 280) !important;
+  color: #bd93f9 !important;
+}
+
+.dracula [data-slot='button'][class*='animated-outline']:hover .animated-outline-inner {
+  background: oklch(0.24 0.03 280) !important;
+  color: #ff79c6 !important;
+}
+
+.dracula .slider-track {
+  background: oklch(0.28 0.03 280);
+}
+
+.dracula .slider-range {
+  background: linear-gradient(to right, #bd93f9, #ff79c6);
+}
+
+.dracula .slider-thumb {
+  background: oklch(0.22 0.02 280);
+  border-color: #bd93f9;
+}
+
+.dracula .xml-highlight {
+  color: oklch(0.95 0.01 280); /* #f8f8f2 */
+}
+
+.dracula .xml-tag-bracket {
+  color: oklch(0.7 0.25 350); /* Pink #ff79c6 */
+}
+
+.dracula .xml-tag-name {
+  color: oklch(0.7 0.25 350); /* Pink for tags */
+}
+
+.dracula .xml-attribute-name {
+  color: oklch(0.8 0.2 130); /* Green #50fa7b */
+}
+
+.dracula .xml-attribute-equals {
+  color: oklch(0.95 0.01 280); /* White */
+}
+
+.dracula .xml-attribute-value {
+  color: oklch(0.85 0.2 90); /* Yellow #f1fa8c */
+}
+
+.dracula .xml-comment {
+  color: oklch(0.55 0.08 280); /* #6272a4 */
+  font-style: italic;
+}
+
+.dracula .xml-cdata {
+  color: oklch(0.75 0.2 180); /* Cyan */
+}
+
+.dracula .xml-doctype {
+  color: oklch(0.7 0.2 320); /* Purple #bd93f9 */
+}
+
+.dracula .xml-text {
+  color: oklch(0.95 0.01 280); /* White */
+}

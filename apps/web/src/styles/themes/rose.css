@@ -1,0 +1,92 @@
+/* Rose Theme - Soft pink/rose tones */
+
+:root.rose {
+  --background: oklch(0.98 0.01 350);
+  --background-50: oklch(0.98 0.01 350 / 0.5);
+  --background-80: oklch(0.98 0.01 350 / 0.8);
+
+  --foreground: oklch(0.25 0.03 350);
+  --foreground-secondary: oklch(0.45 0.03 350);
+  --foreground-muted: oklch(0.55 0.02 350);
+
+  --card: oklch(0.99 0.008 350);
+  --card-foreground: oklch(0.25 0.03 350);
+  --popover: oklch(0.99 0.008 350);
+  --popover-foreground: oklch(0.25 0.03 350);
+
+  --primary: oklch(0.6 0.18 350);
+  --primary-foreground: oklch(0.99 0.008 350);
+  --brand-400: oklch(0.65 0.16 350);
+  --brand-500: oklch(0.6 0.18 350);
+  --brand-600: oklch(0.55 0.2 350);
+
+  --secondary: oklch(0.95 0.015 350);
+  --secondary-foreground: oklch(0.25 0.03 350);
+  --muted: oklch(0.94 0.02 350);
+  --muted-foreground: oklch(0.5 0.03 350);
+  --accent: oklch(0.92 0.025 350);
+  --accent-foreground: oklch(0.25 0.03 350);
+
+  --destructive: oklch(0.55 0.2 15);
+  --border: oklch(0.9 0.02 350);
+  --border-glass: oklch(0.6 0.18 350 / 0.15);
+  --input: oklch(0.98 0.01 350);
+  --ring: oklch(0.6 0.18 350);
+
+  --chart-1: oklch(0.6 0.18 350);
+  --chart-2: oklch(0.65 0.15 320);
+  --chart-3: oklch(0.55 0.15 15);
+  --chart-4: oklch(0.6 0.15 280);
+  --chart-5: oklch(0.55 0.12 200);
+
+  --sidebar: oklch(0.97 0.012 350);
+  --sidebar-foreground: oklch(0.25 0.03 350);
+  --sidebar-primary: oklch(0.6 0.18 350);
+  --sidebar-primary-foreground: oklch(0.99 0.008 350);
+  --sidebar-accent: oklch(0.94 0.02 350);
+  --sidebar-accent-foreground: oklch(0.25 0.03 350);
+  --sidebar-border: oklch(0.9 0.02 350);
+  --sidebar-ring: oklch(0.6 0.18 350);
+
+  --action-view: oklch(0.6 0.18 350);
+  --action-view-hover: oklch(0.55 0.2 350);
+  --action-followup: oklch(0.6 0.15 320);
+  --action-followup-hover: oklch(0.55 0.17 320);
+  --action-commit: oklch(0.55 0.15 145);
+  --action-commit-hover: oklch(0.5 0.17 145);
+  --action-verify: oklch(0.55 0.15 145);
+  --action-verify-hover: oklch(0.5 0.17 145);
+
+  --running-indicator: oklch(0.6 0.18 350);
+  --running-indicator-text: oklch(0.55 0.2 350);
+
+  --status-success: oklch(0.55 0.15 145);
+  --status-success-bg: oklch(0.55 0.15 145 / 0.15);
+  --status-warning: oklch(0.65 0.15 70);
+  --status-warning-bg: oklch(0.65 0.15 70 / 0.15);
+  --status-error: oklch(0.55 0.2 15);
+  --status-error-bg: oklch(0.55 0.2 15 / 0.15);
+  --status-info: oklch(0.55 0.15 230);
+  --status-info-bg: oklch(0.55 0.15 230 / 0.15);
+  --status-backlog: oklch(0.6 0.02 350);
+  --status-in-progress: oklch(0.65 0.15 70);
+  --status-waiting: oklch(0.6 0.12 50);
+}
+
+.rose .content-bg {
+  background: linear-gradient(
+    135deg,
+    oklch(0.98 0.01 350),
+    oklch(0.97 0.015 350),
+    oklch(0.98 0.01 350)
+  );
+}
+
+.rose .animated-outline-gradient {
+  background: conic-gradient(from 90deg at 50% 50%, #f43f5e 0%, #ec4899 50%, #f43f5e 100%);
+}
+
+.rose .animated-outline-inner {
+  background: oklch(0.99 0.008 350) !important;
+  color: #f43f5e !important;
+}

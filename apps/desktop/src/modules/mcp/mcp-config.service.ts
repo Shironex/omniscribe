@@ -21,7 +21,7 @@ interface McpWrittenServerEntry {
 @Injectable()
 export class McpConfigService {
   private readonly configDir: string;
-  private readonly omniscribeMcpPath: string | null;
+  private readonly internalMcpPath: string | null;
 
   constructor(
     @Inject(forwardRef(() => McpStatusServerService))
@@ -31,24 +31,24 @@ export class McpConfigService {
     this.configDir = path.join(os.tmpdir(), 'omniscribe', 'mcp-configs');
     this.ensureConfigDir();
 
-    // Find the Omniscribe MCP server binary
-    this.omniscribeMcpPath = this.findOmniscribeMcp();
-    if (this.omniscribeMcpPath) {
+    // Find the internal MCP server binary
+    this.internalMcpPath = this.findInternalMcp();
+    if (this.internalMcpPath) {
       console.log(
-        `[McpConfigService] Found Omniscribe MCP server at: ${this.omniscribeMcpPath}`
+        `[McpConfigService] Found internal MCP server at: ${this.internalMcpPath}`
       );
     } else {
       console.warn(
-        '[McpConfigService] Omniscribe MCP server not found - status updates will be unavailable'
+        '[McpConfigService] Internal MCP server not found - status updates will be unavailable'
       );
     }
   }
 
   /**
-   * Find the Omniscribe MCP server binary/script
+   * Find the internal MCP server binary/script
    * Checks multiple locations in order of preference
    */
-  private findOmniscribeMcp(): string | null {
+  private findInternalMcp(): string | null {
     const isWindows = process.platform === 'win32';
 
     // Candidate locations to check
@@ -106,13 +106,13 @@ export class McpConfigService {
   }
 
   /**
-   * Get the Omniscribe MCP server info
+   * Get the internal MCP server info
    * @returns Object with path and availability status
    */
-  getOmniscribeMcpInfo(): { available: boolean; path: string | null } {
+  getInternalMcpInfo(): { available: boolean; path: string | null } {
     return {
-      available: this.omniscribeMcpPath !== null,
-      path: this.omniscribeMcpPath,
+      available: this.internalMcpPath !== null,
+      path: this.internalMcpPath,
     };
   }
 
@@ -168,11 +168,11 @@ export class McpConfigService {
       ...(existingMcpServers as Record<string, McpWrittenServerEntry>),
     };
 
-    // Add/update Omniscribe MCP server (always included if available)
+    // Add/update internal MCP server (always included if available)
     // Session-specific env vars are now included directly in the MCP config
     // since they're read by Claude Code when it spawns the MCP server process.
     // This enables HTTP-based status reporting to the desktop app.
-    if (this.omniscribeMcpPath) {
+    if (this.internalMcpPath) {
       const statusUrl = this.statusServer.getStatusUrl();
       const instanceId = this.statusServer.getInstanceId();
 
@@ -182,7 +182,7 @@ export class McpConfigService {
       mcpServers['omniscribe'] = {
         type: 'stdio',
         command: 'node',
-        args: [this.omniscribeMcpPath],
+        args: [this.internalMcpPath],
         env: {
           // Session-specific env vars for HTTP status reporting
           OMNISCRIBE_SESSION_ID: sessionId,
@@ -243,7 +243,7 @@ export class McpConfigService {
 
     const serverCount = Object.keys(mcpServers).length;
     console.log(
-      `[McpConfigService] Wrote MCP config to ${configPath} with ${serverCount} servers (omniscribe: ${!!this.omniscribeMcpPath})`
+      `[McpConfigService] Wrote MCP config to ${configPath} with ${serverCount} servers (internal: ${!!this.internalMcpPath})`
     );
 
     // Also track the config in our central location

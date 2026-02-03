@@ -1,0 +1,92 @@
+/* Paper Theme - Clean minimal white */
+
+:root.paper {
+  --background: oklch(0.99 0 0);
+  --background-50: oklch(0.99 0 0 / 0.5);
+  --background-80: oklch(0.99 0 0 / 0.8);
+
+  --foreground: oklch(0.15 0 0);
+  --foreground-secondary: oklch(0.35 0 0);
+  --foreground-muted: oklch(0.5 0 0);
+
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.15 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.15 0 0);
+
+  --primary: oklch(0.3 0 0);
+  --primary-foreground: oklch(1 0 0);
+  --brand-400: oklch(0.35 0 0);
+  --brand-500: oklch(0.3 0 0);
+  --brand-600: oklch(0.25 0 0);
+
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.15 0 0);
+  --muted: oklch(0.96 0 0);
+  --muted-foreground: oklch(0.45 0 0);
+  --accent: oklch(0.95 0 0);
+  --accent-foreground: oklch(0.15 0 0);
+
+  --destructive: oklch(0.5 0.2 25);
+  --border: oklch(0.9 0 0);
+  --border-glass: oklch(0.15 0 0 / 0.08);
+  --input: oklch(0.98 0 0);
+  --ring: oklch(0.3 0 0);
+
+  --chart-1: oklch(0.3 0 0);
+  --chart-2: oklch(0.5 0 0);
+  --chart-3: oklch(0.4 0 0);
+  --chart-4: oklch(0.6 0 0);
+  --chart-5: oklch(0.35 0 0);
+
+  --sidebar: oklch(0.98 0 0);
+  --sidebar-foreground: oklch(0.15 0 0);
+  --sidebar-primary: oklch(0.3 0 0);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.95 0 0);
+  --sidebar-accent-foreground: oklch(0.15 0 0);
+  --sidebar-border: oklch(0.9 0 0);
+  --sidebar-ring: oklch(0.3 0 0);
+
+  --action-view: oklch(0.3 0 0);
+  --action-view-hover: oklch(0.25 0 0);
+  --action-followup: oklch(0.4 0 0);
+  --action-followup-hover: oklch(0.35 0 0);
+  --action-commit: oklch(0.35 0.1 145);
+  --action-commit-hover: oklch(0.3 0.12 145);
+  --action-verify: oklch(0.35 0.1 145);
+  --action-verify-hover: oklch(0.3 0.12 145);
+
+  --running-indicator: oklch(0.3 0 0);
+  --running-indicator-text: oklch(0.25 0 0);
+
+  --status-success: oklch(0.4 0.15 145);
+  --status-success-bg: oklch(0.4 0.15 145 / 0.12);
+  --status-warning: oklch(0.55 0.15 70);
+  --status-warning-bg: oklch(0.55 0.15 70 / 0.12);
+  --status-error: oklch(0.5 0.2 25);
+  --status-error-bg: oklch(0.5 0.2 25 / 0.12);
+  --status-info: oklch(0.45 0.12 230);
+  --status-info-bg: oklch(0.45 0.12 230 / 0.12);
+  --status-backlog: oklch(0.55 0 0);
+  --status-in-progress: oklch(0.55 0.15 70);
+  --status-waiting: oklch(0.5 0.1 50);
+}
+
+.paper .content-bg {
+  background: linear-gradient(135deg, oklch(0.99 0 0), oklch(0.98 0 0), oklch(0.99 0 0));
+}
+
+.paper .animated-outline-gradient {
+  background: conic-gradient(
+    from 90deg at 50% 50%,
+    oklch(0.3 0 0) 0%,
+    oklch(0.5 0 0) 50%,
+    oklch(0.3 0 0) 100%
+  );
+}
+
+.paper .animated-outline-inner {
+  background: oklch(1 0 0) !important;
+  color: oklch(0.2 0 0) !important;
+}

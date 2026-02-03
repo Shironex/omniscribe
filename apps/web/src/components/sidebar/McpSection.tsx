@@ -11,7 +11,7 @@ import {
   Loader2,
   XCircle,
 } from 'lucide-react';
-import { useMcpStore, selectServers, selectOmniscribeMcp, useWorkspaceStore, selectActiveTab } from '../../stores';
+import { useMcpStore, selectServers, selectInternalMcp, useWorkspaceStore, selectActiveTab } from '../../stores';
 import { McpServerStatus } from '@omniscribe/shared';
 
 interface McpSectionProps {
@@ -78,8 +78,8 @@ export function McpSection({ className }: McpSectionProps) {
   const disconnectServer = useMcpStore((state) => state.disconnectServer);
   const clear = useMcpStore((state) => state.clear);
   const initListeners = useMcpStore((state) => state.initListeners);
-  const omniscribeMcp = useMcpStore(selectOmniscribeMcp);
-  const fetchOmniscribeMcpStatus = useMcpStore((state) => state.fetchOmniscribeMcpStatus);
+  const internalMcp = useMcpStore(selectInternalMcp);
+  const fetchInternalMcpStatus = useMcpStore((state) => state.fetchInternalMcpStatus);
 
   const activeTab = useWorkspaceStore(selectActiveTab);
 
@@ -91,10 +91,10 @@ export function McpSection({ className }: McpSectionProps) {
     initListeners();
   }, [initListeners]);
 
-  // Fetch Omniscribe MCP status on mount
+  // Fetch internal MCP status on mount
   useEffect(() => {
-    fetchOmniscribeMcpStatus();
-  }, [fetchOmniscribeMcpStatus]);
+    fetchInternalMcpStatus();
+  }, [fetchInternalMcpStatus]);
 
   // Discover servers when active project changes
   useEffect(() => {
@@ -140,40 +140,40 @@ export function McpSection({ className }: McpSectionProps) {
 
   return (
     <div className={twMerge(clsx('space-y-2', className))}>
-      {/* Omniscribe MCP Status */}
-      <div className="flex items-center gap-2 px-2 py-1.5 rounded bg-omniscribe-surface/30">
+      {/* Internal MCP Status */}
+      <div className="flex items-center gap-2 px-2 py-1.5 rounded bg-muted/30">
         <span
           className={clsx(
             'w-2 h-2 rounded-full',
-            omniscribeMcp.available ? 'bg-green-400' : 'bg-red-400'
+            internalMcp.available ? 'bg-green-400' : 'bg-red-400'
           )}
         />
         <div className="min-w-0 flex-1">
-          <div className="text-xs text-omniscribe-text-secondary font-medium">
-            Omniscribe MCP
+          <div className="text-xs text-foreground-secondary font-medium">
+            Internal MCP
           </div>
-          <div className="text-[10px] text-omniscribe-text-muted truncate">
-            {omniscribeMcp.available
-              ? omniscribeMcp.path?.split(/[/\\]/).slice(-2).join('/')
+          <div className="text-[10px] text-muted-foreground truncate">
+            {internalMcp.available
+              ? internalMcp.path?.split(/[/\\]/).slice(-2).join('/')
               : 'Not available'}
           </div>
         </div>
         <span
           className={clsx(
             'text-[10px] px-1.5 py-0.5 rounded',
-            omniscribeMcp.available
+            internalMcp.available
               ? 'bg-green-400/20 text-green-400'
               : 'bg-red-400/20 text-red-400'
           )}
         >
-          {omniscribeMcp.available ? 'Ready' : 'Unavailable'}
+          {internalMcp.available ? 'Ready' : 'Unavailable'}
         </span>
       </div>
 
       {/* Header with count and refresh */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="text-xs text-omniscribe-text-secondary">
+          <span className="text-xs text-foreground-secondary">
             {serverCount} server{serverCount !== 1 ? 's' : ''}
           </span>
           {connectedCount > 0 && (
@@ -187,19 +187,19 @@ export function McpSection({ className }: McpSectionProps) {
           disabled={isDiscovering}
           className={clsx(
             'p-1 rounded transition-colors',
-            'hover:bg-omniscribe-surface',
+            'hover:bg-muted',
             'disabled:opacity-50 disabled:cursor-not-allowed',
             isDiscovering && 'animate-spin'
           )}
           title="Refresh servers"
         >
-          <RefreshCw size={12} className="text-omniscribe-text-muted" />
+          <RefreshCw size={12} className="text-muted-foreground" />
         </button>
       </div>
 
       {/* Loading state */}
       {isDiscovering && (
-        <div className="text-xs text-omniscribe-text-muted animate-pulse py-2">
+        <div className="text-xs text-muted-foreground animate-pulse py-2">
           Discovering servers...
         </div>
       )}
@@ -214,7 +214,7 @@ export function McpSection({ className }: McpSectionProps) {
 
       {/* Servers list */}
       {!isDiscovering && servers.length === 0 && !error && (
-        <div className="text-xs text-omniscribe-text-muted py-2">
+        <div className="text-xs text-muted-foreground py-2">
           No MCP servers found
         </div>
       )}
@@ -233,7 +233,7 @@ export function McpSection({ className }: McpSectionProps) {
                 className={clsx(
                   'flex items-center gap-2 px-2 py-1.5 rounded',
                   'transition-colors',
-                  isEnabled ? 'bg-omniscribe-surface/50' : 'opacity-60'
+                  isEnabled ? 'bg-muted/50' : 'opacity-60'
                 )}
               >
                 {/* Status indicator */}
@@ -243,7 +243,7 @@ export function McpSection({ className }: McpSectionProps) {
 
                 {/* Server info */}
                 <div className="min-w-0 flex-1">
-                  <div className="text-xs text-omniscribe-text-secondary truncate">
+                  <div className="text-xs text-foreground-secondary truncate">
                     {server.name}
                   </div>
                   {serverState?.errorMessage && (
@@ -252,7 +252,7 @@ export function McpSection({ className }: McpSectionProps) {
                     </div>
                   )}
                   {serverState?.tools && serverState.tools.length > 0 && (
-                    <div className="text-xs text-omniscribe-text-muted">
+                    <div className="text-xs text-muted-foreground">
                       {serverState.tools.length} tool{serverState.tools.length !== 1 ? 's' : ''}
                     </div>
                   )}
@@ -263,7 +263,7 @@ export function McpSection({ className }: McpSectionProps) {
                   onClick={() => handleToggle(server.id, isEnabled)}
                   className={clsx(
                     'p-1 rounded transition-colors flex-shrink-0',
-                    'hover:bg-omniscribe-border',
+                    'hover:bg-border',
                     isEnabled
                       ? 'text-green-400 hover:text-red-400'
                       : 'text-gray-400 hover:text-green-400'

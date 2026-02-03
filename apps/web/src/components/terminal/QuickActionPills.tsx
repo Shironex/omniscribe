@@ -16,8 +16,8 @@ interface QuickActionPillsProps {
 }
 
 const variantStyles: Record<string, string> = {
-  default: 'bg-omniscribe-card hover:bg-omniscribe-border text-omniscribe-text-secondary hover:text-omniscribe-text-primary',
-  primary: 'bg-omniscribe-accent-primary/10 hover:bg-omniscribe-accent-primary/20 text-omniscribe-accent-primary',
+  default: 'bg-card hover:bg-border text-foreground-secondary hover:text-foreground',
+  primary: 'bg-primary/10 hover:bg-primary/20 text-primary',
   success: 'bg-green-500/10 hover:bg-green-500/20 text-green-400',
   warning: 'bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400',
   danger: 'bg-red-500/10 hover:bg-red-500/20 text-red-400',
