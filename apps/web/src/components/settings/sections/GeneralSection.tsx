@@ -1,11 +1,7 @@
-import { Settings, FolderOpen, SidebarIcon } from 'lucide-react';
+import { Settings, FolderOpen } from 'lucide-react';
 import { clsx } from 'clsx';
-import { useWorkspaceStore } from '../../../stores';
 
 export function GeneralSection() {
-  const preferences = useWorkspaceStore((state) => state.preferences);
-  const updatePreference = useWorkspaceStore((state) => state.updatePreference);
-
   return (
     <div className="space-y-6">
       {/* Section Header */}
@@ -24,70 +20,6 @@ export function GeneralSection() {
           <p className="text-sm text-muted-foreground">
             General application settings
           </p>
-        </div>
-      </div>
-
-      {/* Sidebar Settings */}
-      <div className="space-y-4">
-        <h3 className="text-sm font-medium text-foreground">Sidebar</h3>
-
-        <div className="rounded-xl border border-border/50 bg-card/50 p-4 space-y-4">
-          {/* Sidebar Default State */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <SidebarIcon className="w-4 h-4 text-muted-foreground" />
-              <div>
-                <div className="text-sm font-medium text-foreground">
-                  Default Sidebar State
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  Sidebar visibility on startup
-                </div>
-              </div>
-            </div>
-            <button
-              onClick={() => updatePreference('sidebarOpen', !preferences.sidebarOpen)}
-              className={clsx(
-                'relative w-11 h-6 rounded-full transition-colors duration-200',
-                preferences.sidebarOpen
-                  ? 'bg-primary'
-                  : 'bg-border',
-              )}
-            >
-              <div
-                className={clsx(
-                  'absolute top-1 w-4 h-4 rounded-full bg-white transition-transform duration-200',
-                  preferences.sidebarOpen ? 'translate-x-6' : 'translate-x-1',
-                )}
-              />
-            </button>
-          </div>
-
-          {/* Sidebar Width */}
-          <div className="pt-2 border-t border-border/30">
-            <div className="flex items-center justify-between mb-2">
-              <div className="text-sm font-medium text-foreground">
-                Sidebar Width
-              </div>
-              <div className="text-xs text-muted-foreground">
-                {preferences.sidebarWidth}px
-              </div>
-            </div>
-            <input
-              type="range"
-              min="180"
-              max="320"
-              value={preferences.sidebarWidth}
-              onChange={(e) =>
-                updatePreference('sidebarWidth', parseInt(e.target.value, 10))
-              }
-              className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
-            />
-            <div className="flex justify-between text-xs text-muted-foreground mt-1">
-              <span>180px</span>
-              <span>320px</span>
-            </div>
-          </div>
         </div>
       </div>
 

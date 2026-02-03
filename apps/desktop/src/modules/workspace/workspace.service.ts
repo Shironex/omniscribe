@@ -84,8 +84,6 @@ export class WorkspaceService implements OnModuleInit {
         quickActions: DEFAULT_QUICK_ACTIONS,
         preferences: {
           theme: 'dark',
-          sidebarWidth: 240,
-          sidebarOpen: true,
           worktree: DEFAULT_WORKTREE_SETTINGS,
         },
       },
@@ -116,8 +114,6 @@ export class WorkspaceService implements OnModuleInit {
       activeTabId: this.store.get('activeTabId', null),
       preferences: this.store.get('preferences', {
         theme: 'dark',
-        sidebarWidth: 240,
-        sidebarOpen: true,
         worktree: DEFAULT_WORKTREE_SETTINGS,
       }),
       quickActions: this.store.get('quickActions', DEFAULT_QUICK_ACTIONS),
@@ -302,8 +298,6 @@ export class WorkspaceService implements OnModuleInit {
   getPreferences(): UserPreferences {
     return this.store.get('preferences', {
       theme: 'dark',
-      sidebarWidth: 240,
-      sidebarOpen: true,
       worktree: DEFAULT_WORKTREE_SETTINGS,
     });
   }

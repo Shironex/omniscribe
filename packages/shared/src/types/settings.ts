@@ -95,10 +95,6 @@ export interface GlobalSettings {
   fontFamilyMono?: string;
   /** Terminal font family */
   terminalFontFamily?: string;
-  /** Sidebar open state */
-  sidebarOpen: boolean;
-  /** Sidebar width in pixels */
-  sidebarWidth: number;
   /** MCP server configurations */
   mcpServers: MCPServerConfig[];
   /** Custom Claude CLI spawn command */
@@ -113,8 +109,6 @@ export interface GlobalSettings {
 export const DEFAULT_SETTINGS: GlobalSettings = {
   version: 1,
   theme: 'dark',
-  sidebarOpen: true,
-  sidebarWidth: 240,
   mcpServers: [],
 };
 

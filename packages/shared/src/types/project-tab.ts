@@ -47,10 +47,6 @@ export interface ProjectTabDTO extends ProjectTabBase {
 export interface UserPreferences {
   /** Theme preference - supports all 40 themes */
   theme: Theme;
-  /** Sidebar width */
-  sidebarWidth: number;
-  /** Whether sidebar is open */
-  sidebarOpen: boolean;
   /** Worktree settings */
   worktree?: WorktreeSettings;
   /** Other preferences */

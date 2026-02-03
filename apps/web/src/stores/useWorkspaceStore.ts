@@ -111,8 +111,6 @@ function convertBackendTab(dto: ProjectTabDTO): ProjectTab {
  */
 const DEFAULT_PREFERENCES: UserPreferences = {
   theme: 'dark',
-  sidebarWidth: 240,
-  sidebarOpen: true,
   worktree: DEFAULT_WORKTREE_SETTINGS,
 };
 
