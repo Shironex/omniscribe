@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import { Palette, Bot, Server, Settings, GitBranch } from 'lucide-react';
+import { Palette, Bot, Server, Settings, GitBranch, Github } from 'lucide-react';
 import type { SettingsSectionId } from '@omniscribe/shared';
 
 export interface NavigationItem {
@@ -21,6 +21,7 @@ export const NAV_GROUPS: NavigationGroup[] = [
     label: 'Integrations',
     items: [
       { id: 'integrations', label: 'Claude CLI', icon: Bot },
+      { id: 'github', label: 'GitHub CLI', icon: Github },
       { id: 'mcp', label: 'MCP Servers', icon: Server },
     ],
   },

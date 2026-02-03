@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Theme, SettingsSectionId, ClaudeCliStatus } from '@omniscribe/shared';
+import type { Theme, SettingsSectionId, ClaudeCliStatus, GhCliStatus } from '@omniscribe/shared';
 import { themeOptions } from '../config/theme-options';
 
 /**
@@ -20,8 +20,12 @@ interface SettingsState extends SettingsModalState {
   theme: Theme;
   /** Claude CLI status */
   claudeCliStatus: ClaudeCliStatus | null;
-  /** Whether CLI status is loading */
+  /** Whether Claude CLI status is loading */
   isClaudeCliLoading: boolean;
+  /** GitHub CLI status */
+  githubCliStatus: GhCliStatus | null;
+  /** Whether GitHub CLI status is loading */
+  isGithubCliLoading: boolean;
   /** Preview theme (for hover preview) */
   previewTheme: Theme | null;
 }
@@ -44,8 +48,12 @@ interface SettingsActions {
   applyTheme: (theme: Theme) => void;
   /** Set Claude CLI status */
   setClaudeCliStatus: (status: ClaudeCliStatus | null) => void;
-  /** Set CLI loading state */
+  /** Set Claude CLI loading state */
   setClaudeCliLoading: (loading: boolean) => void;
+  /** Set GitHub CLI status */
+  setGithubCliStatus: (status: GhCliStatus | null) => void;
+  /** Set GitHub CLI loading state */
+  setGithubCliLoading: (loading: boolean) => void;
 }
 
 /**
@@ -86,6 +94,8 @@ export const useSettingsStore = create<SettingsStore>((set, get) => {
   theme: DEFAULT_THEME,
   claudeCliStatus: null,
   isClaudeCliLoading: false,
+  githubCliStatus: null,
+  isGithubCliLoading: false,
   previewTheme: null,
 
   // Actions
@@ -140,6 +150,14 @@ export const useSettingsStore = create<SettingsStore>((set, get) => {
   setClaudeCliLoading: (loading: boolean) => {
     set({ isClaudeCliLoading: loading });
   },
+
+  setGithubCliStatus: (status: GhCliStatus | null) => {
+    set({ githubCliStatus: status, isGithubCliLoading: false });
+  },
+
+  setGithubCliLoading: (loading: boolean) => {
+    set({ isGithubCliLoading: loading });
+  },
 }});
 
 // Selectors
@@ -176,6 +194,16 @@ export const selectEffectiveTheme = (state: SettingsStore) =>
 export const selectClaudeCliStatus = (state: SettingsStore) => state.claudeCliStatus;
 
 /**
- * Select CLI loading state
+ * Select Claude CLI loading state
  */
 export const selectClaudeCliLoading = (state: SettingsStore) => state.isClaudeCliLoading;
+
+/**
+ * Select GitHub CLI status
+ */
+export const selectGithubCliStatus = (state: SettingsStore) => state.githubCliStatus;
+
+/**
+ * Select GitHub CLI loading state
+ */
+export const selectGithubCliLoading = (state: SettingsStore) => state.isGithubCliLoading;

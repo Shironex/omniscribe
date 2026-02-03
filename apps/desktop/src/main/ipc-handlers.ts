@@ -5,7 +5,7 @@ import { join } from 'path';
 import { exec, execFile } from 'child_process';
 import { promisify } from 'util';
 import { homedir } from 'os';
-import type { ClaudeCliStatus } from '@omniscribe/shared';
+import type { ClaudeCliStatus, GhCliStatus, GhCliAuthStatus } from '@omniscribe/shared';
 
 const store = new Store();
 const execAsync = promisify(exec);
@@ -14,7 +14,7 @@ const execFileAsync = promisify(execFile);
 /**
  * Supported CLI tools to check for
  */
-const CLI_TOOLS = ['claude', 'npm', 'node', 'git', 'pnpm', 'yarn'] as const;
+const CLI_TOOLS = ['claude', 'npm', 'node', 'git', 'pnpm', 'yarn', 'gh'] as const;
 type CLITool = (typeof CLI_TOOLS)[number];
 
 /**
@@ -202,6 +202,169 @@ async function getClaudeCliStatus(): Promise<ClaudeCliStatus> {
   };
 }
 
+// ============================================
+// GitHub CLI Detection Utilities
+// ============================================
+
+/**
+ * Get common gh CLI installation paths (cross-platform)
+ */
+function getGhCliPaths(): string[] {
+  const home = normalizePath(homedir());
+  const isWindows = process.platform === 'win32';
+
+  if (isWindows) {
+    const programFiles = process.env['ProgramFiles'] || 'C:\\Program Files';
+    const localAppData =
+      process.env['LOCALAPPDATA'] || joinPaths(home, 'AppData/Local');
+    return [
+      joinPaths(programFiles, 'GitHub CLI/gh.exe'),
+      joinPaths(localAppData, 'Programs/GitHub CLI/gh.exe'),
+      joinPaths(home, 'scoop/shims/gh.exe'),
+      joinPaths(home, '.local/bin/gh.exe'),
+    ];
+  }
+
+  // macOS and Linux
+  const isMac = process.platform === 'darwin';
+  const isLinux = process.platform === 'linux';
+  return [
+    '/usr/local/bin/gh',
+    '/usr/bin/gh',
+    ...(isMac ? ['/opt/homebrew/bin/gh'] : []),
+    joinPaths(home, '.local/bin/gh'),
+    ...(isLinux ? ['/snap/bin/gh'] : []),
+  ];
+}
+
+interface GhCliDetectionResult {
+  cliPath?: string;
+  method: 'path' | 'local' | 'none';
+}
+
+/**
+ * Find gh CLI installation
+ */
+async function findGhCli(): Promise<GhCliDetectionResult> {
+  const platform = process.platform;
+
+  // Try to find CLI in PATH first
+  try {
+    const command = platform === 'win32' ? 'where gh' : 'which gh';
+    const { stdout } = await execAsync(command);
+    const firstPath = stdout.trim().split('\n')[0]?.trim();
+    if (firstPath) {
+      return { cliPath: firstPath, method: 'path' };
+    }
+  } catch {
+    // Not in PATH, fall through to check common locations
+  }
+
+  // Check common installation locations
+  const localPaths = getGhCliPaths();
+  for (const localPath of localPaths) {
+    if (existsSync(localPath)) {
+      return { cliPath: localPath, method: 'local' };
+    }
+  }
+
+  return { method: 'none' };
+}
+
+/**
+ * Get gh CLI version
+ */
+async function getGhCliVersion(cliPath: string): Promise<string | undefined> {
+  try {
+    const { stdout } = await execFileAsync(cliPath, ['--version']);
+    const match = stdout.match(/gh version ([^\s(]+)/);
+    return match ? match[1] : stdout.trim().split('\n')[0];
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Check gh CLI authentication status
+ */
+async function checkGhAuth(cliPath: string): Promise<GhCliAuthStatus> {
+  try {
+    const { stdout, stderr } = await execFileAsync(cliPath, ['auth', 'status'], {
+      timeout: 10000,
+      env: {
+        ...process.env,
+        GH_PROMPT_DISABLED: '1',
+        NO_COLOR: '1',
+      },
+    });
+    const output = stdout + stderr;
+
+    if (output.includes('Logged in to')) {
+      const usernameMatch = output.match(
+        /Logged in to [^\s]+ account ([^\s(]+)/,
+      );
+      const username = usernameMatch ? usernameMatch[1] : undefined;
+
+      const scopesMatch = output.match(/Token scopes: ([^\n]+)/);
+      const scopes = scopesMatch
+        ? scopesMatch[1]
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean)
+        : undefined;
+
+      return { authenticated: true, username, scopes };
+    }
+
+    return { authenticated: false };
+  } catch (error) {
+    const errorMessage =
+      error instanceof Error ? error.message : String(error);
+
+    if (
+      errorMessage.includes('not logged in') ||
+      errorMessage.includes('no authentication') ||
+      errorMessage.includes('You are not logged')
+    ) {
+      return { authenticated: false };
+    }
+
+    return { authenticated: false };
+  }
+}
+
+/**
+ * Get full GitHub CLI status
+ */
+async function getGhCliStatus(): Promise<GhCliStatus> {
+  const platform = process.platform;
+  const arch = process.arch;
+
+  const { cliPath, method } = await findGhCli();
+
+  if (!cliPath || method === 'none') {
+    return {
+      installed: false,
+      platform,
+      arch,
+      auth: { authenticated: false },
+    };
+  }
+
+  const version = await getGhCliVersion(cliPath);
+  const auth = await checkGhAuth(cliPath);
+
+  return {
+    installed: true,
+    path: cliPath,
+    version,
+    method,
+    platform,
+    arch,
+    auth,
+  };
+}
+
 /**
  * Register all IPC handlers for the application
  */
@@ -343,6 +506,14 @@ export function registerIpcHandlers(mainWindow: BrowserWindow): void {
   ipcMain.handle('claude:get-status', async () => {
     return getClaudeCliStatus();
   });
+
+  // ============================================
+  // GitHub CLI Handlers
+  // ============================================
+
+  ipcMain.handle('github:get-status', async () => {
+    return getGhCliStatus();
+  });
 }
 
 /**
@@ -374,4 +545,7 @@ export function cleanupIpcHandlers(): void {
 
   // Claude handlers
   ipcMain.removeHandler('claude:get-status');
+
+  // GitHub handlers
+  ipcMain.removeHandler('github:get-status');
 }

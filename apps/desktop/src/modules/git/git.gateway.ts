@@ -8,6 +8,7 @@ import {
 import { Server, Socket } from 'socket.io';
 import { GitService } from './git.service';
 import { WorktreeService } from './worktree.service';
+import { GithubService } from './github.service';
 import {
   GitBranchesPayload,
   GitCommitsPayload,
@@ -21,6 +22,20 @@ import {
   GitCurrentBranchResponse,
   WorktreeInfo,
   SuccessResponse,
+  GithubStatusPayload,
+  GithubStatusResponse,
+  GithubProjectPayload,
+  GithubRepoInfoResponse,
+  GithubListPRsPayload,
+  GithubPRsResponse,
+  GithubCreatePRPayload,
+  GithubCreatePRResponse,
+  GithubGetPRPayload,
+  GithubPRResponse,
+  GithubListIssuesPayload,
+  GithubIssuesResponse,
+  GithubGetIssuePayload,
+  GithubIssueResponse,
 } from '@omniscribe/shared';
 
 /**
@@ -60,6 +75,7 @@ export class GitGateway {
   constructor(
     private readonly gitService: GitService,
     private readonly worktreeService: WorktreeService,
+    private readonly githubService: GithubService,
   ) {}
 
   @SubscribeMessage('git:branches')
@@ -313,6 +329,241 @@ export class GitGateway {
 
       return {
         success: false,
+        error: message,
+      };
+    }
+  }
+
+  // ============================================
+  // GitHub CLI Handlers
+  // ============================================
+
+  @SubscribeMessage('github:status')
+  async handleGithubStatus(
+    @ConnectedSocket() _client: Socket,
+    @MessageBody() payload: GithubStatusPayload,
+  ): Promise<GithubStatusResponse> {
+    try {
+      if (payload?.refresh) {
+        this.githubService.clearCache();
+      }
+
+      const status = await this.githubService.getStatus();
+
+      return {
+        status,
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      console.error('[GitGateway] Error getting GitHub CLI status:', message);
+
+      return {
+        status: {
+          installed: false,
+          platform: process.platform,
+          arch: process.arch,
+          auth: { authenticated: false },
+        },
+        error: message,
+      };
+    }
+  }
+
+  @SubscribeMessage('github:repo-info')
+  async handleGithubRepoInfo(
+    @ConnectedSocket() _client: Socket,
+    @MessageBody() payload: GithubProjectPayload,
+  ): Promise<GithubRepoInfoResponse> {
+    try {
+      const { projectPath } = payload;
+
+      if (!projectPath) {
+        return {
+          repo: null,
+          error: 'Project path is required',
+        };
+      }
+
+      const repo = await this.githubService.getRepoInfo(projectPath);
+
+      return {
+        repo,
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      console.error('[GitGateway] Error getting repo info:', message);
+
+      return {
+        repo: null,
+        error: message,
+      };
+    }
+  }
+
+  @SubscribeMessage('github:prs')
+  async handleGithubPRs(
+    @ConnectedSocket() _client: Socket,
+    @MessageBody() payload: GithubListPRsPayload,
+  ): Promise<GithubPRsResponse> {
+    try {
+      const { projectPath, state, limit } = payload;
+
+      if (!projectPath) {
+        return {
+          pullRequests: [],
+          error: 'Project path is required',
+        };
+      }
+
+      const pullRequests = await this.githubService.listPullRequests(
+        projectPath,
+        { state, limit },
+      );
+
+      return {
+        pullRequests,
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      console.error('[GitGateway] Error listing pull requests:', message);
+
+      return {
+        pullRequests: [],
+        error: message,
+      };
+    }
+  }
+
+  @SubscribeMessage('github:pr')
+  async handleGithubPR(
+    @ConnectedSocket() _client: Socket,
+    @MessageBody() payload: GithubGetPRPayload,
+  ): Promise<GithubPRResponse> {
+    try {
+      const { projectPath, prNumber } = payload;
+
+      if (!projectPath || !prNumber) {
+        return {
+          pullRequest: null,
+          error: 'Project path and PR number are required',
+        };
+      }
+
+      const pullRequest = await this.githubService.getPullRequest(
+        projectPath,
+        prNumber,
+      );
+
+      return {
+        pullRequest,
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      console.error('[GitGateway] Error getting pull request:', message);
+
+      return {
+        pullRequest: null,
+        error: message,
+      };
+    }
+  }
+
+  @SubscribeMessage('github:create-pr')
+  async handleGithubCreatePR(
+    @ConnectedSocket() _client: Socket,
+    @MessageBody() payload: GithubCreatePRPayload,
+  ): Promise<GithubCreatePRResponse> {
+    try {
+      const { projectPath, title, body, base, head, draft } = payload;
+
+      if (!projectPath || !title) {
+        return {
+          success: false,
+          error: 'Project path and title are required',
+        };
+      }
+
+      const pullRequest = await this.githubService.createPullRequest(
+        projectPath,
+        { title, body, base, head, draft },
+      );
+
+      return {
+        success: true,
+        pullRequest,
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      console.error('[GitGateway] Error creating pull request:', message);
+
+      return {
+        success: false,
+        error: message,
+      };
+    }
+  }
+
+  @SubscribeMessage('github:issues')
+  async handleGithubIssues(
+    @ConnectedSocket() _client: Socket,
+    @MessageBody() payload: GithubListIssuesPayload,
+  ): Promise<GithubIssuesResponse> {
+    try {
+      const { projectPath, state, limit, labels } = payload;
+
+      if (!projectPath) {
+        return {
+          issues: [],
+          error: 'Project path is required',
+        };
+      }
+
+      const issues = await this.githubService.listIssues(projectPath, {
+        state,
+        limit,
+        labels,
+      });
+
+      return {
+        issues,
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      console.error('[GitGateway] Error listing issues:', message);
+
+      return {
+        issues: [],
+        error: message,
+      };
+    }
+  }
+
+  @SubscribeMessage('github:issue')
+  async handleGithubIssue(
+    @ConnectedSocket() _client: Socket,
+    @MessageBody() payload: GithubGetIssuePayload,
+  ): Promise<GithubIssueResponse> {
+    try {
+      const { projectPath, issueNumber } = payload;
+
+      if (!projectPath || !issueNumber) {
+        return {
+          issue: null,
+          error: 'Project path and issue number are required',
+        };
+      }
+
+      const issue = await this.githubService.getIssue(projectPath, issueNumber);
+
+      return {
+        issue,
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      console.error('[GitGateway] Error getting issue:', message);
+
+      return {
+        issue: null,
         error: message,
       };
     }

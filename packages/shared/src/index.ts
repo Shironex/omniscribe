@@ -4,6 +4,9 @@ export * from './types/session';
 // Git types
 export * from './types/git';
 
+// GitHub types
+export * from './types/github';
+
 // MCP types
 export * from './types/mcp';
 

@@ -121,7 +121,7 @@ export const DEFAULT_SETTINGS: GlobalSettings = {
 /**
  * Settings section IDs for navigation
  */
-export type SettingsSectionId = 'appearance' | 'integrations' | 'mcp' | 'general' | 'worktrees';
+export type SettingsSectionId = 'appearance' | 'integrations' | 'github' | 'mcp' | 'general' | 'worktrees';
 
 /**
  * Worktree creation mode

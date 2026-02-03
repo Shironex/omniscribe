@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import type { ClaudeCliStatus } from '@omniscribe/shared';
+import type { ClaudeCliStatus, GhCliStatus } from '@omniscribe/shared';
 
 export interface ElectronAPI {
   window: {
@@ -34,6 +34,9 @@ export interface ElectronAPI {
   };
   claude: {
     getStatus: () => Promise<ClaudeCliStatus>;
+  };
+  github: {
+    getStatus: () => Promise<GhCliStatus>;
   };
   platform: NodeJS.Platform;
 }
@@ -73,6 +76,9 @@ const electronAPI: ElectronAPI = {
   },
   claude: {
     getStatus: () => ipcRenderer.invoke('claude:get-status') as Promise<ClaudeCliStatus>,
+  },
+  github: {
+    getStatus: () => ipcRenderer.invoke('github:get-status') as Promise<GhCliStatus>,
   },
   platform: process.platform,
 };

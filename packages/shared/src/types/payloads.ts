@@ -489,3 +489,135 @@ export interface PreferencesUpdatedEvent {
 export interface QuickActionsUpdatedEvent {
   actions: QuickAction[];
 }
+
+// ============================================
+// GitHub Payloads
+// ============================================
+
+/**
+ * Payload for getting GitHub CLI status
+ */
+export interface GithubStatusPayload {
+  /** Force refresh (bypass cache) */
+  refresh?: boolean;
+}
+
+/**
+ * Payload for GitHub operations that require a project path
+ */
+export interface GithubProjectPayload {
+  projectPath: string;
+}
+
+/**
+ * Payload for listing pull requests
+ */
+export interface GithubListPRsPayload extends GithubProjectPayload {
+  /** Filter by state */
+  state?: 'open' | 'closed' | 'all';
+  /** Maximum number to return */
+  limit?: number;
+}
+
+/**
+ * Payload for creating a pull request
+ */
+export interface GithubCreatePRPayload extends GithubProjectPayload {
+  /** PR title */
+  title: string;
+  /** PR body/description */
+  body?: string;
+  /** Base branch */
+  base?: string;
+  /** Head branch */
+  head?: string;
+  /** Create as draft */
+  draft?: boolean;
+}
+
+/**
+ * Payload for getting a specific PR
+ */
+export interface GithubGetPRPayload extends GithubProjectPayload {
+  /** PR number */
+  prNumber: number;
+}
+
+/**
+ * Payload for listing issues
+ */
+export interface GithubListIssuesPayload extends GithubProjectPayload {
+  /** Filter by state */
+  state?: 'open' | 'closed' | 'all';
+  /** Maximum number to return */
+  limit?: number;
+  /** Filter by labels */
+  labels?: string[];
+}
+
+/**
+ * Payload for getting a specific issue
+ */
+export interface GithubGetIssuePayload extends GithubProjectPayload {
+  /** Issue number */
+  issueNumber: number;
+}
+
+// ============================================
+// GitHub Responses
+// ============================================
+
+/**
+ * Response for GitHub CLI status
+ */
+export interface GithubStatusResponse {
+  status: import('./github').GhCliStatus;
+  error?: string;
+}
+
+/**
+ * Response for repository info
+ */
+export interface GithubRepoInfoResponse {
+  repo: import('./github').RepoInfo | null;
+  error?: string;
+}
+
+/**
+ * Response for pull requests list
+ */
+export interface GithubPRsResponse {
+  pullRequests: import('./github').PullRequest[];
+  error?: string;
+}
+
+/**
+ * Response for a single pull request
+ */
+export interface GithubPRResponse {
+  pullRequest: import('./github').PullRequest | null;
+  error?: string;
+}
+
+/**
+ * Response for creating a pull request
+ */
+export interface GithubCreatePRResponse extends SuccessResponse {
+  pullRequest?: import('./github').PullRequest;
+}
+
+/**
+ * Response for issues list
+ */
+export interface GithubIssuesResponse {
+  issues: import('./github').Issue[];
+  error?: string;
+}
+
+/**
+ * Response for a single issue
+ */
+export interface GithubIssueResponse {
+  issue: import('./github').Issue | null;
+  error?: string;
+}

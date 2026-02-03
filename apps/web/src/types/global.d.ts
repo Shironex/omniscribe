@@ -1,4 +1,4 @@
-import type { ClaudeCliStatus } from '@omniscribe/shared';
+import type { ClaudeCliStatus, GhCliStatus } from '@omniscribe/shared';
 
 /**
  * Electron API exposed via contextBridge
@@ -36,6 +36,9 @@ interface ElectronAPI {
   };
   claude?: {
     getStatus: () => Promise<ClaudeCliStatus>;
+  };
+  github?: {
+    getStatus: () => Promise<GhCliStatus>;
   };
   platform: NodeJS.Platform;
 }

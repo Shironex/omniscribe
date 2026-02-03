@@ -6,6 +6,7 @@ import { SettingsNavigation } from './SettingsNavigation';
 import {
   AppearanceSection,
   IntegrationsSection,
+  GithubSection,
   McpSection,
   GeneralSection,
   WorktreesSection,
@@ -80,6 +81,8 @@ export function SettingsModal() {
         return <AppearanceSection />;
       case 'integrations':
         return <IntegrationsSection />;
+      case 'github':
+        return <GithubSection />;
       case 'mcp':
         return <McpSection />;
       case 'general':
