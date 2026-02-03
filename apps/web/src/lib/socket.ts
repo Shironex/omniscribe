@@ -90,3 +90,13 @@ socket.on('reconnect_failed', () => {
 });
 
 export default socket;
+
+// Re-export socket helpers for convenient access
+export {
+  emitAsync,
+  emitWithErrorHandling,
+  emitWithSuccessHandling,
+  type EmitOptions,
+  type ErrorResponse,
+  type SuccessResponse,
+} from './socketHelpers';

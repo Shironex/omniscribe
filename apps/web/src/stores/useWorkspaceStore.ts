@@ -1,50 +1,21 @@
 import { create } from 'zustand';
 import { socket } from '../lib/socket';
-import type { Theme } from '@omniscribe/shared';
+import type {
+  Theme,
+  ProjectTab,
+  ProjectTabDTO,
+  UserPreferences,
+  TabsResponse,
+  TabsOnlyResponse,
+  TabsUpdatedEvent,
+  PreferencesUpdatedEvent,
+  PreferencesResponse,
+  WorkspaceStateResponse,
+} from '@omniscribe/shared';
 import { useSettingsStore } from './useSettingsStore';
 
-/**
- * Project tab represents an open project in the workspace
- */
-export interface ProjectTab {
-  /** Unique tab identifier */
-  id: string;
-  /** Project path */
-  projectPath: string;
-  /** Project name (directory name) */
-  name: string;
-  /** Session IDs associated with this project */
-  sessionIds: string[];
-  /** Whether this tab is selected */
-  isActive: boolean;
-  /** Last accessed timestamp */
-  lastAccessedAt: Date;
-  /** Per-project theme */
-  theme?: Theme;
-}
-
-/**
- * User preferences
- */
-export interface UserPreferences {
-  /** Theme preference - supports all 40 themes */
-  theme: Theme;
-  /** Sidebar width */
-  sidebarWidth: number;
-  /** Whether sidebar is open */
-  sidebarOpen: boolean;
-  /** Other preferences */
-  [key: string]: unknown;
-}
-
-/**
- * Backend workspace state response
- */
-interface BackendWorkspaceState {
-  tabs: Array<Omit<ProjectTab, 'lastAccessedAt' | 'theme'> & { lastAccessedAt: string; theme?: string }>;
-  activeTabId: string | null;
-  preferences: UserPreferences;
-}
+// Re-export types for consumers of this store
+export type { ProjectTab, UserPreferences } from '@omniscribe/shared';
 
 /**
  * Workspace state
@@ -127,13 +98,13 @@ function extractProjectName(projectPath: string): string {
 }
 
 /**
- * Convert backend tab to frontend tab (handle Date conversion)
+ * Convert backend tab DTO to frontend ProjectTab (handle Date conversion)
  */
-function convertBackendTab(tab: BackendWorkspaceState['tabs'][0]): ProjectTab {
+function convertBackendTab(dto: ProjectTabDTO): ProjectTab {
   return {
-    ...tab,
-    lastAccessedAt: new Date(tab.lastAccessedAt),
-    theme: tab.theme as Theme | undefined,
+    ...dto,
+    lastAccessedAt: new Date(dto.lastAccessedAt),
+    theme: dto.theme as Theme | undefined,
   };
 }
 
@@ -174,7 +145,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
       socket.emit(
         'workspace:select-tab',
         { tabId: existingTab.id },
-        (response: { success: boolean; tabs: BackendWorkspaceState['tabs']; activeTabId: string }) => {
+        (response: TabsResponse) => {
           if (response.success) {
             set({
               tabs: response.tabs.map(convertBackendTab),
@@ -195,7 +166,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     socket.emit(
       'workspace:add-tab',
       { id: tabId, projectPath, name: tabName, theme: currentTheme },
-      (response: { success: boolean; tabs: BackendWorkspaceState['tabs']; activeTabId: string }) => {
+      (response: TabsResponse) => {
         if (response.success) {
           set({
             tabs: response.tabs.map(convertBackendTab),
@@ -210,7 +181,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     socket.emit(
       'workspace:remove-tab',
       { tabId },
-      (response: { success: boolean; tabs: BackendWorkspaceState['tabs']; activeTabId: string | null }) => {
+      (response: TabsResponse) => {
         if (response.success) {
           set({
             tabs: response.tabs.map(convertBackendTab),
@@ -225,7 +196,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     socket.emit(
       'workspace:select-tab',
       { tabId },
-      (response: { success: boolean; tabs: BackendWorkspaceState['tabs']; activeTabId: string }) => {
+      (response: TabsResponse) => {
         if (response.success) {
           set({
             tabs: response.tabs.map(convertBackendTab),
@@ -240,7 +211,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     socket.emit(
       'workspace:update-tab-theme',
       { tabId, theme },
-      (response: { success: boolean; tabs: BackendWorkspaceState['tabs'] }) => {
+      (response: TabsOnlyResponse) => {
         if (response.success) {
           set({ tabs: response.tabs.map(convertBackendTab) });
         }
@@ -300,7 +271,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     socket.emit(
       'workspace:get-state',
       {},
-      (response: BackendWorkspaceState) => {
+      (response: WorkspaceStateResponse) => {
         if (response) {
           const tabs = (response.tabs ?? []).map(convertBackendTab);
           // Clear session IDs on restore - they'll be re-associated
@@ -329,7 +300,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     socket.emit(
       'workspace:update-preference',
       { key, value },
-      (response: { success: boolean; preferences: UserPreferences }) => {
+      (response: PreferencesResponse) => {
         if (response.success) {
           set({ preferences: response.preferences });
         }
@@ -358,7 +329,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     // Handle tabs update from other clients
     socket.on(
       'workspace:tabs-updated',
-      (update: { tabs: BackendWorkspaceState['tabs']; activeTabId: string | null }) => {
+      (update: TabsUpdatedEvent) => {
         const tabs = update.tabs.map(convertBackendTab);
         setTabs(tabs, update.activeTabId);
       }
@@ -367,7 +338,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     // Handle preferences update from other clients
     socket.on(
       'workspace:preferences-updated',
-      (update: { preferences: UserPreferences }) => {
+      (update: PreferencesUpdatedEvent) => {
         setPreferences(update.preferences);
       }
     );

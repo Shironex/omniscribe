@@ -1,15 +1,7 @@
-import { socket, connectSocket } from './socket';
+import { socket } from './socket';
 import { AiMode, UpdateSessionOptions } from '@omniscribe/shared';
 import { ExtendedSessionConfig } from '../stores/useSessionStore';
-
-/**
- * Ensure socket is connected before making requests
- */
-async function ensureConnected(): Promise<void> {
-  if (!socket.connected) {
-    await connectSocket();
-  }
-}
+import { emitWithErrorHandling, emitWithSuccessHandling } from './socketHelpers';
 
 /**
  * Create session options
@@ -31,31 +23,14 @@ export async function createSession(
   branch?: string,
   options?: CreateSessionOptions
 ): Promise<ExtendedSessionConfig> {
-  await ensureConnected();
-
-  return new Promise((resolve, reject) => {
-    const timeout = setTimeout(() => {
-      reject(new Error('Create session request timed out'));
-    }, 10000);
-
-    socket.emit(
-      'session:create',
-      {
-        mode,
-        projectPath,
-        branch,
-        ...options,
-      },
-      (response: ExtendedSessionConfig | { error: string }) => {
-        clearTimeout(timeout);
-
-        if ('error' in response) {
-          reject(new Error(response.error));
-        } else {
-          resolve(response);
-        }
-      }
-    );
+  return emitWithErrorHandling<
+    { mode: AiMode; projectPath: string; branch?: string } & CreateSessionOptions,
+    ExtendedSessionConfig
+  >('session:create', {
+    mode,
+    projectPath,
+    branch,
+    ...options,
   });
 }
 
@@ -66,29 +41,12 @@ export async function updateSession(
   sessionId: string,
   updates: UpdateSessionOptions
 ): Promise<ExtendedSessionConfig> {
-  await ensureConnected();
-
-  return new Promise((resolve, reject) => {
-    const timeout = setTimeout(() => {
-      reject(new Error('Update session request timed out'));
-    }, 10000);
-
-    socket.emit(
-      'session:update',
-      {
-        sessionId,
-        updates,
-      },
-      (response: ExtendedSessionConfig | { error: string }) => {
-        clearTimeout(timeout);
-
-        if ('error' in response) {
-          reject(new Error(response.error));
-        } else {
-          resolve(response);
-        }
-      }
-    );
+  return emitWithErrorHandling<
+    { sessionId: string; updates: UpdateSessionOptions },
+    ExtendedSessionConfig
+  >('session:update', {
+    sessionId,
+    updates,
   });
 }
 
@@ -96,54 +54,22 @@ export async function updateSession(
  * Remove a session
  */
 export async function removeSession(sessionId: string): Promise<void> {
-  await ensureConnected();
-
-  return new Promise((resolve, reject) => {
-    const timeout = setTimeout(() => {
-      reject(new Error('Remove session request timed out'));
-    }, 10000);
-
-    socket.emit(
-      'session:remove',
-      { sessionId },
-      (response: { success: boolean; error?: string }) => {
-        clearTimeout(timeout);
-
-        if (!response.success) {
-          reject(new Error(response.error ?? 'Failed to remove session'));
-        } else {
-          resolve();
-        }
-      }
-    );
-  });
+  return emitWithSuccessHandling(
+    'session:remove',
+    { sessionId },
+    {},
+    'Failed to remove session'
+  );
 }
 
 /**
  * List sessions
  */
 export async function listSessions(projectPath?: string): Promise<ExtendedSessionConfig[]> {
-  await ensureConnected();
-
-  return new Promise((resolve, reject) => {
-    const timeout = setTimeout(() => {
-      reject(new Error('List sessions request timed out'));
-    }, 10000);
-
-    socket.emit(
-      'session:list',
-      { projectPath },
-      (response: ExtendedSessionConfig[] | { error: string }) => {
-        clearTimeout(timeout);
-
-        if ('error' in response) {
-          reject(new Error(response.error));
-        } else {
-          resolve(response);
-        }
-      }
-    );
-  });
+  return emitWithErrorHandling<
+    { projectPath?: string },
+    ExtendedSessionConfig[]
+  >('session:list', { projectPath });
 }
 
 /**

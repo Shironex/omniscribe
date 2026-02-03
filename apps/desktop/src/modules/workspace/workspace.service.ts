@@ -1,60 +1,20 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import Store from 'electron-store';
-import { QuickAction } from '@omniscribe/shared';
+import {
+  QuickAction,
+  ProjectTabDTO,
+  UserPreferences,
+  WorkspaceStateResponse,
+} from '@omniscribe/shared';
 
-/**
- * Project tab for workspace persistence
- */
-interface ProjectTab {
-  /** Unique tab identifier */
-  id: string;
-  /** Project path */
-  projectPath: string;
-  /** Project name (directory name) */
-  name: string;
-  /** Session IDs associated with this project */
-  sessionIds: string[];
-  /** Whether this tab is selected */
-  isActive: boolean;
-  /** Last accessed timestamp */
-  lastAccessedAt: string;
-  /** Per-project theme */
-  theme?: string;
-}
-
-/**
- * User preferences
- */
-interface UserPreferences {
-  /** Theme preference */
-  theme: 'light' | 'dark' | 'system';
-  /** Sidebar width */
-  sidebarWidth: number;
-  /** Whether sidebar is open */
-  sidebarOpen: boolean;
-  /** Other preferences */
-  [key: string]: unknown;
-}
-
-/**
- * Complete workspace state
- */
-export interface WorkspaceState {
-  /** Open project tabs */
-  tabs: ProjectTab[];
-  /** Active tab ID */
-  activeTabId: string | null;
-  /** User preferences */
-  preferences: UserPreferences;
-  /** Quick actions */
-  quickActions: QuickAction[];
-}
+// Re-export WorkspaceStateResponse as WorkspaceState for backward compatibility
+export type WorkspaceState = WorkspaceStateResponse;
 
 /**
  * Store schema for type safety
  */
 interface StoreSchema {
-  tabs: ProjectTab[];
+  tabs: ProjectTabDTO[];
   activeTabId: string | null;
   quickActions: QuickAction[];
   preferences: UserPreferences;
@@ -186,14 +146,14 @@ export class WorkspaceService implements OnModuleInit {
   /**
    * Get all workspace tabs
    */
-  getTabs(): ProjectTab[] {
+  getTabs(): ProjectTabDTO[] {
     return this.store.get('tabs', []);
   }
 
   /**
    * Set workspace tabs
    */
-  setTabs(tabs: ProjectTab[]): void {
+  setTabs(tabs: ProjectTabDTO[]): void {
     this.store.set('tabs', tabs);
   }
 
@@ -214,7 +174,7 @@ export class WorkspaceService implements OnModuleInit {
   /**
    * Add a new tab
    */
-  addTab(tab: ProjectTab): ProjectTab[] {
+  addTab(tab: ProjectTabDTO): ProjectTabDTO[] {
     const tabs = this.getTabs();
     // Check if project is already open
     const existingIndex = tabs.findIndex(
@@ -251,7 +211,7 @@ export class WorkspaceService implements OnModuleInit {
   /**
    * Remove a tab
    */
-  removeTab(tabId: string): { tabs: ProjectTab[]; activeTabId: string | null } {
+  removeTab(tabId: string): { tabs: ProjectTabDTO[]; activeTabId: string | null } {
     const tabs = this.getTabs();
     const tabIndex = tabs.findIndex((t) => t.id === tabId);
 
@@ -280,7 +240,7 @@ export class WorkspaceService implements OnModuleInit {
   /**
    * Select a tab
    */
-  selectTab(tabId: string): ProjectTab[] {
+  selectTab(tabId: string): ProjectTabDTO[] {
     const tabs = this.getTabs();
     const updatedTabs = tabs.map((t) => ({
       ...t,
@@ -295,7 +255,7 @@ export class WorkspaceService implements OnModuleInit {
   /**
    * Update a tab's theme
    */
-  updateTabTheme(tabId: string, theme: string): ProjectTab[] {
+  updateTabTheme(tabId: string, theme: string): ProjectTabDTO[] {
     const tabs = this.getTabs();
     const updatedTabs = tabs.map((t) =>
       t.id === tabId ? { ...t, theme } : t

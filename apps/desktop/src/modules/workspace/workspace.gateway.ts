@@ -8,113 +8,22 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { OnEvent } from '@nestjs/event-emitter';
-import { QuickAction } from '@omniscribe/shared';
+import {
+  QuickAction,
+  ProjectTabDTO,
+  UserPreferences,
+  AddTabPayload,
+  UpdateTabThemePayload,
+  RemoveTabPayload,
+  SelectTabPayload,
+  SaveStatePayload,
+  UpdatePreferencePayload,
+  ExecuteQuickActionPayload,
+  GetQuickActionsPayload,
+  UpdateQuickActionsPayload,
+} from '@omniscribe/shared';
 import { QuickActionService, QuickActionResult } from './quick-action.service';
 import { WorkspaceService, WorkspaceState } from './workspace.service';
-
-/**
- * Project tab interface matching frontend
- */
-interface ProjectTab {
-  id: string;
-  projectPath: string;
-  name: string;
-  sessionIds: string[];
-  isActive: boolean;
-  lastAccessedAt: string;
-  theme?: string;
-}
-
-/**
- * User preferences interface
- */
-interface UserPreferences {
-  theme: 'light' | 'dark' | 'system';
-  sidebarWidth: number;
-  sidebarOpen: boolean;
-  [key: string]: unknown;
-}
-
-/**
- * Payload for adding a tab
- */
-interface AddTabPayload {
-  id: string;
-  projectPath: string;
-  name: string;
-  theme?: string;
-}
-
-/**
- * Payload for updating a tab's theme
- */
-interface UpdateTabThemePayload {
-  tabId: string;
-  theme: string;
-}
-
-/**
- * Payload for removing a tab
- */
-interface RemoveTabPayload {
-  tabId: string;
-}
-
-/**
- * Payload for selecting a tab
- */
-interface SelectTabPayload {
-  tabId: string;
-}
-
-/**
- * Payload for saving workspace state
- */
-interface SaveStatePayload {
-  tabs?: ProjectTab[];
-  activeTabId?: string | null;
-  preferences?: UserPreferences;
-}
-
-/**
- * Payload for updating preferences
- */
-interface UpdatePreferencesPayload {
-  key: string;
-  value: unknown;
-}
-
-/**
- * Payload for executing a quick action
- */
-interface ExecuteQuickActionPayload {
-  /** The session ID context (AI session or identifier) */
-  sessionId: string;
-  /** The quick action to execute */
-  action: QuickAction;
-  /** Additional context */
-  context?: {
-    projectPath?: string;
-    terminalSessionId?: number;
-  };
-}
-
-/**
- * Payload for getting quick actions
- */
-interface GetQuickActionsPayload {
-  /** Optional filter by category */
-  category?: string;
-  /** Only return enabled actions */
-  enabledOnly?: boolean;
-}
-
-/**
- * Payload for updating quick actions
- */
-interface UpdateQuickActionsPayload {
-  actions: QuickAction[];
-}
 
 /**
  * Quick action executed event
@@ -295,10 +204,10 @@ export class WorkspaceGateway implements OnGatewayInit {
   handleAddTab(
     @MessageBody() payload: AddTabPayload,
     @ConnectedSocket() client: Socket,
-  ): { success: boolean; tabs: ProjectTab[]; activeTabId: string } {
+  ): { success: boolean; tabs: ProjectTabDTO[]; activeTabId: string } {
     console.log(`[WorkspaceGateway] Adding tab for project: ${payload.projectPath}`);
 
-    const tab: ProjectTab = {
+    const tab: ProjectTabDTO = {
       id: payload.id,
       projectPath: payload.projectPath,
       name: payload.name,
@@ -327,7 +236,7 @@ export class WorkspaceGateway implements OnGatewayInit {
   handleUpdateTabTheme(
     @MessageBody() payload: UpdateTabThemePayload,
     @ConnectedSocket() client: Socket,
-  ): { success: boolean; tabs: ProjectTab[] } {
+  ): { success: boolean; tabs: ProjectTabDTO[] } {
     console.log(`[WorkspaceGateway] Updating tab theme: ${payload.tabId} -> ${payload.theme}`);
 
     const tabs = this.workspaceService.updateTabTheme(payload.tabId, payload.theme);
@@ -348,7 +257,7 @@ export class WorkspaceGateway implements OnGatewayInit {
   handleRemoveTab(
     @MessageBody() payload: RemoveTabPayload,
     @ConnectedSocket() client: Socket,
-  ): { success: boolean; tabs: ProjectTab[]; activeTabId: string | null } {
+  ): { success: boolean; tabs: ProjectTabDTO[]; activeTabId: string | null } {
     console.log(`[WorkspaceGateway] Removing tab: ${payload.tabId}`);
 
     const result = this.workspaceService.removeTab(payload.tabId);
@@ -369,7 +278,7 @@ export class WorkspaceGateway implements OnGatewayInit {
   handleSelectTab(
     @MessageBody() payload: SelectTabPayload,
     @ConnectedSocket() client: Socket,
-  ): { success: boolean; tabs: ProjectTab[]; activeTabId: string } {
+  ): { success: boolean; tabs: ProjectTabDTO[]; activeTabId: string } {
     console.log(`[WorkspaceGateway] Selecting tab: ${payload.tabId}`);
 
     const tabs = this.workspaceService.selectTab(payload.tabId);
@@ -388,7 +297,7 @@ export class WorkspaceGateway implements OnGatewayInit {
    */
   @SubscribeMessage('workspace:update-preference')
   handleUpdatePreference(
-    @MessageBody() payload: UpdatePreferencesPayload,
+    @MessageBody() payload: UpdatePreferencePayload,
     @ConnectedSocket() client: Socket,
   ): { success: boolean; preferences: UserPreferences } {
     console.log(`[WorkspaceGateway] Updating preference: ${payload.key}`);
