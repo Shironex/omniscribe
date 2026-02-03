@@ -8,7 +8,7 @@ export { ConnectedTerminalGrid } from './ConnectedTerminalGrid';
 
 export { TerminalHeader } from './TerminalHeader';
 
-export { PreLaunchCard } from './PreLaunchCard';
+export { PreLaunchBar } from './PreLaunchBar';
 
 export { QuickActionPills } from './QuickActionPills';
 export type { QuickAction } from './QuickActionPills';

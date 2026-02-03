@@ -7,7 +7,7 @@ import { useTerminalControlStore } from '../../stores/useTerminalControlStore';
 import { createSession, removeSession } from '../../lib/session';
 import { killTerminal } from '../../lib/terminal';
 import type { TerminalSession, AIMode } from './TerminalHeader';
-import type { PreLaunchSlot } from './PreLaunchCard';
+import type { PreLaunchSlot } from './PreLaunchBar';
 import type { Branch } from '../shared/BranchSelector';
 import { mapSessionStatus, type AiMode } from '@omniscribe/shared';
 
