@@ -10,7 +10,7 @@
     ]
   },
   "scripts": {
-    "dev": "concurrently -k -n web,desktop -c cyan,yellow \"pnpm dev:web\" \"wait-on http://localhost:5173 && pnpm --filter @omniscribe/shared build && pnpm --filter @omniscribe/desktop dev\"",
+    "dev": "concurrently -k -n web,desktop -c cyan,yellow \"pnpm dev:web\" \"wait-on http://localhost:5173 && pnpm --filter @omniscribe/shared build && pnpm --filter @omniscribe/mcp-server build && pnpm --filter @omniscribe/desktop dev\"",
     "dev:web": "pnpm --filter @omniscribe/web dev",
     "build": "pnpm -r build",
     "lint": "eslint . --ext .ts,.tsx",

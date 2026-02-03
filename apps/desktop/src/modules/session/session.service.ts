@@ -495,83 +495,139 @@ export class SessionService {
   }
 
   /**
-   * Get common paths where Claude CLI might be installed on Windows
+   * Get common paths where Claude CLI might be installed
    */
   private getClaudeCliPaths(): string[] {
     const homeDir = os.homedir();
-    const appData =
-      process.env.APPDATA || path.join(homeDir, 'AppData', 'Roaming');
-    const localAppData =
-      process.env.LOCALAPPDATA || path.join(homeDir, 'AppData', 'Local');
 
+    if (os.platform() === 'win32') {
+      const appData =
+        process.env.APPDATA || path.join(homeDir, 'AppData', 'Roaming');
+      const localAppData =
+        process.env.LOCALAPPDATA || path.join(homeDir, 'AppData', 'Local');
+
+      return [
+        // npm global installations
+        path.join(appData, 'npm', 'claude.cmd'),
+        path.join(appData, 'npm', 'claude'),
+        path.join(appData, '.npm-global', 'bin', 'claude.cmd'),
+        path.join(appData, '.npm-global', 'bin', 'claude'),
+        // Local bin
+        path.join(homeDir, '.local', 'bin', 'claude.exe'),
+        path.join(homeDir, '.local', 'bin', 'claude'),
+        // pnpm global
+        path.join(localAppData, 'pnpm', 'claude.cmd'),
+        path.join(localAppData, 'pnpm', 'claude'),
+        // Volta
+        path.join(homeDir, '.volta', 'bin', 'claude.exe'),
+      ];
+    }
+
+    // macOS and Linux paths
     return [
       // npm global installations
-      path.join(appData, 'npm', 'claude.cmd'),
-      path.join(appData, 'npm', 'claude'),
-      path.join(appData, '.npm-global', 'bin', 'claude.cmd'),
-      path.join(appData, '.npm-global', 'bin', 'claude'),
+      '/usr/local/bin/claude',
+      '/usr/bin/claude',
+      path.join(homeDir, '.npm-global', 'bin', 'claude'),
       // Local bin
-      path.join(homeDir, '.local', 'bin', 'claude.exe'),
       path.join(homeDir, '.local', 'bin', 'claude'),
+      // nvm installations
+      path.join(homeDir, '.nvm', 'versions', 'node', '*', 'bin', 'claude'),
       // pnpm global
-      path.join(localAppData, 'pnpm', 'claude.cmd'),
-      path.join(localAppData, 'pnpm', 'claude'),
+      path.join(homeDir, 'Library', 'pnpm', 'claude'),
+      path.join(homeDir, '.local', 'share', 'pnpm', 'claude'),
+      // Homebrew
+      '/opt/homebrew/bin/claude',
       // Volta
-      path.join(homeDir, '.volta', 'bin', 'claude.exe'),
+      path.join(homeDir, '.volta', 'bin', 'claude'),
+      // Bun
+      path.join(homeDir, '.bun', 'bin', 'claude'),
     ];
   }
 
   /**
-   * Get common paths where Gemini CLI might be installed on Windows
+   * Get common paths where Gemini CLI might be installed
    */
   private getGeminiCliPaths(): string[] {
     const homeDir = os.homedir();
-    const appData =
-      process.env.APPDATA || path.join(homeDir, 'AppData', 'Roaming');
-    const localAppData =
-      process.env.LOCALAPPDATA || path.join(homeDir, 'AppData', 'Local');
 
+    if (os.platform() === 'win32') {
+      const appData =
+        process.env.APPDATA || path.join(homeDir, 'AppData', 'Roaming');
+      const localAppData =
+        process.env.LOCALAPPDATA || path.join(homeDir, 'AppData', 'Local');
+
+      return [
+        // npm global installations
+        path.join(appData, 'npm', 'gemini.cmd'),
+        path.join(appData, 'npm', 'gemini'),
+        path.join(appData, '.npm-global', 'bin', 'gemini.cmd'),
+        path.join(appData, '.npm-global', 'bin', 'gemini'),
+        // Local bin
+        path.join(homeDir, '.local', 'bin', 'gemini.exe'),
+        path.join(homeDir, '.local', 'bin', 'gemini'),
+        // pnpm global
+        path.join(localAppData, 'pnpm', 'gemini.cmd'),
+        path.join(localAppData, 'pnpm', 'gemini'),
+        // Volta
+        path.join(homeDir, '.volta', 'bin', 'gemini.exe'),
+      ];
+    }
+
+    // macOS and Linux paths
     return [
-      // npm global installations
-      path.join(appData, 'npm', 'gemini.cmd'),
-      path.join(appData, 'npm', 'gemini'),
-      path.join(appData, '.npm-global', 'bin', 'gemini.cmd'),
-      path.join(appData, '.npm-global', 'bin', 'gemini'),
-      // Local bin
-      path.join(homeDir, '.local', 'bin', 'gemini.exe'),
+      '/usr/local/bin/gemini',
+      '/usr/bin/gemini',
+      path.join(homeDir, '.npm-global', 'bin', 'gemini'),
       path.join(homeDir, '.local', 'bin', 'gemini'),
-      // pnpm global
-      path.join(localAppData, 'pnpm', 'gemini.cmd'),
-      path.join(localAppData, 'pnpm', 'gemini'),
-      // Volta
-      path.join(homeDir, '.volta', 'bin', 'gemini.exe'),
+      path.join(homeDir, 'Library', 'pnpm', 'gemini'),
+      path.join(homeDir, '.local', 'share', 'pnpm', 'gemini'),
+      '/opt/homebrew/bin/gemini',
+      path.join(homeDir, '.volta', 'bin', 'gemini'),
+      path.join(homeDir, '.bun', 'bin', 'gemini'),
     ];
   }
 
   /**
-   * Get common paths where Codex CLI might be installed on Windows
+   * Get common paths where Codex CLI might be installed
    */
   private getCodexCliPaths(): string[] {
     const homeDir = os.homedir();
-    const appData =
-      process.env.APPDATA || path.join(homeDir, 'AppData', 'Roaming');
-    const localAppData =
-      process.env.LOCALAPPDATA || path.join(homeDir, 'AppData', 'Local');
 
+    if (os.platform() === 'win32') {
+      const appData =
+        process.env.APPDATA || path.join(homeDir, 'AppData', 'Roaming');
+      const localAppData =
+        process.env.LOCALAPPDATA || path.join(homeDir, 'AppData', 'Local');
+
+      return [
+        // npm global installations
+        path.join(appData, 'npm', 'codex.cmd'),
+        path.join(appData, 'npm', 'codex'),
+        path.join(appData, '.npm-global', 'bin', 'codex.cmd'),
+        path.join(appData, '.npm-global', 'bin', 'codex'),
+        // Local bin
+        path.join(homeDir, '.local', 'bin', 'codex.exe'),
+        path.join(homeDir, '.local', 'bin', 'codex'),
+        // pnpm global
+        path.join(localAppData, 'pnpm', 'codex.cmd'),
+        path.join(localAppData, 'pnpm', 'codex'),
+        // Volta
+        path.join(homeDir, '.volta', 'bin', 'codex.exe'),
+      ];
+    }
+
+    // macOS and Linux paths
     return [
-      // npm global installations
-      path.join(appData, 'npm', 'codex.cmd'),
-      path.join(appData, 'npm', 'codex'),
-      path.join(appData, '.npm-global', 'bin', 'codex.cmd'),
-      path.join(appData, '.npm-global', 'bin', 'codex'),
-      // Local bin
-      path.join(homeDir, '.local', 'bin', 'codex.exe'),
+      '/usr/local/bin/codex',
+      '/usr/bin/codex',
+      path.join(homeDir, '.npm-global', 'bin', 'codex'),
       path.join(homeDir, '.local', 'bin', 'codex'),
-      // pnpm global
-      path.join(localAppData, 'pnpm', 'codex.cmd'),
-      path.join(localAppData, 'pnpm', 'codex'),
-      // Volta
-      path.join(homeDir, '.volta', 'bin', 'codex.exe'),
+      path.join(homeDir, 'Library', 'pnpm', 'codex'),
+      path.join(homeDir, '.local', 'share', 'pnpm', 'codex'),
+      '/opt/homebrew/bin/codex',
+      path.join(homeDir, '.volta', 'bin', 'codex'),
+      path.join(homeDir, '.bun', 'bin', 'codex'),
     ];
   }
 
@@ -667,10 +723,8 @@ export class SessionService {
     }
 
     // Find the Claude CLI command with proper path resolution
-    const command =
-      os.platform() === 'win32'
-        ? this.findCliCommand('claude', this.getClaudeCliPaths())
-        : 'claude';
+    // This is needed on all platforms because Electron doesn't inherit the user's shell PATH
+    const command = this.findCliCommand('claude', this.getClaudeCliPaths());
 
     return {
       command,
@@ -690,10 +744,7 @@ export class SessionService {
     }
 
     // Find the Gemini CLI command with proper path resolution
-    const command =
-      os.platform() === 'win32'
-        ? this.findCliCommand('gemini', this.getGeminiCliPaths())
-        : 'gemini';
+    const command = this.findCliCommand('gemini', this.getGeminiCliPaths());
 
     return {
       command,
@@ -713,10 +764,7 @@ export class SessionService {
     }
 
     // Find the Codex CLI command with proper path resolution
-    const command =
-      os.platform() === 'win32'
-        ? this.findCliCommand('codex', this.getCodexCliPaths())
-        : 'codex';
+    const command = this.findCliCommand('codex', this.getCodexCliPaths());
 
     return {
       command,

@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "pnpm build && cross-env NODE_ENV=development electron .",
     "build": "tsc",
-    "package": "electron-builder"
+    "package": "electron-builder",
+    "postinstall": "electron-rebuild -f -w node-pty",
+    "rebuild": "electron-rebuild -f -w node-pty"
   },
   "dependencies": {
     "@nestjs/common": "^10.0.0",
@@ -22,6 +24,7 @@
     "socket.io": "^4.7.0"
   },
   "devDependencies": {
+    "@electron/rebuild": "^3.6.0",
     "@types/node": "^20.0.0",
     "cross-env": "^7.0.3",
     "electron": "^28.0.0",

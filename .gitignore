@@ -47,3 +47,4 @@ Thumbs.db
 *.temp
 .cache/
 .mcp.json
+.claude
