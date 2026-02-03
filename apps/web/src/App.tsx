@@ -133,8 +133,6 @@ function App() {
 
       {/* Bottom bar */}
       <BottomBar
-        onSelectDirectory={handleSelectDirectory}
-        onAddSession={handleAddSession}
         onStopAll={handleStopAll}
         onLaunch={handleLaunch}
         canLaunch={canLaunch}

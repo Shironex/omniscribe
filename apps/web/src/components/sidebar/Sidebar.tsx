@@ -6,7 +6,6 @@ import {
   FileText,
   Layers,
   Zap,
-  Settings,
   GripVertical,
   ChevronDown,
   ChevronRight,
@@ -14,7 +13,7 @@ import {
 import { GitSection } from './GitSection';
 import { SessionsSection } from './SessionsSection';
 import { QuickActionsSection } from './QuickActionsSection';
-import { useSessionStore, useTerminalControlStore, useSettingsStore } from '../../stores';
+import { useSessionStore, useTerminalControlStore } from '../../stores';
 import { writeToTerminal } from '../../lib/terminal';
 import { QuickAction } from '@omniscribe/shared';
 
@@ -85,9 +84,6 @@ export function Sidebar({
   const [activeTab, setActiveTab] = useState<SidebarTab>('config');
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
-
-  // Settings store
-  const openSettings = useSettingsStore((state) => state.openSettings);
 
   // Get sessions for the Processes tab - use stable selector
   const sessions = useSessionStore((state) => state.sessions);
@@ -242,22 +238,6 @@ export function Sidebar({
             {/* Quick Actions Section */}
             <CollapsibleSection icon={Zap} title="Quick Actions">
               <QuickActionsSection onActionExecute={handleActionExecute} />
-            </CollapsibleSection>
-
-            {/* Settings Section */}
-            <CollapsibleSection icon={Settings} title="Settings" defaultExpanded={false}>
-              <button
-                onClick={() => openSettings('appearance')}
-                className={clsx(
-                  'flex items-center gap-2 w-full px-2 py-1.5 rounded',
-                  'text-xs text-foreground-secondary',
-                  'bg-muted hover:bg-border',
-                  'transition-colors'
-                )}
-              >
-                <Settings size={14} />
-                <span>Open Settings</span>
-              </button>
             </CollapsibleSection>
           </>
         ) : (

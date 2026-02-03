@@ -1,7 +1,8 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import type { PreLaunchSlot } from '../components/terminal/TerminalGrid';
 import { createSession } from '../lib/session';
 import { mapAiModeToBackend } from '../lib/aiMode';
+import { useTerminalControlStore } from '../stores';
 
 interface UsePreLaunchSlotsReturn {
   /** Pre-launch slots state */
@@ -35,6 +36,10 @@ export function usePreLaunchSlots(
   // Pre-launch slots state (sessions waiting to be launched)
   const [preLaunchSlots, setPreLaunchSlots] = useState<PreLaunchSlot[]>([]);
 
+  // Listen to add slot requests from other components (e.g., sidebar + button)
+  const addSlotRequestCounter = useTerminalControlStore((state) => state.addSlotRequestCounter);
+  const prevCounterRef = useRef(addSlotRequestCounter);
+
   // Can launch if we have a project selected and have pre-launch slots
   const canLaunch = activeProjectPath !== null && preLaunchSlots.length > 0;
 
@@ -47,6 +52,14 @@ export function usePreLaunchSlots(
     };
     setPreLaunchSlots((prev) => [...prev, newSlot]);
   }, [currentBranch]);
+
+  // Listen to external add slot requests (from sidebar + button)
+  useEffect(() => {
+    if (addSlotRequestCounter > prevCounterRef.current) {
+      handleAddSession();
+    }
+    prevCounterRef.current = addSlotRequestCounter;
+  }, [addSlotRequestCounter, handleAddSession]);
 
   // Remove pre-launch slot handler
   const handleRemoveSlot = useCallback((slotId: string) => {

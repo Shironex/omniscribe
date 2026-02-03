@@ -1,10 +1,9 @@
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { FolderOpen, Plus, Square, Play } from 'lucide-react';
+import { Settings, Square, Play } from 'lucide-react';
+import { useSettingsStore } from '../../stores';
 
 interface BottomBarProps {
-  onSelectDirectory: () => void;
-  onAddSession: () => void;
   onStopAll: () => void;
   onLaunch: () => void;
   canLaunch: boolean;
@@ -13,14 +12,14 @@ interface BottomBarProps {
 }
 
 export function BottomBar({
-  onSelectDirectory,
-  onAddSession,
   onStopAll,
   onLaunch,
   canLaunch,
   hasActiveSessions,
   className,
 }: BottomBarProps) {
+  const openSettings = useSettingsStore((state) => state.openSettings);
+
   return (
     <div
       className={twMerge(
@@ -34,7 +33,7 @@ export function BottomBar({
       {/* Left actions */}
       <div className="flex items-center gap-2">
         <button
-          onClick={onSelectDirectory}
+          onClick={() => openSettings()}
           className={clsx(
             'flex items-center gap-2 px-3 py-1.5 rounded',
             'text-sm text-foreground-secondary',
@@ -42,21 +41,8 @@ export function BottomBar({
             'transition-colors'
           )}
         >
-          <FolderOpen size={16} />
-          <span>Select Directory</span>
-        </button>
-
-        <button
-          onClick={onAddSession}
-          className={clsx(
-            'flex items-center gap-2 px-3 py-1.5 rounded',
-            'text-sm text-foreground-secondary',
-            'bg-card hover:bg-border',
-            'transition-colors'
-          )}
-        >
-          <Plus size={16} />
-          <span>Add Session</span>
+          <Settings size={16} />
+          <span>Settings</span>
         </button>
       </div>
 
