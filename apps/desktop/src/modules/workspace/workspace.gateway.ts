@@ -21,6 +21,11 @@ import {
   ExecuteQuickActionPayload,
   GetQuickActionsPayload,
   UpdateQuickActionsPayload,
+  SuccessResponse,
+  TabsResponse,
+  TabsOnlyResponse,
+  PreferencesResponse,
+  QuickActionsResponse,
 } from '@omniscribe/shared';
 import { QuickActionService, QuickActionResult } from './quick-action.service';
 import { WorkspaceService, WorkspaceState } from './workspace.service';
@@ -123,7 +128,7 @@ export class WorkspaceGateway implements OnGatewayInit {
   handleUpdateQuickActions(
     @MessageBody() payload: UpdateQuickActionsPayload,
     @ConnectedSocket() _client: Socket,
-  ): { success: boolean } {
+  ): SuccessResponse {
     this.workspaceService.setQuickActions(payload.actions);
 
     // Broadcast update to all clients
@@ -140,7 +145,7 @@ export class WorkspaceGateway implements OnGatewayInit {
   @SubscribeMessage('quickaction:reset')
   handleResetQuickActions(
     @ConnectedSocket() _client: Socket,
-  ): { success: boolean; actions: QuickAction[] } {
+  ): QuickActionsResponse {
     this.workspaceService.resetQuickActionsToDefaults();
 
     const actions = this.workspaceService.getQuickActions();
@@ -191,7 +196,7 @@ export class WorkspaceGateway implements OnGatewayInit {
   handleSaveWorkspaceState(
     @MessageBody() payload: SaveStatePayload,
     @ConnectedSocket() _client: Socket,
-  ): { success: boolean } {
+  ): SuccessResponse {
     console.log('[WorkspaceGateway] Saving workspace state');
     this.workspaceService.saveWorkspaceState(payload);
     return { success: true };
@@ -204,7 +209,7 @@ export class WorkspaceGateway implements OnGatewayInit {
   handleAddTab(
     @MessageBody() payload: AddTabPayload,
     @ConnectedSocket() client: Socket,
-  ): { success: boolean; tabs: ProjectTabDTO[]; activeTabId: string } {
+  ): TabsResponse {
     console.log(`[WorkspaceGateway] Adding tab for project: ${payload.projectPath}`);
 
     const tab: ProjectTabDTO = {
@@ -236,7 +241,7 @@ export class WorkspaceGateway implements OnGatewayInit {
   handleUpdateTabTheme(
     @MessageBody() payload: UpdateTabThemePayload,
     @ConnectedSocket() client: Socket,
-  ): { success: boolean; tabs: ProjectTabDTO[] } {
+  ): TabsOnlyResponse {
     console.log(`[WorkspaceGateway] Updating tab theme: ${payload.tabId} -> ${payload.theme}`);
 
     const tabs = this.workspaceService.updateTabTheme(payload.tabId, payload.theme);
@@ -257,7 +262,7 @@ export class WorkspaceGateway implements OnGatewayInit {
   handleRemoveTab(
     @MessageBody() payload: RemoveTabPayload,
     @ConnectedSocket() client: Socket,
-  ): { success: boolean; tabs: ProjectTabDTO[]; activeTabId: string | null } {
+  ): TabsResponse {
     console.log(`[WorkspaceGateway] Removing tab: ${payload.tabId}`);
 
     const result = this.workspaceService.removeTab(payload.tabId);
@@ -278,7 +283,7 @@ export class WorkspaceGateway implements OnGatewayInit {
   handleSelectTab(
     @MessageBody() payload: SelectTabPayload,
     @ConnectedSocket() client: Socket,
-  ): { success: boolean; tabs: ProjectTabDTO[]; activeTabId: string } {
+  ): TabsResponse {
     console.log(`[WorkspaceGateway] Selecting tab: ${payload.tabId}`);
 
     const tabs = this.workspaceService.selectTab(payload.tabId);
@@ -299,7 +304,7 @@ export class WorkspaceGateway implements OnGatewayInit {
   handleUpdatePreference(
     @MessageBody() payload: UpdatePreferencePayload,
     @ConnectedSocket() client: Socket,
-  ): { success: boolean; preferences: UserPreferences } {
+  ): PreferencesResponse {
     console.log(`[WorkspaceGateway] Updating preference: ${payload.key}`);
 
     const preferences = this.workspaceService.setPreference(payload.key, payload.value);

@@ -4,16 +4,25 @@
 
 import type { ProjectTabDTO, UserPreferences } from './project-tab';
 import type { QuickAction } from './workspace';
+import type { BranchInfo, CommitInfo } from './git';
 
 // ============================================
 // Generic Response Types
 // ============================================
 
 /**
- * Generic success/error response
+ * Generic success/error response for mutations
  */
 export interface SuccessResponse {
   success: boolean;
+  error?: string;
+}
+
+/**
+ * Generic data response for queries (check error field for failure)
+ */
+export interface DataResponse<T> {
+  data: T;
   error?: string;
 }
 
@@ -23,6 +32,297 @@ export interface SuccessResponse {
 export interface ProjectPathPayload {
   projectPath: string;
 }
+
+// ============================================
+// Git Payloads
+// ============================================
+
+/**
+ * Payload for getting branches
+ */
+export interface GitBranchesPayload {
+  projectPath: string;
+}
+
+/**
+ * Payload for getting commits
+ */
+export interface GitCommitsPayload {
+  projectPath: string;
+  limit?: number;
+  allBranches?: boolean;
+}
+
+/**
+ * Payload for checkout
+ */
+export interface GitCheckoutPayload {
+  projectPath: string;
+  branch: string;
+}
+
+/**
+ * Payload for creating a branch
+ */
+export interface GitCreateBranchPayload {
+  projectPath: string;
+  name: string;
+  startPoint?: string;
+}
+
+/**
+ * Payload for getting current branch
+ */
+export interface GitCurrentBranchPayload {
+  projectPath: string;
+}
+
+// ============================================
+// Git Responses
+// ============================================
+
+/**
+ * Response for branches query
+ */
+export interface GitBranchesResponse {
+  branches: BranchInfo[];
+  currentBranch: string;
+  error?: string;
+}
+
+/**
+ * Response for commits query
+ */
+export interface GitCommitsResponse {
+  commits: CommitInfo[];
+  error?: string;
+}
+
+/**
+ * Response for checkout mutation
+ */
+export interface GitCheckoutResponse extends SuccessResponse {
+  currentBranch?: string;
+}
+
+/**
+ * Response for create branch mutation
+ */
+export interface GitCreateBranchResponse extends SuccessResponse {
+  branch?: BranchInfo;
+}
+
+/**
+ * Response for current branch query
+ */
+export interface GitCurrentBranchResponse {
+  currentBranch: string;
+  error?: string;
+}
+
+// ============================================
+// Terminal Payloads
+// ============================================
+
+/**
+ * Payload for spawning a terminal
+ */
+export interface TerminalSpawnPayload {
+  cwd?: string;
+  env?: Record<string, string>;
+}
+
+/**
+ * Payload for terminal input
+ */
+export interface TerminalInputPayload {
+  sessionId: number;
+  data: string;
+}
+
+/**
+ * Payload for terminal resize
+ */
+export interface TerminalResizePayload {
+  sessionId: number;
+  cols: number;
+  rows: number;
+}
+
+/**
+ * Payload for terminal kill
+ */
+export interface TerminalKillPayload {
+  sessionId: number;
+}
+
+/**
+ * Payload for joining a terminal session
+ */
+export interface TerminalJoinPayload {
+  sessionId: number;
+}
+
+// ============================================
+// Terminal Responses
+// ============================================
+
+/**
+ * Response for terminal spawn
+ */
+export interface TerminalSpawnResponse {
+  sessionId: number;
+  error?: string;
+}
+
+/**
+ * Response for terminal join
+ */
+export interface TerminalJoinResponse extends SuccessResponse {}
+
+// ============================================
+// MCP Payloads
+// ============================================
+
+/**
+ * Payload for MCP server discovery
+ */
+export interface McpDiscoverPayload {
+  projectPath: string;
+}
+
+/**
+ * Payload for setting enabled MCP servers
+ */
+export interface McpSetEnabledPayload {
+  projectPath: string;
+  sessionId: string;
+  serverIds: string[];
+}
+
+/**
+ * Payload for getting enabled MCP servers
+ */
+export interface McpGetEnabledPayload {
+  projectPath: string;
+  sessionId: string;
+}
+
+/**
+ * Payload for getting MCP servers
+ */
+export interface McpGetServersPayload {
+  projectPath: string;
+}
+
+/**
+ * Payload for removing MCP config
+ */
+export interface McpRemoveConfigPayload {
+  workingDir: string;
+  sessionId: string;
+  projectPath: string;
+}
+
+/**
+ * Payload for writing MCP config
+ */
+export interface McpWriteConfigPayload {
+  workingDir: string;
+  sessionId: string;
+  projectPath: string;
+  servers: import('./mcp').McpServerConfig[];
+}
+
+// ============================================
+// MCP Responses
+// ============================================
+
+/**
+ * Response for MCP server discovery
+ */
+export interface McpDiscoverResponse {
+  servers: import('./mcp').McpServerConfig[];
+  error?: string;
+}
+
+/**
+ * Response for setting enabled MCP servers
+ */
+export interface McpSetEnabledResponse extends SuccessResponse {}
+
+/**
+ * Response for getting enabled MCP servers
+ */
+export interface McpGetEnabledResponse {
+  serverIds: string[];
+  error?: string;
+}
+
+/**
+ * Response for getting MCP servers
+ */
+export interface McpGetServersResponse {
+  servers: import('./mcp').McpServerConfig[];
+  error?: string;
+}
+
+/**
+ * Response for writing MCP config
+ */
+export interface McpWriteConfigResponse extends SuccessResponse {
+  configPath?: string;
+}
+
+/**
+ * Response for removing MCP config
+ */
+export interface McpRemoveConfigResponse extends SuccessResponse {}
+
+/**
+ * Response for internal MCP status
+ */
+export interface McpInternalStatusResponse {
+  available: boolean;
+  path: string | null;
+}
+
+/**
+ * Response for MCP status server info
+ */
+export interface McpStatusServerInfoResponse {
+  running: boolean;
+  port: number | null;
+  statusUrl: string | null;
+  instanceId: string;
+}
+
+// ============================================
+// Session Payloads
+// ============================================
+
+/**
+ * Payload for removing a session
+ */
+export interface SessionRemovePayload {
+  sessionId: string;
+}
+
+/**
+ * Payload for listing sessions
+ */
+export interface SessionListPayload {
+  projectPath?: string;
+}
+
+// ============================================
+// Session Responses
+// ============================================
+
+/**
+ * Response for session removal
+ */
+export interface SessionRemoveResponse extends SuccessResponse {}
 
 // ============================================
 // Tab Payloads

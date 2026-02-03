@@ -11,7 +11,13 @@ import { Server, Socket } from 'socket.io';
 import { OnEvent } from '@nestjs/event-emitter';
 import { SessionService, ExtendedSessionConfig, SessionStatusUpdate } from './session.service';
 import { TerminalGateway } from '../terminal/terminal.gateway';
-import { AiMode, UpdateSessionOptions } from '@omniscribe/shared';
+import {
+  AiMode,
+  UpdateSessionOptions,
+  SessionRemovePayload,
+  SessionListPayload,
+  SessionRemoveResponse,
+} from '@omniscribe/shared';
 
 /**
  * Payload for creating a session
@@ -36,17 +42,19 @@ interface UpdateSessionPayload {
 }
 
 /**
- * Payload for removing a session
+ * Response for session creation - either the session or an error
  */
-interface RemoveSessionPayload {
-  sessionId: string;
+interface CreateSessionResponse {
+  session?: ExtendedSessionConfig;
+  error?: string;
 }
 
 /**
- * Payload for listing sessions
+ * Response for session update - either the session or an error
  */
-interface ListSessionsPayload {
-  projectPath?: string;
+interface UpdateSessionResponse {
+  session?: ExtendedSessionConfig;
+  error?: string;
 }
 
 @WebSocketGateway({
@@ -75,7 +83,7 @@ export class SessionGateway implements OnGatewayInit {
   async handleCreate(
     @MessageBody() payload: CreateSessionPayload,
     @ConnectedSocket() client: Socket
-  ): Promise<ExtendedSessionConfig | { error: string }> {
+  ): Promise<CreateSessionResponse> {
     const session = this.sessionService.create(payload.mode, payload.projectPath, {
       name: payload.name,
       workingDirectory: payload.workingDirectory,
@@ -112,7 +120,7 @@ export class SessionGateway implements OnGatewayInit {
     }
 
     // Return the updated session with terminalSessionId populated
-    return this.sessionService.get(session.id) ?? session;
+    return { session: this.sessionService.get(session.id) ?? session };
   }
 
   /**
@@ -122,7 +130,7 @@ export class SessionGateway implements OnGatewayInit {
   handleUpdate(
     @MessageBody() payload: UpdateSessionPayload,
     @ConnectedSocket() _client: Socket
-  ): ExtendedSessionConfig | { error: string } {
+  ): UpdateSessionResponse {
     const session = this.sessionService.get(payload.sessionId);
 
     if (!session) {
@@ -163,7 +171,7 @@ export class SessionGateway implements OnGatewayInit {
       message: 'Session updated',
     });
 
-    return session;
+    return { session };
   }
 
   /**
@@ -171,9 +179,9 @@ export class SessionGateway implements OnGatewayInit {
    */
   @SubscribeMessage('session:remove')
   async handleRemove(
-    @MessageBody() payload: RemoveSessionPayload,
+    @MessageBody() payload: SessionRemovePayload,
     @ConnectedSocket() _client: Socket
-  ): Promise<{ success: boolean; error?: string }> {
+  ): Promise<SessionRemoveResponse> {
     const success = await this.sessionService.remove(payload.sessionId);
 
     if (!success) {
@@ -188,7 +196,7 @@ export class SessionGateway implements OnGatewayInit {
    */
   @SubscribeMessage('session:list')
   handleList(
-    @MessageBody() payload: ListSessionsPayload,
+    @MessageBody() payload: SessionListPayload,
     @ConnectedSocket() _client: Socket
   ): ExtendedSessionConfig[] {
     if (payload.projectPath) {

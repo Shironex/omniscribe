@@ -1,6 +1,13 @@
 import { create } from 'zustand';
 import { SessionConfig, SessionStatus } from '@omniscribe/shared';
 import { socket } from '../lib/socket';
+import {
+  SocketStoreState,
+  SocketStoreActions,
+  initialSocketState,
+  createSocketActions,
+  createSocketListeners,
+} from './utils';
 
 /**
  * Extended session config matching the backend
@@ -27,25 +34,19 @@ interface SessionStatusUpdate {
 }
 
 /**
- * Session store state
+ * Session store state (extends common socket state)
  */
-interface SessionState {
+interface SessionState extends SocketStoreState {
   /** All sessions */
   sessions: ExtendedSessionConfig[];
-  /** Loading state */
-  isLoading: boolean;
-  /** Error message */
-  error: string | null;
   /** Pending status updates for race condition handling */
   pendingStatusUpdates: Map<string, SessionStatusUpdate[]>;
-  /** Whether listeners are initialized */
-  listenersInitialized: boolean;
 }
 
 /**
- * Session store actions
+ * Session store actions (extends common socket actions)
  */
-interface SessionActions {
+interface SessionActions extends SocketStoreActions {
   /** Add a new session */
   addSession: (session: ExtendedSessionConfig) => void;
   /** Remove a session by ID */
@@ -54,10 +55,6 @@ interface SessionActions {
   updateSession: (sessionId: string, updates: Partial<ExtendedSessionConfig>) => void;
   /** Update session status */
   updateStatus: (sessionId: string, status: SessionStatus, message?: string, needsInputPrompt?: boolean) => void;
-  /** Set loading state */
-  setLoading: (isLoading: boolean) => void;
-  /** Set error */
-  setError: (error: string | null) => void;
   /** Set sessions list (bulk update) */
   setSessions: (sessions: ExtendedSessionConfig[]) => void;
   /** Initialize socket listeners */
@@ -76,16 +73,64 @@ type SessionStore = SessionState & SessionActions;
 /**
  * Session store using Zustand
  */
-export const useSessionStore = create<SessionStore>((set, get) => ({
-  // Initial state
-  sessions: [],
-  isLoading: false,
-  error: null,
-  pendingStatusUpdates: new Map(),
-  listenersInitialized: false,
+export const useSessionStore = create<SessionStore>((set, get) => {
+  // Create common socket actions
+  const socketActions = createSocketActions<SessionState>(set);
 
-  // Actions
-  addSession: (session) => {
+  // Create socket listeners
+  const { initListeners, cleanupListeners } = createSocketListeners<SessionStore>(
+    get,
+    set,
+    {
+      listeners: [
+        {
+          event: 'session:created',
+          handler: (data, get) => {
+            const session = data as ExtendedSessionConfig;
+            get().addSession(session);
+          },
+        },
+        {
+          event: 'session:status',
+          handler: (data, get) => {
+            const update = data as SessionStatusUpdate;
+            get().updateStatus(update.sessionId, update.status, update.message, update.needsInputPrompt);
+          },
+        },
+        {
+          event: 'session:removed',
+          handler: (data, get) => {
+            const payload = data as { sessionId: string };
+            get().removeSession(payload.sessionId);
+          },
+        },
+      ],
+      onConnect: (get) => {
+        // Request fresh session list on reconnect
+        socket.emit('session:list', {}, (sessions: ExtendedSessionConfig[]) => {
+          if (Array.isArray(sessions)) {
+            get().setSessions(sessions);
+          }
+        });
+      },
+    }
+  );
+
+  return {
+    // Initial state (spread common state + custom state)
+    ...initialSocketState,
+    sessions: [],
+    pendingStatusUpdates: new Map(),
+
+    // Common socket actions
+    ...socketActions,
+
+    // Socket listeners
+    initListeners,
+    cleanupListeners,
+
+    // Custom actions
+    addSession: (session) => {
     set((state) => {
       // Check if session already exists
       const exists = state.sessions.some((s) => s.id === session.id);
@@ -153,14 +198,6 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
     });
   },
 
-  setLoading: (isLoading) => {
-    set({ isLoading });
-  },
-
-  setError: (error) => {
-    set({ error });
-  },
-
   setSessions: (sessions) => {
     set({ sessions });
   },
@@ -185,59 +222,8 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
       return { pendingStatusUpdates: newMap };
     });
   },
-
-  initListeners: () => {
-    const state = get();
-
-    // Prevent duplicate listener registration
-    if (state.listenersInitialized) {
-      return;
-    }
-
-    const { addSession, removeSession, updateStatus, setSessions, setError } = get();
-
-    // Handle session created
-    socket.on('session:created', (session: ExtendedSessionConfig) => {
-      addSession(session);
-    });
-
-    // Handle session status updates
-    socket.on('session:status', (update: SessionStatusUpdate) => {
-      updateStatus(update.sessionId, update.status, update.message, update.needsInputPrompt);
-    });
-
-    // Handle session removed
-    socket.on('session:removed', (payload: { sessionId: string }) => {
-      removeSession(payload.sessionId);
-    });
-
-    // Handle connection error
-    socket.on('connect_error', (err: Error) => {
-      setError(`Connection error: ${err.message}`);
-    });
-
-    // Handle reconnection - refresh session list
-    socket.on('connect', () => {
-      setError(null);
-      // Request fresh session list on reconnect
-      socket.emit('session:list', {}, (sessions: ExtendedSessionConfig[]) => {
-        if (Array.isArray(sessions)) {
-          setSessions(sessions);
-        }
-      });
-    });
-
-    set({ listenersInitialized: true });
-  },
-
-  cleanupListeners: () => {
-    socket.off('session:created');
-    socket.off('session:status');
-    socket.off('session:removed');
-
-    set({ listenersInitialized: false });
-  },
-}));
+  };
+});
 
 // Selectors
 

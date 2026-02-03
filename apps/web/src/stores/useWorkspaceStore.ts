@@ -13,34 +13,35 @@ import type {
   WorkspaceStateResponse,
 } from '@omniscribe/shared';
 import { useSettingsStore } from './useSettingsStore';
+import {
+  SocketStoreState,
+  SocketStoreActions,
+  initialSocketState,
+  createSocketActions,
+  createSocketListeners,
+} from './utils';
 
 // Re-export types for consumers of this store
 export type { ProjectTab, UserPreferences } from '@omniscribe/shared';
 
 /**
- * Workspace state
+ * Workspace state (extends common socket state)
  */
-interface WorkspaceState {
+interface WorkspaceState extends SocketStoreState {
   /** Open project tabs */
   tabs: ProjectTab[];
   /** Active tab ID */
   activeTabId: string | null;
   /** User preferences */
   preferences: UserPreferences;
-  /** Loading state */
-  isLoading: boolean;
-  /** Error message */
-  error: string | null;
   /** Whether state has been restored from backend */
   isRestored: boolean;
-  /** Whether listeners are initialized */
-  listenersInitialized: boolean;
 }
 
 /**
- * Workspace actions
+ * Workspace actions (extends common socket actions)
  */
-interface WorkspaceActions {
+interface WorkspaceActions extends SocketStoreActions {
   /** Open a project (creates new tab or focuses existing) */
   openProject: (projectPath: string, name?: string) => void;
   /** Close a tab by ID */
@@ -71,10 +72,6 @@ interface WorkspaceActions {
   initListeners: () => void;
   /** Clean up socket listeners */
   cleanupListeners: () => void;
-  /** Set loading state */
-  setLoading: (isLoading: boolean) => void;
-  /** Set error */
-  setError: (error: string | null) => void;
 }
 
 /**
@@ -120,18 +117,63 @@ const DEFAULT_PREFERENCES: UserPreferences = {
 /**
  * Workspace store using Zustand with WebSocket-based persistence
  */
-export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
-  // Initial state
-  tabs: [],
-  activeTabId: null,
-  preferences: DEFAULT_PREFERENCES,
-  isLoading: false,
-  error: null,
-  isRestored: false,
-  listenersInitialized: false,
+export const useWorkspaceStore = create<WorkspaceStore>((set, get) => {
+  // Create common socket actions
+  const socketActions = createSocketActions<WorkspaceState>(set);
 
-  // Actions
-  openProject: (projectPath: string, name?: string) => {
+  // Create socket listeners
+  const { initListeners: baseInitListeners, cleanupListeners } = createSocketListeners<WorkspaceStore>(
+    get,
+    set,
+    {
+      listeners: [
+        {
+          event: 'workspace:tabs-updated',
+          handler: (data, get) => {
+            const update = data as TabsUpdatedEvent;
+            const tabs = update.tabs.map(convertBackendTab);
+            get().setTabs(tabs, update.activeTabId);
+          },
+        },
+        {
+          event: 'workspace:preferences-updated',
+          handler: (data, get) => {
+            const update = data as PreferencesUpdatedEvent;
+            get().setPreferences(update.preferences);
+          },
+        },
+      ],
+      onConnect: (get) => {
+        // Restore state on reconnect
+        get().restoreState();
+      },
+    }
+  );
+
+  // Wrap initListeners to also call restoreState on initial setup
+  const initListeners = () => {
+    baseInitListeners();
+    // Initial state restore (only if not already restored)
+    get().restoreState();
+  };
+
+  return {
+    // Initial state (spread common state + custom state)
+    ...initialSocketState,
+    tabs: [],
+    activeTabId: null,
+    preferences: DEFAULT_PREFERENCES,
+    isRestored: false,
+
+    // Common socket actions
+    ...socketActions,
+
+    // Socket listeners
+    initListeners,
+    cleanupListeners,
+
+    // Custom actions
+    openProject: (projectPath: string, name?: string) => {
     const state = get();
     const normalizedPath = projectPath.replace(/\\/g, '/');
 
@@ -315,67 +357,8 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   setPreferences: (preferences: UserPreferences) => {
     set({ preferences });
   },
-
-  initListeners: () => {
-    const state = get();
-
-    // Prevent duplicate listener registration
-    if (state.listenersInitialized) {
-      return;
-    }
-
-    const { setTabs, setPreferences, setError, restoreState } = get();
-
-    // Handle tabs update from other clients
-    socket.on(
-      'workspace:tabs-updated',
-      (update: TabsUpdatedEvent) => {
-        const tabs = update.tabs.map(convertBackendTab);
-        setTabs(tabs, update.activeTabId);
-      }
-    );
-
-    // Handle preferences update from other clients
-    socket.on(
-      'workspace:preferences-updated',
-      (update: PreferencesUpdatedEvent) => {
-        setPreferences(update.preferences);
-      }
-    );
-
-    // Handle connection error
-    socket.on('connect_error', (err: Error) => {
-      setError(`Connection error: ${err.message}`);
-    });
-
-    // Handle reconnection - restore workspace state
-    socket.on('connect', () => {
-      setError(null);
-      // Restore state on reconnect
-      restoreState();
-    });
-
-    set({ listenersInitialized: true });
-
-    // Initial state restore
-    restoreState();
-  },
-
-  cleanupListeners: () => {
-    socket.off('workspace:tabs-updated');
-    socket.off('workspace:preferences-updated');
-
-    set({ listenersInitialized: false });
-  },
-
-  setLoading: (isLoading: boolean) => {
-    set({ isLoading });
-  },
-
-  setError: (error: string | null) => {
-    set({ error });
-  },
-}));
+  };
+});
 
 // Selectors
 

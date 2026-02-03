@@ -11,26 +11,16 @@ import {
 import { Server, Socket } from 'socket.io';
 import { OnEvent } from '@nestjs/event-emitter';
 import { TerminalService } from './terminal.service';
-
-interface SpawnPayload {
-  cwd?: string;
-  env?: Record<string, string>;
-}
-
-interface InputPayload {
-  sessionId: number;
-  data: string;
-}
-
-interface ResizePayload {
-  sessionId: number;
-  cols: number;
-  rows: number;
-}
-
-interface KillPayload {
-  sessionId: number;
-}
+import {
+  TerminalSpawnPayload,
+  TerminalInputPayload,
+  TerminalResizePayload,
+  TerminalKillPayload,
+  TerminalJoinPayload,
+  TerminalSpawnResponse,
+  TerminalJoinResponse,
+  SuccessResponse,
+} from '@omniscribe/shared';
 
 interface TerminalOutputEvent {
   sessionId: number;
@@ -98,8 +88,8 @@ export class TerminalGateway
   @SubscribeMessage('terminal:spawn')
   handleSpawn(
     @ConnectedSocket() client: Socket,
-    @MessageBody() payload: SpawnPayload,
-  ): { sessionId: number } {
+    @MessageBody() payload: TerminalSpawnPayload,
+  ): TerminalSpawnResponse {
     const sessionId = this.terminalService.spawn(payload?.cwd, payload?.env);
 
     // Track session ownership
@@ -117,7 +107,7 @@ export class TerminalGateway
   @SubscribeMessage('terminal:input')
   handleInput(
     @ConnectedSocket() _client: Socket,
-    @MessageBody() payload: InputPayload,
+    @MessageBody() payload: TerminalInputPayload,
   ): void {
     const { sessionId, data } = payload;
 
@@ -151,7 +141,7 @@ export class TerminalGateway
   @SubscribeMessage('terminal:resize')
   handleResize(
     @ConnectedSocket() _client: Socket,
-    @MessageBody() payload: ResizePayload,
+    @MessageBody() payload: TerminalResizePayload,
   ): void {
     const { sessionId, cols, rows } = payload;
 
@@ -164,8 +154,8 @@ export class TerminalGateway
   @SubscribeMessage('terminal:kill')
   async handleKill(
     @ConnectedSocket() client: Socket,
-    @MessageBody() payload: KillPayload,
-  ): Promise<void> {
+    @MessageBody() payload: TerminalKillPayload,
+  ): Promise<SuccessResponse> {
     const { sessionId } = payload;
 
     // Simplified: allow kill if session exists (no ownership check)
@@ -177,14 +167,17 @@ export class TerminalGateway
         sessions.delete(sessionId);
       }
       client.leave(`terminal:${sessionId}`);
+      return { success: true };
     }
+
+    return { success: false, error: `Terminal session ${sessionId} not found` };
   }
 
   @SubscribeMessage('terminal:join')
   handleJoin(
     @ConnectedSocket() client: Socket,
-    @MessageBody() payload: { sessionId: number },
-  ): { success: boolean } {
+    @MessageBody() payload: TerminalJoinPayload,
+  ): TerminalJoinResponse {
     const { sessionId } = payload;
 
     if (this.terminalService.hasSession(sessionId)) {
@@ -199,7 +192,7 @@ export class TerminalGateway
       return { success: true };
     }
 
-    return { success: false };
+    return { success: false, error: `Terminal session ${sessionId} not found` };
   }
 
   @OnEvent('terminal.output')

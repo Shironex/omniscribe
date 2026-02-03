@@ -15,6 +15,14 @@ interface CreateSessionOptions {
 }
 
 /**
+ * Response type for session creation/update
+ */
+interface SessionResponse {
+  session?: ExtendedSessionConfig;
+  error?: string;
+}
+
+/**
  * Create a new session
  */
 export async function createSession(
@@ -23,15 +31,21 @@ export async function createSession(
   branch?: string,
   options?: CreateSessionOptions
 ): Promise<ExtendedSessionConfig> {
-  return emitWithErrorHandling<
+  const response = await emitWithErrorHandling<
     { mode: AiMode; projectPath: string; branch?: string } & CreateSessionOptions,
-    ExtendedSessionConfig
+    SessionResponse
   >('session:create', {
     mode,
     projectPath,
     branch,
     ...options,
   });
+
+  if (!response.session) {
+    throw new Error('No session returned from server');
+  }
+
+  return response.session;
 }
 
 /**
@@ -41,13 +55,19 @@ export async function updateSession(
   sessionId: string,
   updates: UpdateSessionOptions
 ): Promise<ExtendedSessionConfig> {
-  return emitWithErrorHandling<
+  const response = await emitWithErrorHandling<
     { sessionId: string; updates: UpdateSessionOptions },
-    ExtendedSessionConfig
+    SessionResponse
   >('session:update', {
     sessionId,
     updates,
   });
+
+  if (!response.session) {
+    throw new Error('No session returned from server');
+  }
+
+  return response.session;
 }
 
 /**

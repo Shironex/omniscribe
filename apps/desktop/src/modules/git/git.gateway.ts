@@ -7,60 +7,18 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { GitService } from './git.service';
-import { BranchInfo, CommitInfo } from '@omniscribe/shared';
-
-interface BranchesPayload {
-  projectPath: string;
-}
-
-interface CommitsPayload {
-  projectPath: string;
-  limit?: number;
-  allBranches?: boolean;
-}
-
-interface CheckoutPayload {
-  projectPath: string;
-  branch: string;
-}
-
-interface CreateBranchPayload {
-  projectPath: string;
-  name: string;
-  startPoint?: string;
-}
-
-interface CurrentBranchPayload {
-  projectPath: string;
-}
-
-interface CurrentBranchResponse {
-  currentBranch: string;
-  error?: string;
-}
-
-interface BranchesResponse {
-  branches: BranchInfo[];
-  currentBranch: string;
-  error?: string;
-}
-
-interface CommitsResponse {
-  commits: CommitInfo[];
-  error?: string;
-}
-
-interface CheckoutResponse {
-  success: boolean;
-  currentBranch?: string;
-  error?: string;
-}
-
-interface CreateBranchResponse {
-  success: boolean;
-  branch?: BranchInfo;
-  error?: string;
-}
+import {
+  GitBranchesPayload,
+  GitCommitsPayload,
+  GitCheckoutPayload,
+  GitCreateBranchPayload,
+  GitCurrentBranchPayload,
+  GitBranchesResponse,
+  GitCommitsResponse,
+  GitCheckoutResponse,
+  GitCreateBranchResponse,
+  GitCurrentBranchResponse,
+} from '@omniscribe/shared';
 
 @WebSocketGateway({
   cors: {
@@ -78,8 +36,8 @@ export class GitGateway {
   @SubscribeMessage('git:branches')
   async handleBranches(
     @ConnectedSocket() client: Socket,
-    @MessageBody() payload: BranchesPayload,
-  ): Promise<BranchesResponse> {
+    @MessageBody() payload: GitBranchesPayload,
+  ): Promise<GitBranchesResponse> {
     try {
       const { projectPath } = payload;
 
@@ -118,8 +76,8 @@ export class GitGateway {
   @SubscribeMessage('git:commits')
   async handleCommits(
     @ConnectedSocket() client: Socket,
-    @MessageBody() payload: CommitsPayload,
-  ): Promise<CommitsResponse> {
+    @MessageBody() payload: GitCommitsPayload,
+  ): Promise<GitCommitsResponse> {
     try {
       const { projectPath, limit = 50, allBranches = true } = payload;
 
@@ -156,8 +114,8 @@ export class GitGateway {
   @SubscribeMessage('git:checkout')
   async handleCheckout(
     @ConnectedSocket() _client: Socket,
-    @MessageBody() payload: CheckoutPayload,
-  ): Promise<CheckoutResponse> {
+    @MessageBody() payload: GitCheckoutPayload,
+  ): Promise<GitCheckoutResponse> {
     try {
       const { projectPath, branch } = payload;
 
@@ -195,8 +153,8 @@ export class GitGateway {
   @SubscribeMessage('git:create-branch')
   async handleCreateBranch(
     @ConnectedSocket() _client: Socket,
-    @MessageBody() payload: CreateBranchPayload,
-  ): Promise<CreateBranchResponse> {
+    @MessageBody() payload: GitCreateBranchPayload,
+  ): Promise<GitCreateBranchResponse> {
     try {
       const { projectPath, name, startPoint } = payload;
 
@@ -238,8 +196,8 @@ export class GitGateway {
   @SubscribeMessage('git:current-branch')
   async handleCurrentBranch(
     @ConnectedSocket() client: Socket,
-    @MessageBody() payload: CurrentBranchPayload,
-  ): Promise<CurrentBranchResponse> {
+    @MessageBody() payload: GitCurrentBranchPayload,
+  ): Promise<GitCurrentBranchResponse> {
     try {
       const { projectPath } = payload;
 
