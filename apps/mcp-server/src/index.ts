@@ -25,7 +25,7 @@ import { z } from 'zod';
 // ============================================================================
 
 const SESSION_ID = process.env.OMNISCRIBE_SESSION_ID;
-const PROJECT_HASH = process.env.OMNISCRIBE_PROJECT_HASH;
+// PROJECT_HASH available via process.env.OMNISCRIBE_PROJECT_HASH if needed for routing
 const STATUS_URL = process.env.OMNISCRIBE_STATUS_URL;
 const INSTANCE_ID = process.env.OMNISCRIBE_INSTANCE_ID;
 

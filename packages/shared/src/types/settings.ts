@@ -121,7 +121,43 @@ export const DEFAULT_SETTINGS: GlobalSettings = {
 /**
  * Settings section IDs for navigation
  */
-export type SettingsSectionId = 'appearance' | 'integrations' | 'mcp' | 'general';
+export type SettingsSectionId = 'appearance' | 'integrations' | 'mcp' | 'general' | 'worktrees';
+
+/**
+ * Worktree creation mode
+ * - 'branch': Create worktree only when selecting a non-current branch (default)
+ * - 'always': Always create a new worktree with random suffix for full isolation
+ * - 'never': Never use worktrees, always work in main project directory
+ */
+export type WorktreeMode = 'branch' | 'always' | 'never';
+
+/**
+ * Worktree storage location
+ * - 'project': Store in project's .worktrees/ directory (portable, visible)
+ * - 'central': Store in ~/.omniscribe/worktrees/ (hidden, shared across projects)
+ */
+export type WorktreeLocation = 'project' | 'central';
+
+/**
+ * Worktree-related settings
+ */
+export interface WorktreeSettings {
+  /** Worktree creation mode */
+  mode: WorktreeMode;
+  /** Where to store worktrees */
+  location: WorktreeLocation;
+  /** Whether to auto-cleanup worktrees when session ends */
+  autoCleanup: boolean;
+}
+
+/**
+ * Default worktree settings
+ */
+export const DEFAULT_WORKTREE_SETTINGS: WorktreeSettings = {
+  mode: 'branch',
+  location: 'project',
+  autoCleanup: false, // Disabled by default - feature is experimental
+};
 
 /**
  * Dark themes list

@@ -2,7 +2,8 @@
  * Project Tab Types - Shared types for project tabs in workspace
  */
 
-import type { Theme } from './settings';
+import type { Theme, WorktreeSettings } from './settings';
+import { DEFAULT_WORKTREE_SETTINGS } from './settings';
 
 /**
  * Base project tab fields shared between frontend and backend
@@ -50,9 +51,14 @@ export interface UserPreferences {
   sidebarWidth: number;
   /** Whether sidebar is open */
   sidebarOpen: boolean;
+  /** Worktree settings */
+  worktree?: WorktreeSettings;
   /** Other preferences */
   [key: string]: unknown;
 }
+
+// Re-export for convenience
+export { DEFAULT_WORKTREE_SETTINGS };
 
 /**
  * Convert a backend ProjectTabDTO to frontend ProjectTab

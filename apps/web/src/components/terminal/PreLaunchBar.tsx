@@ -1,8 +1,9 @@
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { Play, X, Bot, Sparkles, ChevronDown, GitBranch } from 'lucide-react';
+import { Play, X, Bot, Sparkles, ChevronDown } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import type { Branch } from '../shared/BranchSelector';
+import { BranchAutocomplete } from '../shared/BranchAutocomplete';
 
 export type AIMode = 'claude' | 'gemini' | 'codex' | 'plain';
 
@@ -18,6 +19,7 @@ interface PreLaunchBarProps {
   onUpdate: (slotId: string, updates: Partial<Pick<PreLaunchSlot, 'aiMode' | 'branch'>>) => void;
   onLaunch: (slotId: string) => void;
   onRemove: (slotId: string) => void;
+  onCreateBranch?: (branchName: string) => void;
   className?: string;
 }
 
@@ -34,21 +36,17 @@ export function PreLaunchBar({
   onUpdate,
   onLaunch,
   onRemove,
+  onCreateBranch,
   className,
 }: PreLaunchBarProps) {
   const [isAIModeOpen, setIsAIModeOpen] = useState(false);
-  const [isBranchOpen, setIsBranchOpen] = useState(false);
   const aiModeRef = useRef<HTMLDivElement>(null);
-  const branchRef = useRef<HTMLDivElement>(null);
 
-  // Close dropdowns when clicking outside
+  // Close AI mode dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (aiModeRef.current && !aiModeRef.current.contains(event.target as Node)) {
         setIsAIModeOpen(false);
-      }
-      if (branchRef.current && !branchRef.current.contains(event.target as Node)) {
-        setIsBranchOpen(false);
       }
     }
 
@@ -58,12 +56,6 @@ export function PreLaunchBar({
 
   const selectedMode = aiModeOptions.find((m) => m.value === slot.aiMode) || aiModeOptions[0];
   const SelectedIcon = selectedMode.icon;
-
-  // Filter branches for display (show max 10 in dropdown)
-  const displayBranches = branches.slice(0, 10);
-  const currentBranchDisplay = slot.branch.length > 20
-    ? slot.branch.substring(0, 17) + '...'
-    : slot.branch;
 
   return (
     <div
@@ -134,62 +126,15 @@ export function PreLaunchBar({
       </div>
 
       {/* Branch selector */}
-      <div ref={branchRef} className="relative">
-        <button
-          onClick={() => setIsBranchOpen(!isBranchOpen)}
-          className={clsx(
-            'flex items-center gap-2 px-2 py-1 rounded',
-            'bg-muted border border-border',
-            'text-xs text-foreground',
-            'hover:border-muted-foreground',
-            'transition-colors min-w-[120px] max-w-[180px]'
-          )}
-        >
-          <GitBranch size={14} className="text-muted-foreground flex-shrink-0" />
-          <span className="truncate">{currentBranchDisplay}</span>
-          <ChevronDown
-            size={12}
-            className={clsx(
-              'text-muted-foreground transition-transform ml-auto flex-shrink-0',
-              isBranchOpen && 'rotate-180'
-            )}
-          />
-        </button>
-
-        {/* Branch dropdown */}
-        {isBranchOpen && (
-          <div
-            className={clsx(
-              'absolute bottom-full left-0 mb-1 z-50',
-              'bg-muted border border-border rounded-lg shadow-xl',
-              'overflow-hidden animate-fade-in min-w-[180px] max-h-[200px] overflow-y-auto'
-            )}
-          >
-            {displayBranches.map((branch) => (
-              <button
-                key={branch.name}
-                onClick={() => {
-                  onUpdate(slot.id, { branch: branch.name });
-                  setIsBranchOpen(false);
-                }}
-                className={clsx(
-                  'w-full flex items-center gap-2 px-3 py-1.5',
-                  'text-xs text-left transition-colors',
-                  branch.name === slot.branch
-                    ? 'bg-primary/10 text-primary'
-                    : 'text-foreground hover:bg-card'
-                )}
-              >
-                <GitBranch size={12} className="text-muted-foreground flex-shrink-0" />
-                <span className="truncate">{branch.name}</span>
-                {branch.isCurrent && (
-                  <span className="text-2xs text-muted-foreground ml-auto">(current)</span>
-                )}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
+      <BranchAutocomplete
+        branches={branches}
+        value={slot.branch}
+        onChange={(branchName) => onUpdate(slot.id, { branch: branchName })}
+        onCreateBranch={onCreateBranch}
+        placeholder="Select branch"
+        side="top"
+        className="h-8 w-[240px] text-xs"
+      />
 
       {/* Spacer */}
       <div className="flex-1" />

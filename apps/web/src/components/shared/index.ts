@@ -11,4 +11,7 @@ export type { SessionStatus, StatusCounts } from './StatusLegend';
 export { BranchSelector } from './BranchSelector';
 export type { Branch } from './BranchSelector';
 
+export { BranchAutocomplete } from './BranchAutocomplete';
+export type { Branch as BranchAutocompleteType } from './BranchAutocomplete';
+
 export { IdleLandingView } from './IdleLandingView';

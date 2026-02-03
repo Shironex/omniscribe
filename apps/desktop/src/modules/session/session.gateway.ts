@@ -6,17 +6,23 @@ import {
   ConnectedSocket,
   OnGatewayInit,
 } from '@nestjs/websockets';
-import { Inject, forwardRef } from '@nestjs/common';
+import { Inject, forwardRef, Logger } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 import { OnEvent } from '@nestjs/event-emitter';
+import * as crypto from 'crypto';
 import { SessionService, ExtendedSessionConfig, SessionStatusUpdate } from './session.service';
 import { TerminalGateway } from '../terminal/terminal.gateway';
+import { WorktreeService } from '../git/worktree.service';
+import { GitService } from '../git/git.service';
+import { WorkspaceService } from '../workspace/workspace.service';
 import {
   AiMode,
   UpdateSessionOptions,
   SessionRemovePayload,
   SessionListPayload,
   SessionRemoveResponse,
+  WorktreeSettings,
+  DEFAULT_WORKTREE_SETTINGS,
 } from '@omniscribe/shared';
 
 /**
@@ -63,6 +69,8 @@ interface UpdateSessionResponse {
   },
 })
 export class SessionGateway implements OnGatewayInit {
+  private readonly logger = new Logger(SessionGateway.name);
+
   @WebSocketServer()
   server!: Server;
 
@@ -70,6 +78,10 @@ export class SessionGateway implements OnGatewayInit {
     private readonly sessionService: SessionService,
     @Inject(forwardRef(() => TerminalGateway))
     private readonly terminalGateway: TerminalGateway,
+    private readonly worktreeService: WorktreeService,
+    private readonly gitService: GitService,
+    @Inject(forwardRef(() => WorkspaceService))
+    private readonly workspaceService: WorkspaceService,
   ) {}
 
   afterInit(): void {
@@ -92,13 +104,58 @@ export class SessionGateway implements OnGatewayInit {
       mcpServers: payload.mcpServers,
     });
 
-    // If a branch was specified, assign it
+    // Get worktree settings from workspace preferences
+    const preferences = this.workspaceService.getPreferences();
+    const worktreeSettings: WorktreeSettings = preferences.worktree ?? DEFAULT_WORKTREE_SETTINGS;
+
+    // Determine the working directory based on worktree mode
+    let worktreePath: string | null = null;
+
+    try {
+      if (worktreeSettings.mode !== 'never') {
+        const branch = payload.branch;
+
+        if (worktreeSettings.mode === 'always') {
+          // Always create a new worktree with unique suffix for full isolation
+          const uniqueSuffix = crypto.randomUUID().slice(0, 8);
+          const branchName = branch ?? await this.gitService.getCurrentBranch(payload.projectPath);
+          const isolatedBranch = `${branchName}-${uniqueSuffix}`;
+          worktreePath = await this.worktreeService.prepare(
+            payload.projectPath,
+            isolatedBranch,
+            worktreeSettings.location,
+          );
+          this.logger.log(`Created isolated worktree at ${worktreePath} for session ${session.id}`);
+        } else if (worktreeSettings.mode === 'branch' && branch) {
+          // Create worktree only when selecting a non-current branch
+          const currentBranch = await this.gitService.getCurrentBranch(payload.projectPath);
+          if (branch !== currentBranch) {
+            worktreePath = await this.worktreeService.prepare(
+              payload.projectPath,
+              branch,
+              worktreeSettings.location,
+            );
+            this.logger.log(`Created branch worktree at ${worktreePath} for session ${session.id}`);
+          }
+        }
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.warn(`Failed to create worktree for session ${session.id}: ${errorMessage}`);
+      // Continue without worktree - fall back to main project directory
+    }
+
+    // Assign branch and worktree path to session
     if (payload.branch) {
-      this.sessionService.assignBranch(session.id, payload.branch);
+      this.sessionService.assignBranch(session.id, payload.branch, worktreePath ?? undefined);
+    } else if (worktreePath) {
+      // If we have a worktree but no explicit branch, use the current branch
+      const currentBranch = await this.gitService.getCurrentBranch(payload.projectPath);
+      this.sessionService.assignBranch(session.id, currentBranch, worktreePath);
     }
 
     // Launch the terminal session to spawn the PTY
-    const workingDir = session.worktreePath ?? session.workingDirectory;
+    const workingDir = worktreePath ?? session.workingDirectory;
     const launchResult = await this.sessionService.launchSession(
       session.id,
       payload.projectPath,
@@ -116,7 +173,7 @@ export class SessionGateway implements OnGatewayInit {
       client.join(`terminal:${launchResult.terminalSessionId}`);
       // Register client ownership in TerminalGateway so terminal:input works
       this.terminalGateway.registerClientSession(client.id, launchResult.terminalSessionId);
-      console.log(`[SessionGateway] Client ${client.id} joined terminal room terminal:${launchResult.terminalSessionId}`);
+      this.logger.log(`Client ${client.id} joined terminal room terminal:${launchResult.terminalSessionId}`);
     }
 
     // Return the updated session with terminalSessionId populated

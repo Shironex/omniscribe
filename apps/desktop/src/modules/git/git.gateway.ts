@@ -7,6 +7,7 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { GitService } from './git.service';
+import { WorktreeService } from './worktree.service';
 import {
   GitBranchesPayload,
   GitCommitsPayload,
@@ -18,7 +19,32 @@ import {
   GitCheckoutResponse,
   GitCreateBranchResponse,
   GitCurrentBranchResponse,
+  WorktreeInfo,
+  SuccessResponse,
 } from '@omniscribe/shared';
+
+/**
+ * Payload for listing worktrees
+ */
+interface GitWorktreesPayload {
+  projectPath: string;
+}
+
+/**
+ * Payload for cleaning up a worktree
+ */
+interface GitWorktreeCleanupPayload {
+  projectPath: string;
+  worktreePath: string;
+}
+
+/**
+ * Response for worktrees list
+ */
+interface GitWorktreesResponse {
+  worktrees: WorktreeInfo[];
+  error?: string;
+}
 
 @WebSocketGateway({
   cors: {
@@ -31,7 +57,10 @@ export class GitGateway {
   @WebSocketServer()
   server!: Server;
 
-  constructor(private readonly gitService: GitService) {}
+  constructor(
+    private readonly gitService: GitService,
+    private readonly worktreeService: WorktreeService,
+  ) {}
 
   @SubscribeMessage('git:branches')
   async handleBranches(
@@ -222,6 +251,68 @@ export class GitGateway {
 
       return {
         currentBranch: '',
+        error: message,
+      };
+    }
+  }
+
+  @SubscribeMessage('git:worktrees')
+  async handleWorktrees(
+    @ConnectedSocket() _client: Socket,
+    @MessageBody() payload: GitWorktreesPayload,
+  ): Promise<GitWorktreesResponse> {
+    try {
+      const { projectPath } = payload;
+
+      if (!projectPath) {
+        return {
+          worktrees: [],
+          error: 'Project path is required',
+        };
+      }
+
+      const worktrees = await this.worktreeService.list(projectPath);
+
+      return {
+        worktrees,
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      console.error('[GitGateway] Error listing worktrees:', message);
+
+      return {
+        worktrees: [],
+        error: message,
+      };
+    }
+  }
+
+  @SubscribeMessage('git:worktree:cleanup')
+  async handleWorktreeCleanup(
+    @ConnectedSocket() _client: Socket,
+    @MessageBody() payload: GitWorktreeCleanupPayload,
+  ): Promise<SuccessResponse> {
+    try {
+      const { projectPath, worktreePath } = payload;
+
+      if (!projectPath || !worktreePath) {
+        return {
+          success: false,
+          error: 'Project path and worktree path are required',
+        };
+      }
+
+      await this.worktreeService.cleanup(projectPath, worktreePath);
+
+      return {
+        success: true,
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      console.error('[GitGateway] Error cleaning up worktree:', message);
+
+      return {
+        success: false,
         error: message,
       };
     }

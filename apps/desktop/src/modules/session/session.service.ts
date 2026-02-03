@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import * as os from 'os';
 import * as path from 'path';
@@ -9,10 +9,14 @@ import {
   SessionStatus,
   AiMode,
   CreateSessionOptions,
+  WorktreeSettings,
+  DEFAULT_WORKTREE_SETTINGS,
 } from '@omniscribe/shared';
 import { TerminalService } from '../terminal/terminal.service';
 import { McpConfigService } from '../mcp/mcp-config.service';
 import { McpService } from '../mcp/mcp.service';
+import { WorktreeService } from '../git/worktree.service';
+import { WorkspaceService } from '../workspace/workspace.service';
 
 /**
  * AI CLI command configuration for each mode
@@ -71,7 +75,10 @@ export class SessionService {
     private readonly eventEmitter: EventEmitter2,
     private readonly terminalService: TerminalService,
     private readonly mcpConfigService: McpConfigService,
-    private readonly mcpService: McpService
+    private readonly mcpService: McpService,
+    private readonly worktreeService: WorktreeService,
+    @Inject(forwardRef(() => WorkspaceService))
+    private readonly workspaceService: WorkspaceService,
   ) {
     // Listen for terminal close events to update session status
     this.eventEmitter.on(
@@ -216,6 +223,23 @@ export class SessionService {
         await this.terminalService.kill(session.terminalSessionId);
       }
       session.terminalSessionId = undefined;
+    }
+
+    // Cleanup worktree if auto-cleanup is enabled
+    if (session.worktreePath) {
+      const preferences = this.workspaceService.getPreferences();
+      const worktreeSettings: WorktreeSettings = preferences.worktree ?? DEFAULT_WORKTREE_SETTINGS;
+
+      if (worktreeSettings.autoCleanup) {
+        try {
+          await this.worktreeService.cleanup(session.projectPath, session.worktreePath);
+          this.logger.log(`Cleaned up worktree at ${session.worktreePath} for session ${sessionId}`);
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          this.logger.warn(`Failed to cleanup worktree for session ${sessionId}: ${errorMessage}`);
+          // Continue with session removal even if worktree cleanup fails
+        }
+      }
     }
 
     // Note: We intentionally don't remove the omniscribe MCP entry from .mcp.json

@@ -5,6 +5,7 @@ import {
   ProjectTabDTO,
   UserPreferences,
   WorkspaceStateResponse,
+  DEFAULT_WORKTREE_SETTINGS,
 } from '@omniscribe/shared';
 
 // Re-export WorkspaceStateResponse as WorkspaceState for backward compatibility
@@ -85,6 +86,7 @@ export class WorkspaceService implements OnModuleInit {
           theme: 'dark',
           sidebarWidth: 240,
           sidebarOpen: true,
+          worktree: DEFAULT_WORKTREE_SETTINGS,
         },
       },
     });
@@ -116,6 +118,7 @@ export class WorkspaceService implements OnModuleInit {
         theme: 'dark',
         sidebarWidth: 240,
         sidebarOpen: true,
+        worktree: DEFAULT_WORKTREE_SETTINGS,
       }),
       quickActions: this.store.get('quickActions', DEFAULT_QUICK_ACTIONS),
     };
@@ -301,6 +304,7 @@ export class WorkspaceService implements OnModuleInit {
       theme: 'dark',
       sidebarWidth: 240,
       sidebarOpen: true,
+      worktree: DEFAULT_WORKTREE_SETTINGS,
     });
   }
 

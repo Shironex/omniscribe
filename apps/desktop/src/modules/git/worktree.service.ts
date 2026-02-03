@@ -5,15 +5,18 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as os from 'os';
 import * as crypto from 'crypto';
-import { WorktreeInfo } from '@omniscribe/shared';
+import { WorktreeInfo, WorktreeLocation } from '@omniscribe/shared';
 
 const execAsync = promisify(exec);
 
-/** Base directory for worktrees (follows XDG spec on Linux, .omniscribe on Windows/macOS) */
-const BASE_DIR =
+/** Central directory for worktrees (follows XDG spec on Linux, .omniscribe on Windows/macOS) */
+const CENTRAL_DIR =
   process.platform === 'linux'
     ? path.join(os.homedir(), '.local', 'share', 'omniscribe', 'worktrees')
     : path.join(os.homedir(), '.omniscribe', 'worktrees');
+
+/** Project-local worktree directory name */
+const PROJECT_WORKTREE_DIR = '.worktrees';
 
 /** Default timeout for git commands (30 seconds) */
 const GIT_TIMEOUT_MS = 30000;
@@ -53,22 +56,33 @@ export class WorktreeService {
   }
 
   /**
-   * Compute the worktree path for a given project and branch
-   * Uses SHA256 hash of repo path (first 16 hex chars) to create a unique, filesystem-safe path
-   * Structure: {BASE_DIR}/{repo-hash}/{sanitized-branch}/
+   * Compute the worktree path for a given project, branch, and location preference
+   *
+   * For 'project' location: {projectPath}/.worktrees/{sanitized-branch}/
+   * For 'central' location: {CENTRAL_DIR}/{repo-hash}/{sanitized-branch}/
    */
-  getWorktreePath(projectPath: string, branch: string): string {
-    // Hash the repository path only (not combined with branch)
-    const repoHash = crypto
-      .createHash('sha256')
-      .update(projectPath)
-      .digest('hex')
-      .substring(0, 16);
-
+  getWorktreePath(
+    projectPath: string,
+    branch: string,
+    location: WorktreeLocation = 'project',
+  ): string {
     // Sanitize branch name - remove /, \, :, and other unsafe chars
     const safeBranch = branch.replace(/[/\\:*?"<>|]/g, '_');
 
-    return path.join(BASE_DIR, repoHash, safeBranch);
+    if (location === 'project') {
+      // Store in project's .worktrees/ directory
+      return path.join(projectPath, PROJECT_WORKTREE_DIR, safeBranch);
+    } else {
+      // Store in central ~/.omniscribe/worktrees/ directory
+      // Use hash to avoid collisions between projects with same branch names
+      const repoHash = crypto
+        .createHash('sha256')
+        .update(projectPath)
+        .digest('hex')
+        .substring(0, 16);
+
+      return path.join(CENTRAL_DIR, repoHash, safeBranch);
+    }
   }
 
   /**
@@ -77,9 +91,14 @@ export class WorktreeService {
    *
    * @param projectPath - Path to the main repository
    * @param branch - Branch name to checkout (optional, uses current if not specified)
+   * @param location - Where to store the worktree ('project' or 'central')
    * @returns Worktree path or null if not needed (working on main repo)
    */
-  async prepare(projectPath: string, branch?: string): Promise<string | null> {
+  async prepare(
+    projectPath: string,
+    branch?: string,
+    location: WorktreeLocation = 'project',
+  ): Promise<string | null> {
     // If no branch specified, work directly on the main repo
     if (!branch) {
       return null;
@@ -97,7 +116,7 @@ export class WorktreeService {
       return null;
     }
 
-    const worktreePath = this.getWorktreePath(projectPath, branch);
+    const worktreePath = this.getWorktreePath(projectPath, branch, location);
 
     // Ensure the parent directory exists (BASE_DIR/repo-hash/)
     const parentDir = path.dirname(worktreePath);
@@ -120,6 +139,8 @@ export class WorktreeService {
 
     // Check if the branch exists locally or remotely
     let branchExists = false;
+    let remoteBranchRef: string | null = null;
+
     try {
       await this.execGit(projectPath, ['rev-parse', '--verify', branch]);
       branchExists = true;
@@ -132,28 +153,56 @@ export class WorktreeService {
           '--list',
           `*/${branch}`,
         ]);
-        branchExists = remoteBranches.trim().length > 0;
+        const trimmed = remoteBranches.trim();
+        if (trimmed.length > 0) {
+          branchExists = true;
+          // Get the first matching remote branch (e.g., "origin/branch-name")
+          remoteBranchRef = trimmed.split('\n')[0].trim();
+        }
       } catch {
-        // Branch doesn't exist
+        // Branch doesn't exist remotely either
       }
-    }
-
-    if (!branchExists) {
-      throw new Error(`Branch '${branch}' does not exist`);
     }
 
     // Create the worktree
     try {
-      await this.execGit(projectPath, ['worktree', 'add', worktreePath, branch]);
+      if (branchExists) {
+        // Branch exists - create worktree pointing to it
+        await this.execGit(projectPath, ['worktree', 'add', worktreePath, branch]);
+      } else {
+        // Branch doesn't exist - create a new branch with the worktree
+        // git worktree add -b <new-branch> <path> HEAD
+        await this.execGit(projectPath, [
+          'worktree',
+          'add',
+          '-b',
+          branch,
+          worktreePath,
+          'HEAD',
+        ]);
+      }
     } catch (error) {
+      const errorStr = String(error);
       // If branch is already checked out elsewhere, try with --detach
-      if (String(error).includes('already checked out')) {
+      if (errorStr.includes('already checked out')) {
         await this.execGit(projectPath, [
           'worktree',
           'add',
           '--detach',
           worktreePath,
           branch,
+        ]);
+      } else if (errorStr.includes('already exists') && remoteBranchRef) {
+        // Local branch already exists but wasn't found by rev-parse
+        // This can happen with tracking branches - try tracking the remote
+        await this.execGit(projectPath, [
+          'worktree',
+          'add',
+          '--track',
+          '-b',
+          branch,
+          worktreePath,
+          remoteBranchRef,
         ]);
       } else {
         throw error;
@@ -243,10 +292,14 @@ export class WorktreeService {
    */
   async cleanupAll(projectPath: string): Promise<void> {
     const worktrees = await this.list(projectPath);
+    const projectWorktreeDir = path.join(projectPath, PROJECT_WORKTREE_DIR);
 
     for (const worktree of worktrees) {
-      // Only clean up worktrees in our base directory
-      if (!worktree.isMain && worktree.path.startsWith(BASE_DIR)) {
+      // Only clean up worktrees managed by Omniscribe (in .worktrees/ or central dir)
+      const isProjectWorktree = worktree.path.startsWith(projectWorktreeDir);
+      const isCentralWorktree = worktree.path.startsWith(CENTRAL_DIR);
+
+      if (!worktree.isMain && (isProjectWorktree || isCentralWorktree)) {
         await this.cleanup(projectPath, worktree.path);
       }
     }

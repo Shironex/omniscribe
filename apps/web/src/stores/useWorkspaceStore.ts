@@ -12,6 +12,7 @@ import type {
   PreferencesResponse,
   WorkspaceStateResponse,
 } from '@omniscribe/shared';
+import { DEFAULT_WORKTREE_SETTINGS } from '@omniscribe/shared';
 import { useSettingsStore } from './useSettingsStore';
 import {
   SocketStoreState,
@@ -112,6 +113,7 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   theme: 'dark',
   sidebarWidth: 240,
   sidebarOpen: true,
+  worktree: DEFAULT_WORKTREE_SETTINGS,
 };
 
 /**

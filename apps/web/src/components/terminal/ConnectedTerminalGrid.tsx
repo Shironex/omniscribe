@@ -140,6 +140,7 @@ export function ConnectedTerminalGrid({ className }: ConnectedTerminalGridProps)
       branch: session.branch,
       statusMessage: session.statusMessage,
       terminalSessionId: session.terminalSessionId,
+      worktreePath: session.worktreePath,
     }));
   }, [activeProjectSessions]);
 

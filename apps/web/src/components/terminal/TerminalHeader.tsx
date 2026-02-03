@@ -1,6 +1,6 @@
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { Bot, Sparkles, X, Settings, GitBranch, Zap, MoreVertical, ArrowUp, ArrowDown } from 'lucide-react';
+import { Bot, Sparkles, X, Settings, GitBranch, Zap, MoreVertical, ArrowUp, ArrowDown, FolderGit2 } from 'lucide-react';
 import { SessionStatus, StatusDot } from '../shared/StatusLegend';
 import { useState, useRef, useEffect } from 'react';
 
@@ -21,6 +21,8 @@ export interface TerminalSession {
   statusMessage?: string;
   /** Terminal PTY session ID - required for the terminal to connect */
   terminalSessionId?: number;
+  /** Git worktree path if session is using a worktree */
+  worktreePath?: string;
 }
 
 interface QuickAction {
@@ -135,6 +137,17 @@ export function TerminalHeader({
                 {behind}
               </span>
             )}
+          </div>
+        )}
+
+        {/* Worktree indicator */}
+        {session.worktreePath && (
+          <div
+            className="flex items-center gap-1 text-xs text-cyan-500 shrink-0 px-1.5 py-0.5 rounded bg-cyan-500/10"
+            title={session.worktreePath}
+          >
+            <FolderGit2 size={11} />
+            <span>worktree</span>
           </div>
         )}
 

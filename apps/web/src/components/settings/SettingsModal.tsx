@@ -8,6 +8,7 @@ import {
   IntegrationsSection,
   McpSection,
   GeneralSection,
+  WorktreesSection,
 } from './sections';
 import type { SettingsSectionId } from '@omniscribe/shared';
 
@@ -83,6 +84,8 @@ export function SettingsModal() {
         return <McpSection />;
       case 'general':
         return <GeneralSection />;
+      case 'worktrees':
+        return <WorktreesSection />;
       default:
         return <AppearanceSection />;
     }

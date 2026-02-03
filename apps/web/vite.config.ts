@@ -7,11 +7,16 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': resolve(__dirname, './src'),
+      // Point to source for better dev experience and ESM compatibility
+      '@omniscribe/shared': resolve(__dirname, '../../packages/shared/src/index.ts'),
     },
   },
   server: {
     port: 5173,
     strictPort: true,
+    fs: {
+      allow: ['../..'],
+    },
   },
   build: {
     outDir: 'dist',

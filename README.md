@@ -27,10 +27,10 @@ Omniscribe provides a unified interface for managing multiple AI coding sessions
 │  │  │ Service     │ │ Service     │ │ Service      │  │    │
 │  │  │ (node-pty)  │ │             │ │              │  │    │
 │  │  └─────────────┘ └─────────────┘ └──────────────┘  │    │
-│  │  ┌─────────────┐ ┌─────────────┐ ┌──────────────┐  │    │
-│  │  │ MCP         │ │ Plugin      │ │ Workspace    │  │    │
-│  │  │ Service     │ │ Service     │ │ Service      │  │    │
-│  │  └─────────────┘ └─────────────┘ └──────────────┘  │    │
+│  │  ┌───────────────────────────┐ ┌──────────────┐  │    │
+│  │  │ MCP Service               │ │ Workspace    │  │    │
+│  │  │                           │ │ Service      │  │    │
+│  │  └───────────────────────────┘ └──────────────┘  │    │
 │  └─────────────────────────────────────────────────────┘    │
 │                            │ WebSocket / IPC                 │
 └────────────────────────────┼────────────────────────────────┘
@@ -40,10 +40,11 @@ Omniscribe provides a unified interface for managing multiple AI coding sessions
 │  ┌─────────────────────────────────────────────────────┐    │
 │  │                 React Frontend                       │    │
 │  │  ┌─────────────┐ ┌─────────────┐ ┌──────────────┐  │    │
-│  │  │ Terminal    │ │ Sidebar     │ │ Git Graph    │  │    │
-│  │  │ Grid        │ │             │ │ Panel        │  │    │
+│  │  │ Terminal    │ │ Settings    │ │ Shared       │  │    │
+│  │  │ Grid        │ │ Modal       │ │ Components   │  │    │
 │  │  └─────────────┘ └─────────────┘ └──────────────┘  │    │
-│  │  Zustand Stores: Session | Workspace | Git | MCP   │    │
+│  │  Zustand Stores: Session | Workspace | Git | MCP  │    │
+│  │                   Settings | QuickAction | Terminal│    │
 │  └─────────────────────────────────────────────────────┘    │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -56,7 +57,7 @@ Omniscribe provides a unified interface for managing multiple AI coding sessions
 | Backend Runtime | NestJS 10 (embedded in main process) |
 | Frontend Framework | React 18 |
 | Language | TypeScript 5.5+ |
-| Terminal Emulator | xterm.js 6.0 |
+| Terminal Emulator | xterm.js 5.5 |
 | PTY Library | node-pty |
 | State Management | Zustand 5.0 |
 | Styling | Tailwind CSS 3.4 |
@@ -79,13 +80,14 @@ omniscribe/
 │   │   │   │   └── workspace/
 │   │   │   └── preload/      # Electron preload scripts
 │   │   └── package.json
-│   └── web/                  # React frontend (renderer)
-│       ├── src/
-│       │   ├── components/
-│       │   ├── stores/
-│       │   ├── hooks/
-│       │   └── lib/
-│       └── package.json
+│   ├── web/                  # React frontend (renderer)
+│   │   ├── src/
+│   │   │   ├── components/
+│   │   │   ├── stores/
+│   │   │   ├── hooks/
+│   │   │   └── lib/
+│   │   └── package.json
+│   └── mcp-server/           # MCP server for Claude Code status
 ├── packages/
 │   └── shared/               # Shared types and utilities
 ├── docs/                     # Documentation
@@ -101,11 +103,14 @@ pnpm install
 # Development
 pnpm dev
 
-# Build
+# Build all packages
 pnpm build
 
-# Package for distribution
-pnpm package
+# Build only shared package (required before desktop build)
+pnpm build:packages
+
+# Package desktop app for distribution
+pnpm --filter @omniscribe/desktop package
 ```
 
 ## Documentation
@@ -114,6 +119,7 @@ pnpm package
 - [Tech Stack Decisions](./docs/TECH-STACK.md)
 - [Implementation Plan](./docs/IMPLEMENTATION-PLAN.md)
 - [API Specification](./docs/specs/API.md)
+- [Backend Services](./docs/specs/BACKEND-SERVICES.md)
 - [Frontend Components](./docs/specs/COMPONENTS.md)
 - [State Management](./docs/specs/STATE.md)
 - [MCP Integration](./docs/specs/MCP.md)
