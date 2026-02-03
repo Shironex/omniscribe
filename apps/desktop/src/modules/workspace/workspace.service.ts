@@ -18,6 +18,8 @@ interface ProjectTab {
   isActive: boolean;
   /** Last accessed timestamp */
   lastAccessedAt: string;
+  /** Per-project theme */
+  theme?: string;
 }
 
 /**
@@ -287,6 +289,18 @@ export class WorkspaceService implements OnModuleInit {
     }));
     this.setTabs(updatedTabs);
     this.setActiveTabId(tabId);
+    return updatedTabs;
+  }
+
+  /**
+   * Update a tab's theme
+   */
+  updateTabTheme(tabId: string, theme: string): ProjectTab[] {
+    const tabs = this.getTabs();
+    const updatedTabs = tabs.map((t) =>
+      t.id === tabId ? { ...t, theme } : t
+    );
+    this.setTabs(updatedTabs);
     return updatedTabs;
   }
 

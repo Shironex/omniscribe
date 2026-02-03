@@ -82,6 +82,7 @@ function App() {
   const openProject = useWorkspaceStore((state) => state.openProject);
   const closeWorkspaceTab = useWorkspaceStore((state) => state.closeTab);
   const selectWorkspaceTab = useWorkspaceStore((state) => state.selectTab);
+  const updateTabTheme = useWorkspaceStore((state) => state.updateTabTheme);
   const getActiveTab = useWorkspaceStore((state) => state.getActiveTab);
   const initWorkspaceListeners = useWorkspaceStore((state) => state.initListeners);
   const cleanupWorkspaceListeners = useWorkspaceStore((state) => state.cleanupListeners);
@@ -236,33 +237,56 @@ function App() {
   // Get workspace restored state
   const isWorkspaceRestored = useWorkspaceStore((state) => state.isRestored);
 
-  // Sync workspace theme preference with settings store (only on initial load after restore)
+  // Track the previous active tab ID for detecting tab switches
+  const prevActiveTabIdRef = useRef<string | null>(null);
+
+  // Initial theme sync: Apply the active tab's theme on first load
   useEffect(() => {
     // Only sync once after workspace state is restored from backend
     if (hasInitialThemeSyncRef.current || !isWorkspaceRestored) {
       return;
     }
 
-    const workspaceTheme = workspacePreferences.theme;
-    if (workspaceTheme) {
-      hasInitialThemeSyncRef.current = true;
-      if (workspaceTheme !== settingsTheme) {
-        setSettingsTheme(workspaceTheme as Theme);
-      }
+    const activeTab = getActiveTab();
+    // Use tab theme if available, otherwise fall back to workspace preference or default
+    const themeToApply = activeTab?.theme ?? workspacePreferences.theme ?? 'dark';
+    hasInitialThemeSyncRef.current = true;
+    if (themeToApply !== settingsTheme) {
+      setSettingsTheme(themeToApply as Theme);
     }
-  }, [workspacePreferences.theme, settingsTheme, setSettingsTheme, isWorkspaceRestored]);
+  }, [isWorkspaceRestored, getActiveTab, workspacePreferences.theme, settingsTheme, setSettingsTheme]);
 
-  // Sync settings theme changes back to workspace preferences
+  // Tab switch: Apply the active tab's theme when switching projects
+  useEffect(() => {
+    // Skip if not yet initialized
+    if (!hasInitialThemeSyncRef.current) {
+      return;
+    }
+
+    // Only trigger on actual tab switches
+    if (prevActiveTabIdRef.current === activeWorkspaceTabId) {
+      return;
+    }
+    prevActiveTabIdRef.current = activeWorkspaceTabId;
+
+    const activeTab = getActiveTab();
+    if (activeTab?.theme && activeTab.theme !== settingsTheme) {
+      setSettingsTheme(activeTab.theme);
+    }
+  }, [activeWorkspaceTabId, getActiveTab, settingsTheme, setSettingsTheme]);
+
+  // Settings change: When user changes theme in settings, update the active tab's theme
   useEffect(() => {
     // Skip initial sync - only persist user-initiated changes
     if (!hasInitialThemeSyncRef.current) {
       return;
     }
 
-    if (settingsTheme !== workspacePreferences.theme) {
-      updatePreference('theme', settingsTheme);
+    const activeTab = getActiveTab();
+    if (activeTab && settingsTheme !== activeTab.theme) {
+      updateTabTheme(activeTab.id, settingsTheme);
     }
-  }, [settingsTheme, workspacePreferences.theme, updatePreference]);
+  }, [settingsTheme, getActiveTab, updateTabTheme]);
 
   // Tab handlers
   const handleSelectTab = useCallback((tabId: string) => {

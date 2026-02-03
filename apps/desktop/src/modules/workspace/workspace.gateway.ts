@@ -22,6 +22,7 @@ interface ProjectTab {
   sessionIds: string[];
   isActive: boolean;
   lastAccessedAt: string;
+  theme?: string;
 }
 
 /**
@@ -41,6 +42,15 @@ interface AddTabPayload {
   id: string;
   projectPath: string;
   name: string;
+  theme?: string;
+}
+
+/**
+ * Payload for updating a tab's theme
+ */
+interface UpdateTabThemePayload {
+  tabId: string;
+  theme: string;
 }
 
 /**
@@ -295,6 +305,7 @@ export class WorkspaceGateway implements OnGatewayInit {
       sessionIds: [],
       isActive: true,
       lastAccessedAt: new Date().toISOString(),
+      theme: payload.theme,
     };
 
     const tabs = this.workspaceService.addTab(tab);
@@ -307,6 +318,27 @@ export class WorkspaceGateway implements OnGatewayInit {
     });
 
     return { success: true, tabs, activeTabId };
+  }
+
+  /**
+   * Handle update tab theme request
+   */
+  @SubscribeMessage('workspace:update-tab-theme')
+  handleUpdateTabTheme(
+    @MessageBody() payload: UpdateTabThemePayload,
+    @ConnectedSocket() client: Socket,
+  ): { success: boolean; tabs: ProjectTab[] } {
+    console.log(`[WorkspaceGateway] Updating tab theme: ${payload.tabId} -> ${payload.theme}`);
+
+    const tabs = this.workspaceService.updateTabTheme(payload.tabId, payload.theme);
+
+    // Broadcast tab update to all other clients
+    client.broadcast.emit('workspace:tabs-updated', {
+      tabs,
+      activeTabId: this.workspaceService.getActiveTabId(),
+    });
+
+    return { success: true, tabs };
   }
 
   /**
