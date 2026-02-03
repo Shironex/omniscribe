@@ -45,8 +45,16 @@ export function PreLaunchCard({
   const mcpRef = useRef<HTMLDivElement>(null);
 
   // Connect to MCP store for server selection
-  const mcpServers = useMcpStore(selectServers);
+  const allMcpServers = useMcpStore(selectServers);
   const enabledServers = useMcpStore((state) => state.enabledServers);
+
+  // Filter out internal omniscribe MCP - it's always included and cannot be disabled
+  const mcpServers = useMemo(() =>
+    allMcpServers.filter(
+      (server) => server.id !== 'omniscribe' && server.name !== 'omniscribe'
+    ),
+    [allMcpServers]
+  );
 
   // Connect to Git store for branches (fallback if not provided via props)
   const gitBranches = useGitStore(selectBranches);
@@ -74,7 +82,11 @@ export function PreLaunchCard({
   }, [branches.length, gitProjectPath, fetchBranches]);
 
   // Get selected MCP servers (default to enabled servers if not set)
-  const selectedMcpServers = slot.mcpServers ?? Array.from(enabledServers);
+  // Filter out internal omniscribe MCP from selection tracking
+  const selectedMcpServers = useMemo(() => {
+    const servers = slot.mcpServers ?? Array.from(enabledServers);
+    return servers.filter((id) => id !== 'omniscribe');
+  }, [slot.mcpServers, enabledServers]);
 
   // Close dropdowns when clicking outside
   useEffect(() => {

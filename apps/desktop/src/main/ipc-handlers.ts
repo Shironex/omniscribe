@@ -1,9 +1,15 @@
 import { BrowserWindow, ipcMain, dialog, app } from 'electron';
 import Store from 'electron-store';
-import { existsSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
+import { exec, execFile } from 'child_process';
+import { promisify } from 'util';
+import { homedir } from 'os';
+import type { ClaudeCliStatus } from '@omniscribe/shared';
 
 const store = new Store();
+const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 /**
  * Supported CLI tools to check for
@@ -22,6 +28,178 @@ async function checkCliAvailable(tool: CLITool): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+// ============================================
+// Claude CLI Detection Utilities
+// ============================================
+
+/**
+ * Normalize path separators
+ */
+function normalizePath(path: string): string {
+  return path.replace(/\\/g, '/');
+}
+
+/**
+ * Join paths and normalize
+ */
+function joinPaths(...paths: string[]): string {
+  return normalizePath(join(...paths));
+}
+
+/**
+ * Get Claude config directory (~/.claude)
+ */
+function getClaudeConfigDir(): string {
+  return joinPaths(homedir(), '.claude');
+}
+
+/**
+ * Get paths to Claude credential files
+ */
+function getClaudeCredentialPaths(): string[] {
+  const claudeDir = getClaudeConfigDir();
+  return [
+    joinPaths(claudeDir, '.credentials.json'),
+    joinPaths(claudeDir, 'credentials.json'),
+  ];
+}
+
+/**
+ * Get common Claude CLI installation paths (cross-platform)
+ */
+function getClaudeCliPaths(): string[] {
+  const home = normalizePath(homedir());
+  const isWindows = process.platform === 'win32';
+
+  if (isWindows) {
+    const appData = process.env['APPDATA'] || joinPaths(home, 'AppData/Roaming');
+    const localAppData = process.env['LOCALAPPDATA'] || joinPaths(home, 'AppData/Local');
+    return [
+      joinPaths(home, '.local/bin/claude.exe'),
+      joinPaths(appData, 'npm/claude.cmd'),
+      joinPaths(appData, 'npm/claude'),
+      joinPaths(localAppData, 'Programs/claude/claude.exe'),
+    ];
+  }
+
+  // Unix (macOS/Linux)
+  return [
+    joinPaths(home, '.local/bin/claude'),
+    '/usr/local/bin/claude',
+    joinPaths(home, '.npm-global/bin/claude'),
+  ];
+}
+
+interface CliDetectionResult {
+  cliPath?: string;
+  method: 'path' | 'local' | 'none';
+}
+
+/**
+ * Find Claude CLI installation
+ */
+async function findClaudeCli(): Promise<CliDetectionResult> {
+  const platform = process.platform;
+
+  // Try to find CLI in PATH first
+  try {
+    const command = platform === 'win32' ? 'where claude' : 'which claude';
+    const { stdout } = await execAsync(command);
+    // Take first line (Windows 'where' may return multiple results)
+    const firstPath = stdout.trim().split('\n')[0]?.trim();
+    if (firstPath) {
+      return { cliPath: firstPath, method: 'path' };
+    }
+  } catch {
+    // Not in PATH, fall through to check common locations
+  }
+
+  // Check common installation locations
+  const localPaths = getClaudeCliPaths();
+  for (const localPath of localPaths) {
+    if (existsSync(localPath)) {
+      return { cliPath: localPath, method: 'local' };
+    }
+  }
+
+  return { method: 'none' };
+}
+
+/**
+ * Get Claude CLI version
+ */
+async function getClaudeCliVersion(cliPath: string): Promise<string | undefined> {
+  try {
+    const { stdout } = await execFileAsync(cliPath, ['--version']);
+    return stdout.trim();
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Check Claude CLI authentication status
+ */
+async function checkClaudeAuth(): Promise<{ authenticated: boolean }> {
+  const credentialPaths = getClaudeCredentialPaths();
+
+  for (const credPath of credentialPaths) {
+    if (!existsSync(credPath)) {
+      continue;
+    }
+
+    try {
+      const content = readFileSync(credPath, 'utf-8');
+      const credentials: unknown = JSON.parse(content);
+
+      // Validate that credentials is an object
+      if (typeof credentials !== 'object' || credentials === null) {
+        continue;
+      }
+
+      const creds = credentials as Record<string, unknown>;
+
+      // Check for OAuth token in various locations
+      const claudeAiOauth = creds['claudeAiOauth'] as Record<string, unknown> | undefined;
+      const hasToken =
+        (typeof claudeAiOauth?.['accessToken'] === 'string' &&
+          claudeAiOauth['accessToken'].length > 0) ||
+        (typeof creds['oauth_token'] === 'string' && creds['oauth_token'].length > 0) ||
+        (typeof creds['accessToken'] === 'string' && creds['accessToken'].length > 0);
+
+      if (hasToken) {
+        return { authenticated: true };
+      }
+    } catch {
+      // Failed to read credentials
+    }
+  }
+
+  return { authenticated: false };
+}
+
+/**
+ * Get full Claude CLI status
+ */
+async function getClaudeCliStatus(): Promise<ClaudeCliStatus> {
+  const platform = process.platform;
+  const arch = process.arch;
+
+  const { cliPath, method } = await findClaudeCli();
+  const version = cliPath ? await getClaudeCliVersion(cliPath) : undefined;
+  const auth = await checkClaudeAuth();
+
+  return {
+    installed: !!cliPath,
+    path: cliPath,
+    version,
+    method: method === 'none' ? undefined : method,
+    platform,
+    arch,
+    auth,
+  };
 }
 
 /**
@@ -157,6 +335,14 @@ export function registerIpcHandlers(mainWindow: BrowserWindow): void {
       reason: hasIndicator ? undefined : 'No recognized project files found',
     };
   });
+
+  // ============================================
+  // Claude CLI Handlers
+  // ============================================
+
+  ipcMain.handle('claude:get-status', async () => {
+    return getClaudeCliStatus();
+  });
 }
 
 /**
@@ -185,4 +371,7 @@ export function cleanupIpcHandlers(): void {
   ipcMain.removeHandler('app:get-version');
   ipcMain.removeHandler('app:check-cli');
   ipcMain.removeHandler('app:is-valid-project');
+
+  // Claude handlers
+  ipcMain.removeHandler('claude:get-status');
 }

@@ -5,7 +5,6 @@ import {
   GitBranch,
   FileText,
   Layers,
-  Server,
   Zap,
   Settings,
   GripVertical,
@@ -14,7 +13,6 @@ import {
 } from 'lucide-react';
 import { GitSection } from './GitSection';
 import { SessionsSection } from './SessionsSection';
-import { McpSection } from './McpSection';
 import { QuickActionsSection } from './QuickActionsSection';
 import { useSessionStore, useTerminalControlStore, useSettingsStore } from '../../stores';
 import { writeToTerminal } from '../../lib/terminal';
@@ -239,11 +237,6 @@ export function Sidebar({
                 onSessionClick={handleSessionClick}
                 onNewSession={handleNewSession}
               />
-            </CollapsibleSection>
-
-            {/* MCP Servers Section */}
-            <CollapsibleSection icon={Server} title="MCP Servers">
-              <McpSection />
             </CollapsibleSection>
 
             {/* Quick Actions Section */}

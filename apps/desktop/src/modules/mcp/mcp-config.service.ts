@@ -129,47 +129,30 @@ export class McpConfigService {
 
   /**
    * Write MCP configuration file for a session
-   * Merges omniscribe server into existing config, preserving user's other MCP servers
+   * IMPORTANT: Only includes servers that are explicitly enabled for this session
+   * This ensures that disabling a server in the UI actually prevents it from being used
    * @param workingDir Directory to write the config to
    * @param sessionId Session identifier
    * @param projectPath Original project path
-   * @param servers Array of enabled MCP server configurations
+   * @param enabledServers Array of enabled MCP server configurations (only these will be included)
    * @returns Path to the written config file
    */
   async writeConfig(
     workingDir: string,
     sessionId: string,
     projectPath: string,
-    servers: McpServerConfig[]
+    enabledServers: McpServerConfig[]
   ): Promise<string> {
     const projectHash = this.generateProjectHash(projectPath);
     const configFileName = `.mcp.json`;
     const configPath = path.join(workingDir, configFileName);
 
-    // Read existing config if it exists (preserve user's MCP servers)
-    let existingConfig: Record<string, unknown> = {};
-    let existingMcpServers: Record<string, unknown> = {};
+    // Start with empty server list - we only include what's explicitly enabled
+    // This is critical for proper MCP enable/disable functionality
+    const mcpServers: Record<string, McpWrittenServerEntry> = {};
 
-    try {
-      if (fs.existsSync(configPath)) {
-        const content = await fs.promises.readFile(configPath, 'utf-8');
-        existingConfig = JSON.parse(content);
-        existingMcpServers = (existingConfig.mcpServers as Record<string, unknown>) ?? {};
-        console.log(
-          `[McpConfigService] Found existing .mcp.json with ${Object.keys(existingMcpServers).length} servers`
-        );
-      }
-    } catch (error) {
-      console.warn(`[McpConfigService] Could not read existing config:`, error);
-    }
-
-    // Start with existing servers
-    const mcpServers: Record<string, McpWrittenServerEntry> = {
-      ...(existingMcpServers as Record<string, McpWrittenServerEntry>),
-    };
-
-    // Add/update internal MCP server (always included if available)
-    // Session-specific env vars are now included directly in the MCP config
+    // Add internal MCP server (always included if available - cannot be disabled)
+    // Session-specific env vars are included directly in the MCP config
     // since they're read by Claude Code when it spawns the MCP server process.
     // This enables HTTP-based status reporting to the desktop app.
     if (this.internalMcpPath) {
@@ -193,9 +176,11 @@ export class McpConfigService {
       };
     }
 
-    // Build server entries for additional enabled servers
-    for (const server of servers) {
-      if (!server.enabled) {
+    // Build server entries ONLY for explicitly enabled servers
+    // Servers not in this list will NOT be available to Claude
+    for (const server of enabledServers) {
+      // Skip the internal omniscribe server - it's handled above
+      if (server.id === 'omniscribe' || server.name === 'omniscribe') {
         continue;
       }
 
@@ -222,9 +207,8 @@ export class McpConfigService {
       mcpServers[server.id] = entry;
     }
 
-    // Build final config - preserve any other top-level fields from existing config
+    // Build final config
     const config = {
-      ...existingConfig,
       mcpServers,
       _omniscribe: {
         sessionId,
@@ -243,7 +227,7 @@ export class McpConfigService {
 
     const serverCount = Object.keys(mcpServers).length;
     console.log(
-      `[McpConfigService] Wrote MCP config to ${configPath} with ${serverCount} servers (internal: ${!!this.internalMcpPath})`
+      `[McpConfigService] Wrote MCP config to ${configPath} with ${serverCount} servers (internal: ${!!this.internalMcpPath}, external: ${enabledServers.length})`
     );
 
     // Also track the config in our central location

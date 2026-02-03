@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
+import type { ClaudeCliStatus } from '@omniscribe/shared';
 
 export interface ElectronAPI {
   window: {
@@ -30,6 +31,9 @@ export interface ElectronAPI {
     getVersion: () => Promise<string>;
     checkCli: (tool: string) => Promise<boolean>;
     isValidProject: (projectPath: string) => Promise<{ valid: boolean; reason?: string }>;
+  };
+  claude: {
+    getStatus: () => Promise<ClaudeCliStatus>;
   };
   platform: NodeJS.Platform;
 }
@@ -66,6 +70,9 @@ const electronAPI: ElectronAPI = {
     getVersion: () => ipcRenderer.invoke('app:get-version'),
     checkCli: (tool: string) => ipcRenderer.invoke('app:check-cli', tool),
     isValidProject: (projectPath: string) => ipcRenderer.invoke('app:is-valid-project', projectPath),
+  },
+  claude: {
+    getStatus: () => ipcRenderer.invoke('claude:get-status') as Promise<ClaudeCliStatus>,
   },
   platform: process.platform,
 };

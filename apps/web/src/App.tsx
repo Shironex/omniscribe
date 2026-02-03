@@ -106,9 +106,6 @@ function App() {
   const sidebarOpen = workspacePreferences.sidebarOpen ?? true;
   const sidebarWidth = workspacePreferences.sidebarWidth ?? 240;
 
-  // Use settings store theme (synced with workspace preferences below)
-  const theme = settingsTheme;
-
   // Track previous project path for change detection
   const prevProjectPathRef = useRef<string | null>(null);
 
