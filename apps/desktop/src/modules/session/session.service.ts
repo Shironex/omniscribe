@@ -304,34 +304,18 @@ export class SessionService {
     this.updateStatus(sessionId, 'connecting', 'Starting AI session...');
 
     try {
-      // Get the list of enabled MCP servers for this session
-      // If session.mcpServers is undefined/empty, we only include the internal omniscribe MCP
-      let enabledServers: Awaited<ReturnType<typeof this.mcpService.discoverServers>> = [];
+      // Discover all available MCP servers for this project
+      const allServers = await this.mcpService.discoverServers(projectPath);
+      this.logger.log(
+        `Discovered ${allServers.length} MCP servers for session ${sessionId}`
+      );
 
-      if (session.mcpServers && session.mcpServers.length > 0) {
-        // Discover all available servers for this project
-        const allServers = await this.mcpService.discoverServers(projectPath);
-
-        // Filter to only include servers that the user enabled for this session
-        // The internal 'omniscribe' server is always added by writeConfig, so we exclude it here
-        const enabledServerIds = new Set(session.mcpServers);
-        enabledServers = allServers.filter(
-          (server) => enabledServerIds.has(server.id) && server.id !== 'omniscribe'
-        );
-
-        this.logger.log(
-          `Session ${sessionId} has ${enabledServers.length} enabled MCP servers: ${enabledServers.map(s => s.id).join(', ')}`
-        );
-      }
-
-      // Write MCP config to the working directory before launching
-      // IMPORTANT: Only enabled servers will be included in the config
-      // This ensures that disabling a server in the UI actually prevents Claude from using it
+      // Write MCP config with all discovered servers
       await this.mcpConfigService.writeConfig(
         worktreePath,
         sessionId,
         projectPath,
-        enabledServers // Only pass the user-enabled servers (omniscribe is always added internally)
+        allServers
       );
 
       this.logger.log(`MCP config written to ${worktreePath}/.mcp.json`);

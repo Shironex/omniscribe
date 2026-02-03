@@ -42,8 +42,6 @@ interface McpState {
   servers: McpServerConfig[];
   /** Server states (keyed by server ID) */
   serverStates: Map<string, McpServerState>;
-  /** Enabled server IDs */
-  enabledServers: Set<string>;
   /** Whether server discovery is in progress */
   isDiscovering: boolean;
   /** Error message */
@@ -60,10 +58,6 @@ interface McpState {
 interface McpActions {
   /** Discover available MCP servers */
   discoverServers: (projectPath?: string) => void;
-  /** Set server enabled/disabled */
-  setEnabled: (serverId: string, enabled: boolean) => void;
-  /** Get enabled servers for a session */
-  getEnabledForSession: () => McpServerConfig[];
   /** Set servers list */
   setServers: (servers: McpServerConfig[]) => void;
   /** Update server state */
@@ -78,10 +72,6 @@ interface McpActions {
   initListeners: () => void;
   /** Clean up socket listeners */
   cleanupListeners: () => void;
-  /** Connect to a server */
-  connectServer: (serverId: string) => void;
-  /** Disconnect from a server */
-  disconnectServer: (serverId: string) => void;
   /** Clear store state */
   clear: () => void;
   /** Fetch internal MCP status */
@@ -100,7 +90,6 @@ export const useMcpStore = create<McpStore>((set, get) => ({
   // Initial state
   servers: [],
   serverStates: new Map(),
-  enabledServers: new Set(),
   isDiscovering: false,
   error: null,
   listenersInitialized: false,
@@ -110,44 +99,12 @@ export const useMcpStore = create<McpStore>((set, get) => ({
   discoverServers: (projectPath?: string) => {
     set({ isDiscovering: true, error: null });
     socket.emit('mcp:discover', { projectPath }, (response: { servers: McpServerConfig[]; error?: string }) => {
-      // Backend returns { servers, error? } - no success field
-      // Check for error first, then check if we have servers
       if (response.error) {
         set({ error: response.error, isDiscovering: false });
       } else {
-        // Update servers list (may be empty array, which is valid)
         set({ servers: response.servers ?? [], isDiscovering: false, error: null });
-
-        // Initialize enabled set with servers that have enabled: true
-        const enabledSet = new Set<string>();
-        for (const server of response.servers ?? []) {
-          if (server.enabled) {
-            enabledSet.add(server.id);
-          }
-        }
-        set({ enabledServers: enabledSet });
       }
     });
-  },
-
-  setEnabled: (serverId: string, enabled: boolean) => {
-    set((state) => {
-      const newEnabledServers = new Set(state.enabledServers);
-      if (enabled) {
-        newEnabledServers.add(serverId);
-      } else {
-        newEnabledServers.delete(serverId);
-      }
-      return { enabledServers: newEnabledServers };
-    });
-
-    // Notify backend of the change
-    socket.emit('mcp:set-enabled', { serverId, enabled });
-  },
-
-  getEnabledForSession: () => {
-    const { servers, enabledServers } = get();
-    return servers.filter((server) => enabledServers.has(server.id));
   },
 
   setServers: (servers: McpServerConfig[]) => {
@@ -187,22 +144,6 @@ export const useMcpStore = create<McpStore>((set, get) => ({
     set({ error });
   },
 
-  connectServer: (serverId: string) => {
-    socket.emit('mcp:connect', { serverId }, (response: { success: boolean; error?: string }) => {
-      if (!response.success && response.error) {
-        get().setError(response.error);
-      }
-    });
-  },
-
-  disconnectServer: (serverId: string) => {
-    socket.emit('mcp:disconnect', { serverId }, (response: { success: boolean; error?: string }) => {
-      if (!response.success && response.error) {
-        get().setError(response.error);
-      }
-    });
-  },
-
   initListeners: () => {
     const state = get();
 
@@ -216,15 +157,6 @@ export const useMcpStore = create<McpStore>((set, get) => ({
     // Handle server discovery results
     socket.on('mcp:servers:discovered', (result: McpDiscoveryResult) => {
       setServers(result.servers);
-
-      // Update enabled set
-      const enabledSet = new Set<string>();
-      for (const server of result.servers) {
-        if (server.enabled) {
-          enabledSet.add(server.id);
-        }
-      }
-      set({ enabledServers: enabledSet });
     });
 
     // Handle server status updates
@@ -263,7 +195,6 @@ export const useMcpStore = create<McpStore>((set, get) => ({
     set({
       servers: [],
       serverStates: new Map(),
-      enabledServers: new Set(),
       isDiscovering: false,
       error: null,
     });
@@ -282,18 +213,6 @@ export const useMcpStore = create<McpStore>((set, get) => ({
  * Select all servers
  */
 export const selectServers = (state: McpStore) => state.servers;
-
-/**
- * Select enabled servers
- */
-export const selectEnabledServers = (state: McpStore) =>
-  state.servers.filter((server) => state.enabledServers.has(server.id));
-
-/**
- * Select disabled servers
- */
-export const selectDisabledServers = (state: McpStore) =>
-  state.servers.filter((server) => !state.enabledServers.has(server.id));
 
 /**
  * Select server by ID

@@ -3,7 +3,6 @@ import { TerminalGrid } from './TerminalGrid';
 import { useSessionStore } from '../../stores/useSessionStore';
 import { useWorkspaceStore, selectActiveTab } from '../../stores/useWorkspaceStore';
 import { useGitStore, selectBranches, selectCurrentBranch } from '../../stores/useGitStore';
-import { useMcpStore, selectEnabledServers } from '../../stores/useMcpStore';
 import { useTerminalControlStore } from '../../stores/useTerminalControlStore';
 import { createSession, removeSession } from '../../lib/session';
 import { killTerminal } from '../../lib/terminal';
@@ -11,13 +10,6 @@ import type { TerminalSession, AIMode } from './TerminalHeader';
 import type { PreLaunchSlot } from './PreLaunchCard';
 import type { Branch } from '../shared/BranchSelector';
 import { mapSessionStatus, type AiMode } from '@omniscribe/shared';
-
-/**
- * Extended PreLaunchSlot with MCP server IDs
- */
-export interface ExtendedPreLaunchSlot extends PreLaunchSlot {
-  mcpServers?: string[];
-}
 
 /**
  * Maps UI AIMode to backend AiMode
@@ -62,11 +54,11 @@ interface ConnectedTerminalGridProps {
 
 /**
  * ConnectedTerminalGrid - A container component that wires up TerminalGrid
- * to all the necessary stores (Session, Workspace, Git, MCP)
+ * to all the necessary stores (Session, Workspace, Git)
  */
 export function ConnectedTerminalGrid({ className }: ConnectedTerminalGridProps) {
   // Local state for pre-launch slots
-  const [preLaunchSlots, setPreLaunchSlots] = useState<ExtendedPreLaunchSlot[]>([]);
+  const [preLaunchSlots, setPreLaunchSlots] = useState<PreLaunchSlot[]>([]);
 
   // Shared terminal control store for focus state
   const focusedSessionId = useTerminalControlStore((state) => state.focusedSessionId);
@@ -92,12 +84,6 @@ export function ConnectedTerminalGrid({ className }: ConnectedTerminalGridProps)
   const initGitListeners = useGitStore((state) => state.initListeners);
   const cleanupGitListeners = useGitStore((state) => state.cleanupListeners);
 
-  // MCP store
-  const enabledMcpServers = useMcpStore(selectEnabledServers);
-  const discoverServers = useMcpStore((state) => state.discoverServers);
-  const initMcpListeners = useMcpStore((state) => state.initListeners);
-  const cleanupMcpListeners = useMcpStore((state) => state.cleanupListeners);
-
   // Current branch name
   const currentBranch = currentGitBranch?.name ?? 'main';
 
@@ -105,22 +91,16 @@ export function ConnectedTerminalGrid({ className }: ConnectedTerminalGridProps)
   useEffect(() => {
     initSessionListeners();
     initGitListeners();
-    initMcpListeners();
-    discoverServers();
 
     return () => {
       cleanupSessionListeners();
       cleanupGitListeners();
-      cleanupMcpListeners();
     };
   }, [
     initSessionListeners,
     cleanupSessionListeners,
     initGitListeners,
     cleanupGitListeners,
-    initMcpListeners,
-    cleanupMcpListeners,
-    discoverServers,
   ]);
 
   // Fetch git data when active project changes
@@ -134,19 +114,15 @@ export function ConnectedTerminalGrid({ className }: ConnectedTerminalGridProps)
   // Listen for add slot requests from sidebar (via shared store)
   useEffect(() => {
     if (addSlotRequestCounter > prevAddSlotRequestRef.current) {
-      // Get enabled MCP server IDs
-      const enabledServerIds = enabledMcpServers.map((s) => s.id);
-
-      const newSlot: ExtendedPreLaunchSlot = {
+      const newSlot: PreLaunchSlot = {
         id: `slot-${Date.now()}`,
         aiMode: 'claude',
         branch: currentBranch,
-        mcpServers: enabledServerIds,
       };
       setPreLaunchSlots((prev) => [...prev, newSlot]);
     }
     prevAddSlotRequestRef.current = addSlotRequestCounter;
-  }, [addSlotRequestCounter, currentBranch, enabledMcpServers]);
+  }, [addSlotRequestCounter, currentBranch]);
 
   // Filter sessions for the active project
   const activeProjectSessions = useMemo(() => {
@@ -178,17 +154,13 @@ export function ConnectedTerminalGrid({ className }: ConnectedTerminalGridProps)
 
   // Add session (pre-launch slot) handler
   const handleAddSlot = useCallback(() => {
-    // Get enabled MCP server IDs
-    const enabledServerIds = enabledMcpServers.map((s) => s.id);
-
-    const newSlot: ExtendedPreLaunchSlot = {
+    const newSlot: PreLaunchSlot = {
       id: `slot-${Date.now()}`,
       aiMode: 'claude',
       branch: currentBranch,
-      mcpServers: enabledServerIds,
     };
     setPreLaunchSlots((prev) => [...prev, newSlot]);
-  }, [currentBranch, enabledMcpServers]);
+  }, [currentBranch]);
 
   // Remove pre-launch slot handler
   const handleRemoveSlot = useCallback((slotId: string) => {
@@ -197,7 +169,7 @@ export function ConnectedTerminalGrid({ className }: ConnectedTerminalGridProps)
 
   // Update pre-launch slot handler
   const handleUpdateSlot = useCallback(
-    (slotId: string, updates: Partial<Pick<PreLaunchSlot, 'aiMode' | 'branch' | 'mcpServers'>>) => {
+    (slotId: string, updates: Partial<Pick<PreLaunchSlot, 'aiMode' | 'branch'>>) => {
       setPreLaunchSlots((prev) =>
         prev.map((slot) => (slot.id === slotId ? { ...slot, ...updates } : slot))
       );
@@ -219,9 +191,7 @@ export function ConnectedTerminalGrid({ className }: ConnectedTerminalGridProps)
       try {
         // Create the session via socket
         const backendAiMode = mapAiModeToBackend(slot.aiMode);
-        const session = await createSession(backendAiMode, activeProjectPath, slot.branch, {
-          mcpServers: slot.mcpServers,
-        });
+        const session = await createSession(backendAiMode, activeProjectPath, slot.branch);
 
         // The session:created event arrives before terminalSessionId is set,
         // so we update the store with the complete session from the response
@@ -259,20 +229,12 @@ export function ConnectedTerminalGrid({ className }: ConnectedTerminalGridProps)
   // Focus session handler
   const handleFocusSession = useCallback((sessionId: string) => {
     setFocusedSessionId(sessionId);
-  }, []);
-
-  // Convert extended slots to base PreLaunchSlot for TerminalGrid
-  const basePreLaunchSlots: PreLaunchSlot[] = preLaunchSlots.map(({ id, aiMode, branch, mcpServers }) => ({
-    id,
-    aiMode,
-    branch,
-    mcpServers,
-  }));
+  }, [setFocusedSessionId]);
 
   return (
     <TerminalGrid
       sessions={terminalSessions}
-      preLaunchSlots={basePreLaunchSlots}
+      preLaunchSlots={preLaunchSlots}
       branches={branches}
       focusedSessionId={focusedSessionId}
       onFocusSession={handleFocusSession}

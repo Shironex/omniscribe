@@ -1,21 +1,24 @@
-import { useCallback, useMemo } from 'react';
-import { Server, CheckCircle2, RefreshCw, Loader2, Power, PowerOff } from 'lucide-react';
+import { useCallback, useMemo, useEffect } from 'react';
+import { Server, CheckCircle2, RefreshCw, Loader2 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useMcpStore, useWorkspaceStore, selectActiveTab, selectInternalMcp } from '../../../stores';
 
 export function McpSection() {
   const servers = useMcpStore((state) => state.servers);
   const serverStates = useMcpStore((state) => state.serverStates);
-  const enabledServers = useMcpStore((state) => state.enabledServers);
   const isLoading = useMcpStore((state) => state.isDiscovering);
   const discoverServers = useMcpStore((state) => state.discoverServers);
-  const connectServer = useMcpStore((state) => state.connectServer);
-  const disconnectServer = useMcpStore((state) => state.disconnectServer);
-  const setEnabled = useMcpStore((state) => state.setEnabled);
   const internalMcp = useMcpStore(selectInternalMcp);
 
   // Get active project path for refresh
   const activeTab = useWorkspaceStore(selectActiveTab);
+
+  // Auto-fetch servers when component mounts or project changes
+  useEffect(() => {
+    if (activeTab?.projectPath) {
+      discoverServers(activeTab.projectPath);
+    }
+  }, [activeTab?.projectPath, discoverServers]);
 
   // Count connected servers from serverStates map
   const connectedCount = useMemo(() => {
@@ -27,17 +30,6 @@ export function McpSection() {
   const handleRefresh = useCallback(() => {
     discoverServers(activeTab?.projectPath);
   }, [discoverServers, activeTab?.projectPath]);
-
-  const handleToggle = useCallback((serverId: string, currentlyEnabled: boolean) => {
-    setEnabled(serverId, !currentlyEnabled);
-
-    // If enabling, also connect
-    if (!currentlyEnabled) {
-      connectServer(serverId);
-    } else {
-      disconnectServer(serverId);
-    }
-  }, [setEnabled, connectServer, disconnectServer]);
 
   return (
     <div className="space-y-6">
@@ -159,12 +151,8 @@ export function McpSection() {
           <div className="space-y-2">
             {servers.map((server) => {
               const serverState = serverStates.get(server.id);
-              const isEnabled = enabledServers.has(server.id);
-              // Only show actual status if we have state, otherwise show ready/disabled
               const hasActiveState = serverState?.status && serverState.status !== 'disconnected';
-              const status = hasActiveState
-                ? serverState.status
-                : (isEnabled ? 'ready' : 'disabled');
+              const status = hasActiveState ? serverState.status : 'ready';
               const toolCount = serverState?.tools?.length;
 
               // Status display config
@@ -174,19 +162,15 @@ export function McpSection() {
                 disconnected: { color: 'bg-muted-foreground', label: 'Idle' },
                 error: { color: 'bg-status-error', label: 'Error' },
                 ready: { color: 'bg-primary', label: 'Ready' },
-                disabled: { color: 'bg-muted-foreground', label: 'Disabled' },
               }[status] ?? { color: 'bg-muted-foreground', label: status };
 
-              // Check if this is the internal omniscribe MCP (cannot be disabled)
+              // Check if this is the internal omniscribe MCP
               const isInternalMcp = server.id === 'omniscribe' || server.name === 'omniscribe';
 
               return (
                 <div
                   key={server.id}
-                  className={clsx(
-                    'rounded-lg border border-border/50 bg-card/30 p-3',
-                    !isEnabled && !isInternalMcp && 'opacity-60'
-                  )}
+                  className="rounded-lg border border-border/50 bg-card/30 p-3"
                 >
                   <div className="flex items-center gap-3">
                     <div
@@ -214,26 +198,9 @@ export function McpSection() {
                         </div>
                       )}
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-muted-foreground">
-                        {statusConfig.label}
-                      </span>
-                      {!isInternalMcp && (
-                        <button
-                          onClick={() => handleToggle(server.id, isEnabled)}
-                          className={clsx(
-                            'p-1.5 rounded-lg transition-colors',
-                            'hover:bg-muted',
-                            isEnabled
-                              ? 'text-status-success hover:text-status-error'
-                              : 'text-muted-foreground hover:text-status-success'
-                          )}
-                          title={isEnabled ? 'Disable server' : 'Enable server'}
-                        >
-                          {isEnabled ? <Power className="w-4 h-4" /> : <PowerOff className="w-4 h-4" />}
-                        </button>
-                      )}
-                    </div>
+                    <span className="text-xs text-muted-foreground">
+                      {statusConfig.label}
+                    </span>
                   </div>
                 </div>
               );

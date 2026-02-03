@@ -14,6 +14,7 @@ import { useSessionStore } from './stores/useSessionStore';
 import { useWorkspaceStore } from './stores/useWorkspaceStore';
 import { useGitStore } from './stores/useGitStore';
 import { useSettingsStore } from './stores/useSettingsStore';
+import { useMcpStore } from './stores/useMcpStore';
 import { connectSocket } from './lib/socket';
 import { createSession, removeSession } from './lib/session';
 import { killTerminal } from './lib/terminal';
@@ -97,6 +98,12 @@ function App() {
   const cleanupGitListeners = useGitStore((state) => state.cleanupListeners);
   const fetchBranches = useGitStore((state) => state.fetchBranches);
   const clearGitState = useGitStore((state) => state.clear);
+
+  // MCP store
+  const discoverMcpServers = useMcpStore((state) => state.discoverServers);
+  const fetchInternalMcpStatus = useMcpStore((state) => state.fetchInternalMcpStatus);
+  const initMcpListeners = useMcpStore((state) => state.initListeners);
+  const cleanupMcpListeners = useMcpStore((state) => state.cleanupListeners);
 
   // Get active project path
   const activeTab = getActiveTab();
@@ -190,6 +197,9 @@ function App() {
         initSessionListeners();
         initGitListeners();
         initWorkspaceListeners();
+        initMcpListeners();
+        // Fetch internal MCP status on app start
+        fetchInternalMcpStatus();
       } catch (error) {
         console.error('Failed to initialize:', error);
       }
@@ -201,8 +211,9 @@ function App() {
       cleanupSessionListeners();
       cleanupGitListeners();
       cleanupWorkspaceListeners();
+      cleanupMcpListeners();
     };
-  }, [initSessionListeners, cleanupSessionListeners, initGitListeners, cleanupGitListeners, initWorkspaceListeners, cleanupWorkspaceListeners]);
+  }, [initSessionListeners, cleanupSessionListeners, initGitListeners, cleanupGitListeners, initWorkspaceListeners, cleanupWorkspaceListeners, initMcpListeners, cleanupMcpListeners, fetchInternalMcpStatus]);
 
   // Fetch git data when active project changes
   useEffect(() => {
@@ -216,9 +227,11 @@ function App() {
       if (activeProjectPath) {
         // Fetch fresh data for the new project
         fetchBranches(activeProjectPath);
+        // Also discover MCP servers for the project
+        discoverMcpServers(activeProjectPath);
       }
     }
-  }, [activeProjectPath, clearGitState, fetchBranches]);
+  }, [activeProjectPath, clearGitState, fetchBranches, discoverMcpServers]);
 
   // Get workspace restored state
   const isWorkspaceRestored = useWorkspaceStore((state) => state.isRestored);
@@ -325,7 +338,7 @@ function App() {
 
   // Update pre-launch slot handler
   const handleUpdateSlot = useCallback(
-    (slotId: string, updates: Partial<Pick<PreLaunchSlot, 'aiMode' | 'branch' | 'mcpServers'>>) => {
+    (slotId: string, updates: Partial<Pick<PreLaunchSlot, 'aiMode' | 'branch'>>) => {
       setPreLaunchSlots((prev) =>
         prev.map((slot) => (slot.id === slotId ? { ...slot, ...updates } : slot))
       );
@@ -367,9 +380,7 @@ function App() {
       try {
         // Create the session via socket (map UI aiMode to backend AiMode)
         const backendAiMode = mapAiModeToBackend(slot.aiMode);
-        const session = await createSession(backendAiMode, activeProjectPath, slot.branch, {
-          mcpServers: slot.mcpServers,
-        });
+        const session = await createSession(backendAiMode, activeProjectPath, slot.branch);
 
         // The session:created event arrives before terminalSessionId is set,
         // so we update the store with the complete session from the response

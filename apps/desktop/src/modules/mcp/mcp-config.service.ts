@@ -129,32 +129,26 @@ export class McpConfigService {
 
   /**
    * Write MCP configuration file for a session
-   * IMPORTANT: Only includes servers that are explicitly enabled for this session
-   * This ensures that disabling a server in the UI actually prevents it from being used
+   * All discovered servers are included - no enable/disable filtering
    * @param workingDir Directory to write the config to
    * @param sessionId Session identifier
    * @param projectPath Original project path
-   * @param enabledServers Array of enabled MCP server configurations (only these will be included)
+   * @param servers Array of MCP server configurations to include
    * @returns Path to the written config file
    */
   async writeConfig(
     workingDir: string,
     sessionId: string,
     projectPath: string,
-    enabledServers: McpServerConfig[]
+    servers: McpServerConfig[]
   ): Promise<string> {
     const projectHash = this.generateProjectHash(projectPath);
     const configFileName = `.mcp.json`;
     const configPath = path.join(workingDir, configFileName);
 
-    // Start with empty server list - we only include what's explicitly enabled
-    // This is critical for proper MCP enable/disable functionality
     const mcpServers: Record<string, McpWrittenServerEntry> = {};
 
-    // Add internal MCP server (always included if available - cannot be disabled)
-    // Session-specific env vars are included directly in the MCP config
-    // since they're read by Claude Code when it spawns the MCP server process.
-    // This enables HTTP-based status reporting to the desktop app.
+    // Add internal MCP server (always included if available)
     if (this.internalMcpPath) {
       const statusUrl = this.statusServer.getStatusUrl();
       const instanceId = this.statusServer.getInstanceId();
@@ -167,7 +161,6 @@ export class McpConfigService {
         command: 'node',
         args: [this.internalMcpPath],
         env: {
-          // Session-specific env vars for HTTP status reporting
           OMNISCRIBE_SESSION_ID: sessionId,
           OMNISCRIBE_PROJECT_HASH: projectHash,
           ...(statusUrl ? { OMNISCRIBE_STATUS_URL: statusUrl } : {}),
@@ -176,9 +169,8 @@ export class McpConfigService {
       };
     }
 
-    // Build server entries ONLY for explicitly enabled servers
-    // Servers not in this list will NOT be available to Claude
-    for (const server of enabledServers) {
+    // Build server entries for all discovered servers
+    for (const server of servers) {
       // Skip the internal omniscribe server - it's handled above
       if (server.id === 'omniscribe' || server.name === 'omniscribe') {
         continue;
@@ -227,7 +219,7 @@ export class McpConfigService {
 
     const serverCount = Object.keys(mcpServers).length;
     console.log(
-      `[McpConfigService] Wrote MCP config to ${configPath} with ${serverCount} servers (internal: ${!!this.internalMcpPath}, external: ${enabledServers.length})`
+      `[McpConfigService] Wrote MCP config to ${configPath} with ${serverCount} servers (internal: ${!!this.internalMcpPath}, external: ${servers.length})`
     );
 
     // Also track the config in our central location

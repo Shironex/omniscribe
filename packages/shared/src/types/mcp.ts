@@ -10,8 +10,7 @@ export type McpServerStatus =
   | 'disconnected'
   | 'connecting'
   | 'connected'
-  | 'error'
-  | 'disabled';
+  | 'error';
 
 /**
  * MCP server configuration
