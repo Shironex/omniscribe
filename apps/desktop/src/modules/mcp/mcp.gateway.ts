@@ -10,7 +10,7 @@ import { Server, Socket } from 'socket.io';
 import { OnEvent } from '@nestjs/event-emitter';
 import { McpService } from './mcp.service';
 import { McpConfigService } from './mcp-config.service';
-import { McpMonitorService, SessionStatusEvent } from './mcp-monitor.service';
+import { McpStatusServerService, SessionStatusEvent } from './mcp-status-server.service';
 import { McpServerConfig } from '@omniscribe/shared';
 
 /**
@@ -82,7 +82,7 @@ export class McpGateway implements OnGatewayInit {
   constructor(
     private readonly mcpService: McpService,
     private readonly configService: McpConfigService,
-    private readonly monitorService: McpMonitorService
+    private readonly statusServer: McpStatusServerService
   ) {}
 
   afterInit(): void {
@@ -108,9 +108,6 @@ export class McpGateway implements OnGatewayInit {
 
       // Cache the discovered servers
       this.projectServers.set(payload.projectPath, servers);
-
-      // Start monitoring this project
-      this.monitorService.addProject(payload.projectPath);
 
       console.log(
         `[McpGateway] Discovered ${servers.length} MCP servers for ${payload.projectPath}`
@@ -237,9 +234,6 @@ export class McpGateway implements OnGatewayInit {
       const sessionKey = `${payload.projectPath}:${payload.sessionId}`;
       this.sessionEnabled.delete(sessionKey);
 
-      // Clean up monitor tracking
-      this.monitorService.removeSessionStatus(payload.projectPath, payload.sessionId);
-
       // Clean up config tracking
       const hash = this.configService.generateProjectHash(payload.projectPath);
       await this.configService.cleanupTracking(hash, payload.sessionId);
@@ -260,7 +254,25 @@ export class McpGateway implements OnGatewayInit {
   }
 
   /**
-   * Broadcast session status events from the monitor
+   * Get status server info
+   */
+  @SubscribeMessage('mcp:get-status-server-info')
+  handleGetStatusServerInfo(): {
+    running: boolean;
+    port: number | null;
+    statusUrl: string | null;
+    instanceId: string;
+  } {
+    return {
+      running: this.statusServer.isRunning(),
+      port: this.statusServer.getPort(),
+      statusUrl: this.statusServer.getStatusUrl(),
+      instanceId: this.statusServer.getInstanceId(),
+    };
+  }
+
+  /**
+   * Broadcast session status events from the HTTP status server
    */
   @OnEvent('session.status')
   onSessionStatus(event: SessionStatusEvent): void {

@@ -4,35 +4,13 @@ import { twMerge } from 'tailwind-merge';
 import { Terminal, Plus, AlertCircle } from 'lucide-react';
 import { useSessionStore } from '../../stores';
 import { useWorkspaceStore, selectActiveTab } from '../../stores';
-import { StatusDot, SessionStatus } from '../shared/StatusLegend';
+import { StatusDot } from '../shared/StatusLegend';
+import { mapSessionStatus } from '@omniscribe/shared';
 
 interface SessionsSectionProps {
   className?: string;
   onSessionClick?: (sessionId: string) => void;
   onNewSession?: () => void;
-}
-
-/**
- * Map internal session status to StatusDot status
- */
-function mapSessionStatus(status: string): SessionStatus {
-  switch (status) {
-    case 'connecting':
-      return 'starting';
-    case 'idle':
-    case 'disconnected':
-      return 'idle';
-    case 'active':
-    case 'thinking':
-    case 'executing':
-      return 'working';
-    case 'paused':
-      return 'needsInput';
-    case 'error':
-      return 'error';
-    default:
-      return 'idle';
-  }
 }
 
 export function SessionsSection({

@@ -154,7 +154,7 @@ export class TerminalService implements OnModuleDestroy {
     ptyProcess.onData((data: string) => {
       // Log first few data events to debug
       if (session.outputBuffer.length < 500) {
-        this.logger.debug(`[onData] Session ${sessionId}: received ${data.length} bytes`);
+        // this.logger.debug(`[onData] Session ${sessionId}: received ${data.length} bytes`);
       }
 
       try {

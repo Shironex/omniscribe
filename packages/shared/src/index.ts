@@ -9,3 +9,6 @@ export * from './types/mcp';
 
 // Workspace types
 export * from './types/workspace';
+
+// Utilities
+export * from './utils';

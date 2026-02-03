@@ -9,7 +9,6 @@ import {
 import { Sidebar } from './components';
 import { TerminalGrid, TerminalSession, PreLaunchSlot } from './components/terminal/TerminalGrid';
 import { IdleLandingView } from './components/shared/IdleLandingView';
-import { SessionStatus as UISessionStatus } from './components/shared/StatusLegend';
 import { useSessionStore } from './stores/useSessionStore';
 import { useWorkspaceStore } from './stores/useWorkspaceStore';
 import { useGitStore } from './stores/useGitStore';
@@ -18,31 +17,7 @@ import { createSession, removeSession } from './lib/session';
 import { killTerminal } from './lib/terminal';
 import type { Branch } from './components/shared/BranchSelector';
 import type { AIMode } from './components/terminal/TerminalHeader';
-import type { SessionStatus as BackendSessionStatus, AiMode } from '@omniscribe/shared';
-
-/**
- * Maps backend session status to UI session status
- */
-function mapSessionStatus(backendStatus: BackendSessionStatus): UISessionStatus {
-  switch (backendStatus) {
-    case 'idle':
-    case 'disconnected':
-      return 'idle';
-    case 'connecting':
-      return 'starting';
-    case 'active':
-    case 'executing':
-      return 'working';
-    case 'thinking':
-      return 'working';
-    case 'paused':
-      return 'needsInput';
-    case 'error':
-      return 'error';
-    default:
-      return 'idle';
-  }
-}
+import { mapSessionStatus, type AiMode, type UISessionStatus } from '@omniscribe/shared';
 
 /**
  * Maps UI AIMode to backend AiMode

@@ -10,38 +10,13 @@ import { killTerminal } from '../../lib/terminal';
 import type { TerminalSession, AIMode } from './TerminalHeader';
 import type { PreLaunchSlot } from './PreLaunchCard';
 import type { Branch } from '../shared/BranchSelector';
-import type { SessionStatus as BackendSessionStatus, AiMode } from '@omniscribe/shared';
-import type { SessionStatus as UISessionStatus } from '../shared/StatusLegend';
+import { mapSessionStatus, type AiMode } from '@omniscribe/shared';
 
 /**
  * Extended PreLaunchSlot with MCP server IDs
  */
 export interface ExtendedPreLaunchSlot extends PreLaunchSlot {
   mcpServers?: string[];
-}
-
-/**
- * Maps backend session status to UI session status
- */
-function mapSessionStatus(backendStatus: BackendSessionStatus): UISessionStatus {
-  switch (backendStatus) {
-    case 'idle':
-    case 'disconnected':
-      return 'idle';
-    case 'connecting':
-      return 'starting';
-    case 'active':
-    case 'executing':
-      return 'working';
-    case 'thinking':
-      return 'working';
-    case 'paused':
-      return 'needsInput';
-    case 'error':
-      return 'error';
-    default:
-      return 'idle';
-  }
 }
 
 /**

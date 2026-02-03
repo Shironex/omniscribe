@@ -1,9 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject, forwardRef } from '@nestjs/common';
 import { McpServerConfig } from '@omniscribe/shared';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
 import * as os from 'os';
+import { McpStatusServerService } from './mcp-status-server.service';
 
 /**
  * Server entry format for written config
@@ -22,7 +23,10 @@ export class McpConfigService {
   private readonly configDir: string;
   private readonly omniscribeMcpPath: string | null;
 
-  constructor() {
+  constructor(
+    @Inject(forwardRef(() => McpStatusServerService))
+    private readonly statusServer: McpStatusServerService
+  ) {
     // Use platform-appropriate temp directory
     this.configDir = path.join(os.tmpdir(), 'omniscribe', 'mcp-configs');
     this.ensureConfigDir();
@@ -165,19 +169,26 @@ export class McpConfigService {
     };
 
     // Add/update Omniscribe MCP server (always included if available)
-    // IMPORTANT: Session-specific env vars (SESSION_ID, PROJECT_HASH) are NOT included here!
-    // They are passed via shell environment when spawning the terminal (see session.service.ts).
-    // This avoids race conditions when multiple sessions share the same .mcp.json file.
-    // The MCP server inherits these from the shell process that launched Claude CLI.
+    // Session-specific env vars are now included directly in the MCP config
+    // since they're read by Claude Code when it spawns the MCP server process.
+    // This enables HTTP-based status reporting to the desktop app.
     if (this.omniscribeMcpPath) {
+      const statusUrl = this.statusServer.getStatusUrl();
+      const instanceId = this.statusServer.getInstanceId();
+
+      // Register this session with the status server for routing
+      this.statusServer.registerSession(sessionId, projectPath);
+
       mcpServers['omniscribe'] = {
         type: 'stdio',
         command: 'node',
         args: [this.omniscribeMcpPath],
         env: {
-          // Only static config here - port ranges don't change per session
-          OMNISCRIBE_PORT_RANGE_START: '3000',
-          OMNISCRIBE_PORT_RANGE_END: '3099',
+          // Session-specific env vars for HTTP status reporting
+          OMNISCRIBE_SESSION_ID: sessionId,
+          OMNISCRIBE_PROJECT_HASH: projectHash,
+          ...(statusUrl ? { OMNISCRIBE_STATUS_URL: statusUrl } : {}),
+          ...(instanceId ? { OMNISCRIBE_INSTANCE_ID: instanceId } : {}),
         },
       };
     }
@@ -245,10 +256,14 @@ export class McpConfigService {
    * Remove omniscribe MCP entry from configuration file
    * Preserves user's other MCP servers - only removes omniscribe entry
    * @param workingDir Directory containing the config
-   * @param _sessionId Session identifier (unused, kept for API compatibility)
+   * @param sessionId Session identifier for status server cleanup
    * @returns True if omniscribe was removed, false if not found
    */
-  async removeConfig(workingDir: string, _sessionId?: string): Promise<boolean> {
+  async removeConfig(workingDir: string, sessionId?: string): Promise<boolean> {
+    // Unregister session from status server
+    if (sessionId) {
+      this.statusServer.unregisterSession(sessionId);
+    }
     const configPath = path.join(workingDir, '.mcp.json');
 
     try {

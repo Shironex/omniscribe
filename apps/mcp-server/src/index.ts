@@ -7,35 +7,18 @@
  * It provides tools for AI agents to report their state back to Omniscribe.
  *
  * Transport: stdio (spawned by Claude CLI)
- * Status files: /tmp/omniscribe/agents/{project-hash}/agent-{session-id}.json
+ * Status: HTTP POST to Omniscribe desktop app
+ *
+ * Environment Variables:
+ * - OMNISCRIBE_SESSION_ID: Session identifier
+ * - OMNISCRIBE_PROJECT_HASH: Project hash for routing
+ * - OMNISCRIBE_STATUS_URL: HTTP endpoint for status updates
+ * - OMNISCRIBE_INSTANCE_ID: Omniscribe instance ID for validation
  */
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
-import * as fs from 'node:fs';
-import * as path from 'node:path';
-import * as os from 'node:os';
-
-// ============================================================================
-// Types
-// ============================================================================
-
-/**
- * Agent status values
- */
-type AgentStatus = 'idle' | 'working' | 'needs_input' | 'finished' | 'error';
-
-/**
- * Status file schema written to /tmp/omniscribe/agents/{hash}/agent-{id}.json
- */
-interface AgentState {
-  agentId: string;
-  state: AgentStatus;
-  message: string;
-  needsInputPrompt?: string;
-  timestamp: string;
-}
 
 // ============================================================================
 // Environment Configuration
@@ -43,67 +26,57 @@ interface AgentState {
 
 const SESSION_ID = process.env.OMNISCRIBE_SESSION_ID;
 const PROJECT_HASH = process.env.OMNISCRIBE_PROJECT_HASH;
-const PORT_RANGE_START = process.env.OMNISCRIBE_PORT_RANGE_START || '3000';
-const PORT_RANGE_END = process.env.OMNISCRIBE_PORT_RANGE_END || '3099';
+const STATUS_URL = process.env.OMNISCRIBE_STATUS_URL;
+const INSTANCE_ID = process.env.OMNISCRIBE_INSTANCE_ID;
 
-/**
- * Get the base directory for agent status files
- * Uses platform-appropriate temp directory
- */
-function getBaseDir(): string {
-  // Use platform temp directory
-  const tmpDir = os.tmpdir();
-  return path.join(tmpDir, 'omniscribe', 'agents');
+// ============================================================================
+// HTTP Status Reporter
+// ============================================================================
+
+interface StatusPayload {
+  sessionId: string;
+  instanceId: string;
+  state: string;
+  message: string;
+  needsInputPrompt?: string;
+  timestamp: string;
 }
 
-/**
- * Get the status file path for the current session
- */
-function getStatusFilePath(): string | null {
-  if (!SESSION_ID || !PROJECT_HASH) {
-    return null;
-  }
-  const baseDir = getBaseDir();
-  return path.join(baseDir, PROJECT_HASH, `agent-${SESSION_ID}.json`);
-}
-
-/**
- * Ensure the status directory exists
- */
-function ensureStatusDir(): boolean {
-  if (!PROJECT_HASH) {
+async function reportStatus(
+  state: string,
+  message: string,
+  needsInputPrompt?: string
+): Promise<boolean> {
+  if (!STATUS_URL || !SESSION_ID || !INSTANCE_ID) {
+    console.error('[omniscribe-mcp] Status reporting not configured');
     return false;
   }
 
-  const statusDir = path.join(getBaseDir(), PROJECT_HASH);
-  try {
-    fs.mkdirSync(statusDir, { recursive: true });
-    return true;
-  } catch (error) {
-    console.error('[omniscribe-mcp] Failed to create status directory:', error);
-    return false;
-  }
-}
+  const payload: StatusPayload = {
+    sessionId: SESSION_ID,
+    instanceId: INSTANCE_ID,
+    state,
+    message,
+    needsInputPrompt,
+    timestamp: new Date().toISOString(),
+  };
 
-/**
- * Write agent state to status file
- */
-function writeStatus(state: AgentState): boolean {
-  const filePath = getStatusFilePath();
-  if (!filePath) {
-    console.error('[omniscribe-mcp] Cannot write status: missing SESSION_ID or PROJECT_HASH');
-    return false;
-  }
-
-  if (!ensureStatusDir()) {
-    return false;
-  }
+  console.error(
+    `[omniscribe-mcp] Sending status to ${STATUS_URL}: state=${state}, message=${message}`
+  );
 
   try {
-    fs.writeFileSync(filePath, JSON.stringify(state, null, 2), 'utf-8');
-    return true;
+    const response = await fetch(STATUS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(5000),
+    });
+
+    console.error(`[omniscribe-mcp] Status response: ${response.status}`);
+    return response.ok;
   } catch (error) {
-    console.error('[omniscribe-mcp] Failed to write status file:', error);
+    console.error('[omniscribe-mcp] Status report error:', error);
     return false;
   }
 }
@@ -155,32 +128,8 @@ server.registerTool(
       };
     }
 
-    // Check environment configuration
-    if (!SESSION_ID || !PROJECT_HASH) {
-      return {
-        content: [
-          {
-            type: 'text' as const,
-            text: `Warning: Omniscribe environment not configured. Status not recorded. Missing: ${!SESSION_ID ? 'OMNISCRIBE_SESSION_ID' : ''} ${!PROJECT_HASH ? 'OMNISCRIBE_PROJECT_HASH' : ''}`.trim(),
-          },
-        ],
-      };
-    }
-
-    // Build agent state
-    const agentState: AgentState = {
-      agentId: `agent-${SESSION_ID}`,
-      state: state as AgentStatus,
-      message,
-      timestamp: new Date().toISOString(),
-    };
-
-    if (needsInputPrompt) {
-      agentState.needsInputPrompt = needsInputPrompt;
-    }
-
-    // Write to status file
-    const success = writeStatus(agentState);
+    // Report status via HTTP
+    const success = await reportStatus(state, message, needsInputPrompt);
 
     if (success) {
       return {
@@ -196,10 +145,9 @@ server.registerTool(
         content: [
           {
             type: 'text' as const,
-            text: 'Failed to write status file',
+            text: 'Warning: Status could not be reported to Omniscribe (check configuration)',
           },
         ],
-        isError: true,
       };
     }
   }
@@ -225,7 +173,6 @@ server.registerTool(
     inputSchema: StartDevServerSchema,
   },
   async (input) => {
-    // MVP stub - actual implementation will spawn and manage processes
     return {
       content: [
         {
@@ -250,7 +197,6 @@ server.registerTool(
     inputSchema: {},
   },
   async () => {
-    // MVP stub
     return {
       content: [
         {
@@ -279,7 +225,6 @@ server.registerTool(
     inputSchema: GetServerLogsSchema,
   },
   async (input) => {
-    // MVP stub
     return {
       content: [
         {
@@ -296,12 +241,10 @@ server.registerTool(
 // ============================================================================
 
 async function main() {
-  // Log startup info (to stderr so it doesn't interfere with stdio transport)
   console.error('[omniscribe-mcp] Starting Omniscribe MCP Server v0.1.0');
   console.error(`[omniscribe-mcp] Session ID: ${SESSION_ID || 'not set'}`);
-  console.error(`[omniscribe-mcp] Project Hash: ${PROJECT_HASH || 'not set'}`);
-  console.error(`[omniscribe-mcp] Port Range: ${PORT_RANGE_START}-${PORT_RANGE_END}`);
-  console.error(`[omniscribe-mcp] Status Dir: ${getBaseDir()}`);
+  console.error(`[omniscribe-mcp] Status URL: ${STATUS_URL || 'not set'}`);
+  console.error(`[omniscribe-mcp] Instance ID: ${INSTANCE_ID || 'not set'}`);
 
   // Connect to stdio transport
   const transport = new StdioServerTransport();
@@ -309,15 +252,11 @@ async function main() {
 
   console.error('[omniscribe-mcp] Server connected and ready');
 
-  // Write initial idle status if configured
-  if (SESSION_ID && PROJECT_HASH) {
-    const initialState: AgentState = {
-      agentId: `agent-${SESSION_ID}`,
-      state: 'idle',
-      message: 'Agent connected',
-      timestamp: new Date().toISOString(),
-    };
-    writeStatus(initialState);
+  // Report initial idle status
+  if (STATUS_URL && SESSION_ID && INSTANCE_ID) {
+    reportStatus('idle', 'Agent connected').catch((err) => {
+      console.error('[omniscribe-mcp] Failed to report initial status:', err);
+    });
   }
 }
 

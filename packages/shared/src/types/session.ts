@@ -5,6 +5,7 @@ export type AiMode = 'claude' | 'gemini' | 'openai' | 'local' | 'custom';
 
 /**
  * Session status
+ * Includes both legacy statuses and MCP status values
  */
 export type SessionStatus =
   | 'idle'
@@ -14,7 +15,11 @@ export type SessionStatus =
   | 'executing'
   | 'paused'
   | 'error'
-  | 'disconnected';
+  | 'disconnected'
+  // MCP status values
+  | 'working'
+  | 'needs_input'
+  | 'finished';
 
 /**
  * Session configuration
