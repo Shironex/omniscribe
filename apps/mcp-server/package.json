@@ -1,0 +1,28 @@
+{
+  "name": "@omniscribe/mcp-server",
+  "version": "0.1.0",
+  "description": "Omniscribe MCP server for Claude Code status reporting",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "omniscribe-mcp": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "start": "node dist/index.js",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.5.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

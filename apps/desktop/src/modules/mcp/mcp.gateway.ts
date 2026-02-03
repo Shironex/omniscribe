@@ -252,6 +252,14 @@ export class McpGateway implements OnGatewayInit {
   }
 
   /**
+   * Get Omniscribe MCP server status
+   */
+  @SubscribeMessage('mcp:get-omniscribe-status')
+  handleGetOmniscribeStatus(): { available: boolean; path: string | null } {
+    return this.configService.getOmniscribeMcpInfo();
+  }
+
+  /**
    * Broadcast session status events from the monitor
    */
   @OnEvent('session.status')
@@ -260,7 +268,7 @@ export class McpGateway implements OnGatewayInit {
       sessionId: event.sessionId,
       status: event.status,
       message: event.message,
-      mcpConnections: event.mcpConnections,
+      needsInputPrompt: event.needsInputPrompt,
     });
   }
 }

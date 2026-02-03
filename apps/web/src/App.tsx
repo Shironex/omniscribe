@@ -84,12 +84,8 @@ function mapAiModeToUI(backendMode: AiMode): AIMode {
 type Theme = 'dark' | 'light';
 
 function App() {
-  // Sidebar state
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [sidebarWidth, setSidebarWidth] = useState(240);
-
-  // Theme state
-  const [theme, setTheme] = useState<Theme>('dark');
+  // Note: Sidebar and theme state now come from workspace preferences
+  // Local state is used as fallback and for immediate UI updates
 
   // Pre-launch slots state (sessions waiting to be launched)
   const [preLaunchSlots, setPreLaunchSlots] = useState<PreLaunchSlot[]>([]);
@@ -106,10 +102,14 @@ function App() {
   // Workspace store
   const workspaceTabs = useWorkspaceStore((state) => state.tabs);
   const activeWorkspaceTabId = useWorkspaceStore((state) => state.activeTabId);
+  const workspacePreferences = useWorkspaceStore((state) => state.preferences);
   const openProject = useWorkspaceStore((state) => state.openProject);
   const closeWorkspaceTab = useWorkspaceStore((state) => state.closeTab);
   const selectWorkspaceTab = useWorkspaceStore((state) => state.selectTab);
   const getActiveTab = useWorkspaceStore((state) => state.getActiveTab);
+  const initWorkspaceListeners = useWorkspaceStore((state) => state.initListeners);
+  const cleanupWorkspaceListeners = useWorkspaceStore((state) => state.cleanupListeners);
+  const updatePreference = useWorkspaceStore((state) => state.updatePreference);
 
   // Git store
   const gitBranches = useGitStore((state) => state.branches);
@@ -122,6 +122,11 @@ function App() {
   // Get active project path
   const activeTab = getActiveTab();
   const activeProjectPath = activeTab?.projectPath ?? null;
+
+  // Derive sidebar and theme from workspace preferences
+  const sidebarOpen = workspacePreferences.sidebarOpen ?? true;
+  const sidebarWidth = workspacePreferences.sidebarWidth ?? 240;
+  const theme = (workspacePreferences.theme === 'light' ? 'light' : 'dark') as Theme;
 
   // Track previous project path for change detection
   const prevProjectPathRef = useRef<string | null>(null);
@@ -203,6 +208,7 @@ function App() {
         await connectSocket();
         initSessionListeners();
         initGitListeners();
+        initWorkspaceListeners();
       } catch (error) {
         console.error('Failed to initialize:', error);
       }
@@ -213,8 +219,9 @@ function App() {
     return () => {
       cleanupSessionListeners();
       cleanupGitListeners();
+      cleanupWorkspaceListeners();
     };
-  }, [initSessionListeners, cleanupSessionListeners, initGitListeners, cleanupGitListeners]);
+  }, [initSessionListeners, cleanupSessionListeners, initGitListeners, cleanupGitListeners, initWorkspaceListeners, cleanupWorkspaceListeners]);
 
   // Fetch git data when active project changes
   useEffect(() => {
@@ -243,8 +250,9 @@ function App() {
 
   // Theme toggle handler
   const handleToggleTheme = useCallback(() => {
-    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
-  }, []);
+    const newTheme = theme === 'dark' ? 'light' : 'dark';
+    updatePreference('theme', newTheme);
+  }, [theme, updatePreference]);
 
   // Tab handlers
   const handleSelectTab = useCallback((tabId: string) => {
@@ -289,12 +297,12 @@ function App() {
 
   // Sidebar handlers
   const handleToggleSidebar = useCallback(() => {
-    setSidebarOpen((prev) => !prev);
-  }, []);
+    updatePreference('sidebarOpen', !sidebarOpen);
+  }, [sidebarOpen, updatePreference]);
 
   const handleSidebarWidthChange = useCallback((width: number) => {
-    setSidebarWidth(width);
-  }, []);
+    updatePreference('sidebarWidth', width);
+  }, [updatePreference]);
 
   // Branch handler - fetch fresh branches when clicked
   const handleBranchClick = useCallback(() => {

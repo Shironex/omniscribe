@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { TerminalGrid } from './TerminalGrid';
 import { useSessionStore } from '../../stores/useSessionStore';
 import { useWorkspaceStore, selectActiveTab } from '../../stores/useWorkspaceStore';
 import { useGitStore, selectBranches, selectCurrentBranch } from '../../stores/useGitStore';
 import { useMcpStore, selectEnabledServers } from '../../stores/useMcpStore';
+import { useTerminalControlStore } from '../../stores/useTerminalControlStore';
 import { createSession, removeSession } from '../../lib/session';
 import { killTerminal } from '../../lib/terminal';
 import type { TerminalSession, AIMode } from './TerminalHeader';
@@ -89,9 +90,14 @@ interface ConnectedTerminalGridProps {
  * to all the necessary stores (Session, Workspace, Git, MCP)
  */
 export function ConnectedTerminalGrid({ className }: ConnectedTerminalGridProps) {
-  // Local state for pre-launch slots and focus
+  // Local state for pre-launch slots
   const [preLaunchSlots, setPreLaunchSlots] = useState<ExtendedPreLaunchSlot[]>([]);
-  const [focusedSessionId, setFocusedSessionId] = useState<string | null>(null);
+
+  // Shared terminal control store for focus state
+  const focusedSessionId = useTerminalControlStore((state) => state.focusedSessionId);
+  const setFocusedSessionId = useTerminalControlStore((state) => state.setFocusedSessionId);
+  const addSlotRequestCounter = useTerminalControlStore((state) => state.addSlotRequestCounter);
+  const prevAddSlotRequestRef = useRef(addSlotRequestCounter);
 
   // Session store
   const sessions = useSessionStore((state) => state.sessions);
@@ -149,6 +155,23 @@ export function ConnectedTerminalGrid({ className }: ConnectedTerminalGridProps)
       fetchBranches(activeProjectPath);
     }
   }, [activeProjectPath, setGitProjectPath, fetchBranches]);
+
+  // Listen for add slot requests from sidebar (via shared store)
+  useEffect(() => {
+    if (addSlotRequestCounter > prevAddSlotRequestRef.current) {
+      // Get enabled MCP server IDs
+      const enabledServerIds = enabledMcpServers.map((s) => s.id);
+
+      const newSlot: ExtendedPreLaunchSlot = {
+        id: `slot-${Date.now()}`,
+        aiMode: 'claude',
+        branch: currentBranch,
+        mcpServers: enabledServerIds,
+      };
+      setPreLaunchSlots((prev) => [...prev, newSlot]);
+    }
+    prevAddSlotRequestRef.current = addSlotRequestCounter;
+  }, [addSlotRequestCounter, currentBranch, enabledMcpServers]);
 
   // Filter sessions for the active project
   const activeProjectSessions = useMemo(() => {

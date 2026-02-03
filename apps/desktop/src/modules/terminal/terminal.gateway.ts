@@ -60,13 +60,7 @@ export class TerminalGateway
   private static clientSessions = new Map<string, Set<number>>();
   private static connectedClients = new Map<string, Socket>();
 
-  // Instance ID for debugging multiple instances
-  private readonly instanceId = Math.random().toString(36).substring(7);
-  private static instanceCount = 0;
-
-  constructor(private readonly terminalService: TerminalService) {
-    TerminalGateway.instanceCount++;
-  }
+  constructor(private readonly terminalService: TerminalService) {}
 
   // Getters for the static Maps (for convenience)
   private get clientSessions(): Map<string, Set<number>> {

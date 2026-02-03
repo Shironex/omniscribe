@@ -6,37 +6,110 @@ import * as crypto from 'crypto';
 import * as os from 'os';
 
 /**
- * MCP config structure written to the working directory
- */
-interface McpWrittenConfig {
-  mcpServers: Record<string, McpWrittenServerEntry>;
-  _metadata: {
-    projectPath: string;
-    sessionId: string;
-    generatedAt: string;
-    projectHash: string;
-  };
-}
-
-/**
  * Server entry format for written config
+ * Note: Claude Code expects "type" not "transport"
  */
 interface McpWrittenServerEntry {
   command?: string;
   args?: string[];
   env?: Record<string, string>;
   url?: string;
-  transport: string;
+  type: string;
 }
 
 @Injectable()
 export class McpConfigService {
   private readonly configDir: string;
+  private readonly omniscribeMcpPath: string | null;
 
   constructor() {
     // Use platform-appropriate temp directory
     this.configDir = path.join(os.tmpdir(), 'omniscribe', 'mcp-configs');
     this.ensureConfigDir();
+
+    // Find the Omniscribe MCP server binary
+    this.omniscribeMcpPath = this.findOmniscribeMcp();
+    if (this.omniscribeMcpPath) {
+      console.log(
+        `[McpConfigService] Found Omniscribe MCP server at: ${this.omniscribeMcpPath}`
+      );
+    } else {
+      console.warn(
+        '[McpConfigService] Omniscribe MCP server not found - status updates will be unavailable'
+      );
+    }
+  }
+
+  /**
+   * Find the Omniscribe MCP server binary/script
+   * Checks multiple locations in order of preference
+   */
+  private findOmniscribeMcp(): string | null {
+    const isWindows = process.platform === 'win32';
+
+    // Candidate locations to check
+    const candidates: string[] = [];
+
+    // 1. Development: relative to desktop app
+    candidates.push(
+      path.join(__dirname, '..', '..', '..', '..', 'mcp-server', 'dist', 'index.js')
+    );
+
+    // 2. Development: from workspace root
+    if (process.env.OMNISCRIBE_WORKSPACE_ROOT) {
+      candidates.push(
+        path.join(
+          process.env.OMNISCRIBE_WORKSPACE_ROOT,
+          'apps',
+          'mcp-server',
+          'dist',
+          'index.js'
+        )
+      );
+    }
+
+    // 3. Bundled with app (production) - Electron provides resourcesPath
+    const resourcesPath = (process as NodeJS.Process & { resourcesPath?: string }).resourcesPath;
+    if (resourcesPath) {
+      candidates.push(path.join(resourcesPath, 'mcp-server', 'index.js'));
+    }
+
+    // 4. Global install locations
+    if (isWindows) {
+      candidates.push(
+        path.join(os.homedir(), 'AppData', 'Local', 'omniscribe', 'mcp-server', 'index.js')
+      );
+    } else {
+      candidates.push('/usr/local/lib/omniscribe/mcp-server/index.js');
+      candidates.push(
+        path.join(os.homedir(), '.local', 'lib', 'omniscribe', 'mcp-server', 'index.js')
+      );
+    }
+
+    // Check each candidate
+    for (const candidate of candidates) {
+      try {
+        const normalizedPath = path.normalize(candidate);
+        if (fs.existsSync(normalizedPath)) {
+          return normalizedPath;
+        }
+      } catch {
+        // Continue to next candidate
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Get the Omniscribe MCP server info
+   * @returns Object with path and availability status
+   */
+  getOmniscribeMcpInfo(): { available: boolean; path: string | null } {
+    return {
+      available: this.omniscribeMcpPath !== null,
+      path: this.omniscribeMcpPath,
+    };
   }
 
   /**
@@ -52,6 +125,7 @@ export class McpConfigService {
 
   /**
    * Write MCP configuration file for a session
+   * Merges omniscribe server into existing config, preserving user's other MCP servers
    * @param workingDir Directory to write the config to
    * @param sessionId Session identifier
    * @param projectPath Original project path
@@ -68,24 +142,54 @@ export class McpConfigService {
     const configFileName = `.mcp.json`;
     const configPath = path.join(workingDir, configFileName);
 
-    const config: McpWrittenConfig = {
-      mcpServers: {},
-      _metadata: {
-        projectPath,
-        sessionId,
-        generatedAt: new Date().toISOString(),
-        projectHash,
-      },
+    // Read existing config if it exists (preserve user's MCP servers)
+    let existingConfig: Record<string, unknown> = {};
+    let existingMcpServers: Record<string, unknown> = {};
+
+    try {
+      if (fs.existsSync(configPath)) {
+        const content = await fs.promises.readFile(configPath, 'utf-8');
+        existingConfig = JSON.parse(content);
+        existingMcpServers = (existingConfig.mcpServers as Record<string, unknown>) ?? {};
+        console.log(
+          `[McpConfigService] Found existing .mcp.json with ${Object.keys(existingMcpServers).length} servers`
+        );
+      }
+    } catch (error) {
+      console.warn(`[McpConfigService] Could not read existing config:`, error);
+    }
+
+    // Start with existing servers
+    const mcpServers: Record<string, McpWrittenServerEntry> = {
+      ...(existingMcpServers as Record<string, McpWrittenServerEntry>),
     };
 
-    // Build server entries for enabled servers
+    // Add/update Omniscribe MCP server (always included if available)
+    // IMPORTANT: Session-specific env vars (SESSION_ID, PROJECT_HASH) are NOT included here!
+    // They are passed via shell environment when spawning the terminal (see session.service.ts).
+    // This avoids race conditions when multiple sessions share the same .mcp.json file.
+    // The MCP server inherits these from the shell process that launched Claude CLI.
+    if (this.omniscribeMcpPath) {
+      mcpServers['omniscribe'] = {
+        type: 'stdio',
+        command: 'node',
+        args: [this.omniscribeMcpPath],
+        env: {
+          // Only static config here - port ranges don't change per session
+          OMNISCRIBE_PORT_RANGE_START: '3000',
+          OMNISCRIBE_PORT_RANGE_END: '3099',
+        },
+      };
+    }
+
+    // Build server entries for additional enabled servers
     for (const server of servers) {
       if (!server.enabled) {
         continue;
       }
 
       const entry: McpWrittenServerEntry = {
-        transport: server.transport,
+        type: server.transport,
       };
 
       if (server.command) {
@@ -104,8 +208,20 @@ export class McpConfigService {
         entry.url = server.url;
       }
 
-      config.mcpServers[server.id] = entry;
+      mcpServers[server.id] = entry;
     }
+
+    // Build final config - preserve any other top-level fields from existing config
+    const config = {
+      ...existingConfig,
+      mcpServers,
+      _omniscribe: {
+        sessionId,
+        projectPath,
+        projectHash,
+        updatedAt: new Date().toISOString(),
+      },
+    };
 
     // Write the config file
     await fs.promises.writeFile(
@@ -114,8 +230,9 @@ export class McpConfigService {
       'utf-8'
     );
 
+    const serverCount = Object.keys(mcpServers).length;
     console.log(
-      `[McpConfigService] Wrote MCP config to ${configPath} with ${servers.length} servers`
+      `[McpConfigService] Wrote MCP config to ${configPath} with ${serverCount} servers (omniscribe: ${!!this.omniscribeMcpPath})`
     );
 
     // Also track the config in our central location
@@ -125,30 +242,50 @@ export class McpConfigService {
   }
 
   /**
-   * Remove MCP configuration file for a session
+   * Remove omniscribe MCP entry from configuration file
+   * Preserves user's other MCP servers - only removes omniscribe entry
    * @param workingDir Directory containing the config
-   * @param sessionId Session identifier
-   * @returns True if removed, false if not found
+   * @param _sessionId Session identifier (unused, kept for API compatibility)
+   * @returns True if omniscribe was removed, false if not found
    */
-  async removeConfig(workingDir: string, sessionId: string): Promise<boolean> {
+  async removeConfig(workingDir: string, _sessionId?: string): Promise<boolean> {
     const configPath = path.join(workingDir, '.mcp.json');
 
     try {
-      if (fs.existsSync(configPath)) {
-        // Verify this config belongs to the session before removing
-        const content = await fs.promises.readFile(configPath, 'utf-8');
-        const config = JSON.parse(content) as McpWrittenConfig;
-
-        if (config._metadata?.sessionId === sessionId) {
-          await fs.promises.unlink(configPath);
-          console.log(
-            `[McpConfigService] Removed MCP config at ${configPath} for session ${sessionId}`
-          );
-          return true;
-        }
+      if (!fs.existsSync(configPath)) {
+        return false;
       }
+
+      const content = await fs.promises.readFile(configPath, 'utf-8');
+      const config = JSON.parse(content) as Record<string, unknown>;
+
+      // Check if this config has omniscribe entry
+      const mcpServers = config.mcpServers as Record<string, unknown> | undefined;
+      if (!mcpServers || !('omniscribe' in mcpServers)) {
+        return false;
+      }
+
+      // Remove omniscribe entry
+      delete mcpServers['omniscribe'];
+
+      // Remove our metadata
+      delete config['_omniscribe'];
+      delete config['_metadata']; // Legacy field
+
+      // Write back the config with remaining servers
+      await fs.promises.writeFile(
+        configPath,
+        JSON.stringify(config, null, 2),
+        'utf-8'
+      );
+
+      console.log(
+        `[McpConfigService] Removed omniscribe from ${configPath}, preserved ${Object.keys(mcpServers).length} other servers`
+      );
+
+      return true;
     } catch (error) {
-      console.error(`[McpConfigService] Error removing config:`, error);
+      console.error(`[McpConfigService] Error removing omniscribe from config:`, error);
     }
 
     return false;

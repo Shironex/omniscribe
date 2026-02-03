@@ -72,10 +72,10 @@ export class SessionGateway implements OnGatewayInit {
    * Handle session creation request
    */
   @SubscribeMessage('session:create')
-  handleCreate(
+  async handleCreate(
     @MessageBody() payload: CreateSessionPayload,
     @ConnectedSocket() client: Socket
-  ): ExtendedSessionConfig | { error: string } {
+  ): Promise<ExtendedSessionConfig | { error: string }> {
     const session = this.sessionService.create(payload.mode, payload.projectPath, {
       name: payload.name,
       workingDirectory: payload.workingDirectory,
@@ -91,7 +91,7 @@ export class SessionGateway implements OnGatewayInit {
 
     // Launch the terminal session to spawn the PTY
     const workingDir = session.worktreePath ?? session.workingDirectory;
-    const launchResult = this.sessionService.launchSession(
+    const launchResult = await this.sessionService.launchSession(
       session.id,
       payload.projectPath,
       workingDir,

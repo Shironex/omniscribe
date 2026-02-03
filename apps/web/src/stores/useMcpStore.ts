@@ -27,6 +27,14 @@ interface McpServerStateUpdate {
 }
 
 /**
+ * Omniscribe MCP server info
+ */
+interface OmniscribeMcpInfo {
+  available: boolean;
+  path: string | null;
+}
+
+/**
  * MCP store state
  */
 interface McpState {
@@ -42,6 +50,8 @@ interface McpState {
   error: string | null;
   /** Whether listeners are initialized */
   listenersInitialized: boolean;
+  /** Omniscribe MCP server info */
+  omniscribeMcp: OmniscribeMcpInfo;
 }
 
 /**
@@ -74,6 +84,8 @@ interface McpActions {
   disconnectServer: (serverId: string) => void;
   /** Clear store state */
   clear: () => void;
+  /** Fetch Omniscribe MCP status */
+  fetchOmniscribeMcpStatus: () => void;
 }
 
 /**
@@ -92,6 +104,7 @@ export const useMcpStore = create<McpStore>((set, get) => ({
   isDiscovering: false,
   error: null,
   listenersInitialized: false,
+  omniscribeMcp: { available: false, path: null },
 
   // Actions
   discoverServers: (projectPath?: string) => {
@@ -255,6 +268,12 @@ export const useMcpStore = create<McpStore>((set, get) => ({
       error: null,
     });
   },
+
+  fetchOmniscribeMcpStatus: () => {
+    socket.emit('mcp:get-omniscribe-status', {}, (response: OmniscribeMcpInfo) => {
+      set({ omniscribeMcp: response });
+    });
+  },
 }));
 
 // Selectors
@@ -337,3 +356,8 @@ export const selectMcpDiscovering = (state: McpStore) => state.isDiscovering;
  * Select error
  */
 export const selectMcpError = (state: McpStore) => state.error;
+
+/**
+ * Select Omniscribe MCP info
+ */
+export const selectOmniscribeMcp = (state: McpStore) => state.omniscribeMcp;

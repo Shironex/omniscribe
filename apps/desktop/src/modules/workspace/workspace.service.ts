@@ -1,14 +1,61 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import Store from 'electron-store';
-import { WorkspaceTab, QuickAction } from '@omniscribe/shared';
+import { QuickAction } from '@omniscribe/shared';
+
+/**
+ * Project tab for workspace persistence
+ */
+interface ProjectTab {
+  /** Unique tab identifier */
+  id: string;
+  /** Project path */
+  projectPath: string;
+  /** Project name (directory name) */
+  name: string;
+  /** Session IDs associated with this project */
+  sessionIds: string[];
+  /** Whether this tab is selected */
+  isActive: boolean;
+  /** Last accessed timestamp */
+  lastAccessedAt: string;
+}
+
+/**
+ * User preferences
+ */
+interface UserPreferences {
+  /** Theme preference */
+  theme: 'light' | 'dark' | 'system';
+  /** Sidebar width */
+  sidebarWidth: number;
+  /** Whether sidebar is open */
+  sidebarOpen: boolean;
+  /** Other preferences */
+  [key: string]: unknown;
+}
+
+/**
+ * Complete workspace state
+ */
+export interface WorkspaceState {
+  /** Open project tabs */
+  tabs: ProjectTab[];
+  /** Active tab ID */
+  activeTabId: string | null;
+  /** User preferences */
+  preferences: UserPreferences;
+  /** Quick actions */
+  quickActions: QuickAction[];
+}
 
 /**
  * Store schema for type safety
  */
 interface StoreSchema {
-  tabs: WorkspaceTab[];
+  tabs: ProjectTab[];
+  activeTabId: string | null;
   quickActions: QuickAction[];
-  preferences: Record<string, unknown>;
+  preferences: UserPreferences;
   [key: string]: unknown;
 }
 
@@ -70,8 +117,13 @@ export class WorkspaceService implements OnModuleInit {
       name: 'workspace',
       defaults: {
         tabs: [],
+        activeTabId: null,
         quickActions: DEFAULT_QUICK_ACTIONS,
-        preferences: {},
+        preferences: {
+          theme: 'dark',
+          sidebarWidth: 240,
+          sidebarOpen: true,
+        },
       },
     });
   }
@@ -88,21 +140,154 @@ export class WorkspaceService implements OnModuleInit {
   }
 
   // ============================================
+  // Complete Workspace State
+  // ============================================
+
+  /**
+   * Get complete workspace state
+   */
+  getWorkspaceState(): WorkspaceState {
+    return {
+      tabs: this.store.get('tabs', []),
+      activeTabId: this.store.get('activeTabId', null),
+      preferences: this.store.get('preferences', {
+        theme: 'dark',
+        sidebarWidth: 240,
+        sidebarOpen: true,
+      }),
+      quickActions: this.store.get('quickActions', DEFAULT_QUICK_ACTIONS),
+    };
+  }
+
+  /**
+   * Save complete workspace state
+   */
+  saveWorkspaceState(state: Partial<WorkspaceState>): void {
+    if (state.tabs !== undefined) {
+      this.store.set('tabs', state.tabs);
+    }
+    if (state.activeTabId !== undefined) {
+      this.store.set('activeTabId', state.activeTabId);
+    }
+    if (state.preferences !== undefined) {
+      this.store.set('preferences', state.preferences);
+    }
+    if (state.quickActions !== undefined) {
+      this.store.set('quickActions', state.quickActions);
+    }
+  }
+
+  // ============================================
   // Tabs Management
   // ============================================
 
   /**
    * Get all workspace tabs
    */
-  getTabs(): WorkspaceTab[] {
+  getTabs(): ProjectTab[] {
     return this.store.get('tabs', []);
   }
 
   /**
    * Set workspace tabs
    */
-  setTabs(tabs: WorkspaceTab[]): void {
+  setTabs(tabs: ProjectTab[]): void {
     this.store.set('tabs', tabs);
+  }
+
+  /**
+   * Get active tab ID
+   */
+  getActiveTabId(): string | null {
+    return this.store.get('activeTabId', null);
+  }
+
+  /**
+   * Set active tab ID
+   */
+  setActiveTabId(tabId: string | null): void {
+    this.store.set('activeTabId', tabId);
+  }
+
+  /**
+   * Add a new tab
+   */
+  addTab(tab: ProjectTab): ProjectTab[] {
+    const tabs = this.getTabs();
+    // Check if project is already open
+    const existingIndex = tabs.findIndex(
+      (t) => t.projectPath.replace(/\\/g, '/') === tab.projectPath.replace(/\\/g, '/'),
+    );
+
+    if (existingIndex !== -1) {
+      // Update existing tab and make it active
+      tabs[existingIndex] = {
+        ...tabs[existingIndex],
+        isActive: true,
+        lastAccessedAt: new Date().toISOString(),
+      };
+      // Deactivate other tabs
+      for (let i = 0; i < tabs.length; i++) {
+        if (i !== existingIndex) {
+          tabs[i].isActive = false;
+        }
+      }
+      this.setTabs(tabs);
+      this.setActiveTabId(tabs[existingIndex].id);
+      return tabs;
+    }
+
+    // Deactivate all existing tabs
+    const updatedTabs = tabs.map((t) => ({ ...t, isActive: false }));
+    // Add new tab as active
+    updatedTabs.push({ ...tab, isActive: true });
+    this.setTabs(updatedTabs);
+    this.setActiveTabId(tab.id);
+    return updatedTabs;
+  }
+
+  /**
+   * Remove a tab
+   */
+  removeTab(tabId: string): { tabs: ProjectTab[]; activeTabId: string | null } {
+    const tabs = this.getTabs();
+    const tabIndex = tabs.findIndex((t) => t.id === tabId);
+
+    if (tabIndex === -1) {
+      return { tabs, activeTabId: this.getActiveTabId() };
+    }
+
+    const isActiveTab = tabs[tabIndex].isActive;
+    const newTabs = tabs.filter((t) => t.id !== tabId);
+    let newActiveTabId = this.getActiveTabId();
+
+    // If we removed the active tab, select an adjacent one
+    if (isActiveTab && newTabs.length > 0) {
+      const newActiveIndex = Math.min(tabIndex, newTabs.length - 1);
+      newTabs[newActiveIndex].isActive = true;
+      newActiveTabId = newTabs[newActiveIndex].id;
+    } else if (newTabs.length === 0) {
+      newActiveTabId = null;
+    }
+
+    this.setTabs(newTabs);
+    this.setActiveTabId(newActiveTabId);
+    return { tabs: newTabs, activeTabId: newActiveTabId };
+  }
+
+  /**
+   * Select a tab
+   */
+  selectTab(tabId: string): ProjectTab[] {
+    const tabs = this.getTabs();
+    const updatedTabs = tabs.map((t) => ({
+      ...t,
+      isActive: t.id === tabId,
+      lastAccessedAt: t.id === tabId ? new Date().toISOString() : t.lastAccessedAt,
+    }));
+    this.setTabs(updatedTabs);
+    this.setActiveTabId(tabId);
+    return updatedTabs;
   }
 
   // ============================================
@@ -137,8 +322,19 @@ export class WorkspaceService implements OnModuleInit {
   /**
    * Get all preferences
    */
-  getPreferences(): Record<string, unknown> {
-    return this.store.get('preferences', {});
+  getPreferences(): UserPreferences {
+    return this.store.get('preferences', {
+      theme: 'dark',
+      sidebarWidth: 240,
+      sidebarOpen: true,
+    });
+  }
+
+  /**
+   * Set all preferences
+   */
+  setPreferences(preferences: UserPreferences): void {
+    this.store.set('preferences', preferences);
   }
 
   /**
@@ -152,10 +348,11 @@ export class WorkspaceService implements OnModuleInit {
   /**
    * Set a single preference
    */
-  setPreference(key: string, value: unknown): void {
+  setPreference(key: string, value: unknown): UserPreferences {
     const preferences = this.getPreferences();
     preferences[key] = value;
     this.store.set('preferences', preferences);
+    return preferences;
   }
 
   /**

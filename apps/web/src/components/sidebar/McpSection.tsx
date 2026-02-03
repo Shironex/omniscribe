@@ -11,7 +11,7 @@ import {
   Loader2,
   XCircle,
 } from 'lucide-react';
-import { useMcpStore, selectServers, useWorkspaceStore, selectActiveTab } from '../../stores';
+import { useMcpStore, selectServers, selectOmniscribeMcp, useWorkspaceStore, selectActiveTab } from '../../stores';
 import { McpServerStatus } from '@omniscribe/shared';
 
 interface McpSectionProps {
@@ -78,6 +78,8 @@ export function McpSection({ className }: McpSectionProps) {
   const disconnectServer = useMcpStore((state) => state.disconnectServer);
   const clear = useMcpStore((state) => state.clear);
   const initListeners = useMcpStore((state) => state.initListeners);
+  const omniscribeMcp = useMcpStore(selectOmniscribeMcp);
+  const fetchOmniscribeMcpStatus = useMcpStore((state) => state.fetchOmniscribeMcpStatus);
 
   const activeTab = useWorkspaceStore(selectActiveTab);
 
@@ -88,6 +90,11 @@ export function McpSection({ className }: McpSectionProps) {
   useEffect(() => {
     initListeners();
   }, [initListeners]);
+
+  // Fetch Omniscribe MCP status on mount
+  useEffect(() => {
+    fetchOmniscribeMcpStatus();
+  }, [fetchOmniscribeMcpStatus]);
 
   // Discover servers when active project changes
   useEffect(() => {
@@ -133,6 +140,36 @@ export function McpSection({ className }: McpSectionProps) {
 
   return (
     <div className={twMerge(clsx('space-y-2', className))}>
+      {/* Omniscribe MCP Status */}
+      <div className="flex items-center gap-2 px-2 py-1.5 rounded bg-omniscribe-surface/30">
+        <span
+          className={clsx(
+            'w-2 h-2 rounded-full',
+            omniscribeMcp.available ? 'bg-green-400' : 'bg-red-400'
+          )}
+        />
+        <div className="min-w-0 flex-1">
+          <div className="text-xs text-omniscribe-text-secondary font-medium">
+            Omniscribe MCP
+          </div>
+          <div className="text-[10px] text-omniscribe-text-muted truncate">
+            {omniscribeMcp.available
+              ? omniscribeMcp.path?.split(/[/\\]/).slice(-2).join('/')
+              : 'Not available'}
+          </div>
+        </div>
+        <span
+          className={clsx(
+            'text-[10px] px-1.5 py-0.5 rounded',
+            omniscribeMcp.available
+              ? 'bg-green-400/20 text-green-400'
+              : 'bg-red-400/20 text-red-400'
+          )}
+        >
+          {omniscribeMcp.available ? 'Ready' : 'Unavailable'}
+        </span>
+      </div>
+
       {/* Header with count and refresh */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">

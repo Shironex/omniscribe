@@ -7,14 +7,14 @@ import * as os from 'os';
 
 /**
  * Agent status file structure
+ * Matches what the MCP server writes (omniscribe_status tool)
  */
 interface AgentStatusFile {
   agentId: string;
-  sessionId: string;
-  status: 'idle' | 'active' | 'thinking' | 'executing' | 'paused' | 'error';
+  state: 'idle' | 'working' | 'needs_input' | 'finished' | 'error';
   message?: string;
-  lastUpdated: string;
-  mcpConnections?: string[];
+  needsInputPrompt?: string;
+  timestamp: string;
 }
 
 /**
@@ -24,9 +24,9 @@ export interface SessionStatusEvent {
   projectPath: string;
   sessionId: string;
   agentId: string;
-  status: string;
+  status: 'idle' | 'working' | 'needs_input' | 'finished' | 'error' | 'disconnected';
   message?: string;
-  mcpConnections?: string[];
+  needsInputPrompt?: string;
 }
 
 /**
@@ -138,17 +138,8 @@ export class McpMonitorService implements OnModuleInit, OnModuleDestroy {
       return;
     }
 
-    // Remove from tracking
-    const keysToRemove: string[] = [];
-    for (const [key, status] of tracked.lastStatuses) {
-      if (status.sessionId === sessionId) {
-        keysToRemove.push(key);
-      }
-    }
-
-    for (const key of keysToRemove) {
-      tracked.lastStatuses.delete(key);
-    }
+    // Remove from tracking - the key is sessionId (extracted from filename agent-{sessionId}.json)
+    tracked.lastStatuses.delete(sessionId);
 
     // Also clean up the status file
     this.cleanupSessionStatusFiles(tracked.hash, sessionId);
@@ -262,26 +253,29 @@ export class McpMonitorService implements OnModuleInit, OnModuleDestroy {
 
         if (
           !lastStatus ||
-          lastStatus.status !== status.status ||
+          lastStatus.state !== status.state ||
           lastStatus.message !== status.message ||
-          lastStatus.lastUpdated !== status.lastUpdated
+          lastStatus.timestamp !== status.timestamp
         ) {
           // Status changed - emit event
           tracked.lastStatuses.set(agentId, status);
 
+          // Extract sessionId from agentId (format: agent-{sessionId})
+          const sessionId = status.agentId.replace('agent-', '');
+
           const event: SessionStatusEvent = {
             projectPath,
-            sessionId: status.sessionId,
+            sessionId,
             agentId: status.agentId,
-            status: status.status,
+            status: status.state,
             message: status.message,
-            mcpConnections: status.mcpConnections,
+            needsInputPrompt: status.needsInputPrompt,
           };
 
           this.eventEmitter.emit('session.status', event);
 
           console.log(
-            `[McpMonitorService] Status change for agent ${agentId}: ${status.status}`
+            `[McpMonitorService] Status change for agent ${agentId}: ${status.state}`
           );
         }
       } catch (error) {
@@ -295,9 +289,12 @@ export class McpMonitorService implements OnModuleInit, OnModuleDestroy {
         // Agent status file removed - emit disconnected event
         tracked.lastStatuses.delete(agentId);
 
+        // Extract sessionId from agentId (format: agent-{sessionId})
+        const sessionId = lastStatus.agentId.replace('agent-', '');
+
         const event: SessionStatusEvent = {
           projectPath,
-          sessionId: lastStatus.sessionId,
+          sessionId,
           agentId: lastStatus.agentId,
           status: 'disconnected',
           message: 'Agent status file removed',
@@ -336,9 +333,12 @@ export class McpMonitorService implements OnModuleInit, OnModuleDestroy {
 
       // Emit disconnected event if we had previous status
       if (lastStatus) {
+        // Extract sessionId from agentId (format: agent-{sessionId})
+        const sessionId = lastStatus.agentId.replace('agent-', '');
+
         const event: SessionStatusEvent = {
           projectPath: tracked.projectPath,
-          sessionId: lastStatus.sessionId,
+          sessionId,
           agentId: lastStatus.agentId,
           status: 'disconnected',
           message: 'Status file became stale',
@@ -370,28 +370,15 @@ export class McpMonitorService implements OnModuleInit, OnModuleDestroy {
     }
 
     try {
-      const files = await fs.promises.readdir(agentsDir);
+      // File format is agent-{sessionId}.json
+      const expectedFileName = `agent-${sessionId}.json`;
+      const filePath = path.join(agentsDir, expectedFileName);
 
-      for (const file of files) {
-        if (!file.startsWith('agent-') || !file.endsWith('.json')) {
-          continue;
-        }
-
-        const filePath = path.join(agentsDir, file);
-
-        try {
-          const content = await fs.promises.readFile(filePath, 'utf-8');
-          const status = JSON.parse(content) as AgentStatusFile;
-
-          if (status.sessionId === sessionId) {
-            await fs.promises.unlink(filePath);
-            console.log(
-              `[McpMonitorService] Cleaned up status file for session ${sessionId}: ${file}`
-            );
-          }
-        } catch {
-          // Ignore individual file errors
-        }
+      if (fs.existsSync(filePath)) {
+        await fs.promises.unlink(filePath);
+        console.log(
+          `[McpMonitorService] Cleaned up status file for session ${sessionId}: ${expectedFileName}`
+        );
       }
     } catch (error) {
       console.error(

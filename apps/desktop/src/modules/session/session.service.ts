@@ -11,6 +11,7 @@ import {
   CreateSessionOptions,
 } from '@omniscribe/shared';
 import { TerminalService } from '../terminal/terminal.service';
+import { McpConfigService } from '../mcp/mcp-config.service';
 
 /**
  * AI CLI command configuration for each mode
@@ -67,7 +68,8 @@ export class SessionService {
 
   constructor(
     private readonly eventEmitter: EventEmitter2,
-    private readonly terminalService: TerminalService
+    private readonly terminalService: TerminalService,
+    private readonly mcpConfigService: McpConfigService
   ) {
     // Listen for terminal close events to update session status
     this.eventEmitter.on(
@@ -214,6 +216,10 @@ export class SessionService {
       session.terminalSessionId = undefined;
     }
 
+    // Note: We intentionally don't remove the omniscribe MCP entry from .mcp.json
+    // because other sessions may still be running and need it, plus it's useful
+    // to keep it there for future sessions
+
     this.sessions.delete(sessionId);
 
     this.eventEmitter.emit('session.removed', { sessionId });
@@ -265,12 +271,12 @@ export class SessionService {
    * @param aiMode The AI mode determining which CLI to spawn
    * @returns Launch result with terminal session ID or error
    */
-  launchSession(
+  async launchSession(
     sessionId: string,
     projectPath: string,
     worktreePath: string,
     aiMode: AiMode
-  ): LaunchSessionResult {
+  ): Promise<LaunchSessionResult> {
     const session = this.sessions.get(sessionId);
 
     if (!session) {
@@ -296,12 +302,31 @@ export class SessionService {
     this.updateStatus(sessionId, 'connecting', 'Starting AI session...');
 
     try {
+      // Write MCP config to the working directory before launching
+      // This ensures Claude Code can discover and use the omniscribe MCP server
+      await this.mcpConfigService.writeConfig(
+        worktreePath,
+        sessionId,
+        projectPath,
+        [] // No additional servers for now - omniscribe is always included
+      );
+
+      this.logger.log(`MCP config written to ${worktreePath}/.mcp.json`);
+
       // Get CLI configuration for the AI mode
       const cliConfig = this.getAiCliConfig(aiMode, session);
 
+      // Generate project hash for MCP status file identification
+      const projectHash = this.mcpConfigService.generateProjectHash(projectPath);
+
       // Build environment variables
+      // IMPORTANT: OMNISCRIBE_SESSION_ID and OMNISCRIBE_PROJECT_HASH are passed here
+      // via shell environment (NOT in .mcp.json) to avoid race conditions when
+      // multiple sessions share the same .mcp.json file. The MCP server inherits
+      // these from the shell process that launched Claude CLI.
       const env: Record<string, string> = {
         OMNISCRIBE_SESSION_ID: sessionId,
+        OMNISCRIBE_PROJECT_HASH: projectHash,
         OMNISCRIBE_PROJECT_PATH: projectPath,
         OMNISCRIBE_WORKTREE_PATH: worktreePath,
         OMNISCRIBE_AI_MODE: aiMode,

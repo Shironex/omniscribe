@@ -18,7 +18,8 @@ import { GitSection } from './GitSection';
 import { SessionsSection } from './SessionsSection';
 import { McpSection } from './McpSection';
 import { QuickActionsSection } from './QuickActionsSection';
-import { useSessionStore } from '../../stores';
+import { useSessionStore, useTerminalControlStore } from '../../stores';
+import { writeToTerminal } from '../../lib/terminal';
 import { QuickAction } from '@omniscribe/shared';
 
 type Theme = 'dark' | 'light';
@@ -108,20 +109,55 @@ export function Sidebar({
     setIsResizing(true);
   }, []);
 
+  // Terminal control store for focus and session management
+  const setFocusedSessionId = useTerminalControlStore((state) => state.setFocusedSessionId);
+  const requestAddSlot = useTerminalControlStore((state) => state.requestAddSlot);
+  const focusedSessionId = useTerminalControlStore((state) => state.focusedSessionId);
+
   const handleSessionClick = useCallback((sessionId: string) => {
-    // TODO: Implement session focus - emit event or call workspace store
-    console.log('[Sidebar] Focus session:', sessionId);
-  }, []);
+    // Set the focused session in the shared store
+    setFocusedSessionId(sessionId);
+  }, [setFocusedSessionId]);
 
   const handleNewSession = useCallback(() => {
-    // TODO: Implement new session creation
-    console.log('[Sidebar] Create new session');
-  }, []);
+    // Request a new pre-launch slot via the shared store
+    requestAddSlot();
+  }, [requestAddSlot]);
 
   const handleActionExecute = useCallback((action: QuickAction) => {
-    // TODO: Implement action execution via socket or IPC
-    console.log('[Sidebar] Execute action:', action.id, action.handler, action.params);
-  }, []);
+    // Find the focused session to send the command to
+    const focusedSession = focusedSessionId
+      ? sessions.find((s) => s.id === focusedSessionId)
+      : null;
+
+    // If no focused session, try to use the first active session
+    const targetSession = focusedSession
+      ?? sessions.find((s) => s.status === 'active' || s.status === 'executing');
+
+    if (!targetSession?.terminalSessionId) {
+      console.warn('[Sidebar] No active terminal session to execute action');
+      return;
+    }
+
+    // Build the command based on the action handler and params
+    const params = action.params ?? {};
+    let command = '';
+    if (action.handler === 'shell') {
+      // For shell actions, the command is in params
+      command = String(params.command ?? params.cmd ?? '');
+    } else if (action.handler === 'script') {
+      // For script actions, run the script file
+      command = String(params.path ?? params.script ?? '');
+    } else {
+      // For other handlers, try to construct a command
+      command = String(params.command ?? params.cmd ?? action.id);
+    }
+
+    if (command) {
+      // Write the command to the terminal with a newline to execute it
+      writeToTerminal(targetSession.terminalSessionId, command + '\n');
+    }
+  }, [focusedSessionId, sessions]);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
