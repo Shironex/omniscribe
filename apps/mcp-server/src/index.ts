@@ -95,8 +95,8 @@ const server = new McpServer({
 // ============================================================================
 
 const OmniscribeStatusSchema = {
-  state: z.enum(['idle', 'working', 'needs_input', 'finished', 'error']).describe(
-    'Current agent state: idle (waiting), working (processing), needs_input (waiting for user), finished (task complete), error (something went wrong)'
+  state: z.enum(['idle', 'working', 'planning', 'needs_input', 'finished', 'error']).describe(
+    'Current agent state: idle (waiting), working (executing), planning (in plan mode), needs_input (waiting for user), finished (task complete), error (something went wrong)'
   ),
   message: z.string().describe('Human-readable status message describing what the agent is doing'),
   needsInputPrompt: z.string().optional().describe(

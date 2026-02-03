@@ -5,6 +5,7 @@ export type SessionStatus =
   | 'starting'
   | 'idle'
   | 'working'
+  | 'planning'
   | 'needsInput'
   | 'done'
   | 'error';
@@ -13,6 +14,7 @@ export interface StatusCounts {
   starting: number;
   idle: number;
   working: number;
+  planning: number;
   needsInput: number;
   done: number;
   error: number;
@@ -22,6 +24,7 @@ const statusConfig: Record<SessionStatus, { label: string; color: string }> = {
   starting: { label: 'Starting', color: 'bg-orange-500' },
   idle: { label: 'Idle', color: 'bg-gray-500' },
   working: { label: 'Working', color: 'bg-blue-500' },
+  planning: { label: 'Planning', color: 'bg-purple-500' },
   needsInput: { label: 'Needs Input', color: 'bg-yellow-500' },
   done: { label: 'Done', color: 'bg-green-500' },
   error: { label: 'Error', color: 'bg-red-500' },

@@ -717,10 +717,28 @@ export class SessionService {
       args.push('--model', session.model);
     }
 
-    // Add system prompt if specified
+    // Add system prompt if specified (replaces default)
     if (session.systemPrompt) {
       args.push('--system-prompt', session.systemPrompt);
     }
+
+    // Append Omniscribe status reporting instructions
+    // This adds to the default system prompt without replacing it
+    const omniscribePrompt = `
+## Omniscribe Integration
+
+You have access to the Omniscribe MCP server which tracks your task status. Use it proactively:
+
+- **When starting work**: Call \`mcp__omniscribe__omniscribe_status\` with state "working" and describe what you're doing
+- **When entering plan mode**: Call with state "planning" and describe what you're planning
+- **When waiting for user input**: Call with state "needs_input" and include the question in \`needsInputPrompt\`
+- **When task/plan is complete**: Call with state "finished" to indicate completion
+- **On errors**: Call with state "error" and describe what went wrong
+
+Report status at key transitions so the user can see your progress in the Omniscribe UI.
+`.trim();
+
+    args.push('--append-system-prompt', omniscribePrompt);
 
     // Find the Claude CLI command with proper path resolution
     // This is needed on all platforms because Electron doesn't inherit the user's shell PATH

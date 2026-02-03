@@ -18,6 +18,7 @@ export type SessionStatus =
   | 'disconnected'
   // MCP status values
   | 'working'
+  | 'planning'
   | 'needs_input'
   | 'finished';
 
