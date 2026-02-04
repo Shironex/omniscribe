@@ -77,7 +77,7 @@ export function BottomBar({
               : 'bg-border text-muted-foreground cursor-not-allowed opacity-60'
           )}
         >
-          <Play size={14} />
+          <Play size={14} fill="currentColor" />
           <span>{isLaunching ? 'Launching...' : 'Launch'}</span>
         </button>
       </div>

@@ -153,11 +153,11 @@ export function PreLaunchBar({
         disabled={isLaunching}
         className={clsx(
           'flex items-center gap-1.5 px-3 py-1 rounded',
-          'text-xs font-medium text-white',
+          'text-xs font-medium',
           'transition-colors',
           isLaunching
-            ? 'bg-primary/50 cursor-not-allowed'
-            : 'bg-primary hover:bg-primary/80'
+            ? 'bg-border text-muted-foreground cursor-not-allowed opacity-60'
+            : 'bg-[var(--status-success)] hover:brightness-110 text-white'
         )}
       >
         <Play size={12} fill="currentColor" />
