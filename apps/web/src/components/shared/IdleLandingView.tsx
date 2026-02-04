@@ -54,11 +54,11 @@ export function IdleLandingView({ onAddSession, className }: IdleLandingViewProp
         )
       )}
     >
-      {/* Background gradient blobs for glassmorphism effect */}
+      {/* Background gradient blobs for glassmorphism effect - uses theme colors */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 -left-20 w-72 h-72 bg-primary/30 rounded-full blur-[100px]" />
         <div className="absolute bottom-1/4 -right-20 w-80 h-80 bg-brand-600/25 rounded-full blur-[120px]" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-cyan-500/15 rounded-full blur-[100px]" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-brand-400/15 rounded-full blur-[100px]" />
       </div>
 
       {/* Glassmorphism card */}
