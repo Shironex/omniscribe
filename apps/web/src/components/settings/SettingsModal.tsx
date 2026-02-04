@@ -1,7 +1,7 @@
 import { useEffect, useCallback, useState } from 'react';
 import { X, Menu } from 'lucide-react';
 import { clsx } from 'clsx';
-import { useSettingsStore } from '../../stores';
+import { useSettingsStore } from '@/stores';
 import { SettingsNavigation } from './SettingsNavigation';
 import {
   AppearanceSection,

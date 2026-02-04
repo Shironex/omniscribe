@@ -2,9 +2,9 @@ import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { Play, X, Terminal, ChevronDown } from 'lucide-react';
 import { useState, useRef, useEffect, type ComponentType } from 'react';
-import type { Branch } from '../shared/BranchSelector';
-import { BranchAutocomplete } from '../shared/BranchAutocomplete';
-import { ClaudeIcon } from '../icons/ClaudeIcon';
+import type { Branch } from '@/components/shared/BranchSelector';
+import { BranchAutocomplete } from '@/components/shared/BranchAutocomplete';
+import { ClaudeIcon } from '@/components/shared/ClaudeIcon';
 
 export type AIMode = 'claude' | 'plain';
 

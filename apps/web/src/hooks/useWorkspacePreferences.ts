@@ -1,6 +1,6 @@
 import { useEffect, useRef, useMemo } from 'react';
-import { useWorkspaceStore } from '../stores/useWorkspaceStore';
-import { useSettingsStore } from '../stores/useSettingsStore';
+import { useWorkspaceStore } from '@/stores/useWorkspaceStore';
+import { useSettingsStore } from '@/stores/useSettingsStore';
 import type { Theme } from '@omniscribe/shared';
 
 /**

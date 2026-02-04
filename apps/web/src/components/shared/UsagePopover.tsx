@@ -3,7 +3,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Button } from '@/components/ui/button';
 import { RefreshCw, AlertTriangle, CheckCircle, XCircle, Clock, ExternalLink } from 'lucide-react';
 import { clsx } from 'clsx';
-import { ClaudeIcon } from '@/components/icons/ClaudeIcon';
+import { ClaudeIcon } from '@/components/shared/ClaudeIcon';
 import { useUsageStore } from '@/stores/useUsageStore';
 import { useWorkspaceStore } from '@/stores/useWorkspaceStore';
 import type { UsageError } from '@omniscribe/shared';

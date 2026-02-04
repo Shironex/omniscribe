@@ -2,7 +2,7 @@ import { useCallback, useMemo, useEffect } from 'react';
 import { Server, CheckCircle2, RefreshCw, Loader2 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { MCP_SERVER_NAME } from '@omniscribe/shared';
-import { useMcpStore, useWorkspaceStore, selectActiveTab, selectInternalMcp } from '../../../stores';
+import { useMcpStore, useWorkspaceStore, selectActiveTab, selectInternalMcp } from '@/stores';
 
 export function McpSection() {
   const servers = useMcpStore((state) => state.servers);

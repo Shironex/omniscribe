@@ -21,9 +21,9 @@ import {
   Bot,
   type LucideIcon,
 } from 'lucide-react';
-import { SessionStatus, StatusDot } from '../shared/StatusLegend';
+import { SessionStatus, StatusDot } from '@/components/shared/StatusLegend';
 import { useState, useRef, useEffect, useMemo, type ComponentType } from 'react';
-import { ClaudeIcon } from '../icons/ClaudeIcon';
+import { ClaudeIcon } from '@/components/shared/ClaudeIcon';
 
 // Icon map for rendering icons from string names
 const iconMap: Record<string, LucideIcon> = {

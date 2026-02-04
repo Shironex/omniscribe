@@ -10,7 +10,7 @@ import {
   User,
 } from 'lucide-react';
 import { clsx } from 'clsx';
-import { useSettingsStore } from '../../../stores';
+import { useSettingsStore } from '@/stores';
 
 export function GithubSection() {
   const githubCliStatus = useSettingsStore((state) => state.githubCliStatus);

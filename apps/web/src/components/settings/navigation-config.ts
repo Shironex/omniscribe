@@ -1,7 +1,7 @@
 import type { ComponentType } from 'react';
 import { Palette, Server, Settings, GitBranch, Github } from 'lucide-react';
 import type { SettingsSectionId } from '@omniscribe/shared';
-import { ClaudeIcon } from '../icons/ClaudeIcon';
+import { ClaudeIcon } from '@/components/shared/ClaudeIcon';
 
 export interface NavigationItem {
   id: SettingsSectionId;

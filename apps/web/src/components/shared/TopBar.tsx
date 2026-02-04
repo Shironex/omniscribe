@@ -2,7 +2,7 @@ import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { GitBranch } from 'lucide-react';
 import { StatusLegend, StatusCounts } from './StatusLegend';
-import { UsagePopover } from '@/components/usage';
+import { UsagePopover } from '@/components/shared/UsagePopover';
 
 interface TopBarProps {
   currentBranch: string;

@@ -17,3 +17,7 @@ export type { Branch as BranchAutocompleteType } from './BranchAutocomplete';
 export { IdleLandingView } from './IdleLandingView';
 
 export { WelcomeView } from './WelcomeView';
+
+export { ClaudeIcon } from './ClaudeIcon';
+
+export { UsagePopover } from './UsagePopover';

@@ -3,11 +3,11 @@ import {
   ProjectTabs,
   TopBar,
   BottomBar,
-} from './components';
-import { TerminalGrid } from './components/terminal/TerminalGrid';
-import { IdleLandingView } from './components/shared/IdleLandingView';
-import { WelcomeView } from './components/shared/WelcomeView';
-import { SettingsModal } from './components/settings';
+  TerminalGrid,
+  IdleLandingView,
+  WelcomeView,
+  SettingsModal,
+} from '@/components';
 import {
   useAppInitialization,
   useWorkspaceTabs,
@@ -16,9 +16,9 @@ import {
   usePreLaunchSlots,
   useProjectGit,
   useSessionLifecycle,
-} from './hooks';
-import { useQuickActionStore, useWorkspaceStore } from './stores';
-import { writeToTerminal } from './lib/terminal';
+} from '@/hooks';
+import { useQuickActionStore, useWorkspaceStore } from '@/stores';
+import { writeToTerminal } from '@/lib/terminal';
 
 function App() {
   // Initialize app (socket and store listeners)

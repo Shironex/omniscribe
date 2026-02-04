@@ -1,5 +1,5 @@
 import type { StoreApi } from 'zustand';
-import { socket } from '../../lib/socket';
+import { socket } from '@/lib/socket';
 
 /**
  * Common state for socket-connected stores

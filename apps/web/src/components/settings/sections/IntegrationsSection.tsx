@@ -14,8 +14,8 @@ import {
   Play,
 } from 'lucide-react';
 import { clsx } from 'clsx';
-import { useSettingsStore } from '../../../stores';
-import { ClaudeIcon } from '../../icons/ClaudeIcon';
+import { useSettingsStore } from '@/stores';
+import { ClaudeIcon } from '@/components/shared/ClaudeIcon';
 
 export function IntegrationsSection() {
   const claudeCliStatus = useSettingsStore((state) => state.claudeCliStatus);

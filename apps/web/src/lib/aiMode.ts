@@ -1,5 +1,5 @@
 import type { AiMode } from '@omniscribe/shared';
-import type { AIMode } from '../components/terminal/PreLaunchBar';
+import type { AIMode } from '@/components/terminal/PreLaunchBar';
 
 /**
  * Maps UI AIMode to backend AiMode

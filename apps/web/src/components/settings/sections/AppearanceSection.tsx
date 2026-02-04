@@ -3,8 +3,8 @@ import { Palette, Check } from 'lucide-react';
 import { clsx } from 'clsx';
 import { APP_NAME } from '@omniscribe/shared';
 import type { Theme } from '@omniscribe/shared';
-import { themeOptions, darkThemes, lightThemes } from '../../../config/theme-options';
-import { useSettingsStore } from '../../../stores';
+import { themeOptions, darkThemes, lightThemes } from '@/lib/theme';
+import { useSettingsStore } from '@/stores';
 
 type TabValue = 'dark' | 'light';
 

@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
-import type { ExtendedSessionConfig } from '../stores/useSessionStore';
-import { removeSession } from '../lib/session';
-import { killTerminal } from '../lib/terminal';
+import type { ExtendedSessionConfig } from '@/stores/useSessionStore';
+import { removeSession } from '@/lib/session';
+import { killTerminal } from '@/lib/terminal';
 
 interface UseSessionLifecycleReturn {
   /** Handler to stop all active sessions */

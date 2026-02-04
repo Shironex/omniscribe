@@ -1,6 +1,6 @@
 import { GitBranch, Trash2, FolderOpen, HardDrive, FlaskConical, AlertTriangle } from 'lucide-react';
 import { clsx } from 'clsx';
-import { useWorkspaceStore } from '../../../stores';
+import { useWorkspaceStore } from '@/stores';
 import type { WorktreeMode, WorktreeLocation, WorktreeSettings } from '@omniscribe/shared';
 import { DEFAULT_WORKTREE_SETTINGS, USER_DATA_DIR, WORKTREES_DIR } from '@omniscribe/shared';
 

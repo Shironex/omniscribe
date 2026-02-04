@@ -1,8 +1,8 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import type { PreLaunchSlot } from '../components/terminal/TerminalGrid';
-import { createSession } from '../lib/session';
-import { mapAiModeToBackend } from '../lib/aiMode';
-import { useTerminalControlStore } from '../stores';
+import type { PreLaunchSlot } from '@/components/terminal/TerminalGrid';
+import { createSession } from '@/lib/session';
+import { mapAiModeToBackend } from '@/lib/aiMode';
+import { useTerminalControlStore } from '@/stores';
 
 interface UsePreLaunchSlotsReturn {
   /** Pre-launch slots state */

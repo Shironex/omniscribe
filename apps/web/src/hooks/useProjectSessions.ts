@@ -1,9 +1,9 @@
 import { useState, useCallback, useMemo } from 'react';
-import { useSessionStore, type ExtendedSessionConfig } from '../stores/useSessionStore';
-import type { StatusCounts } from '../components';
-import type { TerminalSession, PreLaunchSlot } from '../components/terminal/TerminalGrid';
+import { useSessionStore, type ExtendedSessionConfig } from '@/stores/useSessionStore';
+import type { StatusCounts } from '@/components';
+import type { TerminalSession, PreLaunchSlot } from '@/components/terminal/TerminalGrid';
 import { mapSessionStatus } from '@omniscribe/shared';
-import { mapAiModeToUI } from '../lib/aiMode';
+import { mapAiModeToUI } from '@/lib/aiMode';
 
 interface UseProjectSessionsReturn {
   /** All sessions from store */

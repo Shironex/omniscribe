@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { useGitStore } from '../stores/useGitStore';
-import { useMcpStore } from '../stores/useMcpStore';
-import type { Branch } from '../components/shared/BranchSelector';
+import { useGitStore } from '@/stores/useGitStore';
+import { useMcpStore } from '@/stores/useMcpStore';
+import type { Branch } from '@/components/shared/BranchSelector';
 
 interface UseProjectGitReturn {
   /** Branches formatted for BranchSelector */

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { socket } from '../lib/socket';
+import { socket } from '@/lib/socket';
 import type {
   Theme,
   ProjectTab,

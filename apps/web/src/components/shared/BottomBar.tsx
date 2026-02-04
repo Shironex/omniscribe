@@ -1,7 +1,7 @@
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { Settings, Square, Play } from 'lucide-react';
-import { useSettingsStore } from '../../stores';
+import { useSettingsStore } from '@/stores';
 
 interface BottomBarProps {
   onStopAll: () => void;

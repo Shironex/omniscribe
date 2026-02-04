@@ -6,7 +6,7 @@ import {
   connectTerminal,
   writeToTerminal,
   resizeTerminal,
-} from '../../lib/terminal';
+} from '@/lib/terminal';
 import '@xterm/xterm/css/xterm.css';
 
 export interface TerminalViewProps {

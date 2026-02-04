@@ -6,7 +6,7 @@ import type {
   GhCliStatus,
   ClaudeVersionCheckResult,
 } from '@omniscribe/shared';
-import { themeOptions } from '../config/theme-options';
+import { themeOptions } from '@/lib/theme';
 
 /**
  * Settings modal state

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { ClaudeUsage, UsageStatus, UsageError } from '@omniscribe/shared';
-import { socket } from '../lib/socket';
-import { emitAsync } from '../lib/socketHelpers';
+import { socket } from '@/lib/socket';
+import { emitAsync } from '@/lib/socketHelpers';
 
 /** Polling interval for usage data (15 minutes) */
 const USAGE_POLLING_INTERVAL = 15 * 60 * 1000;

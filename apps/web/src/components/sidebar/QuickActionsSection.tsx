@@ -13,7 +13,7 @@ import {
   Navigation,
   LucideIcon,
 } from 'lucide-react';
-import { useQuickActionStore, selectActions } from '../../stores';
+import { useQuickActionStore, selectActions } from '@/stores';
 import { QuickAction } from '@omniscribe/shared';
 
 interface QuickActionsSectionProps {

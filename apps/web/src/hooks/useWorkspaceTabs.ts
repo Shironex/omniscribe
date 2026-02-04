@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from 'react';
-import { useWorkspaceStore, type ProjectTab } from '../stores/useWorkspaceStore';
-import { useSessionStore } from '../stores/useSessionStore';
-import type { Tab } from '../components';
+import { useWorkspaceStore, type ProjectTab } from '@/stores/useWorkspaceStore';
+import { useSessionStore } from '@/stores/useSessionStore';
+import type { Tab } from '@/components';
 import type { UISessionStatus } from '@omniscribe/shared';
 
 interface UseWorkspaceTabsReturn {

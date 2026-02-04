@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { BranchInfo, CommitInfo } from '@omniscribe/shared';
-import { socket } from '../lib/socket';
+import { socket } from '@/lib/socket';
 import {
   SocketStoreState,
   SocketStoreActions,

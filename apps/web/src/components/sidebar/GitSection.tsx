@@ -9,8 +9,8 @@ import {
   RefreshCw,
   AlertCircle,
 } from 'lucide-react';
-import { useGitStore, selectCurrentBranch } from '../../stores';
-import { useWorkspaceStore, selectActiveTab } from '../../stores';
+import { useGitStore, selectCurrentBranch } from '@/stores';
+import { useWorkspaceStore, selectActiveTab } from '@/stores';
 
 interface GitSectionProps {
   className?: string;

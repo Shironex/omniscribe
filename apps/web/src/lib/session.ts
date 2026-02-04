@@ -1,6 +1,6 @@
 import { socket } from './socket';
 import { AiMode, UpdateSessionOptions } from '@omniscribe/shared';
-import { ExtendedSessionConfig } from '../stores/useSessionStore';
+import { ExtendedSessionConfig } from '@/stores/useSessionStore';
 import { emitWithErrorHandling, emitWithSuccessHandling } from './socketHelpers';
 
 /**

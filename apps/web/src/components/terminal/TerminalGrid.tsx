@@ -7,8 +7,8 @@ import { TerminalHeader } from './TerminalHeader';
 import type { TerminalSession } from './TerminalHeader';
 import { PreLaunchBar } from './PreLaunchBar';
 import type { PreLaunchSlot } from './PreLaunchBar';
-import { IdleLandingView } from '../shared/IdleLandingView';
-import { Branch } from '../shared/BranchSelector';
+import { IdleLandingView } from '@/components/shared/IdleLandingView';
+import { Branch } from '@/components/shared/BranchSelector';
 
 interface QuickActionItem {
   id: string;

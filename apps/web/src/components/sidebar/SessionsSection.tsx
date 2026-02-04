@@ -2,9 +2,9 @@ import { useEffect, useMemo } from 'react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { Terminal, Plus, AlertCircle } from 'lucide-react';
-import { useSessionStore } from '../../stores';
-import { useWorkspaceStore, selectActiveTab } from '../../stores';
-import { StatusDot } from '../shared/StatusLegend';
+import { useSessionStore } from '@/stores';
+import { useWorkspaceStore, selectActiveTab } from '@/stores';
+import { StatusDot } from '@/components/shared/StatusLegend';
 import { mapSessionStatus } from '@omniscribe/shared';
 
 interface SessionsSectionProps {

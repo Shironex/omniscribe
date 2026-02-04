@@ -1,9 +1,9 @@
 import { useEffect } from 'react';
-import { useSessionStore } from '../stores/useSessionStore';
-import { useWorkspaceStore } from '../stores/useWorkspaceStore';
-import { useGitStore } from '../stores/useGitStore';
-import { useMcpStore } from '../stores/useMcpStore';
-import { connectSocket } from '../lib/socket';
+import { useSessionStore } from '@/stores/useSessionStore';
+import { useWorkspaceStore } from '@/stores/useWorkspaceStore';
+import { useGitStore } from '@/stores/useGitStore';
+import { useMcpStore } from '@/stores/useMcpStore';
+import { connectSocket } from '@/lib/socket';
 
 /**
  * Hook for app initialization - socket connection and all store listener setup/cleanup.

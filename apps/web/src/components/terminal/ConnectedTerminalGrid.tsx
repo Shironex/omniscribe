@@ -1,15 +1,15 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { TerminalGrid } from './TerminalGrid';
-import { useSessionStore } from '../../stores/useSessionStore';
-import { useWorkspaceStore, selectActiveTab } from '../../stores/useWorkspaceStore';
-import { useGitStore, selectBranches, selectCurrentBranch } from '../../stores/useGitStore';
-import { useTerminalControlStore } from '../../stores/useTerminalControlStore';
-import { createSession, removeSession } from '../../lib/session';
-import { killTerminal } from '../../lib/terminal';
-import { mapAiModeToBackend, mapAiModeToUI } from '../../lib/aiMode';
+import { useSessionStore } from '@/stores/useSessionStore';
+import { useWorkspaceStore, selectActiveTab } from '@/stores/useWorkspaceStore';
+import { useGitStore, selectBranches, selectCurrentBranch } from '@/stores/useGitStore';
+import { useTerminalControlStore } from '@/stores/useTerminalControlStore';
+import { createSession, removeSession } from '@/lib/session';
+import { killTerminal } from '@/lib/terminal';
+import { mapAiModeToBackend, mapAiModeToUI } from '@/lib/aiMode';
 import type { TerminalSession } from './TerminalHeader';
 import type { PreLaunchSlot } from './PreLaunchBar';
-import type { Branch } from '../shared/BranchSelector';
+import type { Branch } from '@/components/shared/BranchSelector';
 import { mapSessionStatus } from '@omniscribe/shared';
 
 interface ConnectedTerminalGridProps {

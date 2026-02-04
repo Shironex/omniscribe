@@ -13,8 +13,8 @@ import {
 import { GitSection } from './GitSection';
 import { SessionsSection } from './SessionsSection';
 import { QuickActionsSection } from './QuickActionsSection';
-import { useSessionStore, useTerminalControlStore } from '../../stores';
-import { writeToTerminal } from '../../lib/terminal';
+import { useSessionStore, useTerminalControlStore } from '@/stores';
+import { writeToTerminal } from '@/lib/terminal';
 import { QuickAction } from '@omniscribe/shared';
 
 type SidebarTab = 'config' | 'processes';
