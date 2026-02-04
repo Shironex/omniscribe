@@ -198,13 +198,13 @@ export function UsagePopover() {
         <div
           title={`Session usage (${CLAUDE_SESSION_WINDOW_HOURS}h window)`}
           className={clsx(
-            'h-1.5 w-12 bg-muted-foreground/20 rounded-full overflow-hidden transition-opacity',
+            'h-1.5 w-12 bg-muted rounded-full overflow-hidden border border-border/50 transition-opacity',
             isStale && 'opacity-60'
           )}
         >
           <div
             className={clsx(
-              'h-full transition-all duration-500',
+              'h-full transition-all duration-500 rounded-full',
               getProgressBarColor(sessionPercentage)
             )}
             style={{ width: `${Math.min(sessionPercentage, 100)}%` }}
