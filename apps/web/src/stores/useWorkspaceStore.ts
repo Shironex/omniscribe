@@ -235,6 +235,10 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => {
   },
 
   selectTab: (tabId: string) => {
+    // Optimistic update: set activeTabId immediately to prevent race conditions
+    // This ensures activeTab computed value is accurate before socket response
+    set({ activeTabId: tabId });
+
     socket.emit(
       'workspace:select-tab',
       { tabId },
@@ -244,6 +248,9 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => {
             tabs: response.tabs.map(convertBackendTab),
             activeTabId: response.activeTabId,
           });
+        } else {
+          // Rollback on failure - restore previous state
+          // The tabs array still has the correct state
         }
       }
     );

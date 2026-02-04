@@ -34,6 +34,10 @@ export function useWorkspacePreferences(): void {
   // Track the previous settings theme to detect user changes
   const prevSettingsThemeRef = useRef<Theme | null>(null);
 
+  // Track if a tab switch is in progress to prevent race conditions
+  // This prevents the settings-to-tab effect from firing during programmatic theme changes
+  const isTabSwitchInProgressRef = useRef(false);
+
   // Initial theme sync: Apply the active tab's theme on first load
   useEffect(() => {
     // Only sync once after workspace state is restored from backend
@@ -64,16 +68,35 @@ export function useWorkspacePreferences(): void {
     }
     prevActiveTabIdRef.current = activeWorkspaceTabId;
 
-    if (activeTab?.theme && activeTab.theme !== settingsTheme) {
+    // Guard: Only apply theme if we have valid tab data
+    // This prevents race conditions where activeTabId updates before tabs array
+    if (!activeTab) {
+      return;
+    }
+
+    if (activeTab.theme && activeTab.theme !== settingsTheme) {
+      // Set flag to prevent the settings-to-tab effect from firing
+      isTabSwitchInProgressRef.current = true;
       prevSettingsThemeRef.current = activeTab.theme;
       setSettingsTheme(activeTab.theme);
+
+      // Clear flag after microtask queue flushes to allow state to settle
+      queueMicrotask(() => {
+        isTabSwitchInProgressRef.current = false;
+      });
     }
-  }, [activeWorkspaceTabId, activeTab?.theme, settingsTheme, setSettingsTheme]);
+  }, [activeWorkspaceTabId, activeTab, settingsTheme, setSettingsTheme]);
 
   // Settings change: When user changes theme in settings, update the active tab's theme
   useEffect(() => {
     // Skip initial sync - only persist user-initiated changes
     if (!hasInitialThemeSyncRef.current) {
+      return;
+    }
+
+    // Skip if a tab switch is in progress - prevents race condition where
+    // changing settingsTheme during tab switch would write to wrong tab
+    if (isTabSwitchInProgressRef.current) {
       return;
     }
 
