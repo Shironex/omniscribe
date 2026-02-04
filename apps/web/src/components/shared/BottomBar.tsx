@@ -70,11 +70,11 @@ export function BottomBar({
           disabled={!canLaunch || isLaunching}
           className={clsx(
             'flex items-center gap-2 px-4 py-1.5 rounded',
-            'text-sm font-medium text-white',
+            'text-sm font-medium',
             'transition-colors',
             canLaunch && !isLaunching
-              ? 'bg-primary hover:bg-primary/80'
-              : 'bg-primary/50 cursor-not-allowed'
+              ? 'bg-[var(--status-success)] hover:brightness-110 text-white'
+              : 'bg-border text-muted-foreground cursor-not-allowed opacity-60'
           )}
         >
           <Play size={14} />
