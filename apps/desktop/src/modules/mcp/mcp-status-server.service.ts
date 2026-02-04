@@ -55,7 +55,9 @@ export class McpStatusServerService implements OnModuleInit, OnModuleDestroy {
   }
 
   async onModuleInit(): Promise<void> {
+    console.log('[McpStatusServer] Initializing...');
     await this.startServer();
+    console.log('[McpStatusServer] Initialization complete');
   }
 
   async onModuleDestroy(): Promise<void> {
@@ -76,11 +78,19 @@ export class McpStatusServerService implements OnModuleInit, OnModuleDestroy {
         }
 
         const testServer = http.createServer();
+        const timeout = setTimeout(() => {
+          testServer.close();
+          currentPort++;
+          tryPort();
+        }, 1000); // 1 second timeout per port
+
         testServer.once('error', () => {
+          clearTimeout(timeout);
           currentPort++;
           tryPort();
         });
         testServer.once('listening', () => {
+          clearTimeout(timeout);
           testServer.close(() => {
             resolve(currentPort);
           });
@@ -96,7 +106,9 @@ export class McpStatusServerService implements OnModuleInit, OnModuleDestroy {
    * Start the HTTP status server
    */
   private async startServer(): Promise<void> {
+    console.log('[McpStatusServer] Finding available port...');
     const availablePort = await this.findAvailablePort();
+    console.log('[McpStatusServer] Found port:', availablePort);
 
     if (!availablePort) {
       console.error(

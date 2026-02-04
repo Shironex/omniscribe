@@ -44,7 +44,15 @@ export async function createMainWindow(): Promise<BrowserWindow> {
     // Production: load from built files
     const indexPath = path.join(__dirname, '../renderer/index.html');
     console.log('Running in production mode - loading from:', indexPath);
-    mainWindow.loadFile(indexPath);
+
+    mainWindow.loadFile(indexPath).catch((err) => {
+      console.error('Failed to load renderer:', err);
+    });
+
+    // Log renderer errors
+    mainWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription) => {
+      console.error('Renderer failed to load:', errorCode, errorDescription);
+    });
   }
 
   return mainWindow;

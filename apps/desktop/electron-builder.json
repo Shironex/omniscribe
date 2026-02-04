@@ -8,24 +8,39 @@
   },
   "files": [
     "dist/**/*",
-    "package.json"
+    "package.json",
+    "!**/*.map",
+    "!**/*.d.ts",
+    "!dist/**/*.d.ts"
   ],
+  "extraResources": [
+    {
+      "from": "../mcp-server/dist",
+      "to": "mcp-server",
+      "filter": ["**/*", "!**/*.map", "!**/*.d.ts"]
+    }
+  ],
+  "asarUnpack": [
+    "**/node_modules/node-pty/**/*"
+  ],
+  "nodeGypRebuild": false,
+  "npmRebuild": false,
   "mac": {
     "category": "public.app-category.developer-tools",
-    "target": ["dmg", "zip"],
-    "icon": "resources/icon.icns"
+    "target": ["dmg", "zip"]
   },
   "win": {
     "target": ["nsis", "portable"],
-    "icon": "resources/icon.ico"
+    "signAndEditExecutable": false
   },
   "linux": {
     "target": ["AppImage", "deb"],
-    "icon": "resources/icon.png",
     "category": "Development"
   },
   "nsis": {
     "oneClick": false,
-    "allowToChangeInstallationDirectory": true
+    "allowToChangeInstallationDirectory": true,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true
   }
 }
