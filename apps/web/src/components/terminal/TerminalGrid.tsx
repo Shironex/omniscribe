@@ -163,9 +163,11 @@ export function TerminalGrid({
               'group'
             )}
             aria-label="Add session"
+            title="Press N to add session"
           >
             <Plus size={16} className="group-hover:text-primary transition-colors" />
             <span className="text-sm">Add Session</span>
+            <kbd className="px-1.5 py-0.5 text-xs bg-muted border border-border rounded">N</kbd>
           </button>
         )}
       </div>
