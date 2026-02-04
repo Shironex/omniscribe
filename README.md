@@ -1,129 +1,122 @@
+<a name="top"></a>
+
 # Omniscribe
 
-A desktop application for orchestrating multiple AI coding assistant sessions in parallel. Built with Electron + NestJS + React.
+**Orchestrate multiple AI coding sessions in parallel**
 
-## Overview
+[![Electron](https://img.shields.io/badge/Electron-40.0-47848F?logo=electron&logoColor=white)](https://www.electronjs.org/)
+[![React](https://img.shields.io/badge/React-18.3-61DAFB?logo=react&logoColor=white)](https://react.dev/)
+[![NestJS](https://img.shields.io/badge/NestJS-10.4-E0234E?logo=nestjs&logoColor=white)](https://nestjs.com/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![OS](https://img.shields.io/badge/OS-Windows%20%7C%20macOS%20%7C%20Linux-0078D4)](https://github.com/your-username/omniscribe)
+[![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 
-Omniscribe provides a unified interface for managing multiple AI coding sessions (Claude Code, Gemini CLI, OpenAI Codex) simultaneously, each with isolated git worktrees and configurable MCP (Model Context Protocol) servers.
+## Table of Contents
 
-## Key Features
+- [About](#-about)
+- [Features](#-features)
+- [Quick Start](#-quick-start)
+- [Architecture](#-architecture)
+- [Tech Stack](#-tech-stack)
+- [Contributing](#-contributing)
+- [License](#-license)
 
-- **Multi-Session Terminal Grid** - Run 1-6 AI sessions in parallel with live terminal views
-- **Git Worktree Isolation** - Each session operates in its own git worktree
-- **MCP Integration** - Configure and monitor MCP servers per session
-- **Real-Time Status** - Track session states (Idle, Working, NeedsInput, Done, Error)
-- **Plugin System** - Extensible via plugins and skills
-- **Cross-Platform** - Windows, macOS, Linux support
+## About
+
+Omniscribe is a desktop application for managing multiple AI coding assistant sessions (Claude Code, etc.) simultaneously. Run 1-6 sessions in parallel, each with its own terminal, optional git worktree isolation, and MCP server configuration.
+
+## Features
+
+| Feature | Description |
+|---------|-------------|
+| **Multi-Session Grid** | Run 1-6 AI sessions in parallel with live terminal views |
+| **Real-Time Status** | Track session states: idle, working, planning, needs_input, finished |
+| **Git Worktrees** | Isolate each session in its own git worktree for parallel development |
+| **MCP Integration** | Configure Model Context Protocol servers per session |
+| **Project Tabs** | Manage multiple projects with persistent recent history |
+| **Cross-Platform** | Native support for Windows, macOS, and Linux |
+
+## Quick Start
+
+```bash
+# Clone the repository
+git clone https://github.com/your-username/omniscribe.git
+cd omniscribe
+
+# Install dependencies
+pnpm install
+
+# Start development
+pnpm dev
+
+# Build for production
+pnpm build
+
+# Package for distribution
+pnpm package          # Current platform
+pnpm package:win      # Windows
+pnpm package:mac      # macOS
+pnpm package:linux    # Linux
+```
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    Electron Main Process                     │
-│  ┌─────────────────────────────────────────────────────┐    │
-│  │                 NestJS Backend                       │    │
-│  │  ┌─────────────┐ ┌─────────────┐ ┌──────────────┐  │    │
-│  │  │ Terminal    │ │ Session     │ │ Git          │  │    │
-│  │  │ Service     │ │ Service     │ │ Service      │  │    │
-│  │  │ (node-pty)  │ │             │ │              │  │    │
-│  │  └─────────────┘ └─────────────┘ └──────────────┘  │    │
-│  │  ┌───────────────────────────┐ ┌──────────────┐  │    │
-│  │  │ MCP Service               │ │ Workspace    │  │    │
-│  │  │                           │ │ Service      │  │    │
-│  │  └───────────────────────────┘ └──────────────┘  │    │
-│  └─────────────────────────────────────────────────────┘    │
-│                            │ WebSocket / IPC                 │
-└────────────────────────────┼────────────────────────────────┘
-                             │
-┌────────────────────────────┼────────────────────────────────┐
-│                    Electron Renderer                         │
-│  ┌─────────────────────────────────────────────────────┐    │
-│  │                 React Frontend                       │    │
-│  │  ┌─────────────┐ ┌─────────────┐ ┌──────────────┐  │    │
-│  │  │ Terminal    │ │ Settings    │ │ Shared       │  │    │
-│  │  │ Grid        │ │ Modal       │ │ Components   │  │    │
-│  │  └─────────────┘ └─────────────┘ └──────────────┘  │    │
-│  │  Zustand Stores: Session | Workspace | Git | MCP  │    │
-│  │                   Settings | QuickAction | Terminal│    │
-│  └─────────────────────────────────────────────────────┘    │
-└─────────────────────────────────────────────────────────────┘
+omniscribe/
+├── apps/
+│   ├── desktop/       # Electron + NestJS backend
+│   ├── web/           # React frontend
+│   └── mcp-server/    # MCP status server
+└── packages/
+    └── shared/        # Shared types
+```
+
+**Communication Flow:**
+
+```
+┌─────────────────────────────────┐
+│     Electron Main Process       │
+│  ┌───────────────────────────┐  │
+│  │    NestJS Backend         │  │
+│  │  Terminal │ Session │ Git │  │
+│  │    MCP    │ Workspace     │  │
+│  └───────────────────────────┘  │
+│              │ WebSocket        │
+└──────────────┼──────────────────┘
+               │
+┌──────────────┼──────────────────┐
+│     Electron Renderer           │
+│  ┌───────────────────────────┐  │
+│  │    React + Zustand        │  │
+│  │   Terminal Grid │ Stores  │  │
+│  └───────────────────────────┘  │
+└─────────────────────────────────┘
 ```
 
 ## Tech Stack
 
 | Layer | Technology |
 |-------|------------|
-| Desktop Framework | Electron 28+ |
-| Backend Runtime | NestJS 10 (embedded in main process) |
-| Frontend Framework | React 18 |
-| Language | TypeScript 5.5+ |
-| Terminal Emulator | xterm.js 5.5 |
-| PTY Library | node-pty |
-| State Management | Zustand 5.0 |
-| Styling | Tailwind CSS 3.4 |
-| Build Tool | Vite 5 |
-| IPC | WebSocket (Socket.io) + Electron IPC |
+| Desktop | Electron 40 |
+| Backend | NestJS 10 |
+| Frontend | React 18, Zustand 5 |
+| Terminal | xterm.js, node-pty |
+| Styling | Tailwind CSS |
+| Build | Vite, esbuild |
+| IPC | Socket.io, Electron IPC |
 
-## Project Structure
+## Contributing
 
-```
-omniscribe/
-├── apps/
-│   ├── desktop/              # Electron main process + NestJS
-│   │   ├── src/
-│   │   │   ├── main/         # Electron main entry
-│   │   │   ├── modules/      # NestJS modules
-│   │   │   │   ├── terminal/
-│   │   │   │   ├── session/
-│   │   │   │   ├── git/
-│   │   │   │   ├── mcp/
-│   │   │   │   └── workspace/
-│   │   │   └── preload/      # Electron preload scripts
-│   │   └── package.json
-│   ├── web/                  # React frontend (renderer)
-│   │   ├── src/
-│   │   │   ├── components/
-│   │   │   ├── stores/
-│   │   │   ├── hooks/
-│   │   │   └── lib/
-│   │   └── package.json
-│   └── mcp-server/           # MCP server for Claude Code status
-├── packages/
-│   └── shared/               # Shared types and utilities
-├── docs/                     # Documentation
-└── package.json              # Workspace root
-```
+Contributions are welcome! Feel free to:
 
-## Quick Start
-
-```bash
-# Install dependencies
-pnpm install
-
-# Development
-pnpm dev
-
-# Build all packages
-pnpm build
-
-# Build only shared package (required before desktop build)
-pnpm build:packages
-
-# Package desktop app for distribution
-pnpm --filter @omniscribe/desktop package
-```
-
-## Documentation
-
-- [Architecture](./docs/ARCHITECTURE.md)
-- [Tech Stack Decisions](./docs/TECH-STACK.md)
-- [Implementation Plan](./docs/IMPLEMENTATION-PLAN.md)
-- [API Specification](./docs/specs/API.md)
-- [Backend Services](./docs/specs/BACKEND-SERVICES.md)
-- [Frontend Components](./docs/specs/COMPONENTS.md)
-- [State Management](./docs/specs/STATE.md)
-- [MCP Integration](./docs/specs/MCP.md)
+- [Submit an issue](https://github.com/your-username/omniscribe/issues) for bugs or feature requests
+- Open a pull request with improvements
+- Share feedback and suggestions
 
 ## License
 
 MIT
+
+---
+
+[Back to top](#top)
