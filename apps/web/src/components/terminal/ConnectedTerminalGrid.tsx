@@ -6,26 +6,11 @@ import { useGitStore, selectBranches, selectCurrentBranch } from '../../stores/u
 import { useTerminalControlStore } from '../../stores/useTerminalControlStore';
 import { createSession, removeSession } from '../../lib/session';
 import { killTerminal } from '../../lib/terminal';
-import type { TerminalSession, AIMode } from './TerminalHeader';
+import { mapAiModeToBackend, mapAiModeToUI } from '../../lib/aiMode';
+import type { TerminalSession } from './TerminalHeader';
 import type { PreLaunchSlot } from './PreLaunchBar';
 import type { Branch } from '../shared/BranchSelector';
-import { mapSessionStatus, type AiMode } from '@omniscribe/shared';
-
-/**
- * Maps UI AIMode to backend AiMode
- * Both are now identical: 'claude' | 'plain'
- */
-function mapAiModeToBackend(uiMode: AIMode): AiMode {
-  return uiMode;
-}
-
-/**
- * Maps backend AiMode to UI AIMode
- * Both are now identical: 'claude' | 'plain'
- */
-function mapAiModeToUI(backendMode: AiMode): AIMode {
-  return backendMode;
-}
+import { mapSessionStatus } from '@omniscribe/shared';
 
 interface ConnectedTerminalGridProps {
   className?: string;
