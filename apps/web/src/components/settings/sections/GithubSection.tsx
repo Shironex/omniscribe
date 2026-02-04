@@ -53,8 +53,9 @@ export function GithubSection() {
           className={clsx(
             'w-10 h-10 rounded-xl flex items-center justify-center',
             'bg-gradient-to-br from-primary/20 to-brand-600/10',
-            'ring-1 ring-primary/20',
+            'ring-1',
           )}
+          style={{ '--tw-ring-color': 'color-mix(in oklch, var(--primary), transparent 80%)' } as React.CSSProperties}
         >
           <Github className="w-5 h-5 text-primary" />
         </div>
