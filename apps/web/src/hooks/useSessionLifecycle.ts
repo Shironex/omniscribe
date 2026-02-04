@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useRef, useEffect } from 'react';
 import type { ExtendedSessionConfig } from '@/stores/useSessionStore';
 import { removeSession } from '@/lib/session';
 import { killTerminal } from '@/lib/terminal';
@@ -17,32 +17,46 @@ interface UseSessionLifecycleReturn {
 export function useSessionLifecycle(
   activeProjectSessions: ExtendedSessionConfig[]
 ): UseSessionLifecycleReturn {
+  // Use a ref to always access the latest sessions, avoiding stale closure issues
+  const sessionsRef = useRef(activeProjectSessions);
+  useEffect(() => {
+    sessionsRef.current = activeProjectSessions;
+  }, [activeProjectSessions]);
+
   // Stop all sessions handler
   const handleStopAll = useCallback(async () => {
-    // Stop all active sessions for the current project
-    for (const session of activeProjectSessions) {
-      if (session.status !== 'idle' && session.status !== 'disconnected') {
+    // Capture current sessions at execution time to avoid stale closure
+    const sessions = [...sessionsRef.current];
+
+    // Use Promise.all for parallel execution to avoid race conditions with re-renders
+    await Promise.all(
+      sessions.map(async (session) => {
+        // Skip only disconnected sessions (already closed)
+        // Note: 'idle' status means Claude is waiting for input - still a running session
+        if (session.status === 'disconnected') {
+          return;
+        }
         try {
-          // Kill the terminal process
-          const sessionIdNum = parseInt(session.id, 10);
-          if (!isNaN(sessionIdNum)) {
-            killTerminal(sessionIdNum);
+          // Kill the terminal process using the correct terminalSessionId
+          if (session.terminalSessionId !== undefined) {
+            killTerminal(session.terminalSessionId);
           }
           // Remove the session
           await removeSession(session.id);
         } catch (error) {
           console.error(`Failed to stop session ${session.id}:`, error);
         }
-      }
-    }
-  }, [activeProjectSessions]);
+      })
+    );
+  }, []);
 
   // Kill a session handler
   const handleKillSession = useCallback(async (sessionId: string) => {
     try {
-      const sessionIdNum = parseInt(sessionId, 10);
-      if (!isNaN(sessionIdNum)) {
-        killTerminal(sessionIdNum);
+      // Find the session to get the correct terminalSessionId
+      const session = sessionsRef.current.find((s) => s.id === sessionId);
+      if (session?.terminalSessionId !== undefined) {
+        killTerminal(session.terminalSessionId);
       }
       await removeSession(sessionId);
     } catch (error) {
