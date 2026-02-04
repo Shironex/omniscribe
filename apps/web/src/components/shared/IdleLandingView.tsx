@@ -66,9 +66,9 @@ export function IdleLandingView({ onAddSession, className }: IdleLandingViewProp
         className={clsx(
           'relative flex flex-col items-center',
           'px-12 py-10 rounded-2xl',
-          'bg-white/[0.08] backdrop-blur-2xl',
-          'border border-white/[0.15]',
-          'shadow-[0_8px_32px_rgba(0,0,0,0.3)]'
+          'bg-background/95 backdrop-blur-xl',
+          'border border-border',
+          'shadow-2xl'
         )}
       >
         {/* Greeting */}
@@ -123,7 +123,7 @@ export function IdleLandingView({ onAddSession, className }: IdleLandingViewProp
 
         {/* Keyboard shortcut hint */}
         <p className="mt-6 text-xs text-muted-foreground">
-          Press <kbd className="px-1.5 py-0.5 rounded bg-white/10 border border-white/20 font-mono text-foreground-secondary">N</kbd> to add a session
+          Press <kbd className="px-1.5 py-0.5 rounded bg-muted border border-border font-mono text-foreground-secondary">N</kbd> to add a session
         </p>
       </div>
     </div>

@@ -96,7 +96,7 @@ export function WelcomeView({
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 -left-20 w-72 h-72 bg-primary/30 rounded-full blur-[100px]" />
         <div className="absolute bottom-1/4 -right-20 w-80 h-80 bg-brand-600/25 rounded-full blur-[120px]" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-cyan-500/15 rounded-full blur-[100px]" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-brand-400/15 rounded-full blur-[100px]" />
       </div>
 
       {/* Main content */}
@@ -106,9 +106,9 @@ export function WelcomeView({
           className={clsx(
             'flex flex-col items-center',
             'px-12 py-10 rounded-2xl mb-8',
-            'bg-white/[0.08] backdrop-blur-2xl',
-            'border border-white/[0.15]',
-            'shadow-[0_8px_32px_rgba(0,0,0,0.3)]'
+            'bg-background/95 backdrop-blur-xl',
+            'border border-border',
+            'shadow-2xl'
           )}
         >
           {/* Greeting */}
@@ -156,9 +156,9 @@ export function WelcomeView({
                   onClick={() => onSelectProject(project.id)}
                   className={clsx(
                     'w-full flex items-center gap-3 px-4 py-3 rounded-lg',
-                    'bg-white/[0.05] backdrop-blur-lg',
-                    'border border-white/[0.1]',
-                    'hover:bg-white/[0.1] hover:border-white/[0.2]',
+                    'bg-card/50 backdrop-blur-lg',
+                    'border border-border/60',
+                    'hover:bg-card/80 hover:border-border',
                     'transition-all duration-200',
                     'text-left group'
                   )}
@@ -177,7 +177,7 @@ export function WelcomeView({
                       <span className="font-medium text-foreground truncate">
                         {project.name}
                       </span>
-                      <kbd className="hidden group-hover:inline-flex px-1.5 py-0.5 rounded bg-white/10 border border-white/20 font-mono text-[10px] text-foreground-secondary">
+                      <kbd className="hidden group-hover:inline-flex px-1.5 py-0.5 rounded bg-muted border border-border font-mono text-[10px] text-foreground-secondary">
                         {index + 1}
                       </kbd>
                     </div>
@@ -214,14 +214,14 @@ export function WelcomeView({
         {/* Keyboard hint */}
         <p className="mt-4 text-xs text-muted-foreground">
           Press{' '}
-          <kbd className="px-1.5 py-0.5 rounded bg-white/10 border border-white/20 font-mono text-foreground-secondary">
+          <kbd className="px-1.5 py-0.5 rounded bg-muted border border-border font-mono text-foreground-secondary">
             Ctrl+O
           </kbd>{' '}
           to open a project
           {hasRecentProjects && (
             <>
               {' or '}
-              <kbd className="px-1.5 py-0.5 rounded bg-white/10 border border-white/20 font-mono text-foreground-secondary">
+              <kbd className="px-1.5 py-0.5 rounded bg-muted border border-border font-mono text-foreground-secondary">
                 1-{Math.min(recentProjects.length, 9)}
               </kbd>{' '}
               for recent
