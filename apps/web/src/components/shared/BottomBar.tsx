@@ -7,6 +7,7 @@ interface BottomBarProps {
   onStopAll: () => void;
   onLaunch: () => void;
   canLaunch: boolean;
+  isLaunching?: boolean;
   hasActiveSessions: boolean;
   className?: string;
 }
@@ -15,6 +16,7 @@ export function BottomBar({
   onStopAll,
   onLaunch,
   canLaunch,
+  isLaunching = false,
   hasActiveSessions,
   className,
 }: BottomBarProps) {
@@ -65,18 +67,18 @@ export function BottomBar({
 
         <button
           onClick={onLaunch}
-          disabled={!canLaunch}
+          disabled={!canLaunch || isLaunching}
           className={clsx(
             'flex items-center gap-2 px-4 py-1.5 rounded',
             'text-sm font-medium text-white',
             'transition-colors',
-            canLaunch
+            canLaunch && !isLaunching
               ? 'bg-primary hover:bg-primary/80'
               : 'bg-primary/50 cursor-not-allowed'
           )}
         >
           <Play size={14} />
-          <span>Launch</span>
+          <span>{isLaunching ? 'Launching...' : 'Launch'}</span>
         </button>
       </div>
     </div>

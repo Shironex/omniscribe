@@ -9,6 +9,10 @@ interface UsePreLaunchSlotsReturn {
   preLaunchSlots: PreLaunchSlot[];
   /** Whether launch is available */
   canLaunch: boolean;
+  /** Whether any launch is in progress (for global launch button) */
+  isLaunching: boolean;
+  /** Set of slot IDs currently being launched (for individual launch buttons) */
+  launchingSlotIds: Set<string>;
   /** Handler to add a new session slot */
   handleAddSession: () => void;
   /** Handler to remove a slot */
@@ -35,6 +39,9 @@ export function usePreLaunchSlots(
 ): UsePreLaunchSlotsReturn {
   // Pre-launch slots state (sessions waiting to be launched)
   const [preLaunchSlots, setPreLaunchSlots] = useState<PreLaunchSlot[]>([]);
+
+  // Track which slots are currently being launched (prevents spam clicking)
+  const [launchingSlotIds, setLaunchingSlotIds] = useState<Set<string>>(new Set());
 
   // Listen to add slot requests from other components (e.g., sidebar + button)
   const addSlotRequestCounter = useTerminalControlStore((state) => state.addSlotRequestCounter);
@@ -87,6 +94,14 @@ export function usePreLaunchSlots(
       const slot = preLaunchSlots.find((s) => s.id === slotId);
       if (!slot) return;
 
+      // Prevent double-launch: skip if this slot is already being launched
+      if (launchingSlotIds.has(slotId)) {
+        return;
+      }
+
+      // Mark slot as launching
+      setLaunchingSlotIds((prev) => new Set(prev).add(slotId));
+
       try {
         // Create the session via socket (map UI aiMode to backend AiMode)
         const backendAiMode = mapAiModeToBackend(slot.aiMode);
@@ -102,9 +117,16 @@ export function usePreLaunchSlots(
         setPreLaunchSlots((prev) => prev.filter((s) => s.id !== slotId));
       } catch (error) {
         console.error('Failed to launch session:', error);
+      } finally {
+        // Clear launching state (whether success or failure)
+        setLaunchingSlotIds((prev) => {
+          const next = new Set(prev);
+          next.delete(slotId);
+          return next;
+        });
       }
     },
-    [activeProjectPath, preLaunchSlots, updateSession]
+    [activeProjectPath, preLaunchSlots, launchingSlotIds, updateSession]
   );
 
   // Launch all pre-launch slots
@@ -114,9 +136,14 @@ export function usePreLaunchSlots(
     }
   }, [preLaunchSlots, handleLaunchSlot]);
 
+  // Compute if any launch is in progress
+  const isLaunching = launchingSlotIds.size > 0;
+
   return {
     preLaunchSlots,
     canLaunch,
+    isLaunching,
+    launchingSlotIds,
     handleAddSession,
     handleRemoveSlot,
     handleUpdateSlot,

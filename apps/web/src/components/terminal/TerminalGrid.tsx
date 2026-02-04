@@ -13,6 +13,7 @@ import { Branch } from '../shared/BranchSelector';
 interface TerminalGridProps {
   sessions: TerminalSession[];
   preLaunchSlots: PreLaunchSlot[];
+  launchingSlotIds?: Set<string>;
   branches: Branch[];
   focusedSessionId: string | null;
   onFocusSession: (sessionId: string) => void;
@@ -29,6 +30,7 @@ interface TerminalGridProps {
 export function TerminalGrid({
   sessions,
   preLaunchSlots,
+  launchingSlotIds,
   branches,
   focusedSessionId,
   onFocusSession,
@@ -129,6 +131,7 @@ export function TerminalGrid({
             key={slot.id}
             slot={slot}
             branches={branches}
+            isLaunching={launchingSlotIds?.has(slot.id)}
             onUpdate={onUpdateSlot}
             onLaunch={onLaunch}
             onRemove={onRemoveSlot}

@@ -49,6 +49,8 @@ function App() {
   const {
     preLaunchSlots,
     canLaunch,
+    isLaunching,
+    launchingSlotIds,
     handleAddSession,
     handleRemoveSlot,
     handleUpdateSlot,
@@ -151,6 +153,7 @@ function App() {
             <TerminalGrid
               sessions={terminalSessions}
               preLaunchSlots={preLaunchSlots}
+              launchingSlotIds={launchingSlotIds}
               branches={branches}
               focusedSessionId={focusedSessionId}
               onFocusSession={handleFocusSession}
@@ -175,6 +178,7 @@ function App() {
         onStopAll={handleStopAll}
         onLaunch={handleLaunch}
         canLaunch={canLaunch}
+        isLaunching={isLaunching}
         hasActiveSessions={hasActiveSessions}
       />
 

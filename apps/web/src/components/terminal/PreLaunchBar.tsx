@@ -16,6 +16,7 @@ export interface PreLaunchSlot {
 interface PreLaunchBarProps {
   slot: PreLaunchSlot;
   branches: Branch[];
+  isLaunching?: boolean;
   onUpdate: (slotId: string, updates: Partial<Pick<PreLaunchSlot, 'aiMode' | 'branch'>>) => void;
   onLaunch: (slotId: string) => void;
   onRemove: (slotId: string) => void;
@@ -33,6 +34,7 @@ const aiModeOptions: { value: AIMode; label: string; icon: typeof Bot; color: st
 export function PreLaunchBar({
   slot,
   branches,
+  isLaunching = false,
   onUpdate,
   onLaunch,
   onRemove,
@@ -142,15 +144,18 @@ export function PreLaunchBar({
       {/* Launch button */}
       <button
         onClick={() => onLaunch(slot.id)}
+        disabled={isLaunching}
         className={clsx(
           'flex items-center gap-1.5 px-3 py-1 rounded',
-          'bg-primary hover:bg-primary/80',
           'text-xs font-medium text-white',
-          'transition-colors'
+          'transition-colors',
+          isLaunching
+            ? 'bg-primary/50 cursor-not-allowed'
+            : 'bg-primary hover:bg-primary/80'
         )}
       >
         <Play size={12} fill="currentColor" />
-        <span>Launch</span>
+        <span>{isLaunching ? 'Launching...' : 'Launch'}</span>
       </button>
 
       {/* Remove button */}
