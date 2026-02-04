@@ -13,6 +13,8 @@ import { Branch } from '../shared/BranchSelector';
 interface QuickActionItem {
   id: string;
   label: string;
+  icon?: string;
+  category?: string;
 }
 
 interface TerminalGridProps {

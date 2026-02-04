@@ -1,8 +1,52 @@
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { Bot, Sparkles, X, Settings, GitBranch, Zap, MoreVertical, ArrowUp, ArrowDown, FolderGit2 } from 'lucide-react';
+import {
+  Bot,
+  Sparkles,
+  X,
+  Settings,
+  GitBranch,
+  Zap,
+  MoreVertical,
+  ArrowUp,
+  ArrowDown,
+  FolderGit2,
+  GitCommit,
+  GitMerge,
+  MessageSquare,
+  Play,
+  Wrench,
+  ListTodo,
+  Info,
+  type LucideIcon,
+} from 'lucide-react';
 import { SessionStatus, StatusDot } from '../shared/StatusLegend';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
+
+// Icon map for rendering icons from string names
+const iconMap: Record<string, LucideIcon> = {
+  GitCommit,
+  GitMerge,
+  GitBranch,
+  ArrowUp,
+  ArrowDown,
+  MessageSquare,
+  Play,
+  Sparkles,
+  Wrench,
+  ListTodo,
+  Info,
+  Bot,
+  Settings,
+  Zap,
+};
+
+// Category labels and order
+const categoryConfig: Record<string, { label: string; order: number }> = {
+  git: { label: 'Git', order: 1 },
+  terminal: { label: 'Terminal', order: 2 },
+  ai: { label: 'AI', order: 3 },
+};
 
 export type AIMode = 'claude' | 'gemini' | 'codex' | 'plain';
 
@@ -28,7 +72,8 @@ export interface TerminalSession {
 interface QuickAction {
   id: string;
   label: string;
-  icon?: React.ReactNode;
+  icon?: string;
+  category?: string;
 }
 
 interface TerminalHeaderProps {
@@ -88,6 +133,29 @@ export function TerminalHeader({
     setQuickActionsOpen(false);
     onQuickAction?.(actionId);
   };
+
+  // Group quick actions by category
+  const groupedActions = useMemo(() => {
+    const groups: Record<string, QuickAction[]> = {};
+    for (const action of quickActions) {
+      const category = action.category || 'other';
+      if (!groups[category]) {
+        groups[category] = [];
+      }
+      groups[category].push(action);
+    }
+    // Sort categories by configured order
+    const sortedCategories = Object.keys(groups).sort((a, b) => {
+      const orderA = categoryConfig[a]?.order ?? 99;
+      const orderB = categoryConfig[b]?.order ?? 99;
+      return orderA - orderB;
+    });
+    return sortedCategories.map(cat => ({
+      category: cat,
+      label: categoryConfig[cat]?.label ?? cat,
+      actions: groups[cat],
+    }));
+  }, [quickActions]);
 
   return (
     <div
@@ -175,15 +243,32 @@ export function TerminalHeader({
               <Zap size={12} />
             </button>
             {quickActionsOpen && quickActions.length > 0 && (
-              <div className="absolute right-0 top-full mt-1 z-50 min-w-[160px] bg-popover border border-border rounded-md shadow-lg py-1">
-                {quickActions.map((action) => (
-                  <button
-                    key={action.id}
-                    onClick={() => handleQuickAction(action.id)}
-                    className="w-full text-left px-3 py-1.5 text-xs text-foreground hover:bg-accent transition-colors"
-                  >
-                    {action.label}
-                  </button>
+              <div className="absolute right-0 top-full mt-1 z-50 min-w-[180px] bg-popover border border-border rounded-md shadow-lg py-1">
+                {groupedActions.map((group, groupIndex) => (
+                  <div key={group.category}>
+                    {/* Section divider (except first) */}
+                    {groupIndex > 0 && (
+                      <div className="my-1 border-t border-border" />
+                    )}
+                    {/* Section header */}
+                    <div className="px-3 py-1 text-2xs font-medium text-muted-foreground uppercase tracking-wide">
+                      {group.label}
+                    </div>
+                    {/* Actions in this section */}
+                    {group.actions.map((action) => {
+                      const Icon = action.icon ? iconMap[action.icon] : null;
+                      return (
+                        <button
+                          key={action.id}
+                          onClick={() => handleQuickAction(action.id)}
+                          className="w-full text-left px-3 py-1.5 text-xs text-foreground hover:bg-accent transition-colors flex items-center gap-2"
+                        >
+                          {Icon && <Icon size={12} className="text-muted-foreground" />}
+                          <span>{action.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 ))}
               </div>
             )}

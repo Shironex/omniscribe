@@ -83,9 +83,9 @@ function App() {
     [quickActions]
   );
 
-  // Quick actions for terminal header dropdown (simpler format)
+  // Quick actions for terminal header dropdown (with icon and category)
   const quickActionsForTerminal = useMemo(() =>
-    quickActions.map(a => ({ id: a.id, label: a.title })),
+    quickActions.map(a => ({ id: a.id, label: a.title, icon: a.icon, category: a.category })),
     [quickActions]
   );
 
