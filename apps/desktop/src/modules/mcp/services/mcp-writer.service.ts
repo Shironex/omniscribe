@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import {
   McpServerConfig,
   MCP_SERVER_NAME,
@@ -32,6 +32,8 @@ interface McpWrittenServerEntry {
  */
 @Injectable()
 export class McpWriterService {
+  private readonly logger = new Logger(McpWriterService.name);
+
   constructor(
     private readonly internalService: McpInternalService,
     private readonly trackingService: McpTrackingService,
@@ -142,8 +144,8 @@ export class McpWriterService {
     );
 
     const serverCount = Object.keys(mcpServers).length;
-    console.log(
-      `[McpWriterService] Wrote MCP config to ${configPath} with ${serverCount} servers (internal: ${!!internalPath}, external: ${servers.length})`
+    this.logger.log(
+      `Wrote MCP config to ${configPath} with ${serverCount} servers (internal: ${!!internalPath}, external: ${servers.length})`
     );
 
     // Also track the config in our central location
@@ -194,13 +196,13 @@ export class McpWriterService {
         'utf-8'
       );
 
-      console.log(
-        `[McpWriterService] Removed omniscribe from ${configPath}, preserved ${Object.keys(mcpServers).length} other servers`
+      this.logger.log(
+        `Removed omniscribe from ${configPath}, preserved ${Object.keys(mcpServers).length} other servers`
       );
 
       return true;
     } catch (error) {
-      console.error(`[McpWriterService] Error removing omniscribe from config:`, error);
+      this.logger.error('Error removing omniscribe from config:', error);
     }
 
     return false;

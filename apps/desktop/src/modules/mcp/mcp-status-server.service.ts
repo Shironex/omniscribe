@@ -1,4 +1,4 @@
-import { Injectable, OnModuleInit, OnModuleDestroy, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, OnModuleInit, OnModuleDestroy, Inject, forwardRef, Logger } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import * as http from 'http';
 import * as crypto from 'crypto';
@@ -29,6 +29,8 @@ export interface SessionStatusEvent {
  */
 @Injectable()
 export class McpStatusServerService implements OnModuleInit, OnModuleDestroy {
+  private readonly logger = new Logger(McpStatusServerService.name);
+
   /** Port range for status server */
   private readonly PORT_RANGE_START = MCP_STATUS_PORT_START;
   private readonly PORT_RANGE_END = MCP_STATUS_PORT_END;
@@ -52,9 +54,9 @@ export class McpStatusServerService implements OnModuleInit, OnModuleDestroy {
   }
 
   async onModuleInit(): Promise<void> {
-    console.log('[McpStatusServer] Initializing...');
+    this.logger.log('Initializing...');
     await this.startServer();
-    console.log('[McpStatusServer] Initialization complete');
+    this.logger.log('Initialization complete');
   }
 
   async onModuleDestroy(): Promise<void> {
@@ -103,13 +105,13 @@ export class McpStatusServerService implements OnModuleInit, OnModuleDestroy {
    * Start the HTTP status server
    */
   private async startServer(): Promise<void> {
-    console.log('[McpStatusServer] Finding available port...');
+    this.logger.log('Finding available port...');
     const availablePort = await this.findAvailablePort();
-    console.log('[McpStatusServer] Found port:', availablePort);
+    this.logger.log(`Found port: ${availablePort}`);
 
     if (!availablePort) {
-      console.error(
-        `[McpStatusServer] No available port found in range ${this.PORT_RANGE_START}-${this.PORT_RANGE_END}`
+      this.logger.error(
+        `No available port found in range ${this.PORT_RANGE_START}-${this.PORT_RANGE_END}`
       );
       return;
     }
@@ -120,16 +122,14 @@ export class McpStatusServerService implements OnModuleInit, OnModuleDestroy {
 
     return new Promise((resolve, reject) => {
       this.server!.once('error', (err) => {
-        console.error('[McpStatusServer] Server error:', err);
+        this.logger.error('Server error:', err);
         reject(err);
       });
 
       this.server!.listen(availablePort, LOCALHOST, () => {
         this.port = availablePort;
-        console.log(
-          `[McpStatusServer] Started on http://${LOCALHOST}:${this.port}`
-        );
-        console.log(`[McpStatusServer] Instance ID: ${this.instanceId}`);
+        this.logger.log(`Started on http://${LOCALHOST}:${this.port}`);
+        this.logger.log(`Instance ID: ${this.instanceId}`);
         resolve();
       });
     });
@@ -142,7 +142,7 @@ export class McpStatusServerService implements OnModuleInit, OnModuleDestroy {
     return new Promise((resolve) => {
       if (this.server) {
         this.server.close(() => {
-          console.log('[McpStatusServer] Stopped');
+          this.logger.log('Stopped');
           this.server = null;
           this.port = null;
           resolve();
@@ -179,14 +179,14 @@ export class McpStatusServerService implements OnModuleInit, OnModuleDestroy {
         const payload = JSON.parse(body) as StatusPayload;
         this.handleStatusUpdate(payload, res);
       } catch (error) {
-        console.error('[McpStatusServer] Invalid JSON payload:', error);
+        this.logger.error('Invalid JSON payload:', error);
         res.writeHead(400, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: 'Invalid JSON' }));
       }
     });
 
     req.on('error', (error) => {
-      console.error('[McpStatusServer] Request error:', error);
+      this.logger.error('Request error:', error);
       res.writeHead(500, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: 'Internal error' }));
     });
@@ -196,14 +196,14 @@ export class McpStatusServerService implements OnModuleInit, OnModuleDestroy {
    * Handle a status update from the MCP server
    */
   private handleStatusUpdate(payload: StatusPayload, res: http.ServerResponse): void {
-    console.log(
-      `[McpStatusServer] Received: sessionId=${payload.sessionId}, instanceId=${payload.instanceId}, state=${payload.state}`
+    this.logger.log(
+      `Received: sessionId=${payload.sessionId}, instanceId=${payload.instanceId}, state=${payload.state}`
     );
 
     // Validate instance ID to prevent cross-instance pollution
     if (payload.instanceId !== this.instanceId) {
-      console.log(
-        `[McpStatusServer] REJECTED - wrong instance: expected ${this.instanceId}, got ${payload.instanceId}`
+      this.logger.log(
+        `REJECTED - wrong instance: expected ${this.instanceId}, got ${payload.instanceId}`
       );
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ accepted: false, reason: 'instance_mismatch' }));
@@ -213,11 +213,9 @@ export class McpStatusServerService implements OnModuleInit, OnModuleDestroy {
     // Check if this session is registered
     const projectPath = this.sessionRegistry.getProjectPath(payload.sessionId);
     if (!projectPath) {
-      console.log(
-        `[McpStatusServer] REJECTED - unknown session ${payload.sessionId}`
-      );
-      console.log(
-        `[McpStatusServer] Registered sessions: ${this.sessionRegistry.getRegisteredSessions().join(', ')}`
+      this.logger.log(`REJECTED - unknown session ${payload.sessionId}`);
+      this.logger.log(
+        `Registered sessions: ${this.sessionRegistry.getRegisteredSessions().join(', ')}`
       );
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ accepted: false, reason: 'unknown_session' }));
@@ -232,9 +230,7 @@ export class McpStatusServerService implements OnModuleInit, OnModuleDestroy {
       needsInputPrompt: payload.needsInputPrompt,
     };
 
-    console.log(
-      `[McpStatusServer] EMITTING: session=${payload.sessionId} status=${payload.state}`
-    );
+    this.logger.log(`EMITTING: session=${payload.sessionId} status=${payload.state}`);
 
     this.eventEmitter.emit('session.status', event);
 

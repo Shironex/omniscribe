@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import {
   APP_NAME_LOWER,
   MCP_SERVER_DIR,
@@ -26,19 +26,16 @@ export interface InternalMcpInfo {
  */
 @Injectable()
 export class McpInternalService {
+  private readonly logger = new Logger(McpInternalService.name);
   private readonly internalMcpPath: string | null;
 
   constructor() {
     // Find the internal MCP server binary on startup
     this.internalMcpPath = this.findInternalMcp();
     if (this.internalMcpPath) {
-      console.log(
-        `[McpInternalService] Found internal MCP server at: ${this.internalMcpPath}`
-      );
+      this.logger.log(`Found internal MCP server at: ${this.internalMcpPath}`);
     } else {
-      console.warn(
-        '[McpInternalService] Internal MCP server not found - status updates will be unavailable'
-      );
+      this.logger.warn('Internal MCP server not found - status updates will be unavailable');
     }
   }
 

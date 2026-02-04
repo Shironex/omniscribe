@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { McpServerConfig } from '@omniscribe/shared';
 
 /**
@@ -9,6 +9,8 @@ import { McpServerConfig } from '@omniscribe/shared';
  */
 @Injectable()
 export class McpProjectCacheService {
+  private readonly logger = new Logger(McpProjectCacheService.name);
+
   /** Map of project paths to their discovered servers */
   private projectServers = new Map<string, McpServerConfig[]>();
 
@@ -19,9 +21,7 @@ export class McpProjectCacheService {
    */
   setServers(projectPath: string, servers: McpServerConfig[]): void {
     this.projectServers.set(projectPath, servers);
-    console.log(
-      `[McpProjectCache] Cached ${servers.length} servers for ${projectPath}`
-    );
+    this.logger.log(`Cached ${servers.length} servers for ${projectPath}`);
   }
 
   /**
@@ -48,7 +48,7 @@ export class McpProjectCacheService {
    */
   clearServers(projectPath: string): void {
     if (this.projectServers.delete(projectPath)) {
-      console.log(`[McpProjectCache] Cleared cache for ${projectPath}`);
+      this.logger.log(`Cleared cache for ${projectPath}`);
     }
   }
 
@@ -57,6 +57,6 @@ export class McpProjectCacheService {
    */
   clearAll(): void {
     this.projectServers.clear();
-    console.log('[McpProjectCache] Cleared all cached servers');
+    this.logger.log('Cleared all cached servers');
   }
 }

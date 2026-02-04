@@ -85,7 +85,7 @@ export class SessionGateway implements OnGatewayInit {
   ) {}
 
   afterInit(): void {
-    console.log('[SessionGateway] Initialized');
+    this.logger.log('Initialized');
   }
 
   /**

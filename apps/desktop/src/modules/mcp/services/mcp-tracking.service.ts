@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import {
   APP_NAME_LOWER,
   MCP_CONFIGS_DIR,
@@ -24,6 +24,7 @@ interface TrackingData {
  */
 @Injectable()
 export class McpTrackingService {
+  private readonly logger = new Logger(McpTrackingService.name);
   private readonly configDir: string;
 
   constructor() {
@@ -41,7 +42,7 @@ export class McpTrackingService {
         fs.mkdirSync(this.configDir, { recursive: true });
       }
     } catch (error) {
-      console.error(`[McpTrackingService] Error creating config dir:`, error);
+      this.logger.error('Error creating config dir:', error);
     }
   }
 
@@ -83,7 +84,7 @@ export class McpTrackingService {
         'utf-8'
       );
     } catch (error) {
-      console.error(`[McpTrackingService] Error tracking config:`, error);
+      this.logger.error('Error tracking config:', error);
     }
   }
 
@@ -107,7 +108,7 @@ export class McpTrackingService {
         }
       }
     } catch (error) {
-      console.error(`[McpTrackingService] Error listing sessions:`, error);
+      this.logger.error('Error listing sessions:', error);
     }
 
     return sessions;
@@ -130,7 +131,7 @@ export class McpTrackingService {
         await fs.promises.unlink(trackingFile);
       }
     } catch (error) {
-      console.error(`[McpTrackingService] Error cleaning up tracking:`, error);
+      this.logger.error('Error cleaning up tracking:', error);
     }
   }
 
@@ -153,7 +154,7 @@ export class McpTrackingService {
         return JSON.parse(content) as TrackingData;
       }
     } catch (error) {
-      console.error(`[McpTrackingService] Error reading tracking data:`, error);
+      this.logger.error('Error reading tracking data:', error);
     }
 
     return undefined;

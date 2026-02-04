@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 
 /**
  * Centralized registry for MCP session state.
@@ -10,6 +10,8 @@ import { Injectable } from '@nestjs/common';
  */
 @Injectable()
 export class McpSessionRegistryService {
+  private readonly logger = new Logger(McpSessionRegistryService.name);
+
   /** Maps session IDs to project paths for routing */
   private sessionProjects = new Map<string, string>();
 
@@ -23,9 +25,7 @@ export class McpSessionRegistryService {
    */
   registerSession(sessionId: string, projectPath: string): void {
     this.sessionProjects.set(sessionId, projectPath);
-    console.log(
-      `[McpSessionRegistry] Registered session ${sessionId} for project '${projectPath}'`
-    );
+    this.logger.log(`Registered session ${sessionId} for project '${projectPath}'`);
   }
 
   /**
@@ -35,7 +35,7 @@ export class McpSessionRegistryService {
   unregisterSession(sessionId: string): void {
     const projectPath = this.sessionProjects.get(sessionId);
     if (this.sessionProjects.delete(sessionId)) {
-      console.log(`[McpSessionRegistry] Unregistered session ${sessionId}`);
+      this.logger.log(`Unregistered session ${sessionId}`);
     }
 
     // Also clean up enabled servers for this session
@@ -84,9 +84,7 @@ export class McpSessionRegistryService {
   ): void {
     const sessionKey = `${projectPath}:${sessionId}`;
     this.sessionEnabled.set(sessionKey, serverIds);
-    console.log(
-      `[McpSessionRegistry] Set ${serverIds.length} enabled servers for session ${sessionId}`
-    );
+    this.logger.log(`Set ${serverIds.length} enabled servers for session ${sessionId}`);
   }
 
   /**

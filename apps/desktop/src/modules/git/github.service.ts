@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { exec, ExecException, execSync } from 'child_process';
 import { promisify } from 'util';
 import { existsSync } from 'fs';
@@ -89,6 +89,7 @@ function getGhCliPaths(): string[] {
 
 @Injectable()
 export class GithubService {
+  private readonly logger = new Logger(GithubService.name);
   private cachedStatus: GhCliStatus | null = null;
   private cacheTimestamp: number = 0;
   private pendingStatus: Promise<GhCliStatus> | null = null;
@@ -242,12 +243,12 @@ export class GithubService {
       // Handle timeout errors gracefully
       const execError = error as { killed?: boolean; signal?: string };
       if (execError.killed || execError.signal === 'SIGTERM') {
-        console.warn('[GithubService] gh auth check timed out');
+        this.logger.warn('gh auth check timed out');
         return { authenticated: false };
       }
 
       // Log unexpected errors but return unauthenticated
-      console.warn('[GithubService] Failed to check gh auth status', error);
+      this.logger.warn('Failed to check gh auth status', error);
       return { authenticated: false };
     }
   }

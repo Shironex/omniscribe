@@ -6,6 +6,7 @@ import {
   ConnectedSocket,
   OnGatewayInit,
 } from '@nestjs/websockets';
+import { Logger } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 import { OnEvent } from '@nestjs/event-emitter';
 import {
@@ -49,6 +50,8 @@ import {
   },
 })
 export class McpGateway implements OnGatewayInit {
+  private readonly logger = new Logger(McpGateway.name);
+
   @WebSocketServer()
   server!: Server;
 
@@ -62,7 +65,7 @@ export class McpGateway implements OnGatewayInit {
   ) {}
 
   afterInit(): void {
-    console.log('[McpGateway] Initialized');
+    this.logger.log('Initialized');
   }
 
   /**
@@ -76,7 +79,7 @@ export class McpGateway implements OnGatewayInit {
     try {
       // Validate payload has required projectPath
       if (!payload?.projectPath) {
-        console.warn('[McpGateway] mcp:discover called without projectPath');
+        this.logger.warn('mcp:discover called without projectPath');
         return { servers: [], error: 'projectPath is required' };
       }
 
@@ -85,13 +88,13 @@ export class McpGateway implements OnGatewayInit {
       // Cache the discovered servers
       this.projectCache.setServers(payload.projectPath, servers);
 
-      console.log(
-        `[McpGateway] Discovered ${servers.length} MCP servers for ${payload.projectPath}`
+      this.logger.log(
+        `Discovered ${servers.length} MCP servers for ${payload.projectPath}`
       );
 
       return { servers };
     } catch (error) {
-      console.error('[McpGateway] Error discovering servers:', error);
+      this.logger.error('Error discovering servers:', error);
       return {
         servers: [],
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -124,7 +127,7 @@ export class McpGateway implements OnGatewayInit {
 
       return { success: true };
     } catch (error) {
-      console.error('[McpGateway] Error setting enabled servers:', error);
+      this.logger.error('Error setting enabled servers:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -151,13 +154,13 @@ export class McpGateway implements OnGatewayInit {
         enabledServers
       );
 
-      console.log(
-        `[McpGateway] Wrote MCP config for session ${payload.sessionId} to ${configPath}`
+      this.logger.log(
+        `Wrote MCP config for session ${payload.sessionId} to ${configPath}`
       );
 
       return { success: true, configPath };
     } catch (error) {
-      console.error('[McpGateway] Error writing config:', error);
+      this.logger.error('Error writing config:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -218,7 +221,7 @@ export class McpGateway implements OnGatewayInit {
 
       return { success };
     } catch (error) {
-      console.error('[McpGateway] Error removing config:', error);
+      this.logger.error('Error removing config:', error);
       return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
     }
   }

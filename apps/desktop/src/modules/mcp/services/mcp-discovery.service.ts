@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { McpServerConfig } from '@omniscribe/shared';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -41,6 +41,7 @@ const MCP_CONFIG_FILES = ['.mcp.json', 'mcp.json', '.mcp/config.json'];
  */
 @Injectable()
 export class McpDiscoveryService {
+  private readonly logger = new Logger(McpDiscoveryService.name);
   /**
    * Discover MCP servers from a project's configuration files
    * @param projectPath Path to the project root
@@ -49,7 +50,7 @@ export class McpDiscoveryService {
   async discoverServers(projectPath: string): Promise<McpServerConfig[]> {
     // Validate projectPath before using it with path.join
     if (!projectPath || typeof projectPath !== 'string') {
-      console.warn('[McpDiscoveryService] discoverServers called with invalid projectPath:', projectPath);
+      this.logger.warn(`discoverServers called with invalid projectPath: ${projectPath}`);
       return [];
     }
 
@@ -65,12 +66,10 @@ export class McpDiscoveryService {
           const parsedServers = this.parseConfig(config);
           servers.push(...parsedServers);
 
-          console.log(
-            `[McpDiscoveryService] Discovered ${parsedServers.length} servers from ${configPath}`
-          );
+          this.logger.log(`Discovered ${parsedServers.length} servers from ${configPath}`);
         }
       } catch (error) {
-        console.error(`[McpDiscoveryService] Error reading ${configPath}:`, error);
+        this.logger.error(`Error reading ${configPath}:`, error);
       }
     }
 
@@ -136,16 +135,12 @@ export class McpDiscoveryService {
 
     // Validate required fields based on transport
     if (transport === 'stdio' && !entry.command) {
-      console.warn(
-        `[McpDiscoveryService] Server "${id}" has stdio transport but no command specified`
-      );
+      this.logger.warn(`Server "${id}" has stdio transport but no command specified`);
       return undefined;
     }
 
     if ((transport === 'sse' || transport === 'websocket') && !entry.url) {
-      console.warn(
-        `[McpDiscoveryService] Server "${id}" has ${transport} transport but no URL specified`
-      );
+      this.logger.warn(`Server "${id}" has ${transport} transport but no URL specified`);
       return undefined;
     }
 

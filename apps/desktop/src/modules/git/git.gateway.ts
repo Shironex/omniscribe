@@ -5,6 +5,7 @@ import {
   MessageBody,
   ConnectedSocket,
 } from '@nestjs/websockets';
+import { Logger } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 import { GitService } from './git.service';
 import { WorktreeService } from './worktree.service';
@@ -69,6 +70,8 @@ interface GitWorktreesResponse {
   namespace: '/',
 })
 export class GitGateway {
+  private readonly logger = new Logger(GitGateway.name);
+
   @WebSocketServer()
   server!: Server;
 
@@ -108,7 +111,7 @@ export class GitGateway {
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
-      console.error('[GitGateway] Error fetching branches:', message);
+      this.logger.error(`Error fetching branches: ${message}`);
 
       return {
         branches: [],
@@ -147,7 +150,7 @@ export class GitGateway {
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
-      console.error('[GitGateway] Error fetching commits:', message);
+      this.logger.error(`Error fetching commits: ${message}`);
 
       return {
         commits: [],
@@ -186,7 +189,7 @@ export class GitGateway {
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
-      console.error('[GitGateway] Error checking out branch:', message);
+      this.logger.error(`Error checking out branch: ${message}`);
 
       return {
         success: false,
@@ -229,7 +232,7 @@ export class GitGateway {
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
-      console.error('[GitGateway] Error creating branch:', message);
+      this.logger.error(`Error creating branch: ${message}`);
 
       return {
         success: false,
@@ -263,7 +266,7 @@ export class GitGateway {
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
-      console.error('[GitGateway] Error getting current branch:', message);
+      this.logger.error(`Error getting current branch: ${message}`);
 
       return {
         currentBranch: '',
@@ -294,7 +297,7 @@ export class GitGateway {
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
-      console.error('[GitGateway] Error listing worktrees:', message);
+      this.logger.error(`Error listing worktrees: ${message}`);
 
       return {
         worktrees: [],
@@ -325,7 +328,7 @@ export class GitGateway {
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
-      console.error('[GitGateway] Error cleaning up worktree:', message);
+      this.logger.error(`Error cleaning up worktree: ${message}`);
 
       return {
         success: false,
@@ -355,7 +358,7 @@ export class GitGateway {
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
-      console.error('[GitGateway] Error getting GitHub CLI status:', message);
+      this.logger.error(`Error getting GitHub CLI status: ${message}`);
 
       return {
         status: {
@@ -391,7 +394,7 @@ export class GitGateway {
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
-      console.error('[GitGateway] Error getting repo info:', message);
+      this.logger.error(`Error getting repo info: ${message}`);
 
       return {
         repo: null,
@@ -425,7 +428,7 @@ export class GitGateway {
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
-      console.error('[GitGateway] Error listing pull requests:', message);
+      this.logger.error(`Error listing pull requests: ${message}`);
 
       return {
         pullRequests: [],
@@ -459,7 +462,7 @@ export class GitGateway {
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
-      console.error('[GitGateway] Error getting pull request:', message);
+      this.logger.error(`Error getting pull request: ${message}`);
 
       return {
         pullRequest: null,
@@ -494,7 +497,7 @@ export class GitGateway {
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
-      console.error('[GitGateway] Error creating pull request:', message);
+      this.logger.error(`Error creating pull request: ${message}`);
 
       return {
         success: false,
@@ -529,7 +532,7 @@ export class GitGateway {
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
-      console.error('[GitGateway] Error listing issues:', message);
+      this.logger.error(`Error listing issues: ${message}`);
 
       return {
         issues: [],
@@ -560,7 +563,7 @@ export class GitGateway {
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
-      console.error('[GitGateway] Error getting issue:', message);
+      this.logger.error(`Error getting issue: ${message}`);
 
       return {
         issue: null,

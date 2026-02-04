@@ -6,6 +6,7 @@ import {
   ConnectedSocket,
   OnGatewayInit,
 } from '@nestjs/websockets';
+import { Logger } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 import { OnEvent } from '@nestjs/event-emitter';
 import {
@@ -58,6 +59,8 @@ interface AiPromptEvent {
   },
 })
 export class WorkspaceGateway implements OnGatewayInit {
+  private readonly logger = new Logger(WorkspaceGateway.name);
+
   @WebSocketServer()
   server!: Server;
 
@@ -67,7 +70,7 @@ export class WorkspaceGateway implements OnGatewayInit {
   ) {}
 
   afterInit(): void {
-    console.log('[WorkspaceGateway] Initialized');
+    this.logger.log('Initialized');
   }
 
   /**
@@ -78,9 +81,7 @@ export class WorkspaceGateway implements OnGatewayInit {
     @MessageBody() payload: ExecuteQuickActionPayload,
     @ConnectedSocket() client: Socket,
   ): Promise<QuickActionResult> {
-    console.log(
-      `[WorkspaceGateway] Executing quick action: ${payload.action.handler}`,
-    );
+    this.logger.log(`Executing quick action: ${payload.action.handler}`);
 
     const result = await this.quickActionService.executeAction(
       payload.sessionId,
@@ -185,7 +186,7 @@ export class WorkspaceGateway implements OnGatewayInit {
   handleGetWorkspaceState(
     @ConnectedSocket() _client: Socket,
   ): WorkspaceState {
-    console.log('[WorkspaceGateway] Getting workspace state');
+    this.logger.log('Getting workspace state');
     return this.workspaceService.getWorkspaceState();
   }
 
@@ -197,7 +198,7 @@ export class WorkspaceGateway implements OnGatewayInit {
     @MessageBody() payload: SaveStatePayload,
     @ConnectedSocket() _client: Socket,
   ): SuccessResponse {
-    console.log('[WorkspaceGateway] Saving workspace state');
+    this.logger.log('Saving workspace state');
     this.workspaceService.saveWorkspaceState(payload);
     return { success: true };
   }
@@ -210,7 +211,7 @@ export class WorkspaceGateway implements OnGatewayInit {
     @MessageBody() payload: AddTabPayload,
     @ConnectedSocket() client: Socket,
   ): TabsResponse {
-    console.log(`[WorkspaceGateway] Adding tab for project: ${payload.projectPath}`);
+    this.logger.log(`Adding tab for project: ${payload.projectPath}`);
 
     const tab: ProjectTabDTO = {
       id: payload.id,
@@ -242,7 +243,7 @@ export class WorkspaceGateway implements OnGatewayInit {
     @MessageBody() payload: UpdateTabThemePayload,
     @ConnectedSocket() client: Socket,
   ): TabsOnlyResponse {
-    console.log(`[WorkspaceGateway] Updating tab theme: ${payload.tabId} -> ${payload.theme}`);
+    this.logger.log(`Updating tab theme: ${payload.tabId} -> ${payload.theme}`);
 
     const tabs = this.workspaceService.updateTabTheme(payload.tabId, payload.theme);
 
@@ -263,7 +264,7 @@ export class WorkspaceGateway implements OnGatewayInit {
     @MessageBody() payload: RemoveTabPayload,
     @ConnectedSocket() client: Socket,
   ): TabsResponse {
-    console.log(`[WorkspaceGateway] Removing tab: ${payload.tabId}`);
+    this.logger.log(`Removing tab: ${payload.tabId}`);
 
     const result = this.workspaceService.removeTab(payload.tabId);
 
@@ -284,7 +285,7 @@ export class WorkspaceGateway implements OnGatewayInit {
     @MessageBody() payload: SelectTabPayload,
     @ConnectedSocket() client: Socket,
   ): TabsResponse {
-    console.log(`[WorkspaceGateway] Selecting tab: ${payload.tabId}`);
+    this.logger.log(`Selecting tab: ${payload.tabId}`);
 
     const tabs = this.workspaceService.selectTab(payload.tabId);
 
@@ -305,7 +306,7 @@ export class WorkspaceGateway implements OnGatewayInit {
     @MessageBody() payload: UpdatePreferencePayload,
     @ConnectedSocket() client: Socket,
   ): PreferencesResponse {
-    console.log(`[WorkspaceGateway] Updating preference: ${payload.key}`);
+    this.logger.log(`Updating preference: ${payload.key}`);
 
     const preferences = this.workspaceService.setPreference(payload.key, payload.value);
 
