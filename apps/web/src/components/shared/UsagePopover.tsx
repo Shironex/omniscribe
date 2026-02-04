@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, AlertTriangle, CheckCircle, XCircle, Clock, ExternalLink } from 'lucide-react';
+import { RefreshCw, AlertTriangle, CheckCircle, XCircle, Clock, ExternalLink, Loader2 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { ClaudeIcon } from '@/components/shared/ClaudeIcon';
 import { useUsageStore } from '@/stores/useUsageStore';
@@ -231,11 +231,15 @@ export function UsagePopover() {
           <Button
             variant="ghost"
             size="icon"
-            className={clsx('h-6 w-6', isLoading && 'animate-spin')}
+            className="h-6 w-6"
             onClick={() => fetchUsage()}
             disabled={isLoading}
           >
-            <RefreshCw className="w-3.5 h-3.5" />
+            {isLoading ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />
+            ) : (
+              <RefreshCw className="w-3.5 h-3.5" />
+            )}
           </Button>
         </div>
 
@@ -253,7 +257,7 @@ export function UsagePopover() {
             </div>
           ) : !claudeUsage ? (
             <div className="flex flex-col items-center justify-center py-8 space-y-2">
-              <RefreshCw className={clsx('w-6 h-6', isLoading && 'animate-spin')} />
+              <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
               <p className="text-xs text-muted-foreground">Loading usage data...</p>
             </div>
           ) : (

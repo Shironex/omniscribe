@@ -77,7 +77,11 @@ export function GithubSection() {
           )}
           title="Refresh status"
         >
-          <RefreshCw className={clsx('w-4 h-4', isLoading && 'animate-spin')} />
+          {isLoading ? (
+            <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+          ) : (
+            <RefreshCw className="w-4 h-4" />
+          )}
         </button>
       </div>
 

@@ -8,6 +8,7 @@ import {
   ArrowDown,
   RefreshCw,
   AlertCircle,
+  Loader2,
 } from 'lucide-react';
 import { useGitStore, selectCurrentBranch } from '@/stores';
 import { useWorkspaceStore, selectActiveTab } from '@/stores';
@@ -91,12 +92,15 @@ export function GitSection({ className }: GitSectionProps) {
           className={clsx(
             'p-1 rounded transition-colors flex-shrink-0',
             'hover:bg-muted',
-            'disabled:opacity-50 disabled:cursor-not-allowed',
-            isLoading && 'animate-spin'
+            'disabled:opacity-50 disabled:cursor-not-allowed'
           )}
           title="Refresh"
         >
-          <RefreshCw size={12} className="text-muted-foreground" />
+          {isLoading ? (
+            <Loader2 size={12} className="text-muted-foreground animate-spin" />
+          ) : (
+            <RefreshCw size={12} className="text-muted-foreground" />
+          )}
         </button>
       </div>
 

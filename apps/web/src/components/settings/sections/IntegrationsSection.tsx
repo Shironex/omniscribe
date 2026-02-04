@@ -198,12 +198,11 @@ export function IntegrationsSection() {
           )}
           title="Refresh status"
         >
-          <RefreshCw
-            className={clsx(
-              'w-4 h-4',
-              (isLoading || isVersionCheckLoading) && 'animate-spin',
-            )}
-          />
+          {(isLoading || isVersionCheckLoading) ? (
+            <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+          ) : (
+            <RefreshCw className="w-4 h-4" />
+          )}
         </button>
       </div>
 
