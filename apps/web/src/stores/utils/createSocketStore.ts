@@ -90,6 +90,12 @@ export function createSocketListeners<T extends SocketStoreState>(
 ): { initListeners: () => void; cleanupListeners: () => void } {
   const { listeners, onConnect, includeConnectionErrorHandler = true } = options;
 
+  // Store references to handler functions so they can be removed on cleanup
+  // This prevents the memory leak where listeners accumulate on re-mount
+  let connectHandler: (() => void) | null = null;
+  let connectErrorHandler: ((err: Error) => void) | null = null;
+  const customHandlers: Map<string, (data: unknown) => void> = new Map();
+
   const initListeners = () => {
     const state = get();
 
@@ -101,38 +107,49 @@ export function createSocketListeners<T extends SocketStoreState>(
     // Get setError from the store (cast needed since we know it exists)
     const { setError } = get() as unknown as SocketStoreActions;
 
-    // Register custom listeners
+    // Register custom listeners (store refs for cleanup)
     for (const config of listeners) {
-      socket.on(config.event, (data: unknown) => {
+      const handler = (data: unknown) => {
         config.handler(data, get);
-      });
+      };
+      customHandlers.set(config.event, handler);
+      socket.on(config.event, handler);
     }
 
-    // Handle connection error
+    // Handle connection error (store ref for cleanup)
     if (includeConnectionErrorHandler) {
-      socket.on('connect_error', (err: Error) => {
+      connectErrorHandler = (err: Error) => {
         setError(`Connection error: ${err.message}`);
-      });
+      };
+      socket.on('connect_error', connectErrorHandler);
     }
 
-    // Handle reconnection
-    socket.on('connect', () => {
+    // Handle reconnection (store ref for cleanup)
+    connectHandler = () => {
       setError(null);
       onConnect?.(get);
-    });
+    };
+    socket.on('connect', connectHandler);
 
     set({ listenersInitialized: true } as Partial<T>);
   };
 
   const cleanupListeners = () => {
-    // Remove custom listeners
-    for (const config of listeners) {
-      socket.off(config.event);
+    // Remove custom listeners using stored references
+    for (const [event, handler] of customHandlers) {
+      socket.off(event, handler);
     }
+    customHandlers.clear();
 
-    // Note: We don't remove connect/connect_error listeners here
-    // as they may be shared across stores. Each store manages its own
-    // custom listeners but connection listeners are typically global.
+    // Remove connection listeners using stored references
+    if (connectHandler) {
+      socket.off('connect', connectHandler);
+      connectHandler = null;
+    }
+    if (connectErrorHandler) {
+      socket.off('connect_error', connectErrorHandler);
+      connectErrorHandler = null;
+    }
 
     set({ listenersInitialized: false } as Partial<T>);
   };

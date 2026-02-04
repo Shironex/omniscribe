@@ -30,8 +30,9 @@ function sanitizeBranchForPath(branch: string): string | null {
     return null;
   }
 
-  // Reject null bytes and control characters
-  if (/[\x00-\x1f]/.test(branch)) {
+  // Reject null bytes and control characters (ASCII 0-31)
+  // eslint-disable-next-line no-control-regex
+  if (/[\u0000-\u001f]/.test(branch)) {
     return null;
   }
 

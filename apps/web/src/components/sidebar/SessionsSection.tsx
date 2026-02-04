@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { Terminal, Plus, AlertCircle } from 'lucide-react';
@@ -24,7 +24,6 @@ export function SessionsSection({
   const allSessions = useSessionStore((state) => state.sessions);
   const isLoading = useSessionStore((state) => state.isLoading);
   const error = useSessionStore((state) => state.error);
-  const initListeners = useSessionStore((state) => state.initListeners);
 
   // Memoize filtered sessions to avoid creating new arrays on every render
   const sessions = useMemo(() => {
@@ -34,10 +33,7 @@ export function SessionsSection({
     return allSessions;
   }, [allSessions, activeTab?.projectPath]);
 
-  // Initialize listeners on mount
-  useEffect(() => {
-    initListeners();
-  }, [initListeners]);
+  // Note: Listeners are initialized centrally in useAppInitialization
 
   // Memoize derived counts to avoid recalculation on every render
   const { sessionCount, activeCount } = useMemo(() => ({

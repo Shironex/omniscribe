@@ -33,8 +33,6 @@ export function ConnectedTerminalGrid({ className }: ConnectedTerminalGridProps)
   // Session store
   const sessions = useSessionStore((state) => state.sessions);
   const updateSession = useSessionStore((state) => state.updateSession);
-  const initSessionListeners = useSessionStore((state) => state.initListeners);
-  const cleanupSessionListeners = useSessionStore((state) => state.cleanupListeners);
 
   // Workspace store
   const activeTab = useWorkspaceStore(selectActiveTab);
@@ -45,27 +43,11 @@ export function ConnectedTerminalGrid({ className }: ConnectedTerminalGridProps)
   const currentGitBranch = useGitStore(selectCurrentBranch);
   const fetchBranches = useGitStore((state) => state.fetchBranches);
   const setGitProjectPath = useGitStore((state) => state.setProjectPath);
-  const initGitListeners = useGitStore((state) => state.initListeners);
-  const cleanupGitListeners = useGitStore((state) => state.cleanupListeners);
 
   // Current branch name
   const currentBranch = currentGitBranch?.name ?? 'main';
 
-  // Initialize stores on mount
-  useEffect(() => {
-    initSessionListeners();
-    initGitListeners();
-
-    return () => {
-      cleanupSessionListeners();
-      cleanupGitListeners();
-    };
-  }, [
-    initSessionListeners,
-    cleanupSessionListeners,
-    initGitListeners,
-    cleanupGitListeners,
-  ]);
+  // Note: Store listeners are initialized centrally in useAppInitialization
 
   // Fetch git data when active project changes
   useEffect(() => {

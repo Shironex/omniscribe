@@ -22,17 +22,13 @@ export function GitSection({ className }: GitSectionProps) {
   const error = useGitStore((state) => state.error);
   const fetchBranches = useGitStore((state) => state.fetchBranches);
   const clear = useGitStore((state) => state.clear);
-  const initListeners = useGitStore((state) => state.initListeners);
 
   const activeTab = useWorkspaceStore(selectActiveTab);
 
   // Track the previous project path to detect changes
   const prevProjectPathRef = useRef<string | null>(null);
 
-  // Initialize listeners on mount
-  useEffect(() => {
-    initListeners();
-  }, [initListeners]);
+  // Note: Listeners are initialized centrally in useAppInitialization
 
   // Fetch branches when active project changes
   useEffect(() => {
