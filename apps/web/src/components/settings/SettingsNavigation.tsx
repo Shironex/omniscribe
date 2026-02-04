@@ -1,4 +1,3 @@
-import { X } from 'lucide-react';
 import { clsx } from 'clsx';
 import type { NavigationItem } from './navigation-config';
 import { NAV_GROUPS } from './navigation-config';
@@ -7,8 +6,6 @@ import type { SettingsSectionId } from '@omniscribe/shared';
 interface SettingsNavigationProps {
   activeSection: SettingsSectionId;
   onNavigate: (sectionId: SettingsSectionId) => void;
-  isOpen?: boolean;
-  onClose?: () => void;
 }
 
 function NavButton({
@@ -65,48 +62,16 @@ function NavButton({
 export function SettingsNavigation({
   activeSection,
   onNavigate,
-  isOpen = true,
-  onClose,
 }: SettingsNavigationProps) {
   return (
-    <>
-      {/* Mobile backdrop overlay - only shown when isOpen is true on mobile */}
-      {isOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-20 lg:hidden"
-          onClick={onClose}
-          data-testid="settings-nav-backdrop"
-        />
+    <nav
+      className={clsx(
+        'w-56 shrink-0 overflow-y-auto',
+        'border-r border-border/50',
+        'bg-muted/95 backdrop-blur-xl',
       )}
-
-      {/* Navigation sidebar */}
-      <nav
-        className={clsx(
-          // Mobile: fixed position overlay with slide transition from right
-          'fixed inset-y-0 right-0 w-72 z-30',
-          'transition-transform duration-200 ease-out',
-          // Hide on mobile when closed, show when open
-          isOpen ? 'translate-x-0' : 'translate-x-full',
-          // Desktop: relative position in layout, always visible
-          'lg:relative lg:w-56 lg:z-auto lg:translate-x-0',
-          'shrink-0 overflow-y-auto',
-          'border-l border-border/50 lg:border-l-0 lg:border-r',
-          'bg-muted/95 backdrop-blur-xl',
-        )}
-      >
-        {/* Mobile close button */}
-        <div className="lg:hidden flex items-center justify-between px-4 py-3 border-b border-border/50">
-          <span className="text-sm font-semibold text-foreground">Navigation</span>
-          <button
-            onClick={onClose}
-            className="h-8 w-8 p-0 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-card"
-            aria-label="Close navigation menu"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        <div className="sticky top-0 p-4 space-y-1">
+    >
+      <div className="sticky top-0 p-4 space-y-1">
           {/* Navigation Groups */}
           {NAV_GROUPS.map((group, groupIndex) => (
             <div key={group.label}>
@@ -133,6 +98,5 @@ export function SettingsNavigation({
           ))}
         </div>
       </nav>
-    </>
   );
 }
