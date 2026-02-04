@@ -13,13 +13,14 @@
 
 ## Table of Contents
 
-- [About](#-about)
-- [Features](#-features)
-- [Quick Start](#-quick-start)
-- [Architecture](#-architecture)
-- [Tech Stack](#-tech-stack)
-- [Contributing](#-contributing)
-- [License](#-license)
+- [About](#about)
+- [Features](#features)
+- [Keyboard Shortcuts](#keyboard-shortcuts)
+- [Quick Start](#quick-start)
+- [Architecture](#architecture)
+- [Tech Stack](#tech-stack)
+- [Contributing](#contributing)
+- [License](#license)
 
 ## About
 
@@ -35,6 +36,15 @@ Omniscribe is a desktop application for managing multiple AI coding assistant se
 | **MCP Integration** | Configure Model Context Protocol servers per session |
 | **Project Tabs** | Manage multiple projects with persistent recent history |
 | **Cross-Platform** | Native support for Windows, macOS, and Linux |
+
+## Keyboard Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| `N` | Add new session slot |
+| `L` | Launch all pending sessions |
+| `1-6` | Launch individual session by position |
+| `Ctrl/Cmd + K` | Stop all running sessions |
 
 ## Quick Start
 
