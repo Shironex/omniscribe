@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
+    "@omniscribe/shared": "workspace:*",
     "zod": "^3.25.0"
   },
   "devDependencies": {
