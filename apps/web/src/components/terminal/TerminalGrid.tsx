@@ -136,10 +136,11 @@ export function TerminalGrid({
       {/* Bottom section for pre-launch bars and add button */}
       <div className="flex-shrink-0 p-2 pt-0 space-y-2">
         {/* Pre-launch bars */}
-        {preLaunchSlots.map((slot) => (
+        {preLaunchSlots.map((slot, index) => (
           <PreLaunchBar
             key={slot.id}
             slot={slot}
+            slotIndex={index + 1}
             branches={branches}
             isLaunching={launchingSlotIds?.has(slot.id)}
             onUpdate={onUpdateSlot}

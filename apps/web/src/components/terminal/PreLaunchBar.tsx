@@ -16,6 +16,7 @@ export interface PreLaunchSlot {
 
 interface PreLaunchBarProps {
   slot: PreLaunchSlot;
+  slotIndex?: number;
   branches: Branch[];
   isLaunching?: boolean;
   onUpdate: (slotId: string, updates: Partial<Pick<PreLaunchSlot, 'aiMode' | 'branch'>>) => void;
@@ -39,6 +40,7 @@ const aiModeOptions: AIModeOption[] = [
 
 export function PreLaunchBar({
   slot,
+  slotIndex,
   branches,
   isLaunching = false,
   onUpdate,
@@ -159,9 +161,13 @@ export function PreLaunchBar({
             ? 'bg-border text-muted-foreground cursor-not-allowed opacity-60'
             : 'bg-[var(--status-success)] hover:brightness-110 text-white'
         )}
+        title={slotIndex && slotIndex <= 6 ? `Press ${slotIndex} to launch` : undefined}
       >
         <Play size={12} fill="currentColor" />
         <span>{isLaunching ? 'Launching...' : 'Launch'}</span>
+        {slotIndex && slotIndex <= 6 && !isLaunching && (
+          <kbd className="ml-1 px-1 py-0.5 text-[10px] bg-white/20 rounded">{slotIndex}</kbd>
+        )}
       </button>
 
       {/* Remove button */}

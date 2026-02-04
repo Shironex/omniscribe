@@ -76,9 +76,13 @@ export function BottomBar({
               ? 'bg-[var(--status-success)] hover:brightness-110 text-white'
               : 'bg-border text-muted-foreground cursor-not-allowed opacity-60'
           )}
+          title="Press L to launch all"
         >
           <Play size={14} fill="currentColor" />
           <span>{isLaunching ? 'Launching...' : 'Launch'}</span>
+          {canLaunch && !isLaunching && (
+            <kbd className="ml-1 px-1.5 py-0.5 text-xs bg-white/20 rounded">L</kbd>
+          )}
         </button>
       </div>
     </div>

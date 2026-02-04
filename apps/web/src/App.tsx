@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useEffect } from 'react';
 import {
   ProjectTabs,
   TopBar,
@@ -124,6 +124,48 @@ function App() {
 
   // Determine whether to show IdleLandingView or TerminalGrid
   const hasContent = terminalSessions.length > 0 || preLaunchSlots.length > 0;
+
+  // Keyboard shortcuts for launching sessions
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore if user is typing in an input/textarea or if modifier keys are pressed
+      const target = e.target as HTMLElement;
+      if (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.isContentEditable ||
+        e.metaKey ||
+        e.ctrlKey ||
+        e.altKey
+      ) {
+        return;
+      }
+
+      const key = e.key.toLowerCase();
+
+      // L - Launch all pre-launch slots
+      if (key === 'l' && canLaunch && !isLaunching) {
+        e.preventDefault();
+        handleLaunch();
+        return;
+      }
+
+      // 1-6 - Launch individual slot by index
+      if (/^[1-6]$/.test(key)) {
+        const index = parseInt(key, 10) - 1;
+        if (index < preLaunchSlots.length) {
+          e.preventDefault();
+          const slot = preLaunchSlots[index];
+          if (!launchingSlotIds?.has(slot.id)) {
+            handleLaunchSlot(slot.id);
+          }
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [canLaunch, isLaunching, preLaunchSlots, launchingSlotIds, handleLaunch, handleLaunchSlot]);
 
   return (
     <div className="h-screen w-screen bg-background text-foreground flex flex-col overflow-hidden">
