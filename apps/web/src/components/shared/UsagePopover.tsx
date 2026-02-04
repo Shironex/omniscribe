@@ -41,17 +41,17 @@ const ERROR_MESSAGES: Record<UsageError, { title: string; description: string }>
 
 /** Get status color/icon based on percentage used */
 function getStatusInfo(percentage: number) {
-  if (percentage >= 75) return { color: 'text-red-500', icon: XCircle, bg: 'bg-red-500' };
-  if (percentage >= 50) return { color: 'text-orange-500', icon: AlertTriangle, bg: 'bg-orange-500' };
-  return { color: 'text-green-500', icon: CheckCircle, bg: 'bg-green-500' };
+  if (percentage >= 75) return { color: 'text-status-error', icon: XCircle, bg: 'bg-status-error' };
+  if (percentage >= 50) return { color: 'text-status-warning', icon: AlertTriangle, bg: 'bg-status-warning' };
+  return { color: 'text-primary', icon: CheckCircle, bg: 'bg-primary' };
 }
 
 /** Progress bar component */
 function ProgressBar({ percentage, colorClass }: { percentage: number; colorClass: string }) {
   return (
-    <div className="h-2 w-full bg-secondary/50 rounded-full overflow-hidden">
+    <div className="h-2 w-full bg-muted rounded-full overflow-hidden border border-border/50">
       <div
-        className={clsx('h-full transition-all duration-500', colorClass)}
+        className={clsx('h-full transition-all duration-500 rounded-full', colorClass)}
         style={{ width: `${Math.min(percentage, 100)}%` }}
       />
     </div>
@@ -85,7 +85,7 @@ function UsageCard({
     <div
       className={clsx(
         'rounded-xl border bg-card/50 p-4 transition-opacity',
-        isPrimary ? 'border-border/60 shadow-sm' : 'border-border/40',
+        isPrimary ? 'border-border shadow-sm' : 'border-border/60',
         (stale || !isValidPercentage) && 'opacity-50'
       )}
     >
@@ -176,9 +176,9 @@ export function UsagePopover() {
 
   // Get progress bar color for header indicator
   const getProgressBarColor = (percentage: number) => {
-    if (percentage >= 80) return 'bg-red-500';
-    if (percentage >= 50) return 'bg-yellow-500';
-    return 'bg-green-500';
+    if (percentage >= 80) return 'bg-status-error';
+    if (percentage >= 50) return 'bg-status-warning';
+    return 'bg-primary';
   };
 
   const sessionPercentage = claudeUsage?.sessionPercentage ?? 0;
@@ -218,7 +218,7 @@ export function UsagePopover() {
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>{trigger}</PopoverTrigger>
       <PopoverContent
-        className="w-80 p-0 overflow-hidden bg-background/95 backdrop-blur-xl border-border shadow-2xl"
+        className="w-[340px] p-0 overflow-hidden bg-background/95 backdrop-blur-xl border-border shadow-2xl"
         align="end"
         sideOffset={8}
       >
