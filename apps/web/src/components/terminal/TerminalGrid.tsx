@@ -10,11 +10,17 @@ import type { PreLaunchSlot } from './PreLaunchBar';
 import { IdleLandingView } from '../shared/IdleLandingView';
 import { Branch } from '../shared/BranchSelector';
 
+interface QuickActionItem {
+  id: string;
+  label: string;
+}
+
 interface TerminalGridProps {
   sessions: TerminalSession[];
   preLaunchSlots: PreLaunchSlot[];
   launchingSlotIds?: Set<string>;
   branches: Branch[];
+  quickActions?: QuickActionItem[];
   focusedSessionId: string | null;
   onFocusSession: (sessionId: string) => void;
   onAddSlot: () => void;
@@ -32,6 +38,7 @@ export function TerminalGrid({
   preLaunchSlots,
   launchingSlotIds,
   branches,
+  quickActions = [],
   focusedSessionId,
   onFocusSession,
   onAddSlot,
@@ -94,6 +101,7 @@ export function TerminalGrid({
             {/* Header */}
             <TerminalHeader
               session={session}
+              quickActions={quickActions}
               onClose={() => onKill(session.id)}
               onQuickAction={onQuickAction ? (actionId) => onQuickAction(session.id, actionId) : undefined}
             />

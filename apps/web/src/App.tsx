@@ -83,6 +83,12 @@ function App() {
     [quickActions]
   );
 
+  // Quick actions for terminal header dropdown (simpler format)
+  const quickActionsForTerminal = useMemo(() =>
+    quickActions.map(a => ({ id: a.id, label: a.title })),
+    [quickActions]
+  );
+
   // Handle quick action execution (writes command to terminal)
   const handleQuickAction = useCallback((sessionId: string, actionId: string) => {
     const action = quickActions.find(a => a.id === actionId);
@@ -155,6 +161,7 @@ function App() {
               preLaunchSlots={preLaunchSlots}
               launchingSlotIds={launchingSlotIds}
               branches={branches}
+              quickActions={quickActionsForTerminal}
               focusedSessionId={focusedSessionId}
               onFocusSession={handleFocusSession}
               onAddSlot={handleAddSession}

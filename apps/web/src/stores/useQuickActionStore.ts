@@ -6,6 +6,77 @@ import { QuickAction } from '@omniscribe/shared';
  * Default quick actions for new installations
  */
 const DEFAULT_QUICK_ACTIONS: QuickAction[] = [
+  // Git Actions (AI Prompts)
+  {
+    id: 'git-commit',
+    title: 'Git Commit',
+    description: 'Generate a conventional commit message and commit changes',
+    category: 'git',
+    icon: 'GitCommit',
+    enabled: true,
+    handler: 'terminal:execute',
+    params: {
+      command:
+        'Generate a conventional commit message for the staged changes and commit them. Use the format: type: short description. Types: feat, fix, refactor, docs, chore, style, test, perf, ci, build.',
+    },
+  },
+  {
+    id: 'git-push',
+    title: 'Git Push',
+    description: 'Push committed changes to remote',
+    category: 'git',
+    icon: 'ArrowUp',
+    enabled: true,
+    handler: 'terminal:execute',
+    params: { command: 'git push' },
+  },
+  {
+    id: 'git-pull',
+    title: 'Git Pull',
+    description: 'Pull latest changes from remote',
+    category: 'git',
+    icon: 'ArrowDown',
+    enabled: true,
+    handler: 'terminal:execute',
+    params: { command: 'git pull' },
+  },
+  {
+    id: 'git-status',
+    title: 'Git Status',
+    description: 'Show the working tree status',
+    category: 'git',
+    icon: 'Info',
+    enabled: true,
+    handler: 'terminal:execute',
+    params: { command: 'git status' },
+  },
+  {
+    id: 'resolve-conflicts',
+    title: 'Resolve Conflicts',
+    description: 'AI-assisted merge conflict resolution',
+    category: 'git',
+    icon: 'GitMerge',
+    enabled: true,
+    handler: 'terminal:execute',
+    params: {
+      command:
+        'Resolve merge conflicts in the current branch. Examine each conflicted file, understand both sides of the conflict, and resolve them appropriately. After resolving all conflicts, ensure the code compiles and tests pass, then stage and commit the resolved changes.',
+    },
+  },
+  {
+    id: 'address-pr-comments',
+    title: 'Address PR Comments',
+    description: 'Review and address PR feedback',
+    category: 'git',
+    icon: 'MessageSquare',
+    enabled: true,
+    handler: 'terminal:execute',
+    params: {
+      command:
+        'Read the review comments on the current PR and address any feedback. Review the PR diff, understand the reviewer\'s concerns, and make the necessary changes to address their feedback.',
+    },
+  },
+  // Terminal Actions
   {
     id: 'run-app',
     title: 'Run App',
@@ -17,26 +88,6 @@ const DEFAULT_QUICK_ACTIONS: QuickAction[] = [
     params: { command: 'npm run dev' },
   },
   {
-    id: 'commit-push',
-    title: 'Commit & Push',
-    description: 'Stage all changes, commit, and push to remote',
-    category: 'git',
-    icon: 'GitCommit',
-    enabled: true,
-    handler: 'git:commit-push',
-    params: {},
-  },
-  {
-    id: 'fix-errors',
-    title: 'Fix Errors',
-    description: 'Ask AI to analyze and fix compilation errors',
-    category: 'ai',
-    icon: 'Wrench',
-    enabled: true,
-    handler: 'ai:fix-errors',
-    params: {},
-  },
-  {
     id: 'lint-format',
     title: 'Lint & Format',
     description: 'Run linter and formatter on the codebase',
@@ -45,6 +96,33 @@ const DEFAULT_QUICK_ACTIONS: QuickAction[] = [
     enabled: true,
     handler: 'terminal:execute',
     params: { command: 'npm run lint && npm run format' },
+  },
+  // AI Actions
+  {
+    id: 'fix-errors',
+    title: 'Fix Errors',
+    description: 'Ask AI to analyze and fix compilation errors',
+    category: 'ai',
+    icon: 'Wrench',
+    enabled: true,
+    handler: 'terminal:execute',
+    params: {
+      command:
+        'Analyze and fix any compilation errors or warnings in the codebase. Run the build/compile command, identify issues, and fix them.',
+    },
+  },
+  {
+    id: 'plan-implementation',
+    title: 'Plan Implementation',
+    description: 'Create a brief implementation plan for a task',
+    category: 'ai',
+    icon: 'ListTodo',
+    enabled: true,
+    handler: 'terminal:execute',
+    params: {
+      command:
+        'Create a brief implementation plan for this task:\n1. Goal: What we\'re accomplishing\n2. Approach: How we\'ll do it\n3. Files to modify and what changes\n4. Tasks (numbered list)\n5. Potential risks or gotchas',
+    },
   },
 ];
 

@@ -31,14 +31,8 @@ interface QuickAction {
   icon?: React.ReactNode;
 }
 
-const defaultQuickActions: QuickAction[] = [
-  { id: 'commit', label: 'Git Commit' },
-  { id: 'push', label: 'Git Push' },
-  { id: 'pull', label: 'Git Pull' },
-  { id: 'status', label: 'Git Status' },
-];
-
 interface TerminalHeaderProps {
+  quickActions?: QuickAction[];
   session: TerminalSession;
   gitBranch?: GitBranchInfo;
   onSettingsClick?: () => void;
@@ -57,6 +51,7 @@ const aiModeConfig: Record<AIMode, { icon: typeof Bot; label: string; color: str
 export function TerminalHeader({
   session,
   gitBranch,
+  quickActions = [],
   onSettingsClick,
   onClose,
   onQuickAction,
@@ -162,7 +157,7 @@ export function TerminalHeader({
       {/* Right section: Quick actions + More menu + Close */}
       <div className="flex items-center gap-0.5 shrink-0">
         {/* Quick Actions dropdown */}
-        {onQuickAction && (
+        {onQuickAction && quickActions.length > 0 && (
           <div className="relative" ref={quickActionsRef}>
             <button
               onClick={() => {
@@ -179,9 +174,9 @@ export function TerminalHeader({
             >
               <Zap size={12} />
             </button>
-            {quickActionsOpen && (
-              <div className="absolute right-0 top-full mt-1 z-50 min-w-[140px] bg-popover border border-border rounded-md shadow-lg py-1">
-                {defaultQuickActions.map((action) => (
+            {quickActionsOpen && quickActions.length > 0 && (
+              <div className="absolute right-0 top-full mt-1 z-50 min-w-[160px] bg-popover border border-border rounded-md shadow-lg py-1">
+                {quickActions.map((action) => (
                   <button
                     key={action.id}
                     onClick={() => handleQuickAction(action.id)}
