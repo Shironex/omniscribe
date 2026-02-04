@@ -6,6 +6,7 @@ import {
 } from './components';
 import { TerminalGrid } from './components/terminal/TerminalGrid';
 import { IdleLandingView } from './components/shared/IdleLandingView';
+import { WelcomeView } from './components/shared/WelcomeView';
 import { SettingsModal } from './components/settings';
 import {
   useAppInitialization,
@@ -16,7 +17,7 @@ import {
   useProjectGit,
   useSessionLifecycle,
 } from './hooks';
-import { useQuickActionStore } from './stores';
+import { useQuickActionStore, useWorkspaceStore } from './stores';
 import { writeToTerminal } from './lib/terminal';
 
 function App() {
@@ -114,6 +115,13 @@ function App() {
     }
   }, [quickActions, terminalSessions]);
 
+  // Recent projects for welcome view (sorted by last accessed)
+  const workspaceTabs = useWorkspaceStore((state) => state.tabs);
+  const recentProjects = useMemo(
+    () => [...workspaceTabs].sort((a, b) => b.lastAccessedAt.getTime() - a.lastAccessedAt.getTime()),
+    [workspaceTabs]
+  );
+
   // Determine whether to show IdleLandingView or TerminalGrid
   const hasContent = terminalSessions.length > 0 || preLaunchSlots.length > 0;
 
@@ -158,7 +166,11 @@ function App() {
             <IdleLandingView onAddSession={handleAddSession} />
           )
         ) : (
-          <IdleLandingView onAddSession={handleSelectDirectory} />
+          <WelcomeView
+            recentProjects={recentProjects}
+            onOpenProject={handleSelectDirectory}
+            onSelectProject={handleSelectTab}
+          />
         )}
       </main>
 

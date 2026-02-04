@@ -15,3 +15,5 @@ export { BranchAutocomplete } from './BranchAutocomplete';
 export type { Branch as BranchAutocompleteType } from './BranchAutocomplete';
 
 export { IdleLandingView } from './IdleLandingView';
+
+export { WelcomeView } from './WelcomeView';
