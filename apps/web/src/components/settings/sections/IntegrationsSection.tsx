@@ -243,7 +243,7 @@ export function IntegrationsSection() {
                   </span>
                 )}
                 {claudeCliStatus.installed ? (
-                  <span className="flex items-center gap-1.5 text-xs font-medium text-status-success bg-status-success-bg px-2 py-1 rounded-full">
+                  <span className="flex items-center gap-1.5 text-xs font-medium text-primary bg-primary/10 px-2 py-1 rounded-full">
                     <CheckCircle2 className="w-3 h-3" />
                     Installed
                   </span>
@@ -269,7 +269,7 @@ export function IntegrationsSection() {
                       {claudeVersionCheck?.isOutdated && claudeVersionCheck.latestVersion && (
                         <>
                           <ArrowRight className="w-3 h-3 text-muted-foreground" />
-                          <span className="font-mono text-status-success">
+                          <span className="font-mono text-primary">
                             {claudeVersionCheck.latestVersion}
                           </span>
                         </>
@@ -453,7 +453,7 @@ export function IntegrationsSection() {
                 <p className="text-xs text-muted-foreground">OAuth sign-in status</p>
               </div>
               {claudeCliStatus.auth.authenticated ? (
-                <span className="flex items-center gap-1.5 text-xs font-medium text-status-success bg-status-success-bg px-2 py-1 rounded-full">
+                <span className="flex items-center gap-1.5 text-xs font-medium text-primary bg-primary/10 px-2 py-1 rounded-full">
                   <CheckCircle2 className="w-3 h-3" />
                   Signed In
                 </span>
@@ -479,7 +479,7 @@ export function IntegrationsSection() {
             )}
 
             {claudeCliStatus.auth.authenticated && (
-              <div className="p-3 rounded-lg bg-status-success-bg text-sm text-status-success">
+              <div className="p-3 rounded-lg bg-primary/10 text-sm text-primary">
                 OAuth token found. You're ready to use Claude CLI.
               </div>
             )}

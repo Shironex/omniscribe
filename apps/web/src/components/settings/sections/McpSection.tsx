@@ -73,7 +73,7 @@ export function McpSection() {
           <div
             className={clsx(
               'w-3 h-3 rounded-full',
-              internalMcp.available ? 'bg-status-success' : 'bg-status-error'
+              internalMcp.available ? 'bg-primary' : 'bg-status-error'
             )}
           />
           <div className="flex-1">
@@ -88,7 +88,7 @@ export function McpSection() {
             className={clsx(
               'text-xs font-medium px-2 py-1 rounded-full',
               internalMcp.available
-                ? 'bg-status-success-bg text-status-success'
+                ? 'bg-primary/10 text-primary'
                 : 'bg-status-error-bg text-status-error'
             )}
           >
@@ -110,7 +110,7 @@ export function McpSection() {
             </p>
           </div>
           {connectedCount === servers.length && servers.length > 0 ? (
-            <span className="flex items-center gap-1.5 text-xs font-medium text-status-success bg-status-success-bg px-2 py-1 rounded-full">
+            <span className="flex items-center gap-1.5 text-xs font-medium text-primary bg-primary/10 px-2 py-1 rounded-full">
               <CheckCircle2 className="w-3 h-3" />
               All Active
             </span>
@@ -158,7 +158,7 @@ export function McpSection() {
 
               // Status display config
               const statusConfig: { color: string; label: string } = {
-                connected: { color: 'bg-status-success', label: 'Connected' },
+                connected: { color: 'bg-primary', label: 'Connected' },
                 connecting: { color: 'bg-status-warning animate-pulse', label: 'Connecting' },
                 disconnected: { color: 'bg-muted-foreground', label: 'Idle' },
                 error: { color: 'bg-status-error', label: 'Error' },

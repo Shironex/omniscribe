@@ -52,11 +52,11 @@ export function GithubSection() {
         <div
           className={clsx(
             'w-10 h-10 rounded-xl flex items-center justify-center',
-            'bg-gradient-to-br from-[#238636]/20 to-[#238636]/5',
-            'ring-1 ring-[#238636]/20',
+            'bg-gradient-to-br from-primary/20 to-brand-600/10',
+            'ring-1 ring-primary/20',
           )}
         >
-          <Github className="w-5 h-5 text-[#238636]" />
+          <Github className="w-5 h-5 text-primary" />
         </div>
         <div className="flex-1">
           <h2 className="text-lg font-semibold text-foreground">GitHub CLI</h2>
@@ -108,7 +108,7 @@ export function GithubSection() {
                 </p>
               </div>
               {githubCliStatus.installed ? (
-                <span className="flex items-center gap-1.5 text-xs font-medium text-status-success bg-status-success-bg px-2 py-1 rounded-full">
+                <span className="flex items-center gap-1.5 text-xs font-medium text-primary bg-primary/10 px-2 py-1 rounded-full">
                   <CheckCircle2 className="w-3 h-3" />
                   Installed
                 </span>
@@ -179,7 +179,7 @@ export function GithubSection() {
                 <p className="text-xs text-muted-foreground">GitHub account sign-in</p>
               </div>
               {githubCliStatus.auth.authenticated ? (
-                <span className="flex items-center gap-1.5 text-xs font-medium text-status-success bg-status-success-bg px-2 py-1 rounded-full">
+                <span className="flex items-center gap-1.5 text-xs font-medium text-primary bg-primary/10 px-2 py-1 rounded-full">
                   <CheckCircle2 className="w-3 h-3" />
                   Signed In
                 </span>
@@ -194,7 +194,7 @@ export function GithubSection() {
             {githubCliStatus.auth.authenticated ? (
               <div className="space-y-2">
                 {githubCliStatus.auth.username && (
-                  <div className="flex items-center gap-2 p-3 rounded-lg bg-status-success-bg text-sm text-status-success">
+                  <div className="flex items-center gap-2 p-3 rounded-lg bg-primary/10 text-sm text-primary">
                     <User className="w-4 h-4" />
                     <span>Logged in as <strong>{githubCliStatus.auth.username}</strong></span>
                   </div>
