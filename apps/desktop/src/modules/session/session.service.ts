@@ -577,92 +577,6 @@ export class SessionService {
   }
 
   /**
-   * Get common paths where Gemini CLI might be installed
-   */
-  private getGeminiCliPaths(): string[] {
-    const homeDir = os.homedir();
-
-    if (os.platform() === 'win32') {
-      const appData =
-        process.env.APPDATA || path.join(homeDir, 'AppData', 'Roaming');
-      const localAppData =
-        process.env.LOCALAPPDATA || path.join(homeDir, 'AppData', 'Local');
-
-      return [
-        // npm global installations
-        path.join(appData, 'npm', 'gemini.cmd'),
-        path.join(appData, 'npm', 'gemini'),
-        path.join(appData, '.npm-global', 'bin', 'gemini.cmd'),
-        path.join(appData, '.npm-global', 'bin', 'gemini'),
-        // Local bin
-        path.join(homeDir, '.local', 'bin', 'gemini.exe'),
-        path.join(homeDir, '.local', 'bin', 'gemini'),
-        // pnpm global
-        path.join(localAppData, 'pnpm', 'gemini.cmd'),
-        path.join(localAppData, 'pnpm', 'gemini'),
-        // Volta
-        path.join(homeDir, '.volta', 'bin', 'gemini.exe'),
-      ];
-    }
-
-    // macOS and Linux paths
-    return [
-      '/usr/local/bin/gemini',
-      '/usr/bin/gemini',
-      path.join(homeDir, '.npm-global', 'bin', 'gemini'),
-      path.join(homeDir, '.local', 'bin', 'gemini'),
-      path.join(homeDir, 'Library', 'pnpm', 'gemini'),
-      path.join(homeDir, '.local', 'share', 'pnpm', 'gemini'),
-      '/opt/homebrew/bin/gemini',
-      path.join(homeDir, '.volta', 'bin', 'gemini'),
-      path.join(homeDir, '.bun', 'bin', 'gemini'),
-    ];
-  }
-
-  /**
-   * Get common paths where Codex CLI might be installed
-   */
-  private getCodexCliPaths(): string[] {
-    const homeDir = os.homedir();
-
-    if (os.platform() === 'win32') {
-      const appData =
-        process.env.APPDATA || path.join(homeDir, 'AppData', 'Roaming');
-      const localAppData =
-        process.env.LOCALAPPDATA || path.join(homeDir, 'AppData', 'Local');
-
-      return [
-        // npm global installations
-        path.join(appData, 'npm', 'codex.cmd'),
-        path.join(appData, 'npm', 'codex'),
-        path.join(appData, '.npm-global', 'bin', 'codex.cmd'),
-        path.join(appData, '.npm-global', 'bin', 'codex'),
-        // Local bin
-        path.join(homeDir, '.local', 'bin', 'codex.exe'),
-        path.join(homeDir, '.local', 'bin', 'codex'),
-        // pnpm global
-        path.join(localAppData, 'pnpm', 'codex.cmd'),
-        path.join(localAppData, 'pnpm', 'codex'),
-        // Volta
-        path.join(homeDir, '.volta', 'bin', 'codex.exe'),
-      ];
-    }
-
-    // macOS and Linux paths
-    return [
-      '/usr/local/bin/codex',
-      '/usr/bin/codex',
-      path.join(homeDir, '.npm-global', 'bin', 'codex'),
-      path.join(homeDir, '.local', 'bin', 'codex'),
-      path.join(homeDir, 'Library', 'pnpm', 'codex'),
-      path.join(homeDir, '.local', 'share', 'pnpm', 'codex'),
-      '/opt/homebrew/bin/codex',
-      path.join(homeDir, '.volta', 'bin', 'codex'),
-      path.join(homeDir, '.bun', 'bin', 'codex'),
-    ];
-  }
-
-  /**
    * Find the first existing path from a list of paths
    */
   private findFirstExistingPath(paths: string[]): string | null {
@@ -680,7 +594,7 @@ export class SessionService {
 
   /**
    * Find a CLI command, checking PATH first, then known installation locations
-   * @param command The base command name (e.g., 'claude', 'gemini', 'codex')
+   * @param command The base command name (e.g., 'claude')
    * @param knownPaths Platform-specific known installation paths
    * @returns The resolved command path
    */
@@ -724,14 +638,7 @@ export class SessionService {
       case 'claude':
         return this.getClaudeCliConfig(session);
 
-      case 'gemini':
-        return this.getGeminiCliConfig(session);
-
-      case 'openai':
-        return this.getOpenAiCliConfig(session);
-
-      case 'local':
-      case 'custom':
+      case 'plain':
       default:
         return this.getShellConfig();
     }
@@ -782,47 +689,7 @@ Report status at key transitions so the user can see your progress in the Omnisc
   }
 
   /**
-   * Get Gemini CLI configuration
-   */
-  private getGeminiCliConfig(session: ExtendedSessionConfig): AiCliConfig {
-    const args: string[] = [];
-
-    // Add model flag if specified
-    if (session.model) {
-      args.push('--model', session.model);
-    }
-
-    // Find the Gemini CLI command with proper path resolution
-    const command = this.findCliCommand('gemini', this.getGeminiCliPaths());
-
-    return {
-      command,
-      args,
-    };
-  }
-
-  /**
-   * Get OpenAI/Codex CLI configuration
-   */
-  private getOpenAiCliConfig(session: ExtendedSessionConfig): AiCliConfig {
-    const args: string[] = [];
-
-    // Add model flag if specified
-    if (session.model) {
-      args.push('--model', session.model);
-    }
-
-    // Find the Codex CLI command with proper path resolution
-    const command = this.findCliCommand('codex', this.getCodexCliPaths());
-
-    return {
-      command,
-      args,
-    };
-  }
-
-  /**
-   * Get shell configuration for local/plain mode
+   * Get shell configuration for plain terminal mode
    */
   private getShellConfig(): AiCliConfig {
     if (os.platform() === 'win32') {
@@ -845,14 +712,8 @@ Report status at key transitions so the user can see your progress in the Omnisc
     switch (aiMode) {
       case 'claude':
         return 'Claude';
-      case 'gemini':
-        return 'Gemini';
-      case 'openai':
-        return 'OpenAI Codex';
-      case 'local':
-        return 'Local Shell';
-      case 'custom':
-        return 'Custom';
+      case 'plain':
+        return 'Plain Terminal';
       default:
         return 'Unknown';
     }

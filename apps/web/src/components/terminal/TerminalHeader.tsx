@@ -1,8 +1,7 @@
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import {
-  Bot,
-  Sparkles,
+  Terminal,
   X,
   Settings,
   GitBranch,
@@ -15,13 +14,16 @@ import {
   GitMerge,
   MessageSquare,
   Play,
+  Sparkles,
   Wrench,
   ListTodo,
   Info,
+  Bot,
   type LucideIcon,
 } from 'lucide-react';
 import { SessionStatus, StatusDot } from '../shared/StatusLegend';
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo, type ComponentType } from 'react';
+import { ClaudeIcon } from '../icons/ClaudeIcon';
 
 // Icon map for rendering icons from string names
 const iconMap: Record<string, LucideIcon> = {
@@ -48,7 +50,7 @@ const categoryConfig: Record<string, { label: string; order: number }> = {
   ai: { label: 'AI', order: 3 },
 };
 
-export type AIMode = 'claude' | 'gemini' | 'codex' | 'plain';
+export type AIMode = 'claude' | 'plain';
 
 export interface GitBranchInfo {
   name: string;
@@ -86,11 +88,15 @@ interface TerminalHeaderProps {
   className?: string;
 }
 
-const aiModeConfig: Record<AIMode, { icon: typeof Bot; label: string; color: string }> = {
-  claude: { icon: Bot, label: 'Claude', color: 'text-orange-400' },
-  gemini: { icon: Sparkles, label: 'Gemini', color: 'text-blue-400' },
-  codex: { icon: Sparkles, label: 'Codex', color: 'text-green-400' },
-  plain: { icon: Bot, label: 'Plain', color: 'text-muted-foreground' },
+interface AIModeConfigItem {
+  icon: ComponentType<{ size?: string | number; className?: string }>;
+  label: string;
+  color: string;
+}
+
+const aiModeConfig: Record<AIMode, AIModeConfigItem> = {
+  claude: { icon: ClaudeIcon, label: 'Claude', color: 'text-orange-400' },
+  plain: { icon: Terminal, label: 'Plain', color: 'text-muted-foreground' },
 };
 
 export function TerminalHeader({

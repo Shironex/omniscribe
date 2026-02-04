@@ -1,7 +1,9 @@
 /**
  * AI mode for the session
+ * - claude: Uses Claude Code CLI
+ * - plain: Plain terminal without AI
  */
-export type AiMode = 'claude' | 'gemini' | 'openai' | 'local' | 'custom';
+export type AiMode = 'claude' | 'plain';
 
 /**
  * Session status

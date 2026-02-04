@@ -47,6 +47,7 @@ function NavButton({
         <div className="absolute inset-y-0 left-0 w-0.5 bg-gradient-to-b from-primary via-primary to-brand-600 rounded-r-full" />
       )}
       <Icon
+        size={16}
         className={clsx(
           'w-4 h-4 shrink-0 transition-all duration-200',
           isActive

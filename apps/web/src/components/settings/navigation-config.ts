@@ -1,11 +1,12 @@
-import type { LucideIcon } from 'lucide-react';
-import { Palette, Bot, Server, Settings, GitBranch, Github } from 'lucide-react';
+import type { ComponentType } from 'react';
+import { Palette, Server, Settings, GitBranch, Github } from 'lucide-react';
 import type { SettingsSectionId } from '@omniscribe/shared';
+import { ClaudeIcon } from '../icons/ClaudeIcon';
 
 export interface NavigationItem {
   id: SettingsSectionId;
   label: string;
-  icon: LucideIcon;
+  icon: ComponentType<{ className?: string; size?: string | number }>;
 }
 
 export interface NavigationGroup {
@@ -20,7 +21,7 @@ export const NAV_GROUPS: NavigationGroup[] = [
   {
     label: 'Integrations',
     items: [
-      { id: 'integrations', label: 'Claude CLI', icon: Bot },
+      { id: 'integrations', label: 'Claude CLI', icon: ClaudeIcon },
       { id: 'github', label: 'GitHub CLI', icon: Github },
       { id: 'mcp', label: 'MCP Servers', icon: Server },
     ],

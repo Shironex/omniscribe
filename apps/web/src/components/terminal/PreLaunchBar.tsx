@@ -1,11 +1,12 @@
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { Play, X, Bot, Sparkles, ChevronDown } from 'lucide-react';
-import { useState, useRef, useEffect } from 'react';
+import { Play, X, Terminal, ChevronDown } from 'lucide-react';
+import { useState, useRef, useEffect, type ComponentType } from 'react';
 import type { Branch } from '../shared/BranchSelector';
 import { BranchAutocomplete } from '../shared/BranchAutocomplete';
+import { ClaudeIcon } from '../icons/ClaudeIcon';
 
-export type AIMode = 'claude' | 'gemini' | 'codex' | 'plain';
+export type AIMode = 'claude' | 'plain';
 
 export interface PreLaunchSlot {
   id: string;
@@ -24,11 +25,16 @@ interface PreLaunchBarProps {
   className?: string;
 }
 
-const aiModeOptions: { value: AIMode; label: string; icon: typeof Bot; color: string }[] = [
-  { value: 'claude', label: 'Claude', icon: Bot, color: 'text-orange-400' },
-  { value: 'gemini', label: 'Gemini', icon: Sparkles, color: 'text-blue-400' },
-  { value: 'codex', label: 'Codex', icon: Sparkles, color: 'text-green-400' },
-  { value: 'plain', label: 'Plain', icon: Bot, color: 'text-muted-foreground' },
+interface AIModeOption {
+  value: AIMode;
+  label: string;
+  icon: ComponentType<{ size?: string | number; className?: string }>;
+  color: string;
+}
+
+const aiModeOptions: AIModeOption[] = [
+  { value: 'claude', label: 'Claude', icon: ClaudeIcon, color: 'text-orange-400' },
+  { value: 'plain', label: 'Plain', icon: Terminal, color: 'text-muted-foreground' },
 ];
 
 export function PreLaunchBar({

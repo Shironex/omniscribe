@@ -13,39 +13,18 @@ import { mapSessionStatus, type AiMode } from '@omniscribe/shared';
 
 /**
  * Maps UI AIMode to backend AiMode
+ * Both are now identical: 'claude' | 'plain'
  */
 function mapAiModeToBackend(uiMode: AIMode): AiMode {
-  switch (uiMode) {
-    case 'claude':
-      return 'claude';
-    case 'gemini':
-      return 'gemini';
-    case 'codex':
-      return 'openai';
-    case 'plain':
-      return 'local';
-    default:
-      return 'claude';
-  }
+  return uiMode;
 }
 
 /**
  * Maps backend AiMode to UI AIMode
+ * Both are now identical: 'claude' | 'plain'
  */
 function mapAiModeToUI(backendMode: AiMode): AIMode {
-  switch (backendMode) {
-    case 'claude':
-      return 'claude';
-    case 'gemini':
-      return 'gemini';
-    case 'openai':
-      return 'codex';
-    case 'local':
-    case 'custom':
-      return 'plain';
-    default:
-      return 'plain';
-  }
+  return backendMode;
 }
 
 interface ConnectedTerminalGridProps {
