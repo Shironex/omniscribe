@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { Palette, Check } from 'lucide-react';
 import { clsx } from 'clsx';
+import { APP_NAME } from '@omniscribe/shared';
 import type { Theme } from '@omniscribe/shared';
 import { themeOptions, darkThemes, lightThemes } from '../../../config/theme-options';
 import { useSettingsStore } from '../../../stores';
@@ -54,7 +55,7 @@ export function AppearanceSection() {
         </div>
         <div>
           <h2 className="text-lg font-semibold text-foreground">Appearance</h2>
-          <p className="text-sm text-muted-foreground">Customize how Omniscribe looks</p>
+          <p className="text-sm text-muted-foreground">Customize how {APP_NAME} looks</p>
         </div>
       </div>
 

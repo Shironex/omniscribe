@@ -2,7 +2,7 @@ import { GitBranch, Trash2, FolderOpen, HardDrive, FlaskConical, AlertTriangle }
 import { clsx } from 'clsx';
 import { useWorkspaceStore } from '../../../stores';
 import type { WorktreeMode, WorktreeLocation, WorktreeSettings } from '@omniscribe/shared';
-import { DEFAULT_WORKTREE_SETTINGS } from '@omniscribe/shared';
+import { DEFAULT_WORKTREE_SETTINGS, USER_DATA_DIR, WORKTREES_DIR } from '@omniscribe/shared';
 
 const WORKTREE_MODE_OPTIONS: {
   value: WorktreeMode;
@@ -245,7 +245,7 @@ export function WorktreesSection() {
               <strong>Project directory:</strong> Creates <code className="bg-muted px-1 py-0.5 rounded">.worktrees/</code> in your project root (recommended)
             </li>
             <li>
-              <strong>Central location:</strong> Uses <code className="bg-muted px-1 py-0.5 rounded">~/.omniscribe/worktrees/</code> for all projects
+              <strong>Central location:</strong> Uses <code className="bg-muted px-1 py-0.5 rounded">~/{USER_DATA_DIR}/{WORKTREES_DIR}/</code> for all projects
             </li>
           </ul>
         </div>

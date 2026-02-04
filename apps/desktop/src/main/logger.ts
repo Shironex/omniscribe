@@ -1,6 +1,7 @@
 import { app } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
+import { LOG_FILE_PREFIX } from '@omniscribe/shared';
 
 const isDev = process.env.NODE_ENV === 'development';
 
@@ -15,7 +16,7 @@ const getLogPath = (): string => {
   }
 
   const date = new Date().toISOString().split('T')[0];
-  return path.join(logsDir, `omniscribe-${date}.log`);
+  return path.join(logsDir, `${LOG_FILE_PREFIX}-${date}.log`);
 };
 
 const formatMessage = (level: string, message: string, ...args: unknown[]): string => {

@@ -1,6 +1,7 @@
 import { BrowserWindow, shell } from 'electron';
 import * as path from 'path';
 import { registerIpcHandlers } from './ipc-handlers';
+import { VITE_DEV_PORT } from '@omniscribe/shared';
 
 export async function createMainWindow(): Promise<BrowserWindow> {
   const mainWindow = new BrowserWindow({
@@ -36,7 +37,7 @@ export async function createMainWindow(): Promise<BrowserWindow> {
     mainWindow.webContents.openDevTools();
 
     // Load from Vite dev server
-    mainWindow.loadURL('http://localhost:5173').catch((err) => {
+    mainWindow.loadURL(`http://localhost:${VITE_DEV_PORT}`).catch((err) => {
       console.error('Failed to load from Vite dev server:', err.message);
       console.error('Make sure the web app is running: pnpm dev:web (in another terminal)');
     });

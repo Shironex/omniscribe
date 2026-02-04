@@ -2,6 +2,11 @@ import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import * as http from 'http';
 import * as crypto from 'crypto';
+import {
+  MCP_STATUS_PORT_START,
+  MCP_STATUS_PORT_END,
+  LOCALHOST,
+} from '@omniscribe/shared';
 
 /**
  * Status payload received from MCP server via HTTP POST
@@ -34,8 +39,8 @@ export interface SessionStatusEvent {
 @Injectable()
 export class McpStatusServerService implements OnModuleInit, OnModuleDestroy {
   /** Port range for status server */
-  private readonly PORT_RANGE_START = 9900;
-  private readonly PORT_RANGE_END = 9999;
+  private readonly PORT_RANGE_START = MCP_STATUS_PORT_START;
+  private readonly PORT_RANGE_END = MCP_STATUS_PORT_END;
 
   /** HTTP server instance */
   private server: http.Server | null = null;
@@ -95,7 +100,7 @@ export class McpStatusServerService implements OnModuleInit, OnModuleDestroy {
             resolve(currentPort);
           });
         });
-        testServer.listen(currentPort, '127.0.0.1');
+        testServer.listen(currentPort, LOCALHOST);
       };
 
       tryPort();
@@ -127,7 +132,7 @@ export class McpStatusServerService implements OnModuleInit, OnModuleDestroy {
         reject(err);
       });
 
-      this.server!.listen(availablePort, '127.0.0.1', () => {
+      this.server!.listen(availablePort, LOCALHOST, () => {
         this.port = availablePort;
         console.log(
           `[McpStatusServer] Started on http://127.0.0.1:${this.port}`

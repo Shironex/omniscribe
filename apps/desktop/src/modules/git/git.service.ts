@@ -6,6 +6,7 @@ import {
   CommitInfo,
   RemoteInfo,
   GitUserConfig,
+  GIT_TIMEOUT_MS,
 } from '@omniscribe/shared';
 import type {
   GitRepoStatus,
@@ -14,9 +15,6 @@ import type {
 } from '@omniscribe/shared';
 
 const execAsync = promisify(exec);
-
-/** Default timeout for git commands (30 seconds) */
-const GIT_TIMEOUT_MS = 30000;
 
 /** Git environment variables to prevent interactive prompts */
 const GIT_ENV: Record<string, string> = {

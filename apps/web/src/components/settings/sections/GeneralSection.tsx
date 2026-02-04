@@ -1,5 +1,6 @@
 import { Settings, FolderOpen } from 'lucide-react';
 import { clsx } from 'clsx';
+import { APP_NAME } from '@omniscribe/shared';
 
 export function GeneralSection() {
   return (
@@ -48,7 +49,7 @@ export function GeneralSection() {
 
         <div className="rounded-xl border border-border/50 bg-card/50 p-4">
           <div className="text-center space-y-2">
-            <div className="text-lg font-bold text-gradient">Omniscribe</div>
+            <div className="text-lg font-bold text-gradient">{APP_NAME}</div>
             <div className="text-xs text-muted-foreground">
               AI-powered development workspace
             </div>

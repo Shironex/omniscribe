@@ -3,6 +3,7 @@ import { twMerge } from 'tailwind-merge';
 import { FolderOpen, Clock, Sparkles } from 'lucide-react';
 import { useEffect, useMemo } from 'react';
 import type { ProjectTab } from '@omniscribe/shared';
+import { APP_NAME } from '@omniscribe/shared';
 
 interface WelcomeViewProps {
   recentProjects: ProjectTab[];
@@ -132,7 +133,7 @@ export function WelcomeView({
 
           {/* Tagline */}
           <h1 className="text-xl font-semibold text-foreground mb-2">
-            Welcome to Omniscribe
+            Welcome to {APP_NAME}
           </h1>
           <p className="text-sm text-foreground-secondary text-center max-w-sm">
             Orchestrate multiple AI coding assistants in parallel

@@ -1,5 +1,11 @@
 import { Injectable, Inject, forwardRef } from '@nestjs/common';
-import { McpServerConfig } from '@omniscribe/shared';
+import {
+  McpServerConfig,
+  APP_NAME_LOWER,
+  MCP_CONFIGS_DIR,
+  MCP_SERVER_DIR,
+  MCP_SERVER_NAME,
+} from '@omniscribe/shared';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
@@ -28,7 +34,7 @@ export class McpConfigService {
     private readonly statusServer: McpStatusServerService
   ) {
     // Use platform-appropriate temp directory
-    this.configDir = path.join(os.tmpdir(), 'omniscribe', 'mcp-configs');
+    this.configDir = path.join(os.tmpdir(), APP_NAME_LOWER, MCP_CONFIGS_DIR);
     this.ensureConfigDir();
 
     // Find the internal MCP server binary
@@ -75,18 +81,18 @@ export class McpConfigService {
     // 3. Bundled with app (production) - Electron provides resourcesPath
     const resourcesPath = (process as NodeJS.Process & { resourcesPath?: string }).resourcesPath;
     if (resourcesPath) {
-      candidates.push(path.join(resourcesPath, 'mcp-server', 'index.js'));
+      candidates.push(path.join(resourcesPath, MCP_SERVER_DIR, 'index.js'));
     }
 
     // 4. Global install locations
     if (isWindows) {
       candidates.push(
-        path.join(os.homedir(), 'AppData', 'Local', 'omniscribe', 'mcp-server', 'index.js')
+        path.join(os.homedir(), 'AppData', 'Local', APP_NAME_LOWER, MCP_SERVER_DIR, 'index.js')
       );
     } else {
-      candidates.push('/usr/local/lib/omniscribe/mcp-server/index.js');
+      candidates.push(`/usr/local/lib/${APP_NAME_LOWER}/${MCP_SERVER_DIR}/index.js`);
       candidates.push(
-        path.join(os.homedir(), '.local', 'lib', 'omniscribe', 'mcp-server', 'index.js')
+        path.join(os.homedir(), '.local', 'lib', APP_NAME_LOWER, MCP_SERVER_DIR, 'index.js')
       );
     }
 
@@ -156,7 +162,7 @@ export class McpConfigService {
       // Register this session with the status server for routing
       this.statusServer.registerSession(sessionId, projectPath);
 
-      mcpServers['omniscribe'] = {
+      mcpServers[MCP_SERVER_NAME] = {
         type: 'stdio',
         command: 'node',
         args: [this.internalMcpPath],
@@ -172,7 +178,7 @@ export class McpConfigService {
     // Build server entries for all discovered servers
     for (const server of servers) {
       // Skip the internal omniscribe server - it's handled above
-      if (server.id === 'omniscribe' || server.name === 'omniscribe') {
+      if (server.id === MCP_SERVER_NAME || server.name === MCP_SERVER_NAME) {
         continue;
       }
 
@@ -202,7 +208,7 @@ export class McpConfigService {
     // Build final config
     const config = {
       mcpServers,
-      _omniscribe: {
+      [`_${MCP_SERVER_NAME}`]: {
         sessionId,
         projectPath,
         projectHash,
@@ -252,15 +258,15 @@ export class McpConfigService {
 
       // Check if this config has omniscribe entry
       const mcpServers = config.mcpServers as Record<string, unknown> | undefined;
-      if (!mcpServers || !('omniscribe' in mcpServers)) {
+      if (!mcpServers || !(MCP_SERVER_NAME in mcpServers)) {
         return false;
       }
 
       // Remove omniscribe entry
-      delete mcpServers['omniscribe'];
+      delete mcpServers[MCP_SERVER_NAME];
 
       // Remove our metadata
-      delete config['_omniscribe'];
+      delete config[`_${MCP_SERVER_NAME}`];
       delete config['_metadata']; // Legacy field
 
       // Write back the config with remaining servers

@@ -5,21 +5,25 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as os from 'os';
 import * as crypto from 'crypto';
-import { WorktreeInfo, WorktreeLocation } from '@omniscribe/shared';
+import {
+  WorktreeInfo,
+  WorktreeLocation,
+  GIT_TIMEOUT_MS,
+  USER_DATA_DIR,
+  WORKTREES_DIR,
+  APP_NAME_LOWER,
+} from '@omniscribe/shared';
 
 const execAsync = promisify(exec);
 
 /** Central directory for worktrees (follows XDG spec on Linux, .omniscribe on Windows/macOS) */
 const CENTRAL_DIR =
   process.platform === 'linux'
-    ? path.join(os.homedir(), '.local', 'share', 'omniscribe', 'worktrees')
-    : path.join(os.homedir(), '.omniscribe', 'worktrees');
+    ? path.join(os.homedir(), '.local', 'share', APP_NAME_LOWER, WORKTREES_DIR)
+    : path.join(os.homedir(), USER_DATA_DIR, WORKTREES_DIR);
 
 /** Project-local worktree directory name */
 const PROJECT_WORKTREE_DIR = '.worktrees';
-
-/** Default timeout for git commands (30 seconds) */
-const GIT_TIMEOUT_MS = 30000;
 
 /** Git environment variables to prevent interactive prompts */
 const GIT_ENV: Record<string, string> = {

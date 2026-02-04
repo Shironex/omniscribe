@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useEffect } from 'react';
 import { Server, CheckCircle2, RefreshCw, Loader2 } from 'lucide-react';
 import { clsx } from 'clsx';
+import { MCP_SERVER_NAME } from '@omniscribe/shared';
 import { useMcpStore, useWorkspaceStore, selectActiveTab, selectInternalMcp } from '../../../stores';
 
 export function McpSection() {
@@ -165,7 +166,7 @@ export function McpSection() {
               }[status] ?? { color: 'bg-muted-foreground', label: status };
 
               // Check if this is the internal omniscribe MCP
-              const isInternalMcp = server.id === 'omniscribe' || server.name === 'omniscribe';
+              const isInternalMcp = server.id === MCP_SERVER_NAME || server.name === MCP_SERVER_NAME;
 
               return (
                 <div

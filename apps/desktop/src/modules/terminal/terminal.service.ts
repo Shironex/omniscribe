@@ -2,6 +2,7 @@ import { Injectable, OnModuleDestroy, Logger } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import * as pty from 'node-pty';
 import * as os from 'os';
+import { TERM_PROGRAM } from '@omniscribe/shared';
 
 interface PtySession {
   pty: pty.IPty;
@@ -101,7 +102,7 @@ export class TerminalService implements OnModuleDestroy {
       ...cleanEnv,
       TERM: 'xterm-256color',
       COLORTERM: 'truecolor',
-      TERM_PROGRAM: 'omniscribe-terminal',
+      TERM_PROGRAM,
       LANG: process.env.LANG || 'en_US.UTF-8',
       LC_ALL: process.env.LC_ALL || process.env.LANG || 'en_US.UTF-8',
       ...env,

@@ -4,6 +4,9 @@ import { promisify } from 'util';
 import { existsSync } from 'fs';
 import { homedir } from 'os';
 import { join } from 'path';
+import {
+  GH_TIMEOUT_MS,
+} from '@omniscribe/shared';
 import type {
   GhCliStatus,
   GhCliAuthStatus,
@@ -19,9 +22,6 @@ import type {
 } from '@omniscribe/shared';
 
 const execAsync = promisify(exec);
-
-/** Default timeout for gh commands (30 seconds) */
-const GH_TIMEOUT_MS = 30000;
 
 /** Cache TTL for CLI status (1 minute) */
 const CACHE_TTL_MS = 60 * 1000;
