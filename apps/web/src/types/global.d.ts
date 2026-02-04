@@ -1,4 +1,11 @@
-import type { ClaudeCliStatus, GhCliStatus } from '@omniscribe/shared';
+import type {
+  ClaudeCliStatus,
+  GhCliStatus,
+  ClaudeVersionCheckResult,
+  ClaudeVersionList,
+  ClaudeInstallCommandOptions,
+  ClaudeInstallCommand,
+} from '@omniscribe/shared';
 
 /**
  * Electron API exposed via contextBridge
@@ -36,6 +43,10 @@ interface ElectronAPI {
   };
   claude?: {
     getStatus: () => Promise<ClaudeCliStatus>;
+    checkVersion: () => Promise<ClaudeVersionCheckResult | null>;
+    getVersions: () => Promise<ClaudeVersionList>;
+    getInstallCommand: (options: ClaudeInstallCommandOptions) => Promise<ClaudeInstallCommand>;
+    runInstall: (command: string) => Promise<void>;
   };
   github?: {
     getStatus: () => Promise<GhCliStatus>;

@@ -1,5 +1,11 @@
 import { create } from 'zustand';
-import type { Theme, SettingsSectionId, ClaudeCliStatus, GhCliStatus } from '@omniscribe/shared';
+import type {
+  Theme,
+  SettingsSectionId,
+  ClaudeCliStatus,
+  GhCliStatus,
+  ClaudeVersionCheckResult,
+} from '@omniscribe/shared';
 import { themeOptions } from '../config/theme-options';
 
 /**
@@ -22,6 +28,14 @@ interface SettingsState extends SettingsModalState {
   claudeCliStatus: ClaudeCliStatus | null;
   /** Whether Claude CLI status is loading */
   isClaudeCliLoading: boolean;
+  /** Claude CLI version check result */
+  claudeVersionCheck: ClaudeVersionCheckResult | null;
+  /** Whether version check is loading */
+  isVersionCheckLoading: boolean;
+  /** Available Claude CLI versions */
+  availableVersions: string[];
+  /** Whether versions list is loading */
+  isVersionsLoading: boolean;
   /** GitHub CLI status */
   githubCliStatus: GhCliStatus | null;
   /** Whether GitHub CLI status is loading */
@@ -50,6 +64,14 @@ interface SettingsActions {
   setClaudeCliStatus: (status: ClaudeCliStatus | null) => void;
   /** Set Claude CLI loading state */
   setClaudeCliLoading: (loading: boolean) => void;
+  /** Set Claude CLI version check result */
+  setClaudeVersionCheck: (result: ClaudeVersionCheckResult | null) => void;
+  /** Set version check loading state */
+  setVersionCheckLoading: (loading: boolean) => void;
+  /** Set available versions */
+  setAvailableVersions: (versions: string[]) => void;
+  /** Set versions loading state */
+  setVersionsLoading: (loading: boolean) => void;
   /** Set GitHub CLI status */
   setGithubCliStatus: (status: GhCliStatus | null) => void;
   /** Set GitHub CLI loading state */
@@ -94,6 +116,10 @@ export const useSettingsStore = create<SettingsStore>((set, get) => {
   theme: DEFAULT_THEME,
   claudeCliStatus: null,
   isClaudeCliLoading: false,
+  claudeVersionCheck: null,
+  isVersionCheckLoading: false,
+  availableVersions: [],
+  isVersionsLoading: false,
   githubCliStatus: null,
   isGithubCliLoading: false,
   previewTheme: null,
@@ -151,6 +177,22 @@ export const useSettingsStore = create<SettingsStore>((set, get) => {
     set({ isClaudeCliLoading: loading });
   },
 
+  setClaudeVersionCheck: (result: ClaudeVersionCheckResult | null) => {
+    set({ claudeVersionCheck: result, isVersionCheckLoading: false });
+  },
+
+  setVersionCheckLoading: (loading: boolean) => {
+    set({ isVersionCheckLoading: loading });
+  },
+
+  setAvailableVersions: (versions: string[]) => {
+    set({ availableVersions: versions, isVersionsLoading: false });
+  },
+
+  setVersionsLoading: (loading: boolean) => {
+    set({ isVersionsLoading: loading });
+  },
+
   setGithubCliStatus: (status: GhCliStatus | null) => {
     set({ githubCliStatus: status, isGithubCliLoading: false });
   },
@@ -197,6 +239,26 @@ export const selectClaudeCliStatus = (state: SettingsStore) => state.claudeCliSt
  * Select Claude CLI loading state
  */
 export const selectClaudeCliLoading = (state: SettingsStore) => state.isClaudeCliLoading;
+
+/**
+ * Select Claude version check result
+ */
+export const selectClaudeVersionCheck = (state: SettingsStore) => state.claudeVersionCheck;
+
+/**
+ * Select version check loading state
+ */
+export const selectVersionCheckLoading = (state: SettingsStore) => state.isVersionCheckLoading;
+
+/**
+ * Select available versions
+ */
+export const selectAvailableVersions = (state: SettingsStore) => state.availableVersions;
+
+/**
+ * Select versions loading state
+ */
+export const selectVersionsLoading = (state: SettingsStore) => state.isVersionsLoading;
 
 /**
  * Select GitHub CLI status

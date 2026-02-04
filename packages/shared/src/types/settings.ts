@@ -79,6 +79,45 @@ export interface ClaudeCliStatus {
   auth: {
     authenticated: boolean;
   };
+  /** Latest available version from npm registry */
+  latestVersion?: string;
+  /** Whether the installed version is outdated */
+  isOutdated?: boolean;
+  /** ISO date string of last version check */
+  lastVersionCheck?: string;
+}
+
+/**
+ * Claude CLI Version Check Result
+ */
+export interface ClaudeVersionCheckResult {
+  installedVersion?: string;
+  latestVersion: string;
+  isOutdated: boolean;
+  lastChecked: string;
+}
+
+/**
+ * Claude CLI Available Versions List
+ */
+export interface ClaudeVersionList {
+  versions: string[];
+}
+
+/**
+ * Install command options
+ */
+export interface ClaudeInstallCommandOptions {
+  isUpdate: boolean;
+  version?: string;
+}
+
+/**
+ * Install command result
+ */
+export interface ClaudeInstallCommand {
+  command: string;
+  description: string;
 }
 
 /**

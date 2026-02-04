@@ -1,5 +1,12 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import type { ClaudeCliStatus, GhCliStatus } from '@omniscribe/shared';
+import type {
+  ClaudeCliStatus,
+  GhCliStatus,
+  ClaudeVersionCheckResult,
+  ClaudeVersionList,
+  ClaudeInstallCommandOptions,
+  ClaudeInstallCommand,
+} from '@omniscribe/shared';
 
 export interface ElectronAPI {
   window: {
@@ -34,6 +41,10 @@ export interface ElectronAPI {
   };
   claude: {
     getStatus: () => Promise<ClaudeCliStatus>;
+    checkVersion: () => Promise<ClaudeVersionCheckResult | null>;
+    getVersions: () => Promise<ClaudeVersionList>;
+    getInstallCommand: (options: ClaudeInstallCommandOptions) => Promise<ClaudeInstallCommand>;
+    runInstall: (command: string) => Promise<void>;
   };
   github: {
     getStatus: () => Promise<GhCliStatus>;
@@ -76,6 +87,12 @@ const electronAPI: ElectronAPI = {
   },
   claude: {
     getStatus: () => ipcRenderer.invoke('claude:get-status') as Promise<ClaudeCliStatus>,
+    checkVersion: () =>
+      ipcRenderer.invoke('claude:check-version') as Promise<ClaudeVersionCheckResult | null>,
+    getVersions: () => ipcRenderer.invoke('claude:get-versions') as Promise<ClaudeVersionList>,
+    getInstallCommand: (options: ClaudeInstallCommandOptions) =>
+      ipcRenderer.invoke('claude:get-install-command', options) as Promise<ClaudeInstallCommand>,
+    runInstall: (command: string) => ipcRenderer.invoke('claude:run-install', command) as Promise<void>,
   },
   github: {
     getStatus: () => ipcRenderer.invoke('github:get-status') as Promise<GhCliStatus>,
