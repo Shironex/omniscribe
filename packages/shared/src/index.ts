@@ -22,5 +22,8 @@ export * from './types/payloads';
 // Settings types
 export * from './types/settings';
 
+// Usage types
+export * from './types/usage';
+
 // Utilities
 export * from './utils';

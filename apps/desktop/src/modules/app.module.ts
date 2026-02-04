@@ -5,6 +5,7 @@ import { WorkspaceModule } from './workspace';
 import { SessionModule } from './session/session.module';
 import { GitModule } from './git/git.module';
 import { McpModule } from './mcp/mcp.module';
+import { UsageModule } from './usage';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { McpModule } from './mcp/mcp.module';
     SessionModule,
     GitModule,
     McpModule,
+    UsageModule,
   ],
   controllers: [],
   providers: [],

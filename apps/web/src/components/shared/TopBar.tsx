@@ -2,6 +2,7 @@ import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { GitBranch } from 'lucide-react';
 import { StatusLegend, StatusCounts } from './StatusLegend';
+import { UsagePopover } from '@/components/usage';
 
 interface TopBarProps {
   currentBranch: string;
@@ -35,8 +36,9 @@ export function TopBar({
         <span className="font-mono text-xs">{currentBranch}</span>
       </div>
 
-      {/* Right section: Status legend */}
+      {/* Right section: Usage popover and Status legend */}
       <div className="flex items-center gap-3">
+        <UsagePopover />
         <StatusLegend counts={statusCounts} showCounts={true} />
       </div>
     </div>
