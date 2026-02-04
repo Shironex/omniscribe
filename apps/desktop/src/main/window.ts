@@ -1,10 +1,57 @@
-import { BrowserWindow, shell } from 'electron';
+import { BrowserWindow, shell, session } from 'electron';
 import * as path from 'path';
 import { registerIpcHandlers } from './ipc-handlers';
 import { VITE_DEV_PORT } from '@omniscribe/shared';
 import { logger } from './logger';
 
+/**
+ * Set Content Security Policy for the renderer process
+ * This helps prevent XSS attacks and other injection vulnerabilities
+ */
+function setupContentSecurityPolicy(isDev: boolean): void {
+  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    // Build CSP directives
+    const cspDirectives = [
+      // Only allow scripts from same origin (and Vite dev server in dev mode)
+      isDev
+        ? `script-src 'self' http://localhost:${VITE_DEV_PORT} 'unsafe-inline'`
+        : "script-src 'self'",
+      // Allow styles from same origin and inline (needed for CSS-in-JS)
+      "style-src 'self' 'unsafe-inline'",
+      // Allow images from same origin and data URIs
+      "img-src 'self' data: blob:",
+      // Allow fonts from same origin
+      "font-src 'self' data:",
+      // Allow connections to localhost (WebSocket and API)
+      isDev
+        ? `connect-src 'self' http://localhost:${VITE_DEV_PORT} ws://localhost:${VITE_DEV_PORT} http://localhost:3001 ws://localhost:3001 http://127.0.0.1:3001 ws://127.0.0.1:3001`
+        : "connect-src 'self' http://localhost:3001 ws://localhost:3001 http://127.0.0.1:3001 ws://127.0.0.1:3001",
+      // Restrict object/embed/frame sources
+      "object-src 'none'",
+      "frame-src 'none'",
+      // Default to same-origin
+      "default-src 'self'",
+      // Allow forms to submit to same origin
+      "form-action 'self'",
+      // Restrict base URI
+      "base-uri 'self'",
+    ];
+
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        'Content-Security-Policy': [cspDirectives.join('; ')],
+      },
+    });
+  });
+}
+
 export async function createMainWindow(): Promise<BrowserWindow> {
+  const isDev = process.env.NODE_ENV === 'development';
+
+  // Set up Content Security Policy before creating the window
+  setupContentSecurityPolicy(isDev);
+
   const mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
@@ -29,9 +76,6 @@ export async function createMainWindow(): Promise<BrowserWindow> {
     shell.openExternal(url);
     return { action: 'deny' };
   });
-
-  // Load the app
-  const isDev = process.env.NODE_ENV === 'development';
 
   if (isDev) {
     logger.info('Running in development mode - loading from Vite dev server');
