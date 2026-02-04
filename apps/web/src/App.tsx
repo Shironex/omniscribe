@@ -78,10 +78,6 @@ function App() {
     allQuickActions.filter((a) => a.enabled !== false),
     [allQuickActions]
   );
-  const quickActionsForTopBar = useMemo(() =>
-    quickActions.map(a => ({ id: a.id, title: a.title, icon: a.icon, shortcut: a.shortcut })),
-    [quickActions]
-  );
 
   // Quick actions for terminal header dropdown (with icon and category)
   const quickActionsForTerminal = useMemo(() =>
@@ -118,18 +114,6 @@ function App() {
     }
   }, [quickActions, terminalSessions]);
 
-  // Handle quick action from TopBar (uses focused session)
-  const handleTopBarQuickAction = useCallback((actionId: string) => {
-    // Use focused session or first active session
-    const targetSession = focusedSessionId
-      ? terminalSessions.find(s => s.id === focusedSessionId)
-      : terminalSessions.find(s => s.terminalSessionId !== undefined);
-
-    if (targetSession) {
-      handleQuickAction(targetSession.id, actionId);
-    }
-  }, [focusedSessionId, terminalSessions, handleQuickAction]);
-
   // Determine whether to show IdleLandingView or TerminalGrid
   const hasContent = terminalSessions.length > 0 || preLaunchSlots.length > 0;
 
@@ -148,8 +132,6 @@ function App() {
       <TopBar
         currentBranch={currentBranch}
         statusCounts={statusCounts}
-        quickActions={quickActionsForTopBar}
-        onQuickAction={handleTopBarQuickAction}
       />
 
       {/* Main content */}
