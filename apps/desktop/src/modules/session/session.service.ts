@@ -375,10 +375,11 @@ export class SessionService {
       session.worktreePath = worktreePath;
       session.lastActiveAt = new Date();
 
-      // Update status to active
+      // Update status to idle (session is waiting for user input)
+      // MCP will report actual status (working/planning) when user sends a prompt
       this.updateStatus(
         sessionId,
-        'active',
+        'idle',
         `Running ${this.cliCommandService.getAiModeName(aiMode)}`
       );
 

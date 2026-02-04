@@ -243,8 +243,8 @@ export interface StatusPayload {
   /** Current agent state */
   state: SessionStatusState;
 
-  /** Human-readable status message */
-  message: string;
+  /** Human-readable status message (optional - preserves existing if not provided) */
+  message?: string;
 
   /** Question or prompt for user when state is "needs_input" */
   needsInputPrompt?: string;

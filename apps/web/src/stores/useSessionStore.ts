@@ -188,7 +188,8 @@ export const useSessionStore = create<SessionStore>((set, get) => {
             ? {
                 ...session,
                 status,
-                statusMessage: message,
+                // Only update statusMessage if a new message is provided
+                statusMessage: message ?? session.statusMessage,
                 needsInputPrompt,
                 lastActiveAt: new Date(),
               }

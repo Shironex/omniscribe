@@ -54,7 +54,7 @@ export async function startServer(): Promise<void> {
   // Report initial idle status if configured
   if (isConfigured(config)) {
     const httpClient = createHttpClient(config, logger);
-    httpClient.reportStatus('idle', 'Agent connected').catch((err: unknown) => {
+    httpClient.reportStatus('idle').catch((err: unknown) => {
       logger.error('Failed to report initial status:', err);
     });
   }

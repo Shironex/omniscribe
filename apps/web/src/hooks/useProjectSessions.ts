@@ -60,9 +60,9 @@ export function useProjectSessions(
     }));
   }, [activeProjectSessions]);
 
-  // Check if we have active sessions
+  // Check if we have any running sessions (sessions with a terminal)
   const hasActiveSessions = activeProjectSessions.some(
-    (s) => s.status !== 'idle' && s.status !== 'disconnected'
+    (s) => s.terminalSessionId !== undefined && s.status !== 'disconnected'
   );
 
   // Compute status counts (mapping backend status to UI status)

@@ -12,7 +12,7 @@ export interface OmniscribeHttpClient {
    */
   reportStatus(
     state: SessionStatusState,
-    message: string,
+    message?: string,
     needsInputPrompt?: string
   ): Promise<boolean>;
 }
@@ -28,7 +28,7 @@ export function createHttpClient(
 
   async function reportStatus(
     state: SessionStatusState,
-    message: string,
+    message?: string,
     needsInputPrompt?: string
   ): Promise<boolean> {
     if (!statusUrl || !sessionId || !instanceId) {
@@ -45,7 +45,7 @@ export function createHttpClient(
       timestamp: new Date().toISOString(),
     };
 
-    logger.info(`Sending status to ${statusUrl}: state=${state}, message=${message}`);
+    logger.info(`Sending status to ${statusUrl}: state=${state}${message ? `, message=${message}` : ''}`);
 
     try {
       const response = await fetch(statusUrl, {

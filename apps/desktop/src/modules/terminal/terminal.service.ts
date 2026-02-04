@@ -174,12 +174,7 @@ export class TerminalService implements OnModuleDestroy {
 
     // Handle terminal exit
     ptyProcess.onExit(({ exitCode, signal }) => {
-      this.logger.warn(`[onExit] Session ${sessionId} EXITED: exitCode=${exitCode}, signal=${signal}`);
-      this.logger.warn(`[onExit] Session was alive for: PID was ${ptyProcess.pid}`);
-
-      // Log stack trace to see what triggered the exit
-      const stack = new Error().stack;
-      this.logger.warn(`[onExit] Stack trace:\n${stack}`);
+      this.logger.log(`[onExit] Session ${sessionId} exited (code=${exitCode}, signal=${signal})`);
 
       this.cleanup(sessionId);
       this.eventEmitter.emit('terminal.closed', {
@@ -248,10 +243,6 @@ export class TerminalService implements OnModuleDestroy {
    */
   async kill(sessionId: number): Promise<void> {
     this.logger.log(`[kill] Called for session ${sessionId}`);
-
-    // Log stack trace to see who called kill
-    const stack = new Error().stack;
-    this.logger.log(`[kill] Stack trace:\n${stack}`);
 
     const session = this.sessions.get(sessionId);
     if (!session) {
