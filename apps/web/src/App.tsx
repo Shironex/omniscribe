@@ -125,23 +125,29 @@ function App() {
   // Determine whether to show IdleLandingView or TerminalGrid
   const hasContent = terminalSessions.length > 0 || preLaunchSlots.length > 0;
 
-  // Keyboard shortcuts for launching sessions
+  // Keyboard shortcuts for session management
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore if user is typing in an input/textarea or if modifier keys are pressed
       const target = e.target as HTMLElement;
-      if (
+      const isTyping =
         target.tagName === 'INPUT' ||
         target.tagName === 'TEXTAREA' ||
-        target.isContentEditable ||
-        e.metaKey ||
-        e.ctrlKey ||
-        e.altKey
-      ) {
+        target.isContentEditable;
+
+      const key = e.key.toLowerCase();
+      const isMod = e.metaKey || e.ctrlKey;
+
+      // Cmd/Ctrl + K - Kill all sessions (works even when typing)
+      if (isMod && key === 'k' && hasActiveSessions) {
+        e.preventDefault();
+        handleStopAll();
         return;
       }
 
-      const key = e.key.toLowerCase();
+      // Below shortcuts only work when not typing and no modifier keys
+      if (isTyping || isMod || e.altKey) {
+        return;
+      }
 
       // L - Launch all pre-launch slots
       if (key === 'l' && canLaunch && !isLaunching) {
@@ -165,7 +171,7 @@ function App() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [canLaunch, isLaunching, preLaunchSlots, launchingSlotIds, handleLaunch, handleLaunchSlot]);
+  }, [canLaunch, isLaunching, hasActiveSessions, preLaunchSlots, launchingSlotIds, handleLaunch, handleLaunchSlot, handleStopAll]);
 
   return (
     <div className="h-screen w-screen bg-background text-foreground flex flex-col overflow-hidden">

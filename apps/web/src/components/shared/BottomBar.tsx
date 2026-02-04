@@ -59,9 +59,11 @@ export function BottomBar({
               'bg-red-600 hover:bg-red-500',
               'transition-colors'
             )}
+            title="Stop all sessions (Ctrl/Cmd + K)"
           >
             <Square size={14} />
             <span>Stop All</span>
+            <kbd className="ml-1 px-1 py-0.5 text-xs bg-white/20 rounded">⌘K</kbd>
           </button>
         )}
 
