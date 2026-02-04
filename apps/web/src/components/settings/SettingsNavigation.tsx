@@ -73,11 +73,8 @@ export function SettingsNavigation({
     >
       <div className="sticky top-0 p-4 space-y-1">
           {/* Navigation Groups */}
-          {NAV_GROUPS.map((group, groupIndex) => (
+          {NAV_GROUPS.map((group) => (
             <div key={group.label}>
-              {/* Group divider (except for first group) */}
-              {groupIndex > 0 && <div className="my-3 border-t border-border/50" />}
-
               {/* Group Label */}
               <div className="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground opacity-70">
                 {group.label}

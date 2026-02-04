@@ -1,5 +1,5 @@
 import type { ComponentType } from 'react';
-import { Palette, Server, Settings, GitBranch, Github } from 'lucide-react';
+import { Palette, Server, Info, GitBranch, Github } from 'lucide-react';
 import type { SettingsSectionId } from '@omniscribe/shared';
 import { ClaudeIcon } from '@/components/shared/ClaudeIcon';
 
@@ -36,7 +36,7 @@ export const NAV_GROUPS: NavigationGroup[] = [
     label: 'Interface',
     items: [
       { id: 'appearance', label: 'Appearance', icon: Palette },
-      { id: 'general', label: 'General', icon: Settings },
+      { id: 'general', label: 'About', icon: Info },
     ],
   },
 ];
