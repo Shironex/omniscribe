@@ -149,6 +149,14 @@ function App() {
         return;
       }
 
+      // N - Add new session slot (max 6)
+      const canAddMore = terminalSessions.length + preLaunchSlots.length < 6;
+      if (key === 'n' && canAddMore && activeProjectPath) {
+        e.preventDefault();
+        handleAddSession();
+        return;
+      }
+
       // L - Launch all pre-launch slots
       if (key === 'l' && canLaunch && !isLaunching) {
         e.preventDefault();
@@ -171,7 +179,7 @@ function App() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [canLaunch, isLaunching, hasActiveSessions, preLaunchSlots, launchingSlotIds, handleLaunch, handleLaunchSlot, handleStopAll]);
+  }, [canLaunch, isLaunching, hasActiveSessions, terminalSessions.length, preLaunchSlots, launchingSlotIds, activeProjectPath, handleAddSession, handleLaunch, handleLaunchSlot, handleStopAll]);
 
   return (
     <div className="h-screen w-screen bg-background text-foreground flex flex-col overflow-hidden">
