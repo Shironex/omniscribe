@@ -13,12 +13,10 @@ import type {
   UsageFetchResponse,
   ClaudeCliStatus,
 } from '@omniscribe/shared';
+import { CORS_CONFIG } from '../shared/cors.config';
 
 @WebSocketGateway({
-  cors: {
-    origin: '*',
-    credentials: true,
-  },
+  cors: CORS_CONFIG,
 })
 export class UsageGateway {
   @WebSocketServer()

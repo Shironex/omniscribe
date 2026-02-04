@@ -24,6 +24,7 @@ import {
   WorktreeSettings,
   DEFAULT_WORKTREE_SETTINGS,
 } from '@omniscribe/shared';
+import { CORS_CONFIG } from '../shared/cors.config';
 
 /**
  * Payload for creating a session
@@ -64,9 +65,7 @@ interface UpdateSessionResponse {
 }
 
 @WebSocketGateway({
-  cors: {
-    origin: '*',
-  },
+  cors: CORS_CONFIG,
 })
 export class SessionGateway implements OnGatewayInit {
   private readonly logger = new Logger(SessionGateway.name);

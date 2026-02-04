@@ -40,6 +40,17 @@ export class QuickActionService {
   ) {}
 
   /**
+   * Escape a string for safe use as a shell argument
+   * Uses single quotes with proper escaping to prevent command injection
+   */
+  private escapeShellArg(arg: string): string {
+    // Replace single quotes with '\'' (end quote, escaped quote, start quote)
+    // Then wrap the whole thing in single quotes
+    // This is the safest way to escape shell arguments
+    return `'${arg.replace(/'/g, "'\\''")}'`;
+  }
+
+  /**
    * Execute a quick action
    * @param sessionId The session ID context (can be terminal session or AI session)
    * @param action The quick action to execute
@@ -173,10 +184,14 @@ export class QuickActionService {
     const commitMessage =
       params.message || `Auto-commit: ${new Date().toISOString()}`;
 
+    // Security: Properly escape commit message for shell
+    // Use single quotes with proper escaping to prevent command injection
+    const safeCommitMessage = this.escapeShellArg(commitMessage);
+
     // Stage all, commit, and push
     const commands = [
       'git add -A',
-      `git commit -m "${commitMessage.replace(/"/g, '\\"')}"`,
+      `git commit -m ${safeCommitMessage}`,
       'git push',
     ].join(' && ');
 

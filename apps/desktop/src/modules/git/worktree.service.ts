@@ -21,6 +21,40 @@ const CENTRAL_DIR =
 /** Project-local worktree directory name */
 const PROJECT_WORKTREE_DIR = '.worktrees';
 
+/**
+ * Security: Validate and sanitize a branch name for use in file paths
+ * Returns null if the branch name is invalid
+ */
+function sanitizeBranchForPath(branch: string): string | null {
+  if (!branch || branch.length === 0 || branch.length > 255) {
+    return null;
+  }
+
+  // Reject null bytes and control characters
+  if (/[\x00-\x1f]/.test(branch)) {
+    return null;
+  }
+
+  // Reject path traversal attempts
+  if (branch === '.' || branch === '..' || branch.includes('/../') || branch.includes('/..')) {
+    return null;
+  }
+
+  // Sanitize branch name - replace unsafe characters with underscore
+  // Keep only alphanumeric, dash, underscore, and dot
+  const safeBranch = branch.replace(/[^a-zA-Z0-9._-]/g, '_');
+
+  // Ensure the result doesn't start/end with dots or dashes
+  const trimmed = safeBranch.replace(/^[._-]+|[._-]+$/g, '');
+
+  // Ensure we have something left
+  if (trimmed.length === 0) {
+    return null;
+  }
+
+  return trimmed;
+}
+
 @Injectable()
 export class WorktreeService {
   constructor(private readonly gitBase: GitBaseService) {}
@@ -36,8 +70,11 @@ export class WorktreeService {
     branch: string,
     location: WorktreeLocation = 'project',
   ): string {
-    // Sanitize branch name - remove /, \, :, and other unsafe chars
-    const safeBranch = branch.replace(/[/\\:*?"<>|]/g, '_');
+    // Security: Sanitize branch name to prevent path traversal
+    const safeBranch = sanitizeBranchForPath(branch);
+    if (!safeBranch) {
+      throw new Error(`Invalid branch name: ${branch}`);
+    }
 
     if (location === 'project') {
       // Store in project's .worktrees/ directory

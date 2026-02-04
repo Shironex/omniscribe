@@ -2,6 +2,58 @@ import { Injectable } from '@nestjs/common';
 import { BranchInfo } from '@omniscribe/shared';
 import { GitBaseService } from './git-base.service';
 
+/**
+ * Security: Validate git branch/ref names
+ * Git ref names have specific rules about what characters are allowed
+ * See: https://git-scm.com/docs/git-check-ref-format
+ */
+function isValidGitRefName(name: string): boolean {
+  if (!name || name.length === 0 || name.length > 255) {
+    return false;
+  }
+
+  // Cannot start or end with a slash, or contain consecutive slashes
+  if (name.startsWith('/') || name.endsWith('/') || name.includes('//')) {
+    return false;
+  }
+
+  // Cannot start with a dot or end with .lock
+  if (name.startsWith('.') || name.endsWith('.lock')) {
+    return false;
+  }
+
+  // Cannot contain special sequences
+  const invalidPatterns = [
+    '..', // Two consecutive dots
+    '@{', // Reflog syntax
+    '\\', // Backslash
+    '\x00', // Null byte
+  ];
+
+  for (const pattern of invalidPatterns) {
+    if (name.includes(pattern)) {
+      return false;
+    }
+  }
+
+  // Cannot contain ASCII control characters, space, tilde, caret, colon, question, asterisk, or open bracket
+  // Allow: alphanumeric, dash, underscore, dot, slash (for remote branches)
+  const validPattern = /^[a-zA-Z0-9._\-/]+$/;
+  if (!validPattern.test(name)) {
+    return false;
+  }
+
+  // Cannot be empty component (e.g., "foo//bar" is invalid)
+  const components = name.split('/');
+  for (const component of components) {
+    if (component.length === 0 || component.startsWith('.') || component.endsWith('.lock')) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 @Injectable()
 export class GitBranchService {
   constructor(private readonly gitBase: GitBaseService) {}
@@ -284,6 +336,10 @@ export class GitBranchService {
    * Checkout a branch
    */
   async checkout(repoPath: string, branch: string): Promise<void> {
+    // Security: Validate branch name to prevent injection
+    if (!isValidGitRefName(branch)) {
+      throw new Error(`Invalid branch name: ${branch}`);
+    }
     await this.gitBase.execGit(repoPath, ['checkout', branch]);
   }
 
@@ -295,6 +351,14 @@ export class GitBranchService {
     name: string,
     startPoint?: string,
   ): Promise<void> {
+    // Security: Validate branch name to prevent injection
+    if (!isValidGitRefName(name)) {
+      throw new Error(`Invalid branch name: ${name}`);
+    }
+    if (startPoint && !isValidGitRefName(startPoint)) {
+      throw new Error(`Invalid start point: ${startPoint}`);
+    }
+
     const args = ['checkout', '-b', name];
     if (startPoint) {
       args.push(startPoint);

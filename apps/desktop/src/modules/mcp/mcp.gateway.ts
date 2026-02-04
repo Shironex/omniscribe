@@ -33,6 +33,7 @@ import {
   McpSessionRegistryService,
   McpTrackingService,
 } from './services';
+import { CORS_CONFIG } from '../shared/cors.config';
 
 /**
  * WebSocket gateway for MCP-related operations.
@@ -45,9 +46,7 @@ import {
  * - McpTrackingService: Config tracking
  */
 @WebSocketGateway({
-  cors: {
-    origin: '*',
-  },
+  cors: CORS_CONFIG,
 })
 export class McpGateway implements OnGatewayInit {
   private readonly logger = new Logger(McpGateway.name);

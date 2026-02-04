@@ -5,6 +5,7 @@ import { IoAdapter } from '@nestjs/platform-socket.io';
 import { AppModule } from '../modules/app.module';
 import { createMainWindow } from './window';
 import { logger } from './logger';
+import { corsOriginCallback } from '../modules/shared/cors.config';
 
 export let mainWindow: BrowserWindow | null = null;
 let nestApp: INestApplication | null = null;
@@ -21,7 +22,7 @@ async function bootstrapNestApp(): Promise<void> {
     nestApp.useWebSocketAdapter(new IoAdapter(nestApp));
 
     nestApp.enableCors({
-      origin: true,
+      origin: corsOriginCallback,
       credentials: true,
     });
 

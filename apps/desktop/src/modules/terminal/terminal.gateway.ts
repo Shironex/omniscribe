@@ -21,6 +21,7 @@ import {
   TerminalJoinResponse,
   SuccessResponse,
 } from '@omniscribe/shared';
+import { CORS_CONFIG } from '../shared/cors.config';
 
 interface TerminalOutputEvent {
   sessionId: number;
@@ -34,10 +35,7 @@ interface TerminalClosedEvent {
 }
 
 @WebSocketGateway({
-  cors: {
-    origin: '*',
-    credentials: true,
-  },
+  cors: CORS_CONFIG,
 })
 export class TerminalGateway
   implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect

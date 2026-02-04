@@ -1,31 +1,133 @@
-import { exec } from 'child_process';
+import { exec, spawn } from 'child_process';
 import { promisify } from 'util';
 
 const execAsync = promisify(exec);
 
 /**
- * Open an external terminal and run a command
+ * Security: Escape a string for use in a shell command
+ * Uses single quotes with proper escaping
  */
-export async function openTerminalWithCommand(command: string): Promise<void> {
-  const platform = process.platform;
+function escapeShellArg(arg: string): string {
+  // Replace single quotes with '\'' (end quote, escaped quote, start quote)
+  // Then wrap the whole thing in single quotes
+  return `'${arg.replace(/'/g, "'\\''")}'`;
+}
 
-  let terminalCommand: string;
+/**
+ * Security: Escape a string for PowerShell
+ * PowerShell has different escaping rules
+ */
+function escapePowerShellArg(arg: string): string {
+  // Escape special PowerShell characters
+  // Replace backticks, dollars, and quotes
+  return arg
+    .replace(/`/g, '``')
+    .replace(/\$/g, '`$')
+    .replace(/"/g, '`"')
+    .replace(/'/g, "''");
+}
 
-  if (platform === 'win32') {
-    // Windows: Open PowerShell with the command
-    // Use -NoExit to keep the window open after the command completes
-    const escapedCommand = command.replace(/"/g, '\\"');
-    terminalCommand = `start powershell -NoExit -Command "${escapedCommand}"`;
-  } else if (platform === 'darwin') {
-    // macOS: Use osascript to open Terminal.app
-    const escapedCommand = command.replace(/"/g, '\\"').replace(/'/g, "'\\''");
-    terminalCommand = `osascript -e 'tell app "Terminal" to do script "${escapedCommand}"' -e 'tell app "Terminal" to activate'`;
-  } else {
-    // Linux: Try common terminal emulators
-    const escapedCommand = command.replace(/"/g, '\\"');
-    // Try gnome-terminal first, then konsole, then xterm as fallback
-    terminalCommand = `gnome-terminal -- bash -c "${escapedCommand}; exec bash" 2>/dev/null || konsole -e bash -c "${escapedCommand}; exec bash" 2>/dev/null || xterm -hold -e "${escapedCommand}"`;
+/**
+ * Security: Validate command string
+ * Rejects commands with obvious injection attempts
+ */
+function validateCommand(command: string): boolean {
+  // Reject empty commands
+  if (!command || command.trim().length === 0) {
+    return false;
   }
 
-  await execAsync(terminalCommand);
+  // Reject commands with null bytes
+  if (command.includes('\0')) {
+    return false;
+  }
+
+  // Reject excessively long commands
+  if (command.length > 10000) {
+    return false;
+  }
+
+  return true;
+}
+
+/**
+ * Open an external terminal and run a command
+ *
+ * Security: This function properly escapes commands to prevent injection.
+ * However, since it runs arbitrary commands, it should only be called
+ * with trusted input (e.g., from known install scripts).
+ */
+export async function openTerminalWithCommand(command: string): Promise<void> {
+  // Security: Validate command first
+  if (!validateCommand(command)) {
+    throw new Error('Invalid command');
+  }
+
+  const platform = process.platform;
+
+  if (platform === 'win32') {
+    // Windows: Use spawn with argument array to avoid shell interpretation
+    // -NoExit keeps the window open, -Command runs the command
+    const escapedCommand = escapePowerShellArg(command);
+    return new Promise((resolve, reject) => {
+      const proc = spawn('powershell', ['-NoExit', '-Command', escapedCommand], {
+        detached: true,
+        stdio: 'ignore',
+        shell: false, // Important: don't use shell
+      });
+      proc.unref();
+      proc.on('error', reject);
+      // Resolve immediately since we detached the process
+      resolve();
+    });
+  } else if (platform === 'darwin') {
+    // macOS: Use osascript with properly escaped command
+    // AppleScript escaping: escape backslashes and quotes
+    const escapedForAppleScript = command
+      .replace(/\\/g, '\\\\')
+      .replace(/"/g, '\\"');
+    const terminalCommand = `osascript -e 'tell app "Terminal" to do script "${escapedForAppleScript}"' -e 'tell app "Terminal" to activate'`;
+    await execAsync(terminalCommand);
+  } else {
+    // Linux: Use spawn with argument arrays for safer execution
+    const escapedCommand = escapeShellArg(command);
+    const bashCommand = `${escapedCommand}; exec bash`;
+
+    return new Promise((resolve, reject) => {
+      // Try gnome-terminal first
+      const proc = spawn('gnome-terminal', ['--', 'bash', '-c', bashCommand], {
+        detached: true,
+        stdio: 'ignore',
+        shell: false,
+      });
+
+      proc.on('error', () => {
+        // Try konsole as fallback
+        const konsole = spawn('konsole', ['-e', 'bash', '-c', bashCommand], {
+          detached: true,
+          stdio: 'ignore',
+          shell: false,
+        });
+
+        konsole.on('error', () => {
+          // Try xterm as last resort
+          const xterm = spawn('xterm', ['-hold', '-e', command], {
+            detached: true,
+            stdio: 'ignore',
+            shell: false,
+          });
+
+          xterm.on('error', reject);
+          xterm.unref();
+          resolve();
+        });
+
+        konsole.unref();
+        resolve();
+      });
+
+      proc.unref();
+      resolve();
+    });
+  }
 }

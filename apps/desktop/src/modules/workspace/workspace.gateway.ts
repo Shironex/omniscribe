@@ -30,6 +30,7 @@ import {
 } from '@omniscribe/shared';
 import { QuickActionService, QuickActionResult } from './quick-action.service';
 import { WorkspaceService, WorkspaceState } from './workspace.service';
+import { CORS_CONFIG } from '../shared/cors.config';
 
 /**
  * Quick action executed event
@@ -54,9 +55,7 @@ interface AiPromptEvent {
 }
 
 @WebSocketGateway({
-  cors: {
-    origin: '*',
-  },
+  cors: CORS_CONFIG,
 })
 export class WorkspaceGateway implements OnGatewayInit {
   private readonly logger = new Logger(WorkspaceGateway.name);
