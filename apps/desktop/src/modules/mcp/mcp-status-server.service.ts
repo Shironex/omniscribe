@@ -135,7 +135,7 @@ export class McpStatusServerService implements OnModuleInit, OnModuleDestroy {
       this.server!.listen(availablePort, LOCALHOST, () => {
         this.port = availablePort;
         console.log(
-          `[McpStatusServer] Started on http://127.0.0.1:${this.port}`
+          `[McpStatusServer] Started on http://${LOCALHOST}:${this.port}`
         );
         console.log(`[McpStatusServer] Instance ID: ${this.instanceId}`);
         resolve();
@@ -280,7 +280,7 @@ export class McpStatusServerService implements OnModuleInit, OnModuleDestroy {
     if (!this.port) {
       return null;
     }
-    return `http://127.0.0.1:${this.port}/status`;
+    return `http://${LOCALHOST}:${this.port}/status`;
   }
 
   /**

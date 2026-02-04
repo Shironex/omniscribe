@@ -46,24 +46,18 @@ Found **85+ occurrences** across the codebase. Moved to a constants file.
 
 ---
 
-## 2. Duplicate Timeout Constants - MEDIUM PRIORITY
+## 2. Duplicate Timeout Constants - ✅ COMPLETED
 
-`GIT_TIMEOUT_MS = 30000` defined in **3 separate files**:
-- `apps/desktop/src/modules/git/git.service.ts:19`
-- `apps/desktop/src/modules/git/worktree.service.ts:22`
-- `apps/desktop/src/modules/git/github.service.ts:24`
-
-**Solution:** Move to `packages/shared/src/constants/timeouts.ts`.
+`GIT_TIMEOUT_MS = 30000` was defined in **3 separate files** - now consolidated in `packages/shared/src/constants/app.ts`.
 
 ---
 
-## 3. Port/URL Constants Scattered - MEDIUM PRIORITY
+## 3. Port/URL Constants Scattered - ✅ COMPLETED
 
-- `5173` (Vite dev port) in `vite.config.ts` and `window.ts`
-- `9900-9999` (status server range) in `mcp-status-server.service.ts`
-- `127.0.0.1` hardcoded in multiple places
-
-**Solution:** Create `packages/shared/src/constants/network.ts`.
+All port and URL constants consolidated:
+- `VITE_DEV_PORT` (5173) - used in window.ts (vite.config.ts keeps local copy as build config)
+- `MCP_STATUS_PORT_START/END` (9900-9999) - used in mcp-status-server.service.ts
+- `LOCALHOST` (127.0.0.1) - used in mcp-status-server.service.ts
 
 ---
 
