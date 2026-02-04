@@ -1,5 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { McpServerConfig } from '@omniscribe/shared';
+import { Injectable } from '@nestjs/common';
+import { McpServerConfig, createLogger } from '@omniscribe/shared';
 
 /**
  * Service responsible for caching discovered MCP servers per project.
@@ -9,7 +9,7 @@ import { McpServerConfig } from '@omniscribe/shared';
  */
 @Injectable()
 export class McpProjectCacheService {
-  private readonly logger = new Logger(McpProjectCacheService.name);
+  private readonly logger = createLogger('McpProjectCacheService');
 
   /** Map of project paths to their discovered servers */
   private projectServers = new Map<string, McpServerConfig[]>();

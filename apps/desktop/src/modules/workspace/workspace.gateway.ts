@@ -6,7 +6,6 @@ import {
   ConnectedSocket,
   OnGatewayInit,
 } from '@nestjs/websockets';
-import { Logger } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 import { OnEvent } from '@nestjs/event-emitter';
 import {
@@ -27,6 +26,7 @@ import {
   TabsOnlyResponse,
   PreferencesResponse,
   QuickActionsResponse,
+  createLogger,
 } from '@omniscribe/shared';
 import { QuickActionService, QuickActionResult } from './quick-action.service';
 import { WorkspaceService, WorkspaceState } from './workspace.service';
@@ -58,7 +58,7 @@ interface AiPromptEvent {
   cors: CORS_CONFIG,
 })
 export class WorkspaceGateway implements OnGatewayInit {
-  private readonly logger = new Logger(WorkspaceGateway.name);
+  private readonly logger = createLogger('WorkspaceGateway');
 
   @WebSocketServer()
   server!: Server;

@@ -1,8 +1,8 @@
-import { Injectable, OnModuleDestroy, Logger } from '@nestjs/common';
+import { Injectable, OnModuleDestroy } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import * as pty from 'node-pty';
 import * as os from 'os';
-import { TERM_PROGRAM } from '@omniscribe/shared';
+import { TERM_PROGRAM, createLogger } from '@omniscribe/shared';
 
 interface PtySession {
   pty: pty.IPty;
@@ -14,7 +14,7 @@ interface PtySession {
 
 @Injectable()
 export class TerminalService implements OnModuleDestroy {
-  private readonly logger = new Logger(TerminalService.name);
+  private readonly logger = createLogger('TerminalService');
   private sessions = new Map<number, PtySession>();
   private nextSessionId = 1;
   private readonly BATCH_INTERVAL_MS = 16; // ~60fps

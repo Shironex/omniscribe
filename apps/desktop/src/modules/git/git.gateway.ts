@@ -5,7 +5,6 @@ import {
   MessageBody,
   ConnectedSocket,
 } from '@nestjs/websockets';
-import { Logger } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 import { GitService } from './git.service';
 import { WorktreeService } from './worktree.service';
@@ -37,6 +36,7 @@ import {
   GithubIssuesResponse,
   GithubGetIssuePayload,
   GithubIssueResponse,
+  createLogger,
 } from '@omniscribe/shared';
 import { CORS_CONFIG } from '../shared/cors.config';
 
@@ -68,7 +68,7 @@ interface GitWorktreesResponse {
   namespace: '/',
 })
 export class GitGateway {
-  private readonly logger = new Logger(GitGateway.name);
+  private readonly logger = createLogger('GitGateway');
 
   @WebSocketServer()
   server!: Server;

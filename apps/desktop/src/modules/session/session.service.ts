@@ -1,4 +1,4 @@
-import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, Inject, forwardRef } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
   SessionConfig,
@@ -7,6 +7,7 @@ import {
   CreateSessionOptions,
   WorktreeSettings,
   DEFAULT_WORKTREE_SETTINGS,
+  createLogger,
 } from '@omniscribe/shared';
 import { TerminalService } from '../terminal/terminal.service';
 import { McpWriterService, McpDiscoveryService } from '../mcp';
@@ -55,7 +56,7 @@ export interface SessionStatusUpdate {
 
 @Injectable()
 export class SessionService {
-  private readonly logger = new Logger(SessionService.name);
+  private readonly logger = createLogger('SessionService');
   private sessions = new Map<string, ExtendedSessionConfig>();
   private sessionCounter = 0;
 

@@ -1,4 +1,4 @@
-import { Injectable, OnModuleInit, OnModuleDestroy, Inject, forwardRef, Logger } from '@nestjs/common';
+import { Injectable, OnModuleInit, OnModuleDestroy, Inject, forwardRef } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import * as http from 'http';
 import * as crypto from 'crypto';
@@ -8,6 +8,7 @@ import {
   LOCALHOST,
   StatusPayload,
   SessionStatusState,
+  createLogger,
 } from '@omniscribe/shared';
 import { McpSessionRegistryService } from './services/mcp-session-registry.service';
 
@@ -29,7 +30,7 @@ export interface SessionStatusEvent {
  */
 @Injectable()
 export class McpStatusServerService implements OnModuleInit, OnModuleDestroy {
-  private readonly logger = new Logger(McpStatusServerService.name);
+  private readonly logger = createLogger('McpStatusServerService');
 
   /** Port range for status server */
   private readonly PORT_RANGE_START = MCP_STATUS_PORT_START;

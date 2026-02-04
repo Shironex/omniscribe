@@ -6,7 +6,7 @@ import {
   ConnectedSocket,
   OnGatewayInit,
 } from '@nestjs/websockets';
-import { Inject, forwardRef, Logger } from '@nestjs/common';
+import { Inject, forwardRef } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 import { OnEvent } from '@nestjs/event-emitter';
 import * as crypto from 'crypto';
@@ -23,6 +23,7 @@ import {
   SessionRemoveResponse,
   WorktreeSettings,
   DEFAULT_WORKTREE_SETTINGS,
+  createLogger,
 } from '@omniscribe/shared';
 import { CORS_CONFIG } from '../shared/cors.config';
 
@@ -68,7 +69,7 @@ interface UpdateSessionResponse {
   cors: CORS_CONFIG,
 })
 export class SessionGateway implements OnGatewayInit {
-  private readonly logger = new Logger(SessionGateway.name);
+  private readonly logger = createLogger('SessionGateway');
 
   @WebSocketServer()
   server!: Server;

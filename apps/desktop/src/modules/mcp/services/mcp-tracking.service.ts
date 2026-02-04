@@ -1,7 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import {
   APP_NAME_LOWER,
   MCP_CONFIGS_DIR,
+  createLogger,
 } from '@omniscribe/shared';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -24,7 +25,7 @@ interface TrackingData {
  */
 @Injectable()
 export class McpTrackingService {
-  private readonly logger = new Logger(McpTrackingService.name);
+  private readonly logger = createLogger('McpTrackingService');
   private readonly configDir: string;
 
   constructor() {

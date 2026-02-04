@@ -1,4 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { createLogger } from '@omniscribe/shared';
 
 /**
  * Centralized registry for MCP session state.
@@ -10,7 +11,7 @@ import { Injectable, Logger } from '@nestjs/common';
  */
 @Injectable()
 export class McpSessionRegistryService {
-  private readonly logger = new Logger(McpSessionRegistryService.name);
+  private readonly logger = createLogger('McpSessionRegistryService');
 
   /** Maps session IDs to project paths for routing */
   private sessionProjects = new Map<string, string>();

@@ -1,7 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import {
   McpServerConfig,
   MCP_SERVER_NAME,
+  createLogger,
 } from '@omniscribe/shared';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -32,7 +33,7 @@ interface McpWrittenServerEntry {
  */
 @Injectable()
 export class McpWriterService {
-  private readonly logger = new Logger(McpWriterService.name);
+  private readonly logger = createLogger('McpWriterService');
 
   constructor(
     private readonly internalService: McpInternalService,

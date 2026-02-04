@@ -1,6 +1,6 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { QuickAction } from '@omniscribe/shared';
+import { QuickAction, createLogger } from '@omniscribe/shared';
 import { TerminalService } from '../terminal/terminal.service';
 import { GitService } from '../git/git.service';
 import { SessionService } from '../session/session.service';
@@ -30,7 +30,7 @@ interface AiActionContext {
  */
 @Injectable()
 export class QuickActionService {
-  private readonly logger = new Logger(QuickActionService.name);
+  private readonly logger = createLogger('QuickActionService');
 
   constructor(
     private readonly terminalService: TerminalService,

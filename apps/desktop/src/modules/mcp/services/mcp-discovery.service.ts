@@ -1,5 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { McpServerConfig } from '@omniscribe/shared';
+import { Injectable } from '@nestjs/common';
+import { McpServerConfig, createLogger } from '@omniscribe/shared';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -41,7 +41,7 @@ const MCP_CONFIG_FILES = ['.mcp.json', 'mcp.json', '.mcp/config.json'];
  */
 @Injectable()
 export class McpDiscoveryService {
-  private readonly logger = new Logger(McpDiscoveryService.name);
+  private readonly logger = createLogger('McpDiscoveryService');
   /**
    * Discover MCP servers from a project's configuration files
    * @param projectPath Path to the project root

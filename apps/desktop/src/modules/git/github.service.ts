@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { exec, ExecException, execSync } from 'child_process';
 import { promisify } from 'util';
 import { existsSync } from 'fs';
@@ -6,6 +6,7 @@ import { homedir } from 'os';
 import { join } from 'path';
 import {
   GH_TIMEOUT_MS,
+  createLogger,
 } from '@omniscribe/shared';
 import type {
   GhCliStatus,
@@ -89,7 +90,7 @@ function getGhCliPaths(): string[] {
 
 @Injectable()
 export class GithubService {
-  private readonly logger = new Logger(GithubService.name);
+  private readonly logger = createLogger('GithubService');
   private cachedStatus: GhCliStatus | null = null;
   private cacheTimestamp: number = 0;
   private pendingStatus: Promise<GhCliStatus> | null = null;

@@ -1,7 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import * as pty from 'node-pty';
 import * as os from 'os';
 import { spawn, execSync } from 'child_process';
+import { createLogger } from '@omniscribe/shared';
 import type { ClaudeUsage, UsageError, ClaudeCliStatus } from '@omniscribe/shared';
 
 /** Cache TTL for status checks (5 minutes) */
@@ -20,7 +21,7 @@ const STATUS_CACHE_TTL_MS = 5 * 60 * 1000;
  */
 @Injectable()
 export class UsageService {
-  private readonly logger = new Logger(UsageService.name);
+  private readonly logger = createLogger('UsageService');
   private readonly claudeBinary = 'claude';
   private readonly timeout = 45000; // 45 second timeout
   private readonly isWindows = os.platform() === 'win32';

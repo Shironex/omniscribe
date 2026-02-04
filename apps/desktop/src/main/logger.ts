@@ -1,7 +1,7 @@
 import { app } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
-import { LOG_FILE_PREFIX } from '@omniscribe/shared';
+import { LOG_FILE_PREFIX, createLogger, LoggerOptions, setTimestampsEnabled } from '@omniscribe/shared';
 
 const isDev = process.env.NODE_ENV === 'development';
 
@@ -19,13 +19,8 @@ const getLogPath = (): string => {
   return path.join(logsDir, `${LOG_FILE_PREFIX}-${date}.log`);
 };
 
-const formatMessage = (level: string, message: string, ...args: unknown[]): string => {
-  const timestamp = new Date().toISOString();
-  const formattedArgs = args.length > 0 ? ' ' + args.map(a => JSON.stringify(a)).join(' ') : '';
-  return `[${timestamp}] [${level}] ${message}${formattedArgs}\n`;
-};
-
-const writeToFile = (message: string): void => {
+// File transport for production logging
+const fileTransport = (message: string): void => {
   if (isDev) return; // Don't write to file in development
 
   try {
@@ -36,34 +31,18 @@ const writeToFile = (message: string): void => {
   }
 };
 
-export const logger = {
-  info: (message: string, ...args: unknown[]): void => {
-    const formatted = formatMessage('INFO', message, ...args);
-    console.log(message, ...args);
-    writeToFile(formatted);
-  },
+// Enable timestamps for main process logs
+setTimestampsEnabled(true);
 
-  warn: (message: string, ...args: unknown[]): void => {
-    const formatted = formatMessage('WARN', message, ...args);
-    console.warn(message, ...args);
-    writeToFile(formatted);
-  },
-
-  error: (message: string, ...args: unknown[]): void => {
-    const formatted = formatMessage('ERROR', message, ...args);
-    console.error(message, ...args);
-    writeToFile(formatted);
-  },
-
-  debug: (message: string, ...args: unknown[]): void => {
-    const formatted = formatMessage('DEBUG', message, ...args);
-    if (isDev) {
-      console.debug(message, ...args);
-    }
-    writeToFile(formatted);
-  },
-
-  getLogPath,
+// Logger options with file transport for production
+const loggerOptions: LoggerOptions = {
+  fileTransport,
 };
+
+// Create the main logger instance
+export const logger = createLogger('Main', loggerOptions);
+
+// Export getLogPath for external access (e.g., showing log location to users)
+export { getLogPath };
 
 export default logger;

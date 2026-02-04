@@ -6,7 +6,6 @@ import {
   ConnectedSocket,
   OnGatewayInit,
 } from '@nestjs/websockets';
-import { Logger } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 import { OnEvent } from '@nestjs/event-emitter';
 import {
@@ -24,6 +23,7 @@ import {
   McpRemoveConfigResponse,
   McpInternalStatusResponse,
   McpStatusServerInfoResponse,
+  createLogger,
 } from '@omniscribe/shared';
 import { McpStatusServerService, SessionStatusEvent } from './mcp-status-server.service';
 import {
@@ -49,7 +49,7 @@ import { CORS_CONFIG } from '../shared/cors.config';
   cors: CORS_CONFIG,
 })
 export class McpGateway implements OnGatewayInit {
-  private readonly logger = new Logger(McpGateway.name);
+  private readonly logger = createLogger('McpGateway');
 
   @WebSocketServer()
   server!: Server;
