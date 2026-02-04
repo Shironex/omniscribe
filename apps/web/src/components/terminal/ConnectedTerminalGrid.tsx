@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { createLogger } from '@omniscribe/shared';
+import { createLogger, DEFAULT_SESSION_SETTINGS } from '@omniscribe/shared';
 
 const logger = createLogger('TerminalGrid');
 import { TerminalGrid } from './TerminalGrid';
@@ -40,6 +40,9 @@ export function ConnectedTerminalGrid({ className }: ConnectedTerminalGridProps)
   // Workspace store
   const activeTab = useWorkspaceStore(selectActiveTab);
   const activeProjectPath = activeTab?.projectPath ?? null;
+  const defaultAiMode = useWorkspaceStore(
+    (state) => state.preferences.session?.defaultMode ?? DEFAULT_SESSION_SETTINGS.defaultMode
+  );
 
   // Git store
   const gitBranches = useGitStore(selectBranches);
@@ -65,13 +68,13 @@ export function ConnectedTerminalGrid({ className }: ConnectedTerminalGridProps)
     if (addSlotRequestCounter > prevAddSlotRequestRef.current) {
       const newSlot: PreLaunchSlot = {
         id: `slot-${Date.now()}`,
-        aiMode: 'claude',
+        aiMode: defaultAiMode,
         branch: currentBranch,
       };
       setPreLaunchSlots((prev) => [...prev, newSlot]);
     }
     prevAddSlotRequestRef.current = addSlotRequestCounter;
-  }, [addSlotRequestCounter, currentBranch]);
+  }, [addSlotRequestCounter, currentBranch, defaultAiMode]);
 
   // Filter sessions for the active project
   const activeProjectSessions = useMemo(() => {
@@ -106,11 +109,11 @@ export function ConnectedTerminalGrid({ className }: ConnectedTerminalGridProps)
   const handleAddSlot = useCallback(() => {
     const newSlot: PreLaunchSlot = {
       id: `slot-${Date.now()}`,
-      aiMode: 'claude',
+      aiMode: defaultAiMode,
       branch: currentBranch,
     };
     setPreLaunchSlots((prev) => [...prev, newSlot]);
-  }, [currentBranch]);
+  }, [currentBranch, defaultAiMode]);
 
   // Remove pre-launch slot handler
   const handleRemoveSlot = useCallback((slotId: string) => {

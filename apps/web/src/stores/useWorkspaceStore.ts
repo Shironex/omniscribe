@@ -15,7 +15,7 @@ import type {
   PreferencesResponse,
   WorkspaceStateResponse,
 } from '@omniscribe/shared';
-import { DEFAULT_WORKTREE_SETTINGS } from '@omniscribe/shared';
+import { DEFAULT_WORKTREE_SETTINGS, DEFAULT_SESSION_SETTINGS } from '@omniscribe/shared';
 import { useSettingsStore } from './useSettingsStore';
 import {
   SocketStoreState,
@@ -115,6 +115,7 @@ function convertBackendTab(dto: ProjectTabDTO): ProjectTab {
 const DEFAULT_PREFERENCES: UserPreferences = {
   theme: 'dark',
   worktree: DEFAULT_WORKTREE_SETTINGS,
+  session: DEFAULT_SESSION_SETTINGS,
 };
 
 /**

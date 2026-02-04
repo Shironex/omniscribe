@@ -2,6 +2,8 @@
  * Settings Types - Shared types for settings storage
  */
 
+import type { AiMode } from './session';
+
 /**
  * Theme - All available color themes
  * 20 dark themes + 20 light themes = 40 total
@@ -154,7 +156,7 @@ export const DEFAULT_SETTINGS: GlobalSettings = {
 /**
  * Settings section IDs for navigation
  */
-export type SettingsSectionId = 'appearance' | 'integrations' | 'github' | 'mcp' | 'general' | 'worktrees';
+export type SettingsSectionId = 'appearance' | 'integrations' | 'github' | 'mcp' | 'general' | 'worktrees' | 'sessions';
 
 /**
  * Worktree creation mode
@@ -190,6 +192,21 @@ export const DEFAULT_WORKTREE_SETTINGS: WorktreeSettings = {
   mode: 'branch',
   location: 'project',
   autoCleanup: false, // Disabled by default - feature is experimental
+};
+
+/**
+ * Session-related settings
+ */
+export interface SessionSettings {
+  /** Default AI mode for new pre-launch slots */
+  defaultMode: AiMode;
+}
+
+/**
+ * Default session settings
+ */
+export const DEFAULT_SESSION_SETTINGS: SessionSettings = {
+  defaultMode: 'claude',
 };
 
 /**

@@ -2,8 +2,8 @@
  * Project Tab Types - Shared types for project tabs in workspace
  */
 
-import type { Theme, WorktreeSettings } from './settings';
-import { DEFAULT_WORKTREE_SETTINGS } from './settings';
+import type { Theme, WorktreeSettings, SessionSettings } from './settings';
+import { DEFAULT_WORKTREE_SETTINGS, DEFAULT_SESSION_SETTINGS } from './settings';
 
 /**
  * Base project tab fields shared between frontend and backend
@@ -49,12 +49,14 @@ export interface UserPreferences {
   theme: Theme;
   /** Worktree settings */
   worktree?: WorktreeSettings;
+  /** Session settings */
+  session?: SessionSettings;
   /** Other preferences */
   [key: string]: unknown;
 }
 
 // Re-export for convenience
-export { DEFAULT_WORKTREE_SETTINGS };
+export { DEFAULT_WORKTREE_SETTINGS, DEFAULT_SESSION_SETTINGS };
 
 /**
  * Convert a backend ProjectTabDTO to frontend ProjectTab

@@ -10,6 +10,7 @@ import {
   McpSection,
   GeneralSection,
   WorktreesSection,
+  SessionsSection,
 } from './sections';
 
 export function SettingsModal() {
@@ -53,6 +54,8 @@ export function SettingsModal() {
         return <GeneralSection />;
       case 'worktrees':
         return <WorktreesSection />;
+      case 'sessions':
+        return <SessionsSection />;
       default:
         return <AppearanceSection />;
     }

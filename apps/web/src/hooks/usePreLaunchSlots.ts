@@ -1,9 +1,9 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { createLogger } from '@omniscribe/shared';
+import { createLogger, DEFAULT_SESSION_SETTINGS } from '@omniscribe/shared';
 import type { PreLaunchSlot } from '@/components/terminal/TerminalGrid';
 import { createSession } from '@/lib/session';
 import { mapAiModeToBackend } from '@/lib/aiMode';
-import { useTerminalControlStore } from '@/stores';
+import { useTerminalControlStore, useWorkspaceStore } from '@/stores';
 
 const logger = createLogger('PreLaunchSlots');
 
@@ -46,6 +46,11 @@ export function usePreLaunchSlots(
   // Track which slots are currently being launched (prevents spam clicking)
   const [launchingSlotIds, setLaunchingSlotIds] = useState<Set<string>>(new Set());
 
+  // Read default AI mode from workspace preferences
+  const defaultAiMode = useWorkspaceStore(
+    (state) => state.preferences.session?.defaultMode ?? DEFAULT_SESSION_SETTINGS.defaultMode
+  );
+
   // Listen to add slot requests from other components (e.g., sidebar + button)
   const addSlotRequestCounter = useTerminalControlStore((state) => state.addSlotRequestCounter);
   const prevCounterRef = useRef(addSlotRequestCounter);
@@ -57,11 +62,11 @@ export function usePreLaunchSlots(
   const handleAddSession = useCallback(() => {
     const newSlot: PreLaunchSlot = {
       id: `slot-${Date.now()}`,
-      aiMode: 'claude',
+      aiMode: defaultAiMode,
       branch: currentBranch,
     };
     setPreLaunchSlots((prev) => [...prev, newSlot]);
-  }, [currentBranch]);
+  }, [currentBranch, defaultAiMode]);
 
   // Listen to external add slot requests (from sidebar + button)
   useEffect(() => {
