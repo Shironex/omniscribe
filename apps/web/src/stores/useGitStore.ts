@@ -160,13 +160,10 @@ export const useGitStore = create<GitStore>((set, get) => {
 
     // Custom actions
     fetchBranches: (projectPath: string) => {
-      console.log('[GitStore] fetchBranches called for:', projectPath);
       set({ isLoading: true, error: null, projectPath });
       socket.emit('git:branches', { projectPath }, (response: { branches: BranchInfo[]; currentBranch: string | BranchInfo; error?: string }) => {
-        console.log('[GitStore] fetchBranches response:', response);
         // Backend returns { branches, currentBranch, error? } - no success field
         if (response.error) {
-          console.error('[GitStore] fetchBranches error:', response.error);
           set({ error: response.error, isLoading: false });
         } else {
           const branches = response.branches ?? [];
@@ -195,7 +192,6 @@ export const useGitStore = create<GitStore>((set, get) => {
             }
           }
 
-          console.log('[GitStore] Setting branches:', branches.length, 'currentBranch:', currentBranchInfo?.name);
           set({ branches, currentBranch: currentBranchInfo, isLoading: false, error: null });
         }
       });

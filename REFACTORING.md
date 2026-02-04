@@ -114,9 +114,28 @@ The MCP module (`apps/desktop/src/modules/mcp/`) has 6 files but responsibilitie
 
 ---
 
-## 8. Store Patterns - LOW PRIORITY
+## 8. Store Patterns - ✅ COMPLETED
 
-All stores in `apps/web/src/stores/` follow similar patterns with `createSocketListeners`. The utility exists (`createSocketStore.ts`) but not all stores use it consistently.
+All socket-connected stores now consistently use the `createSocketListeners` utility from `stores/utils/createSocketStore.ts`.
+
+**Standardized stores (use utility):**
+- `useSessionStore` - Session management
+- `useWorkspaceStore` - Workspace/tab management
+- `useGitStore` - Git operations
+- `useMcpStore` - MCP server discovery (migrated)
+
+**Non-socket stores (no utility needed):**
+- `useQuickActionStore` - Uses Electron persistence, no socket listeners
+- `useTerminalControlStore` - Pure client-side state
+- `useSettingsStore` - Pure client-side state
+- `useUsageStore` - Uses polling with `emitAsync`, not event-driven
+
+**Pattern benefits:**
+- Consistent `initListeners`/`cleanupListeners` interface
+- Common state: `isLoading`, `error`, `listenersInitialized`
+- Common actions: `setLoading`, `setError`
+- Automatic connect/reconnect handling
+- Prevents duplicate listener registration
 
 ---
 
@@ -129,4 +148,4 @@ All stores in `apps/web/src/stores/` follow similar patterns with `createSocketL
 - [x] 5. Refactor MCP module
 - [ ] 6. Consolidate StatusPayload type
 - [x] 7. Standardize logging
-- [ ] 8. Standardize store patterns
+- [x] 8. Standardize store patterns

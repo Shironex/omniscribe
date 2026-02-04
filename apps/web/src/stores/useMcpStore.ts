@@ -1,6 +1,13 @@
 import { create } from 'zustand';
 import { McpServerConfig, McpServerState, McpServerStatus } from '@omniscribe/shared';
 import { socket } from '../lib/socket';
+import {
+  SocketStoreState,
+  SocketStoreActions,
+  initialSocketState,
+  createSocketActions,
+  createSocketListeners,
+} from './utils';
 
 /**
  * MCP server discovery result payload
@@ -35,27 +42,23 @@ interface InternalMcpInfo {
 }
 
 /**
- * MCP store state
+ * MCP store state (extends common socket state)
  */
-interface McpState {
+interface McpState extends SocketStoreState {
   /** Discovered MCP servers */
   servers: McpServerConfig[];
   /** Server states (keyed by server ID) */
   serverStates: Map<string, McpServerState>;
   /** Whether server discovery is in progress */
   isDiscovering: boolean;
-  /** Error message */
-  error: string | null;
-  /** Whether listeners are initialized */
-  listenersInitialized: boolean;
   /** Internal MCP server info */
   internalMcp: InternalMcpInfo;
 }
 
 /**
- * MCP store actions
+ * MCP store actions (extends common socket actions)
  */
-interface McpActions {
+interface McpActions extends SocketStoreActions {
   /** Discover available MCP servers */
   discoverServers: (projectPath?: string) => void;
   /** Set servers list */
@@ -66,8 +69,6 @@ interface McpActions {
   updateServerStatus: (serverId: string, status: McpServerStatus, errorMessage?: string) => void;
   /** Set discovering state */
   setDiscovering: (isDiscovering: boolean) => void;
-  /** Set error */
-  setError: (error: string | null) => void;
   /** Initialize socket listeners */
   initListeners: () => void;
   /** Clean up socket listeners */
@@ -86,126 +87,121 @@ type McpStore = McpState & McpActions;
 /**
  * MCP store using Zustand
  */
-export const useMcpStore = create<McpStore>((set, get) => ({
-  // Initial state
-  servers: [],
-  serverStates: new Map(),
-  isDiscovering: false,
-  error: null,
-  listenersInitialized: false,
-  internalMcp: { available: false, path: null },
+export const useMcpStore = create<McpStore>((set, get) => {
+  // Create common socket actions
+  const socketActions = createSocketActions<McpState>(set);
 
-  // Actions
-  discoverServers: (projectPath?: string) => {
-    set({ isDiscovering: true, error: null });
-    socket.emit('mcp:discover', { projectPath }, (response: { servers: McpServerConfig[]; error?: string }) => {
-      if (response.error) {
-        set({ error: response.error, isDiscovering: false });
-      } else {
-        set({ servers: response.servers ?? [], isDiscovering: false, error: null });
-      }
-    });
-  },
-
-  setServers: (servers: McpServerConfig[]) => {
-    set({ servers });
-  },
-
-  updateServerState: (serverId: string, state: McpServerState) => {
-    set((currentState) => {
-      const newServerStates = new Map(currentState.serverStates);
-      newServerStates.set(serverId, state);
-      return { serverStates: newServerStates };
-    });
-  },
-
-  updateServerStatus: (serverId: string, status: McpServerStatus, errorMessage?: string) => {
-    set((state) => {
-      const newServerStates = new Map(state.serverStates);
-      const existingState = newServerStates.get(serverId);
-
-      if (existingState) {
-        newServerStates.set(serverId, {
-          ...existingState,
-          status,
-          errorMessage,
-        });
-      }
-
-      return { serverStates: newServerStates };
-    });
-  },
-
-  setDiscovering: (isDiscovering: boolean) => {
-    set({ isDiscovering });
-  },
-
-  setError: (error: string | null) => {
-    set({ error });
-  },
-
-  initListeners: () => {
-    const state = get();
-
-    // Prevent duplicate listener registration
-    if (state.listenersInitialized) {
-      return;
+  // Create socket listeners
+  const { initListeners, cleanupListeners } = createSocketListeners<McpStore>(
+    get,
+    set,
+    {
+      listeners: [
+        {
+          event: 'mcp:servers:discovered',
+          handler: (data, get) => {
+            const result = data as McpDiscoveryResult;
+            get().setServers(result.servers);
+          },
+        },
+        {
+          event: 'mcp:status',
+          handler: (data, get) => {
+            const update = data as McpStatusUpdate;
+            get().updateServerStatus(update.serverId, update.status, update.errorMessage);
+          },
+        },
+        {
+          event: 'mcp:state',
+          handler: (data, get) => {
+            const update = data as McpServerStateUpdate;
+            get().updateServerState(update.serverId, update.state);
+          },
+        },
+      ],
+      onConnect: (get) => {
+        // Refresh server list on reconnect
+        get().discoverServers();
+      },
     }
+  );
 
-    const { setServers, updateServerState, updateServerStatus, setError } = get();
+  return {
+    // Initial state (spread common state + custom state)
+    ...initialSocketState,
+    servers: [],
+    serverStates: new Map(),
+    isDiscovering: false,
+    internalMcp: { available: false, path: null },
 
-    // Handle server discovery results
-    socket.on('mcp:servers:discovered', (result: McpDiscoveryResult) => {
-      setServers(result.servers);
-    });
+    // Common socket actions
+    ...socketActions,
 
-    // Handle server status updates
-    socket.on('mcp:status', (update: McpStatusUpdate) => {
-      updateServerStatus(update.serverId, update.status, update.errorMessage);
-    });
+    // Socket listeners
+    initListeners,
+    cleanupListeners,
 
-    // Handle server state updates (tools, resources, prompts)
-    socket.on('mcp:state', (update: McpServerStateUpdate) => {
-      updateServerState(update.serverId, update.state);
-    });
+    // Custom actions
+    discoverServers: (projectPath?: string) => {
+      set({ isDiscovering: true, error: null });
+      socket.emit('mcp:discover', { projectPath }, (response: { servers: McpServerConfig[]; error?: string }) => {
+        if (response.error) {
+          set({ error: response.error, isDiscovering: false });
+        } else {
+          set({ servers: response.servers ?? [], isDiscovering: false, error: null });
+        }
+      });
+    },
 
-    // Handle connection error
-    socket.on('connect_error', (err: Error) => {
-      setError(`Connection error: ${err.message}`);
-    });
+    setServers: (servers: McpServerConfig[]) => {
+      set({ servers });
+    },
 
-    // Handle reconnection - refresh server list
-    socket.on('connect', () => {
-      setError(null);
-      get().discoverServers();
-    });
+    updateServerState: (serverId: string, state: McpServerState) => {
+      set((currentState) => {
+        const newServerStates = new Map(currentState.serverStates);
+        newServerStates.set(serverId, state);
+        return { serverStates: newServerStates };
+      });
+    },
 
-    set({ listenersInitialized: true });
-  },
+    updateServerStatus: (serverId: string, status: McpServerStatus, errorMessage?: string) => {
+      set((state) => {
+        const newServerStates = new Map(state.serverStates);
+        const existingState = newServerStates.get(serverId);
 
-  cleanupListeners: () => {
-    socket.off('mcp:servers:discovered');
-    socket.off('mcp:status');
-    socket.off('mcp:state');
+        if (existingState) {
+          newServerStates.set(serverId, {
+            ...existingState,
+            status,
+            errorMessage,
+          });
+        }
 
-    set({ listenersInitialized: false });
-  },
+        return { serverStates: newServerStates };
+      });
+    },
 
-  clear: () => {
-    set({
-      servers: [],
-      serverStates: new Map(),
-      isDiscovering: false,
-      error: null,
-    });
-  },
+    setDiscovering: (isDiscovering: boolean) => {
+      set({ isDiscovering });
+    },
 
-  fetchInternalMcpStatus: () => {
-    socket.emit('mcp:get-internal-status', {}, (response: InternalMcpInfo) => {
-      set({ internalMcp: response });
-    });
-  },
-}));
+    clear: () => {
+      set({
+        servers: [],
+        serverStates: new Map(),
+        isDiscovering: false,
+        error: null,
+      });
+    },
+
+    fetchInternalMcpStatus: () => {
+      socket.emit('mcp:get-internal-status', {}, (response: InternalMcpInfo) => {
+        set({ internalMcp: response });
+      });
+    },
+  };
+});
 
 // Selectors
 
