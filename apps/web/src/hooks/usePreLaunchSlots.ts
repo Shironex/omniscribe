@@ -1,8 +1,11 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { createLogger } from '@omniscribe/shared';
 import type { PreLaunchSlot } from '@/components/terminal/TerminalGrid';
 import { createSession } from '@/lib/session';
 import { mapAiModeToBackend } from '@/lib/aiMode';
 import { useTerminalControlStore } from '@/stores';
+
+const logger = createLogger('PreLaunchSlots');
 
 interface UsePreLaunchSlotsReturn {
   /** Pre-launch slots state */
@@ -87,7 +90,7 @@ export function usePreLaunchSlots(
   const handleLaunchSlot = useCallback(
     async (slotId: string) => {
       if (!activeProjectPath) {
-        console.warn('No active project to launch session');
+        logger.warn('No active project to launch session');
         return;
       }
 
@@ -103,10 +106,12 @@ export function usePreLaunchSlots(
       setLaunchingSlotIds((prev) => new Set(prev).add(slotId));
 
       try {
+        logger.info('Launching slot', slotId, slot.aiMode);
         // Create the session via socket (map UI aiMode to backend AiMode)
         const backendAiMode = mapAiModeToBackend(slot.aiMode);
         const session = await createSession(backendAiMode, activeProjectPath, slot.branch);
 
+        logger.info('Session created', session.id);
         // The session:created event arrives before terminalSessionId is set,
         // so we update the store with the complete session from the response
         if (session.terminalSessionId !== undefined) {
@@ -116,7 +121,7 @@ export function usePreLaunchSlots(
         // Remove the pre-launch slot
         setPreLaunchSlots((prev) => prev.filter((s) => s.id !== slotId));
       } catch (error) {
-        console.error('Failed to launch session:', error);
+        logger.error('Failed to launch session:', error);
       } finally {
         // Clear launching state (whether success or failure)
         setLaunchingSlotIds((prev) => {
@@ -131,6 +136,7 @@ export function usePreLaunchSlots(
 
   // Launch all pre-launch slots
   const handleLaunch = useCallback(async () => {
+    logger.info('Launching all slots:', preLaunchSlots.length);
     for (const slot of preLaunchSlots) {
       await handleLaunchSlot(slot.id);
     }

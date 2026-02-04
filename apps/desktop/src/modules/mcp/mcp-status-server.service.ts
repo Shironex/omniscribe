@@ -197,13 +197,13 @@ export class McpStatusServerService implements OnModuleInit, OnModuleDestroy {
    * Handle a status update from the MCP server
    */
   private handleStatusUpdate(payload: StatusPayload, res: http.ServerResponse): void {
-    this.logger.log(
+    this.logger.debug(
       `Received: sessionId=${payload.sessionId}, instanceId=${payload.instanceId}, state=${payload.state}`
     );
 
     // Validate instance ID to prevent cross-instance pollution
     if (payload.instanceId !== this.instanceId) {
-      this.logger.log(
+      this.logger.debug(
         `REJECTED - wrong instance: expected ${this.instanceId}, got ${payload.instanceId}`
       );
       res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -214,8 +214,8 @@ export class McpStatusServerService implements OnModuleInit, OnModuleDestroy {
     // Check if this session is registered
     const projectPath = this.sessionRegistry.getProjectPath(payload.sessionId);
     if (!projectPath) {
-      this.logger.log(`REJECTED - unknown session ${payload.sessionId}`);
-      this.logger.log(
+      this.logger.debug(`REJECTED - unknown session ${payload.sessionId}`);
+      this.logger.debug(
         `Registered sessions: ${this.sessionRegistry.getRegisteredSessions().join(', ')}`
       );
       res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -231,7 +231,7 @@ export class McpStatusServerService implements OnModuleInit, OnModuleDestroy {
       needsInputPrompt: payload.needsInputPrompt,
     };
 
-    this.logger.log(`EMITTING: session=${payload.sessionId} status=${payload.state}`);
+    this.logger.debug(`EMITTING: session=${payload.sessionId} status=${payload.state}`);
 
     this.eventEmitter.emit('session.status', event);
 

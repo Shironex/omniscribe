@@ -1,4 +1,7 @@
 import { socket, connectSocket } from './socket';
+import { createLogger } from '@omniscribe/shared';
+
+const logger = createLogger('TerminalAPI');
 
 export interface TerminalOutputEvent {
   sessionId: number;
@@ -36,8 +39,10 @@ export async function spawnTerminal(
       { cwd, env },
       (response: { sessionId: number } | { error: string }) => {
         if ('error' in response) {
+          logger.error('Spawn failed:', response.error);
           reject(new Error(response.error));
         } else {
+          logger.info('Spawn success, sessionId:', response.sessionId);
           resolve(response.sessionId);
         }
       },
@@ -45,6 +50,7 @@ export async function spawnTerminal(
 
     // Timeout after 10 seconds
     setTimeout(() => {
+      logger.error('Terminal spawn timeout');
       reject(new Error('Terminal spawn timeout'));
     }, 10000);
   });
@@ -74,10 +80,12 @@ export function connectTerminal(
     }
   };
 
+  logger.debug('Connecting to terminal', sessionId);
   socket.on('terminal:output', handleOutput);
   socket.on('terminal:closed', handleClosed);
 
   const cleanup = () => {
+    logger.debug('Cleaning up terminal connection', sessionId);
     socket.off('terminal:output', handleOutput);
     socket.off('terminal:closed', handleClosed);
   };
@@ -97,6 +105,7 @@ export function connectTerminal(
  */
 export function writeToTerminal(sessionId: number, data: string): void {
   if (!socket.connected) {
+    logger.warn('writeToTerminal: socket not connected, skipping');
     return;
   }
 
@@ -115,6 +124,7 @@ export function resizeTerminal(
   rows: number,
 ): void {
   if (!socket.connected) {
+    logger.warn('resizeTerminal: socket not connected, skipping');
     return;
   }
 
@@ -127,6 +137,7 @@ export function resizeTerminal(
  */
 export function killTerminal(sessionId: number): void {
   if (!socket.connected) {
+    logger.warn('killTerminal: socket not connected, skipping');
     return;
   }
 
@@ -141,6 +152,7 @@ export function killTerminal(sessionId: number): void {
 export async function joinTerminal(sessionId: number): Promise<boolean> {
   await connectSocket();
 
+  logger.debug('Joining terminal', sessionId);
   return new Promise((resolve) => {
     socket.emit(
       'terminal:join',

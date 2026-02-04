@@ -1,4 +1,7 @@
 import { socket, connectSocket } from './socket';
+import { createLogger } from '@omniscribe/shared';
+
+const logger = createLogger('SocketHelper');
 
 /**
  * Default timeout for socket operations (in milliseconds)
@@ -57,8 +60,11 @@ export async function emitAsync<TPayload, TResponse>(
     await ensureConnected();
   }
 
+  logger.debug('Emitting', event);
+
   return new Promise((resolve, reject) => {
     const timeoutId = setTimeout(() => {
+      logger.error('Request timed out:', event, `(${timeout}ms)`);
       reject(new Error(`Socket request '${event}' timed out after ${timeout}ms`));
     }, timeout);
 
@@ -93,6 +99,7 @@ export async function emitWithErrorHandling<TPayload, TResponse>(
   );
 
   if (response && typeof response === 'object' && 'error' in response) {
+    logger.warn('Error response for', event, (response as ErrorResponse).error);
     throw new Error((response as ErrorResponse).error);
   }
 
@@ -125,6 +132,7 @@ export async function emitWithSuccessHandling<TPayload>(
   );
 
   if (!response.success) {
+    logger.warn('Failed response for', event, response.error ?? errorMessage);
     throw new Error(response.error ?? errorMessage);
   }
 }

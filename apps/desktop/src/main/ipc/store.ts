@@ -1,7 +1,9 @@
 import { ipcMain } from 'electron';
 import Store from 'electron-store';
+import { createLogger } from '@omniscribe/shared';
 
 const store = new Store();
+const logger = createLogger('IPC:Store');
 
 /**
  * Security: Whitelist of allowed store keys
@@ -59,7 +61,7 @@ function isKeyAllowed(key: string): boolean {
 export function registerStoreHandlers(): void {
   ipcMain.handle('store:get', (_event, key: string) => {
     if (!isKeyAllowed(key)) {
-      console.warn(`[Security] Blocked store:get for unauthorized key: ${key}`);
+      logger.warn(`Blocked store:get for unauthorized key: ${key}`);
       return undefined;
     }
     return store.get(key);
@@ -67,7 +69,7 @@ export function registerStoreHandlers(): void {
 
   ipcMain.handle('store:set', (_event, key: string, value: unknown) => {
     if (!isKeyAllowed(key)) {
-      console.warn(`[Security] Blocked store:set for unauthorized key: ${key}`);
+      logger.warn(`Blocked store:set for unauthorized key: ${key}`);
       return;
     }
     store.set(key, value);
@@ -75,7 +77,7 @@ export function registerStoreHandlers(): void {
 
   ipcMain.handle('store:delete', (_event, key: string) => {
     if (!isKeyAllowed(key)) {
-      console.warn(`[Security] Blocked store:delete for unauthorized key: ${key}`);
+      logger.warn(`Blocked store:delete for unauthorized key: ${key}`);
       return;
     }
     store.delete(key);
@@ -84,7 +86,7 @@ export function registerStoreHandlers(): void {
   // Security: Remove store:clear to prevent wiping all data
   // If needed, implement a selective clear for specific key prefixes
   ipcMain.handle('store:clear', () => {
-    console.warn('[Security] store:clear is disabled for security reasons');
+    logger.warn('store:clear is disabled for security reasons');
     // Intentionally do nothing - clearing all data is dangerous
   });
 }

@@ -131,6 +131,7 @@ export class SessionService {
     };
 
     this.sessions.set(id, session);
+    this.logger.info(`Created session ${id} (mode: ${mode}, project: ${projectPath})`);
 
     this.eventEmitter.emit('session.created', session);
 
@@ -152,6 +153,7 @@ export class SessionService {
       return undefined;
     }
 
+    this.logger.debug(`Updating status for session ${sessionId}: ${status}${message ? ` (${message})` : ''}`);
     session.status = status;
     session.statusMessage = message;
     session.needsInputPrompt = needsInputPrompt;
@@ -201,6 +203,7 @@ export class SessionService {
    * Remove a session and kill its terminal if running
    */
   async remove(sessionId: string): Promise<boolean> {
+    this.logger.info(`Removing session ${sessionId}`);
     const session = this.sessions.get(sessionId);
 
     if (!session) {
@@ -418,16 +421,19 @@ export class SessionService {
     const session = this.sessions.get(sessionId);
 
     if (!session) {
+      this.logger.debug(`stopSession: session ${sessionId} not found`);
       return false;
     }
 
     if (session.terminalSessionId === undefined) {
+      this.logger.debug(`stopSession: session ${sessionId} has no terminal`);
       return false;
     }
 
     const terminalId = session.terminalSessionId;
 
     if (!this.terminalService.hasSession(terminalId)) {
+      this.logger.debug(`stopSession: terminal ${terminalId} for session ${sessionId} no longer exists`);
       session.terminalSessionId = undefined;
       return false;
     }

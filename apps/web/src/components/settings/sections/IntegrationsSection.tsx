@@ -1,4 +1,7 @@
 import { useEffect, useCallback, useState } from 'react';
+import { createLogger } from '@omniscribe/shared';
+
+const logger = createLogger('Integrations');
 import {
   CheckCircle2,
   XCircle,
@@ -42,6 +45,7 @@ export function IntegrationsSection() {
   const [versionCheckAttempted, setVersionCheckAttempted] = useState(false);
 
   const refreshStatus = useCallback(async () => {
+    logger.debug('Fetching Claude CLI status');
     setClaudeCliLoading(true);
     try {
       if (window.electronAPI?.claude?.getStatus) {
@@ -56,12 +60,13 @@ export function IntegrationsSection() {
         });
       }
     } catch (error) {
-      console.error('Failed to get Claude CLI status:', error);
+      logger.error('Failed to get Claude CLI status:', error);
       setClaudeCliStatus(null);
     }
   }, [setClaudeCliStatus, setClaudeCliLoading]);
 
   const checkVersion = useCallback(async () => {
+    logger.debug('Checking Claude CLI version');
     setVersionCheckLoading(true);
     setVersionCheckAttempted(true);
     try {
@@ -70,12 +75,13 @@ export function IntegrationsSection() {
         setClaudeVersionCheck(result);
       }
     } catch (error) {
-      console.error('Failed to check Claude CLI version:', error);
+      logger.error('Failed to check Claude CLI version:', error);
       setClaudeVersionCheck(null);
     }
   }, [setClaudeVersionCheck, setVersionCheckLoading]);
 
   const fetchVersions = useCallback(async () => {
+    logger.debug('Fetching available versions');
     setVersionsLoading(true);
     try {
       if (window.electronAPI?.claude?.getVersions) {
@@ -83,7 +89,7 @@ export function IntegrationsSection() {
         setAvailableVersions(result.versions);
       }
     } catch (error) {
-      console.error('Failed to fetch available versions:', error);
+      logger.error('Failed to fetch available versions:', error);
       setAvailableVersions([]);
     }
   }, [setAvailableVersions, setVersionsLoading]);
@@ -99,7 +105,7 @@ export function IntegrationsSection() {
           setInstallCommand(result);
         }
       } catch (error) {
-        console.error('Failed to get install command:', error);
+        logger.error('Failed to get install command:', error);
       }
     },
     [],
@@ -118,7 +124,7 @@ export function IntegrationsSection() {
       try {
         await window.electronAPI.claude.runInstall(installCommand.command);
       } catch (error) {
-        console.error('Failed to open terminal:', error);
+        logger.error('Failed to open terminal:', error);
       }
     }
   }, [installCommand]);

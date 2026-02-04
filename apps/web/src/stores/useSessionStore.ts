@@ -1,6 +1,8 @@
 import { create } from 'zustand';
-import { SessionConfig, SessionStatus } from '@omniscribe/shared';
+import { SessionConfig, SessionStatus, createLogger } from '@omniscribe/shared';
 import { socket } from '@/lib/socket';
+
+const logger = createLogger('SessionStore');
 import {
   SocketStoreState,
   SocketStoreActions,
@@ -87,6 +89,7 @@ export const useSessionStore = create<SessionStore>((set, get) => {
           event: 'session:created',
           handler: (data, get) => {
             const session = data as ExtendedSessionConfig;
+            logger.debug('session:created', session.id);
             get().addSession(session);
           },
         },
@@ -94,6 +97,7 @@ export const useSessionStore = create<SessionStore>((set, get) => {
           event: 'session:status',
           handler: (data, get) => {
             const update = data as SessionStatusUpdate;
+            logger.debug('session:status', update.sessionId, update.status);
             get().updateStatus(update.sessionId, update.status, update.message, update.needsInputPrompt);
           },
         },
@@ -101,12 +105,14 @@ export const useSessionStore = create<SessionStore>((set, get) => {
           event: 'session:removed',
           handler: (data, get) => {
             const payload = data as { sessionId: string };
+            logger.debug('session:removed', payload.sessionId);
             get().removeSession(payload.sessionId);
           },
         },
       ],
       onConnect: (get) => {
         // Request fresh session list on reconnect
+        logger.info('Refreshing session list on reconnect');
         socket.emit('session:list', {}, (sessions: ExtendedSessionConfig[]) => {
           if (Array.isArray(sessions)) {
             get().setSessions(sessions);
@@ -138,6 +144,7 @@ export const useSessionStore = create<SessionStore>((set, get) => {
         return state;
       }
 
+      logger.debug('addSession', session.id);
       const newSessions = [...state.sessions, session];
 
       // Process any pending status updates for this session
@@ -148,6 +155,7 @@ export const useSessionStore = create<SessionStore>((set, get) => {
   },
 
   removeSession: (sessionId) => {
+    logger.debug('removeSession', sessionId);
     set((state) => ({
       sessions: state.sessions.filter((s) => s.id !== sessionId),
       pendingStatusUpdates: (() => {
@@ -169,11 +177,13 @@ export const useSessionStore = create<SessionStore>((set, get) => {
   },
 
   updateStatus: (sessionId, status, message, needsInputPrompt) => {
+    logger.debug('updateStatus', sessionId, status);
     set((state) => {
       const sessionExists = state.sessions.some((s) => s.id === sessionId);
 
       if (!sessionExists) {
         // Buffer the status update for later
+        logger.debug('Buffering pending update for unknown session', sessionId);
         const pending = state.pendingStatusUpdates.get(sessionId) ?? [];
         const newPending = [...pending, { sessionId, status, message, needsInputPrompt }];
         const newMap = new Map(state.pendingStatusUpdates);

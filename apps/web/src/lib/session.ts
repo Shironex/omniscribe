@@ -1,7 +1,9 @@
 import { socket } from './socket';
-import { AiMode, UpdateSessionOptions } from '@omniscribe/shared';
+import { AiMode, UpdateSessionOptions, createLogger } from '@omniscribe/shared';
 import { ExtendedSessionConfig } from '@/stores/useSessionStore';
 import { emitWithErrorHandling, emitWithSuccessHandling } from './socketHelpers';
+
+const logger = createLogger('SessionAPI');
 
 /**
  * Create session options
@@ -31,6 +33,7 @@ export async function createSession(
   branch?: string,
   options?: CreateSessionOptions
 ): Promise<ExtendedSessionConfig> {
+  logger.info('Creating session', mode, projectPath, branch);
   const response = await emitWithErrorHandling<
     { mode: AiMode; projectPath: string; branch?: string } & CreateSessionOptions,
     SessionResponse
@@ -42,6 +45,7 @@ export async function createSession(
   });
 
   if (!response.session) {
+    logger.error('No session returned from server');
     throw new Error('No session returned from server');
   }
 
@@ -55,6 +59,7 @@ export async function updateSession(
   sessionId: string,
   updates: UpdateSessionOptions
 ): Promise<ExtendedSessionConfig> {
+  logger.debug('Updating session', sessionId);
   const response = await emitWithErrorHandling<
     { sessionId: string; updates: UpdateSessionOptions },
     SessionResponse
@@ -64,6 +69,7 @@ export async function updateSession(
   });
 
   if (!response.session) {
+    logger.error('No session returned from server after update', sessionId);
     throw new Error('No session returned from server');
   }
 
@@ -74,6 +80,7 @@ export async function updateSession(
  * Remove a session
  */
 export async function removeSession(sessionId: string): Promise<void> {
+  logger.info('Removing session', sessionId);
   return emitWithSuccessHandling(
     'session:remove',
     { sessionId },
@@ -86,6 +93,7 @@ export async function removeSession(sessionId: string): Promise<void> {
  * List sessions
  */
 export async function listSessions(projectPath?: string): Promise<ExtendedSessionConfig[]> {
+  logger.debug('Listing sessions', projectPath);
   return emitWithErrorHandling<
     { projectPath?: string },
     ExtendedSessionConfig[]

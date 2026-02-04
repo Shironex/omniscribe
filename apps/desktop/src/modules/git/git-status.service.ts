@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { BranchInfo } from '@omniscribe/shared';
+import { BranchInfo, createLogger } from '@omniscribe/shared';
 import type { GitRepoStatus, GitFileChange, GitFileStatus } from '@omniscribe/shared';
 import { GitBaseService } from './git-base.service';
 import { GitRepoService } from './git-repo.service';
@@ -7,6 +7,8 @@ import { GitBranchService } from './git-branch.service';
 
 @Injectable()
 export class GitStatusService {
+  private readonly logger = createLogger('GitStatusService');
+
   constructor(
     private readonly gitBase: GitBaseService,
     private readonly gitRepo: GitRepoService,
@@ -17,6 +19,7 @@ export class GitStatusService {
    * Get full repository status including staged, unstaged, and untracked files
    */
   async getStatus(projectPath: string): Promise<GitRepoStatus> {
+    this.logger.debug(`Getting status for ${projectPath}`);
     const isRepo = await this.gitRepo.isGitRepository(projectPath);
 
     if (!isRepo) {
@@ -223,7 +226,8 @@ export class GitStatusService {
       ]).catch(() => ({ stdout: '' }));
 
       return !!lsApplyOutput;
-    } catch {
+    } catch (error) {
+      this.logger.warn('Failed to check rebase state:', error);
       return false;
     }
   }
@@ -243,8 +247,8 @@ export class GitStatusService {
       // Try to read MERGE_HEAD - if it exists, merge is in progress
       await this.gitBase.execGit(projectPath, ['cat-file', '-e', `HEAD:${mergePath}`]);
       return true;
-    } catch {
-      // MERGE_HEAD doesn't exist, no merge in progress
+    } catch (error) {
+      this.logger.warn('Failed to check merge state:', error);
       return false;
     }
   }
@@ -257,7 +261,8 @@ export class GitStatusService {
       const { stdout } = await this.gitBase.execGit(projectPath, ['stash', 'list']);
       if (!stdout.trim()) return 0;
       return stdout.trim().split('\n').filter(Boolean).length;
-    } catch {
+    } catch (error) {
+      this.logger.warn('Failed to get stash count:', error);
       return 0;
     }
   }

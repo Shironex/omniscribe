@@ -1,15 +1,18 @@
 import { Injectable } from '@nestjs/common';
-import { RemoteInfo } from '@omniscribe/shared';
+import { RemoteInfo, createLogger } from '@omniscribe/shared';
 import { GitBaseService } from './git-base.service';
 
 @Injectable()
 export class GitRemoteService {
+  private readonly logger = createLogger('GitRemoteService');
+
   constructor(private readonly gitBase: GitBaseService) {}
 
   /**
    * Get remote information
    */
   async getRemotes(repoPath: string): Promise<RemoteInfo[]> {
+    this.logger.debug(`Getting remotes for ${repoPath}`);
     const remotes: RemoteInfo[] = [];
     const remoteMap = new Map<string, RemoteInfo>();
 
@@ -71,6 +74,7 @@ export class GitRemoteService {
     remote: string = 'origin',
     branch?: string,
   ): Promise<void> {
+    this.logger.info(`Pushing to ${remote}${branch ? `/${branch}` : ''} in ${projectPath}`);
     const args = ['push', remote];
     if (branch) {
       args.push(branch);
@@ -86,6 +90,7 @@ export class GitRemoteService {
     remote: string = 'origin',
     branch?: string,
   ): Promise<void> {
+    this.logger.info(`Pulling from ${remote}${branch ? `/${branch}` : ''} in ${projectPath}`);
     const args = ['pull', remote];
     if (branch) {
       args.push(branch);
@@ -97,6 +102,7 @@ export class GitRemoteService {
    * Fetch updates from a remote repository
    */
   async fetch(projectPath: string, remote?: string): Promise<void> {
+    this.logger.info(`Fetching${remote ? ` from ${remote}` : ' all'} in ${projectPath}`);
     const args = ['fetch'];
     if (remote) {
       args.push(remote);

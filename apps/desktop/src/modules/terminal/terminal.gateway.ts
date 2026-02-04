@@ -20,6 +20,7 @@ import {
   TerminalSpawnResponse,
   TerminalJoinResponse,
   SuccessResponse,
+  createLogger,
 } from '@omniscribe/shared';
 import { CORS_CONFIG } from '../shared/cors.config';
 
@@ -40,6 +41,8 @@ interface TerminalClosedEvent {
 export class TerminalGateway
   implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
 {
+  private readonly logger = createLogger('TerminalGateway');
+
   @WebSocketServer()
   server!: Server;
 
@@ -60,10 +63,11 @@ export class TerminalGateway
   }
 
   afterInit(): void {
-    // Gateway initialized
+    this.logger.log('Initialized');
   }
 
   handleConnection(client: Socket): void {
+    this.logger.debug(`Client connected: ${client.id}`);
     // Only create a new Set if client doesn't already have sessions registered
     // This prevents clearing sessions on reconnection
     if (!this.clientSessions.has(client.id)) {
@@ -73,6 +77,7 @@ export class TerminalGateway
   }
 
   handleDisconnect(client: Socket): void {
+    this.logger.debug(`Client disconnected: ${client.id}`);
     // Only clean up tracking, do NOT kill terminal sessions
     // Terminals should persist across WebSocket disconnections because:
     // 1. WebSocket connections can be flaky and reconnect
@@ -88,6 +93,7 @@ export class TerminalGateway
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: TerminalSpawnPayload,
   ): TerminalSpawnResponse {
+    this.logger.info(`Spawning terminal for client ${client.id} (cwd: ${payload?.cwd})`);
     const sessionId = this.terminalService.spawn(payload?.cwd, payload?.env);
 
     // Track session ownership
@@ -168,6 +174,7 @@ export class TerminalGateway
       return { success: true };
     }
 
+    this.logger.warn(`Kill requested for non-existent terminal session ${sessionId}`);
     return { success: false, error: `Terminal session ${sessionId} not found` };
   }
 
@@ -190,6 +197,7 @@ export class TerminalGateway
       return { success: true };
     }
 
+    this.logger.warn(`Join requested for non-existent terminal session ${sessionId}`);
     return { success: false, error: `Terminal session ${sessionId} not found` };
   }
 

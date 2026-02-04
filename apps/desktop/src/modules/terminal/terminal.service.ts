@@ -38,10 +38,10 @@ export class TerminalService implements OnModuleDestroy {
     // bash and zsh use --login for login shell behavior
     const shellArgs = this.getShellArgs(shell);
 
-    this.logger.log(`[spawn] Detected shell: "${shell}"`);
-    this.logger.log(`[spawn] Shell args: ${JSON.stringify(shellArgs)}`);
-    this.logger.log(`[spawn] COMSPEC: ${process.env.COMSPEC}`);
-    this.logger.log(`[spawn] SHELL: ${process.env.SHELL}`);
+    this.logger.debug(`[spawn] Detected shell: "${shell}"`);
+    this.logger.debug(`[spawn] Shell args: ${JSON.stringify(shellArgs)}`);
+    this.logger.debug(`[spawn] COMSPEC: ${process.env.COMSPEC}`);
+    this.logger.debug(`[spawn] SHELL: ${process.env.SHELL}`);
 
     return this.spawnCommand(shell, shellArgs, cwd, env);
   }
@@ -83,12 +83,11 @@ export class TerminalService implements OnModuleDestroy {
     const sessionId = this.nextSessionId++;
     const resolvedCwd = cwd || process.cwd();
 
-    this.logger.log(`[spawnCommand] Starting session ${sessionId}`);
-    this.logger.log(`[spawnCommand] Command: "${command}"`);
-    this.logger.log(`[spawnCommand] Args: ${JSON.stringify(args)}`);
-    this.logger.log(`[spawnCommand] CWD: "${resolvedCwd}"`);
-    this.logger.log(`[spawnCommand] Platform: ${os.platform()}`);
-    this.logger.log(`[spawnCommand] ExternalId: ${externalId}`);
+    this.logger.log(`[spawnCommand] Starting session ${sessionId}: "${command}"`);
+    this.logger.debug(`[spawnCommand] Args: ${JSON.stringify(args)}`);
+    this.logger.debug(`[spawnCommand] CWD: "${resolvedCwd}"`);
+    this.logger.debug(`[spawnCommand] Platform: ${os.platform()}`);
+    this.logger.debug(`[spawnCommand] ExternalId: ${externalId}`);
 
     // Build environment - match automaker's approach
     const cleanEnv: Record<string, string> = {};
@@ -125,14 +124,14 @@ export class TerminalService implements OnModuleDestroy {
     // The error happens in a subprocess so we can't catch it - must proactively disable
     if (this.isWindows) {
       (ptyOptions as pty.IWindowsPtyForkOptions).useConpty = false;
-      this.logger.log(`[spawnCommand] Using winpty (ConPTY disabled for Windows compatibility)`);
+      this.logger.debug(`[spawnCommand] Using winpty (ConPTY disabled for Windows compatibility)`);
     }
 
-    this.logger.log(`[spawnCommand] PTY options: cols=${ptyOptions.cols}, rows=${ptyOptions.rows}, name=${ptyOptions.name}`);
+    this.logger.debug(`[spawnCommand] PTY options: cols=${ptyOptions.cols}, rows=${ptyOptions.rows}, name=${ptyOptions.name}`);
 
     let ptyProcess: pty.IPty;
     try {
-      this.logger.log(`[spawnCommand] Calling pty.spawn()...`);
+      this.logger.debug(`[spawnCommand] Calling pty.spawn()...`);
       ptyProcess = pty.spawn(command, args, ptyOptions);
       this.logger.log(`[spawnCommand] pty.spawn() succeeded, PID: ${ptyProcess.pid}`);
     } catch (spawnError) {
@@ -149,7 +148,7 @@ export class TerminalService implements OnModuleDestroy {
     };
 
     this.sessions.set(sessionId, session);
-    this.logger.log(`[spawnCommand] Session ${sessionId} stored in sessions map`);
+    this.logger.debug(`[spawnCommand] Session ${sessionId} stored in sessions map`);
 
     // Handle output with batching for performance
     ptyProcess.onData((data: string) => {
@@ -185,7 +184,7 @@ export class TerminalService implements OnModuleDestroy {
       });
     });
 
-    this.logger.log(`[spawnCommand] Session ${sessionId} fully initialized, returning`);
+    this.logger.debug(`[spawnCommand] Session ${sessionId} fully initialized, returning`);
     return sessionId;
   }
 
@@ -242,7 +241,7 @@ export class TerminalService implements OnModuleDestroy {
    * @param sessionId The session to kill
    */
   async kill(sessionId: number): Promise<void> {
-    this.logger.log(`[kill] Called for session ${sessionId}`);
+    this.logger.debug(`[kill] Called for session ${sessionId}`);
 
     const session = this.sessions.get(sessionId);
     if (!session) {
@@ -250,11 +249,11 @@ export class TerminalService implements OnModuleDestroy {
       return;
     }
 
-    this.logger.log(`[kill] Killing session ${sessionId}, PID: ${session.pty.pid}`);
+    this.logger.debug(`[kill] Killing session ${sessionId}, PID: ${session.pty.pid}`);
 
     // Try graceful termination first (SIGTERM)
     if (!this.isWindows) {
-      this.logger.log(`[kill] Sending SIGTERM to session ${sessionId}`);
+      this.logger.debug(`[kill] Sending SIGTERM to session ${sessionId}`);
       session.pty.kill('SIGTERM');
 
       // Wait for graceful shutdown, then force kill if needed
@@ -276,12 +275,12 @@ export class TerminalService implements OnModuleDestroy {
 
       if (!gracefullyTerminated && this.sessions.has(sessionId)) {
         // Force kill with SIGKILL
-        this.logger.log(`[kill] Sending SIGKILL to session ${sessionId}`);
+        this.logger.debug(`[kill] Sending SIGKILL to session ${sessionId}`);
         session.pty.kill('SIGKILL');
       }
     } else {
       // On Windows, just kill the process
-      this.logger.log(`[kill] Windows kill for session ${sessionId}`);
+      this.logger.debug(`[kill] Windows kill for session ${sessionId}`);
       session.pty.kill();
     }
 

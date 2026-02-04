@@ -3,7 +3,7 @@ import * as os from 'os';
 import * as path from 'path';
 import * as fs from 'fs';
 import { execFileSync } from 'child_process';
-import { AiMode } from '@omniscribe/shared';
+import { AiMode, createLogger } from '@omniscribe/shared';
 import { AiCliConfig } from './types';
 
 /**
@@ -21,6 +21,7 @@ export interface CliSessionContext {
  */
 @Injectable()
 export class CliCommandService {
+  private readonly logger = createLogger('CliCommandService');
 
   /**
    * Get the CLI configuration for a given AI mode
@@ -92,6 +93,7 @@ Report status at key transitions so the user can see your progress in the Omnisc
     // Find the Claude CLI command with proper path resolution
     // This is needed on all platforms because Electron doesn't inherit the user's shell PATH
     const command = this.findCliCommand('claude', this.getClaudeCliPaths());
+    this.logger.debug(`Resolved Claude CLI command: ${command}`);
 
     return {
       command,
@@ -148,6 +150,7 @@ Report status at key transitions so the user can see your progress in the Omnisc
     }
 
     // Fall back to the bare command (will likely fail, but provides clear error)
+    this.logger.info(`CLI not found in PATH or known locations, falling back to bare command: ${command}`);
     return command;
   }
 

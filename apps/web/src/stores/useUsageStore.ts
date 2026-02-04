@@ -1,7 +1,10 @@
 import { create } from 'zustand';
 import type { ClaudeUsage, UsageStatus, UsageError } from '@omniscribe/shared';
+import { createLogger } from '@omniscribe/shared';
 import { socket } from '@/lib/socket';
 import { emitAsync } from '@/lib/socketHelpers';
+
+const logger = createLogger('UsageStore');
 
 /** Polling interval for usage data (15 minutes) */
 const USAGE_POLLING_INTERVAL = 15 * 60 * 1000;
@@ -64,7 +67,7 @@ export const useUsageStore = create<UsageStore>((set, get) => ({
     const dir = workingDir ?? state.workingDir;
 
     if (!dir) {
-      console.warn('[UsageStore] No working directory set');
+      logger.warn('No working directory set');
       return;
     }
 
@@ -73,6 +76,7 @@ export const useUsageStore = create<UsageStore>((set, get) => ({
       return;
     }
 
+    logger.debug('Fetching usage for', dir);
     set({ status: 'fetching', error: null, errorMessage: null });
 
     try {
@@ -82,6 +86,7 @@ export const useUsageStore = create<UsageStore>((set, get) => ({
       >('usage:fetch', { workingDir: dir }, { timeout: 60000 });
 
       if (response.error) {
+        logger.warn('Usage fetch error:', response.error, response.message);
         set({
           status: 'error',
           error: response.error,
@@ -98,6 +103,7 @@ export const useUsageStore = create<UsageStore>((set, get) => ({
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
+      logger.error('Usage fetch failed:', message);
       set({
         status: 'error',
         error: 'unknown',
@@ -120,10 +126,11 @@ export const useUsageStore = create<UsageStore>((set, get) => ({
 
     // Ensure socket is connected
     if (!socket.connected) {
-      console.warn('[UsageStore] Socket not connected, cannot start polling');
+      logger.warn('Socket not connected, cannot start polling');
       return;
     }
 
+    logger.info('Starting usage polling');
     // Fetch immediately
     state.fetchUsage();
 
@@ -136,6 +143,7 @@ export const useUsageStore = create<UsageStore>((set, get) => ({
   },
 
   stopPolling: () => {
+    logger.info('Stopping usage polling');
     const state = get();
 
     if (state.pollingIntervalId) {

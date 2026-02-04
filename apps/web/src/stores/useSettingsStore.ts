@@ -6,7 +6,10 @@ import type {
   GhCliStatus,
   ClaudeVersionCheckResult,
 } from '@omniscribe/shared';
+import { createLogger } from '@omniscribe/shared';
 import { themeOptions } from '@/lib/theme';
+
+const logger = createLogger('Settings');
 
 /**
  * Settings modal state
@@ -87,6 +90,7 @@ type SettingsStore = SettingsState & SettingsActions;
  * Apply theme class to document element
  */
 function applyThemeToDOM(theme: Theme) {
+  logger.debug('applyThemeToDOM:', theme);
   const root = document.documentElement;
   const allThemeClasses = themeOptions.map((t) => t.value);
 

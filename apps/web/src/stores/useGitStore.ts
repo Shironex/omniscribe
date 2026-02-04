@@ -1,6 +1,8 @@
 import { create } from 'zustand';
-import { BranchInfo, CommitInfo } from '@omniscribe/shared';
+import { BranchInfo, CommitInfo, createLogger } from '@omniscribe/shared';
 import { socket } from '@/lib/socket';
+
+const logger = createLogger('GitStore');
 import {
   SocketStoreState,
   SocketStoreActions,
@@ -160,10 +162,12 @@ export const useGitStore = create<GitStore>((set, get) => {
 
     // Custom actions
     fetchBranches: (projectPath: string) => {
+      logger.debug('fetchBranches', projectPath);
       set({ isLoading: true, error: null, projectPath });
       socket.emit('git:branches', { projectPath }, (response: { branches: BranchInfo[]; currentBranch: string | BranchInfo; error?: string }) => {
         // Backend returns { branches, currentBranch, error? } - no success field
         if (response.error) {
+          logger.error('fetchBranches error:', response.error);
           set({ error: response.error, isLoading: false });
         } else {
           const branches = response.branches ?? [];
@@ -198,10 +202,12 @@ export const useGitStore = create<GitStore>((set, get) => {
     },
 
     fetchCurrentBranch: (projectPath: string) => {
+      logger.debug('fetchCurrentBranch', projectPath);
       set({ isLoading: true, error: null, projectPath });
       socket.emit('git:current-branch', { projectPath }, (response: { currentBranch: string; error?: string }) => {
         // Backend returns { currentBranch: string, error? } - no success field, no BranchInfo
         if (response.error) {
+          logger.error('fetchCurrentBranch error:', response.error);
           set({ error: response.error, isLoading: false });
         } else {
           // Create a minimal BranchInfo from the branch name
@@ -214,10 +220,12 @@ export const useGitStore = create<GitStore>((set, get) => {
     },
 
     checkout: (projectPath: string, branchName: string) => {
+      logger.info('Checking out', branchName, 'in', projectPath);
       set({ isLoading: true, error: null });
       socket.emit('git:checkout', { projectPath, branch: branchName }, (response: { success: boolean; currentBranch?: string; error?: string }) => {
         // Backend returns { success, currentBranch?, error? }
         if (response.error || !response.success) {
+          logger.error('Checkout error:', response.error ?? 'Failed to checkout branch');
           set({ error: response.error ?? 'Failed to checkout branch', isLoading: false });
         } else {
           // Refresh branches and current branch after checkout
@@ -228,10 +236,12 @@ export const useGitStore = create<GitStore>((set, get) => {
     },
 
     fetchCommits: (projectPath: string, limit: number = 50) => {
+      logger.debug('fetchCommits', projectPath, 'limit:', limit);
       set({ isLoading: true, error: null, projectPath });
       socket.emit('git:commits', { projectPath, limit }, (response: { commits: CommitInfo[]; error?: string }) => {
         // Backend returns { commits, error? } - no success field
         if (response.error) {
+          logger.error('fetchCommits error:', response.error);
           set({ error: response.error, isLoading: false });
         } else {
           set({ commits: response.commits ?? [], isLoading: false, error: null });

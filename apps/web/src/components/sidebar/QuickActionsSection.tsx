@@ -1,4 +1,7 @@
 import { useCallback, useMemo } from 'react';
+import { createLogger } from '@omniscribe/shared';
+
+const logger = createLogger('QuickActions');
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import {
@@ -82,7 +85,7 @@ export function QuickActionsSection({
         onActionExecute(action);
       } else {
         // Default behavior: log the action
-        console.log('[QuickAction] Executing:', action.id, action.handler, action.params);
+        logger.info('Executing:', action.id, action.handler);
       }
     },
     [onActionExecute]

@@ -1,6 +1,8 @@
 import { create } from 'zustand';
-import { McpServerConfig, McpServerState, McpServerStatus } from '@omniscribe/shared';
+import { McpServerConfig, McpServerState, McpServerStatus, createLogger } from '@omniscribe/shared';
 import { socket } from '@/lib/socket';
+
+const logger = createLogger('McpStore');
 import {
   SocketStoreState,
   SocketStoreActions,
@@ -108,6 +110,7 @@ export const useMcpStore = create<McpStore>((set, get) => {
           event: 'mcp:status',
           handler: (data, get) => {
             const update = data as McpStatusUpdate;
+            logger.debug('mcp:status', update.serverId, update.status);
             get().updateServerStatus(update.serverId, update.status, update.errorMessage);
           },
         },
@@ -115,6 +118,7 @@ export const useMcpStore = create<McpStore>((set, get) => {
           event: 'mcp:state',
           handler: (data, get) => {
             const update = data as McpServerStateUpdate;
+            logger.debug('mcp:state', update.serverId);
             get().updateServerState(update.serverId, update.state);
           },
         },
@@ -143,9 +147,11 @@ export const useMcpStore = create<McpStore>((set, get) => {
 
     // Custom actions
     discoverServers: (projectPath?: string) => {
+      logger.info('Discovering servers', projectPath);
       set({ isDiscovering: true, error: null });
       socket.emit('mcp:discover', { projectPath }, (response: { servers: McpServerConfig[]; error?: string }) => {
         if (response.error) {
+          logger.error('Discovery failed:', response.error);
           set({ error: response.error, isDiscovering: false });
         } else {
           set({ servers: response.servers ?? [], isDiscovering: false, error: null });
@@ -176,6 +182,8 @@ export const useMcpStore = create<McpStore>((set, get) => {
             status,
             errorMessage,
           });
+        } else {
+          logger.warn('Status update for unknown server', serverId);
         }
 
         return { serverStates: newServerStates };

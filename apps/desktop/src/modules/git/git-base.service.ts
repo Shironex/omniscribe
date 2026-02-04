@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { exec, ExecException } from 'child_process';
 import { promisify } from 'util';
-import { GIT_TIMEOUT_MS } from '@omniscribe/shared';
+import { GIT_TIMEOUT_MS, createLogger } from '@omniscribe/shared';
 
 const execAsync = promisify(exec);
 
@@ -18,6 +18,8 @@ export interface ExecResult {
 
 @Injectable()
 export class GitBaseService {
+  private readonly logger = createLogger('GitBaseService');
+
   /**
    * Execute a git command with timeout and proper environment
    */
@@ -27,6 +29,7 @@ export class GitBaseService {
     timeoutMs: number = GIT_TIMEOUT_MS,
   ): Promise<ExecResult> {
     const command = `git ${args.join(' ')}`;
+    this.logger.debug(`execGit: ${command} (cwd: ${repoPath})`);
 
     try {
       const result = await execAsync(command, {
@@ -48,6 +51,7 @@ export class GitBaseService {
 
       // Check for timeout
       if (execError.killed) {
+        this.logger.warn(`Git command timed out after ${timeoutMs}ms: ${command}`);
         throw new Error(`Git command timed out after ${timeoutMs}ms: ${command}`);
       }
 
@@ -59,6 +63,7 @@ export class GitBaseService {
         };
       }
 
+      this.logger.error(`Git command failed: ${execError.message}`);
       throw new Error(`Git command failed: ${execError.message}`);
     }
   }

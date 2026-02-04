@@ -1,9 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { CommitInfo } from '@omniscribe/shared';
+import { CommitInfo, createLogger } from '@omniscribe/shared';
 import { GitBaseService } from './git-base.service';
 
 @Injectable()
 export class GitCommitService {
+  private readonly logger = createLogger('GitCommitService');
+
   constructor(private readonly gitBase: GitBaseService) {}
 
   /**
@@ -94,6 +96,7 @@ export class GitCommitService {
    */
   async stage(projectPath: string, files: string[]): Promise<void> {
     if (files.length === 0) return;
+    this.logger.debug(`Staging ${files.length} file(s) in ${projectPath}`);
 
     await this.gitBase.execGit(projectPath, ['add', '--', ...files]);
   }
@@ -103,6 +106,7 @@ export class GitCommitService {
    */
   async unstage(projectPath: string, files: string[]): Promise<void> {
     if (files.length === 0) return;
+    this.logger.debug(`Unstaging ${files.length} file(s) in ${projectPath}`);
 
     await this.gitBase.execGit(projectPath, ['restore', '--staged', '--', ...files]);
   }
@@ -112,6 +116,7 @@ export class GitCommitService {
    * @returns The commit hash of the new commit
    */
   async commit(projectPath: string, message: string): Promise<string> {
+    this.logger.info(`Creating commit in ${projectPath}`);
     await this.gitBase.execGit(projectPath, ['commit', '-m', message]);
 
     // Get the hash of the newly created commit
@@ -126,6 +131,7 @@ export class GitCommitService {
    * @returns The diff output as a string
    */
   async diff(projectPath: string, file?: string): Promise<string> {
+    this.logger.debug(`Getting diff for ${file || 'working tree'} in ${projectPath}`);
     const args = ['diff'];
     if (file) {
       args.push('--', file);

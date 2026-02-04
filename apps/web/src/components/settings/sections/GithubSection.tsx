@@ -1,4 +1,7 @@
 import { useEffect, useCallback } from 'react';
+import { createLogger } from '@omniscribe/shared';
+
+const logger = createLogger('GithubSection');
 import {
   Github,
   CheckCircle2,
@@ -19,6 +22,7 @@ export function GithubSection() {
   const setGithubCliLoading = useSettingsStore((state) => state.setGithubCliLoading);
 
   const refreshStatus = useCallback(async () => {
+    logger.debug('Fetching GitHub CLI status');
     setGithubCliLoading(true);
     try {
       if (window.electronAPI?.github?.getStatus) {
@@ -33,7 +37,7 @@ export function GithubSection() {
         });
       }
     } catch (error) {
-      console.error('Failed to get GitHub CLI status:', error);
+      logger.error('Failed to get GitHub CLI status:', error);
       setGithubCliStatus(null);
     }
   }, [setGithubCliStatus, setGithubCliLoading]);

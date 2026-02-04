@@ -367,7 +367,8 @@ export class GithubService {
         isFork: data.isFork || false,
         isArchived: data.isArchived || false,
       };
-    } catch {
+    } catch (error) {
+      this.logger.debug('Failed to get repo info:', error);
       return null;
     }
   }
@@ -562,7 +563,8 @@ export class GithubService {
         updatedAt: data.updatedAt,
         mergedAt: data.mergedAt || undefined,
       };
-    } catch {
+    } catch (error) {
+      this.logger.debug(`Failed to get PR #${prNumber}:`, error);
       return null;
     }
   }
@@ -601,7 +603,8 @@ export class GithubService {
         updatedAt: data.updatedAt,
         closedAt: data.closedAt || undefined,
       };
-    } catch {
+    } catch (error) {
+      this.logger.debug(`Failed to get issue #${issueNumber}:`, error);
       return null;
     }
   }

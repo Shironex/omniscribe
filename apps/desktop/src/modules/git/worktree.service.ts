@@ -9,6 +9,7 @@ import {
   USER_DATA_DIR,
   WORKTREES_DIR,
   APP_NAME_LOWER,
+  createLogger,
 } from '@omniscribe/shared';
 import { GitBaseService } from './git-base.service';
 
@@ -58,6 +59,8 @@ function sanitizeBranchForPath(branch: string): string | null {
 
 @Injectable()
 export class WorktreeService {
+  private readonly logger = createLogger('WorktreeService');
+
   constructor(private readonly gitBase: GitBaseService) {}
 
   /**
@@ -107,6 +110,8 @@ export class WorktreeService {
     branch?: string,
     location: WorktreeLocation = 'project',
   ): Promise<string | null> {
+    this.logger.info(`Preparing worktree for branch "${branch || 'current'}" in ${projectPath}`);
+
     // If no branch specified, work directly on the main repo
     if (!branch) {
       return null;
@@ -146,6 +151,7 @@ export class WorktreeService {
     }
 
     // Check if the branch exists locally or remotely
+    this.logger.debug(`Checking if branch "${branch}" exists locally or remotely`);
     let branchExists = false;
     let remoteBranchRef: string | null = null;
 
@@ -224,6 +230,7 @@ export class WorktreeService {
    * Clean up a worktree
    */
   async cleanup(projectPath: string, worktreePath: string): Promise<void> {
+    this.logger.info(`Cleaning up worktree at ${worktreePath}`);
     // Remove the worktree
     try {
       await this.gitBase.execGit(projectPath, ['worktree', 'remove', worktreePath, '--force']);
@@ -232,8 +239,8 @@ export class WorktreeService {
       try {
         await fs.rm(worktreePath, { recursive: true, force: true });
         await this.gitBase.execGit(projectPath, ['worktree', 'prune']);
-      } catch {
-        // Ignore cleanup errors
+      } catch (innerError) {
+        this.logger.warn(`Manual worktree cleanup failed for ${worktreePath}:`, innerError);
       }
     }
   }

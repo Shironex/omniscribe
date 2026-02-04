@@ -6,6 +6,7 @@ import {
   UserPreferences,
   WorkspaceStateResponse,
   DEFAULT_WORKTREE_SETTINGS,
+  createLogger,
 } from '@omniscribe/shared';
 
 // Re-export WorkspaceStateResponse as WorkspaceState for backward compatibility
@@ -73,6 +74,7 @@ const DEFAULT_QUICK_ACTIONS: QuickAction[] = [
  */
 @Injectable()
 export class WorkspaceService implements OnModuleInit {
+  private readonly logger = createLogger('WorkspaceService');
   private store: Store<StoreSchema>;
 
   constructor() {
@@ -94,6 +96,7 @@ export class WorkspaceService implements OnModuleInit {
    * Initialize default values on module init
    */
   onModuleInit(): void {
+    this.logger.info('Initializing workspace service');
     // Ensure quick actions exist
     const quickActions = this.store.get('quickActions');
     if (!quickActions || quickActions.length === 0) {
@@ -124,6 +127,7 @@ export class WorkspaceService implements OnModuleInit {
    * Save complete workspace state
    */
   saveWorkspaceState(state: Partial<WorkspaceState>): void {
+    this.logger.debug('Saving workspace state');
     if (state.tabs !== undefined) {
       this.store.set('tabs', state.tabs);
     }
@@ -174,6 +178,7 @@ export class WorkspaceService implements OnModuleInit {
    * Add a new tab
    */
   addTab(tab: ProjectTabDTO): ProjectTabDTO[] {
+    this.logger.debug(`Adding tab: ${tab.id} (${tab.projectPath})`);
     const tabs = this.getTabs();
     // Check if project is already open
     const existingIndex = tabs.findIndex(
@@ -211,6 +216,7 @@ export class WorkspaceService implements OnModuleInit {
    * Remove a tab
    */
   removeTab(tabId: string): { tabs: ProjectTabDTO[]; activeTabId: string | null } {
+    this.logger.debug(`Removing tab: ${tabId}`);
     const tabs = this.getTabs();
     const tabIndex = tabs.findIndex((t) => t.id === tabId);
 
@@ -372,6 +378,7 @@ export class WorkspaceService implements OnModuleInit {
    * Clear all data from the store
    */
   clear(): void {
+    this.logger.info('Clearing all workspace data');
     this.store.clear();
   }
 

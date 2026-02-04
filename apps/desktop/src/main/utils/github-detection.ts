@@ -1,8 +1,11 @@
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import type { GhCliStatus, GhCliAuthStatus } from '@omniscribe/shared';
+import { createLogger } from '@omniscribe/shared';
 import { joinPaths, getHomeDir, isWindows, isMac, isLinux } from './path';
 import { findCliInPath, findCliInLocalPaths, type CliDetectionResult } from './cli-detection';
+
+const logger = createLogger('GithubDetection');
 
 const execFileAsync = promisify(execFile);
 
@@ -60,7 +63,8 @@ export async function getGhCliVersion(cliPath: string): Promise<string | undefin
     const { stdout } = await execFileAsync(cliPath, ['--version']);
     const match = stdout.match(/gh version ([^\s(]+)/);
     return match ? match[1] : stdout.trim().split('\n')[0];
-  } catch {
+  } catch (error) {
+    logger.debug('Failed to get gh CLI version:', error);
     return undefined;
   }
 }
@@ -110,6 +114,7 @@ export async function checkGhAuth(cliPath: string): Promise<GhCliAuthStatus> {
       return { authenticated: false };
     }
 
+    logger.debug('Unexpected error checking gh auth status:', error);
     return { authenticated: false };
   }
 }

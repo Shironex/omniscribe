@@ -185,7 +185,7 @@ export class WorkspaceGateway implements OnGatewayInit {
   handleGetWorkspaceState(
     @ConnectedSocket() _client: Socket,
   ): WorkspaceState {
-    this.logger.log('Getting workspace state');
+    this.logger.debug('Getting workspace state');
     return this.workspaceService.getWorkspaceState();
   }
 
@@ -197,7 +197,7 @@ export class WorkspaceGateway implements OnGatewayInit {
     @MessageBody() payload: SaveStatePayload,
     @ConnectedSocket() _client: Socket,
   ): SuccessResponse {
-    this.logger.log('Saving workspace state');
+    this.logger.debug('Saving workspace state');
     this.workspaceService.saveWorkspaceState(payload);
     return { success: true };
   }
@@ -284,7 +284,7 @@ export class WorkspaceGateway implements OnGatewayInit {
     @MessageBody() payload: SelectTabPayload,
     @ConnectedSocket() client: Socket,
   ): TabsResponse {
-    this.logger.log(`Selecting tab: ${payload.tabId}`);
+    this.logger.debug(`Selecting tab: ${payload.tabId}`);
 
     const tabs = this.workspaceService.selectTab(payload.tabId);
 
@@ -305,7 +305,7 @@ export class WorkspaceGateway implements OnGatewayInit {
     @MessageBody() payload: UpdatePreferencePayload,
     @ConnectedSocket() client: Socket,
   ): PreferencesResponse {
-    this.logger.log(`Updating preference: ${payload.key}`);
+    this.logger.debug(`Updating preference: ${payload.key}`);
 
     const preferences = this.workspaceService.setPreference(payload.key, payload.value);
 

@@ -1,7 +1,10 @@
 import { useCallback, useRef, useEffect } from 'react';
+import { createLogger } from '@omniscribe/shared';
 import type { ExtendedSessionConfig } from '@/stores/useSessionStore';
 import { removeSession } from '@/lib/session';
 import { killTerminal } from '@/lib/terminal';
+
+const logger = createLogger('SessionLifecycle');
 
 interface UseSessionLifecycleReturn {
   /** Handler to stop all active sessions */
@@ -25,6 +28,7 @@ export function useSessionLifecycle(
 
   // Stop all sessions handler
   const handleStopAll = useCallback(async () => {
+    logger.info('Stopping all sessions');
     // Capture current sessions at execution time to avoid stale closure
     const sessions = [...sessionsRef.current];
 
@@ -34,6 +38,7 @@ export function useSessionLifecycle(
         // Skip only disconnected sessions (already closed)
         // Note: 'idle' status means Claude is waiting for input - still a running session
         if (session.status === 'disconnected') {
+          logger.debug('Skipping disconnected session', session.id);
           return;
         }
         try {
@@ -44,7 +49,7 @@ export function useSessionLifecycle(
           // Remove the session
           await removeSession(session.id);
         } catch (error) {
-          console.error(`Failed to stop session ${session.id}:`, error);
+          logger.error('Failed to stop session', session.id, error);
         }
       })
     );
@@ -52,6 +57,7 @@ export function useSessionLifecycle(
 
   // Kill a session handler
   const handleKillSession = useCallback(async (sessionId: string) => {
+    logger.info('Killing session', sessionId);
     try {
       // Find the session to get the correct terminalSessionId
       const session = sessionsRef.current.find((s) => s.id === sessionId);
@@ -60,7 +66,7 @@ export function useSessionLifecycle(
       }
       await removeSession(sessionId);
     } catch (error) {
-      console.error(`Failed to kill session ${sessionId}:`, error);
+      logger.error('Failed to kill session', sessionId, error);
     }
   }, []);
 

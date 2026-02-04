@@ -1,9 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { GitUserConfig } from '@omniscribe/shared';
+import { GitUserConfig, createLogger } from '@omniscribe/shared';
 import { GitBaseService } from './git-base.service';
 
 @Injectable()
 export class GitRepoService {
+  private readonly logger = createLogger('GitRepoService');
+
   constructor(private readonly gitBase: GitBaseService) {}
 
   /**
@@ -13,7 +15,8 @@ export class GitRepoService {
     try {
       await this.gitBase.execGit(repoPath, ['rev-parse', '--git-dir']);
       return true;
-    } catch {
+    } catch (error) {
+      this.logger.debug(`Path is not a git repository: ${repoPath}`, error);
       return false;
     }
   }
@@ -42,8 +45,8 @@ export class GitRepoService {
         'user.name',
       ]);
       config.name = name.trim() || undefined;
-    } catch {
-      // Config not set
+    } catch (error) {
+      this.logger.debug('Git user.name not configured:', error);
     }
 
     try {
@@ -53,8 +56,8 @@ export class GitRepoService {
         'user.email',
       ]);
       config.email = email.trim() || undefined;
-    } catch {
-      // Config not set
+    } catch (error) {
+      this.logger.debug('Git user.email not configured:', error);
     }
 
     return config;

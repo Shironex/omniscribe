@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage, StateStorage } from 'zustand/middleware';
-import { QuickAction } from '@omniscribe/shared';
+import { QuickAction, createLogger } from '@omniscribe/shared';
+
+const logger = createLogger('QuickActionStore');
 
 /**
  * Default quick actions for new installations
@@ -168,6 +170,7 @@ type QuickActionStore = QuickActionState & QuickActionActions;
  */
 const electronStorage: StateStorage = {
   getItem: async (name: string): Promise<string | null> => {
+    logger.debug('Storage getItem:', name);
     if (typeof window !== 'undefined' && window.electronAPI?.store) {
       const value = await window.electronAPI.store.get<string>(name);
       return value ?? null;
@@ -176,6 +179,7 @@ const electronStorage: StateStorage = {
     return localStorage.getItem(name);
   },
   setItem: async (name: string, value: string): Promise<void> => {
+    logger.debug('Storage setItem:', name);
     if (typeof window !== 'undefined' && window.electronAPI?.store) {
       await window.electronAPI.store.set(name, value);
     } else {
@@ -184,6 +188,7 @@ const electronStorage: StateStorage = {
     }
   },
   removeItem: async (name: string): Promise<void> => {
+    logger.debug('Storage removeItem:', name);
     if (typeof window !== 'undefined' && window.electronAPI?.store) {
       await window.electronAPI.store.delete(name);
     } else {
@@ -211,7 +216,7 @@ export const useQuickActionStore = create<QuickActionStore>()(
         set((state) => {
           // Check for duplicate ID
           if (state.actions.some((a) => a.id === action.id)) {
-            console.warn(`Quick action with ID "${action.id}" already exists`);
+            logger.warn('Duplicate quick action ID:', action.id);
             return state;
           }
           return { actions: [...state.actions, action] };
@@ -244,6 +249,7 @@ export const useQuickActionStore = create<QuickActionStore>()(
       },
 
       resetToDefaults: () => {
+        logger.info('Resetting to default actions');
         set({ actions: DEFAULT_QUICK_ACTIONS });
       },
 

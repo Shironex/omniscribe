@@ -2,8 +2,11 @@ import { existsSync, readFileSync } from 'fs';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import type { ClaudeCliStatus } from '@omniscribe/shared';
+import { createLogger } from '@omniscribe/shared';
 import { joinPaths, getHomeDir, isWindows } from './path';
 import { findCliInPath, findCliInLocalPaths, type CliDetectionResult } from './cli-detection';
+
+const logger = createLogger('ClaudeDetection');
 
 const execFileAsync = promisify(execFile);
 
@@ -76,7 +79,8 @@ export async function getClaudeCliVersion(cliPath: string): Promise<string | und
   try {
     const { stdout } = await execFileAsync(cliPath, ['--version']);
     return stdout.trim();
-  } catch {
+  } catch (error) {
+    logger.debug('Failed to get Claude CLI version:', error);
     return undefined;
   }
 }
@@ -114,8 +118,8 @@ export async function checkClaudeAuth(): Promise<{ authenticated: boolean }> {
       if (hasToken) {
         return { authenticated: true };
       }
-    } catch {
-      // Failed to read credentials
+    } catch (error) {
+      logger.debug(`Failed to read credentials from ${credPath}:`, error);
     }
   }
 

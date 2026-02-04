@@ -1,7 +1,10 @@
 import { useEffect, useRef, useMemo } from 'react';
+import { createLogger } from '@omniscribe/shared';
 import { useWorkspaceStore } from '@/stores/useWorkspaceStore';
 import { useSettingsStore } from '@/stores/useSettingsStore';
 import type { Theme } from '@omniscribe/shared';
+
+const logger = createLogger('Preferences');
 
 /**
  * Hook for workspace theme synchronization.
@@ -51,6 +54,7 @@ export function useWorkspacePreferences(): void {
     prevSettingsThemeRef.current = themeToApply as Theme;
 
     if (themeToApply !== settingsTheme) {
+      logger.debug('Initial theme sync:', themeToApply);
       setSettingsTheme(themeToApply as Theme);
     }
   }, [isWorkspaceRestored, activeTab?.theme, workspacePreferences.theme, settingsTheme, setSettingsTheme]);
@@ -75,6 +79,7 @@ export function useWorkspacePreferences(): void {
     }
 
     if (activeTab.theme && activeTab.theme !== settingsTheme) {
+      logger.debug('Tab switch theme:', activeTab.theme);
       // Set flag to prevent the settings-to-tab effect from firing
       isTabSwitchInProgressRef.current = true;
       prevSettingsThemeRef.current = activeTab.theme;

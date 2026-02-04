@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { createLogger } from '@omniscribe/shared';
 import { useGitStore } from '@/stores/useGitStore';
 import { useMcpStore } from '@/stores/useMcpStore';
 import type { Branch } from '@/components/shared/BranchSelector';
+
+const logger = createLogger('ProjectGit');
 
 interface UseProjectGitReturn {
   /** Branches formatted for BranchSelector */
@@ -37,8 +40,10 @@ export function useProjectGit(activeProjectPath: string | null): UseProjectGitRe
     // If project path changed, clear old state and fetch new data
     if (activeProjectPath !== prevProjectPath) {
       // Clear old git data first to avoid showing stale branch in top bar
+      logger.debug('Clearing stale git state for project change');
       clearGitState();
       if (activeProjectPath) {
+        logger.info('Project changed, refreshing git data for', activeProjectPath);
         // Fetch fresh data for the new project
         fetchBranches(activeProjectPath);
         // Also discover MCP servers for the project

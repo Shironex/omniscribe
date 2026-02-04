@@ -1,4 +1,7 @@
 import { useCallback, useMemo, useEffect } from 'react';
+import { createLogger } from '@omniscribe/shared';
+
+const logger = createLogger('App');
 import {
   ProjectTabs,
   TopBar,
@@ -94,9 +97,11 @@ function App() {
     // Find the session to get terminalSessionId
     const session = terminalSessions.find(s => s.id === sessionId);
     if (!session?.terminalSessionId) {
-      console.warn('[App] No terminal session for quick action');
+      logger.warn('No terminal session for quick action');
       return;
     }
+
+    logger.debug('Executing quick action', actionId, 'on session', sessionId);
 
     // Build command based on handler type
     const params = action.params ?? {};

@@ -1,4 +1,7 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import { createLogger } from '@omniscribe/shared';
+
+const logger = createLogger('Sidebar');
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import {
@@ -125,7 +128,7 @@ export function Sidebar({
       ?? sessions.find((s) => s.status === 'active' || s.status === 'executing');
 
     if (!targetSession?.terminalSessionId) {
-      console.warn('[Sidebar] No active terminal session to execute action');
+      logger.warn('No active terminal session to execute action');
       return;
     }
 

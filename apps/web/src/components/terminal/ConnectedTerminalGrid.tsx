@@ -1,4 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { createLogger } from '@omniscribe/shared';
+
+const logger = createLogger('TerminalGrid');
 import { TerminalGrid } from './TerminalGrid';
 import { useSessionStore } from '@/stores/useSessionStore';
 import { useWorkspaceStore, selectActiveTab } from '@/stores/useWorkspaceStore';
@@ -128,7 +131,7 @@ export function ConnectedTerminalGrid({ className }: ConnectedTerminalGridProps)
   const handleLaunch = useCallback(
     async (slotId: string) => {
       if (!activeProjectPath) {
-        console.warn('No active project to launch session');
+        logger.warn('No active project to launch session');
         return;
       }
 
@@ -136,6 +139,7 @@ export function ConnectedTerminalGrid({ className }: ConnectedTerminalGridProps)
       if (!slot) return;
 
       try {
+        logger.info('Launching session for slot', slotId);
         // Create the session via socket
         const backendAiMode = mapAiModeToBackend(slot.aiMode);
         const session = await createSession(backendAiMode, activeProjectPath, slot.branch);
@@ -149,7 +153,7 @@ export function ConnectedTerminalGrid({ className }: ConnectedTerminalGridProps)
         // Remove the pre-launch slot
         setPreLaunchSlots((prev) => prev.filter((s) => s.id !== slotId));
       } catch (error) {
-        console.error('Failed to launch session:', error);
+        logger.error('Failed to launch session:', error);
       }
     },
     [activeProjectPath, preLaunchSlots, updateSession]
@@ -157,6 +161,7 @@ export function ConnectedTerminalGrid({ className }: ConnectedTerminalGridProps)
 
   // Kill a session handler
   const handleKill = useCallback(async (sessionId: string) => {
+    logger.info('Killing session', sessionId);
     try {
       const sessionIdNum = parseInt(sessionId, 10);
       if (!isNaN(sessionIdNum)) {
@@ -164,7 +169,7 @@ export function ConnectedTerminalGrid({ className }: ConnectedTerminalGridProps)
       }
       await removeSession(sessionId);
     } catch (error) {
-      console.error(`Failed to kill session ${sessionId}:`, error);
+      logger.error('Failed to kill session', sessionId, error);
     }
   }, []);
 

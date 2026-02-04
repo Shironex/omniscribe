@@ -1,4 +1,7 @@
 import { io, Socket } from 'socket.io-client';
+import { createLogger } from '@omniscribe/shared';
+
+const logger = createLogger('Socket');
 
 const SOCKET_URL = 'ws://localhost:3001';
 
@@ -66,27 +69,27 @@ export function disconnectSocket(): void {
 
 // Connection event handlers
 socket.on('connect', () => {
-  console.log('[Socket] Connected to server');
+  logger.info('Connected to server');
 });
 
 socket.on('disconnect', (reason) => {
-  console.log(`[Socket] Disconnected: ${reason}`);
+  logger.warn('Disconnected:', reason);
 });
 
 socket.on('reconnect', (attemptNumber) => {
-  console.log(`[Socket] Reconnected after ${attemptNumber} attempts`);
+  logger.info('Reconnected after', attemptNumber, 'attempts');
 });
 
 socket.on('reconnect_attempt', (attemptNumber) => {
-  console.log(`[Socket] Reconnection attempt ${attemptNumber}`);
+  logger.debug('Reconnection attempt', attemptNumber);
 });
 
 socket.on('reconnect_error', (error) => {
-  console.error('[Socket] Reconnection error:', error);
+  logger.error('Reconnection error:', error);
 });
 
 socket.on('reconnect_failed', () => {
-  console.error('[Socket] Reconnection failed after all attempts');
+  logger.error('Reconnection failed after all attempts');
 });
 
 export default socket;

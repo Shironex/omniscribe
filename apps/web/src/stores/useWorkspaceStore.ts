@@ -1,5 +1,8 @@
 import { create } from 'zustand';
+import { createLogger } from '@omniscribe/shared';
 import { socket } from '@/lib/socket';
+
+const logger = createLogger('WorkspaceStore');
 import type {
   Theme,
   ProjectTab,
@@ -174,6 +177,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => {
 
     // Custom actions
     openProject: (projectPath: string, name?: string) => {
+    logger.info('Opening project', projectPath);
     const state = get();
     const normalizedPath = projectPath.replace(/\\/g, '/');
 
@@ -220,6 +224,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => {
   },
 
   closeTab: (tabId: string) => {
+    logger.debug('closeTab', tabId);
     socket.emit(
       'workspace:remove-tab',
       { tabId },
@@ -235,6 +240,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => {
   },
 
   selectTab: (tabId: string) => {
+    logger.debug('selectTab', tabId);
     // Optimistic update: set activeTabId immediately to prevent race conditions
     // This ensures activeTab computed value is accurate before socket response
     set({ activeTabId: tabId });
@@ -251,6 +257,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => {
         } else {
           // Rollback on failure - restore previous state
           // The tabs array still has the correct state
+          logger.warn('selectTab rollback for', tabId);
         }
       }
     );
@@ -326,6 +333,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => {
           // Clear session IDs on restore - they'll be re-associated
           const cleanedTabs = tabs.map((tab) => ({ ...tab, sessionIds: [] }));
 
+          logger.info('Restored state:', cleanedTabs.length, 'tabs');
           set({
             tabs: cleanedTabs,
             activeTabId: response.activeTabId,
@@ -335,6 +343,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => {
             error: null,
           });
         } else {
+          logger.warn('Empty restore response');
           set({
             isLoading: false,
             isRestored: true,

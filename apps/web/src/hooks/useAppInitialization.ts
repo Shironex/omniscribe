@@ -1,9 +1,12 @@
 import { useEffect } from 'react';
+import { createLogger } from '@omniscribe/shared';
 import { useSessionStore } from '@/stores/useSessionStore';
 import { useWorkspaceStore } from '@/stores/useWorkspaceStore';
 import { useGitStore } from '@/stores/useGitStore';
 import { useMcpStore } from '@/stores/useMcpStore';
 import { connectSocket } from '@/lib/socket';
+
+const logger = createLogger('AppInit');
 
 /**
  * Hook for app initialization - socket connection and all store listener setup/cleanup.
@@ -31,21 +34,25 @@ export function useAppInitialization(): void {
   useEffect(() => {
     const init = async () => {
       try {
+        logger.info('Initializing app...');
         await connectSocket();
+        logger.info('Socket connected');
         initSessionListeners();
         initGitListeners();
         initWorkspaceListeners();
         initMcpListeners();
+        logger.info('All listeners initialized');
         // Fetch internal MCP status on app start
         fetchInternalMcpStatus();
       } catch (error) {
-        console.error('Failed to initialize:', error);
+        logger.error('Failed to initialize:', error);
       }
     };
 
     init();
 
     return () => {
+      logger.debug('Cleaning up listeners');
       cleanupSessionListeners();
       cleanupGitListeners();
       cleanupWorkspaceListeners();

@@ -4,7 +4,10 @@ import type {
   ClaudeInstallCommandOptions,
   ClaudeInstallCommand,
 } from '@omniscribe/shared';
+import { createLogger } from '@omniscribe/shared';
 import { isWindows } from './path';
+
+const logger = createLogger('VersionCheck');
 
 /** Cache for latest version info */
 let cachedLatestVersion: { version: string; timestamp: number } | null = null;
@@ -43,7 +46,7 @@ export async function fetchLatestVersion(): Promise<string | null> {
     }
     return null;
   } catch (error) {
-    console.error('Failed to fetch latest Claude CLI version:', error);
+    logger.error('Failed to fetch latest Claude CLI version:', error);
     // Return cached value if available, even if expired
     return cachedLatestVersion?.version ?? null;
   }
@@ -79,7 +82,7 @@ export async function fetchAvailableVersions(limit = 20): Promise<string[]> {
     cachedVersionList = { versions: sortedVersions, timestamp: Date.now() };
     return sortedVersions.slice(0, limit);
   } catch (error) {
-    console.error('Failed to fetch available Claude CLI versions:', error);
+    logger.error('Failed to fetch available Claude CLI versions:', error);
     // Return cached value if available, even if expired
     return cachedVersionList?.versions.slice(0, limit) ?? [];
   }

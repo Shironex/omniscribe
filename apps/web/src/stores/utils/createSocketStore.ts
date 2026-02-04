@@ -1,5 +1,8 @@
 import type { StoreApi } from 'zustand';
 import { socket } from '@/lib/socket';
+import { createLogger } from '@omniscribe/shared';
+
+const logger = createLogger('SocketStore');
 
 /**
  * Common state for socket-connected stores
@@ -109,6 +112,7 @@ export function createSocketListeners<T extends SocketStoreState>(
 
     // Register custom listeners (store refs for cleanup)
     for (const config of listeners) {
+      logger.debug('Registering listener:', config.event);
       const handler = (data: unknown) => {
         config.handler(data, get);
       };
@@ -119,6 +123,7 @@ export function createSocketListeners<T extends SocketStoreState>(
     // Handle connection error (store ref for cleanup)
     if (includeConnectionErrorHandler) {
       connectErrorHandler = (err: Error) => {
+        logger.error('Connection error:', err.message);
         setError(`Connection error: ${err.message}`);
       };
       socket.on('connect_error', connectErrorHandler);
@@ -126,6 +131,7 @@ export function createSocketListeners<T extends SocketStoreState>(
 
     // Handle reconnection (store ref for cleanup)
     connectHandler = () => {
+      logger.info('Reconnected, clearing error');
       setError(null);
       onConnect?.(get);
     };
@@ -135,6 +141,7 @@ export function createSocketListeners<T extends SocketStoreState>(
   };
 
   const cleanupListeners = () => {
+    logger.debug('Cleaning up listeners');
     // Remove custom listeners using stored references
     for (const [event, handler] of customHandlers) {
       socket.off(event, handler);

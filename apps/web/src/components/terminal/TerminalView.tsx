@@ -1,4 +1,7 @@
 import React, { useEffect, useRef, useCallback, useState } from 'react';
+import { createLogger } from '@omniscribe/shared';
+
+const logger = createLogger('TerminalView');
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
@@ -30,6 +33,7 @@ const isTerminalReady = (terminal: Terminal | null): terminal is Terminal => {
     const dims = (terminal as unknown as { _core?: { _renderService?: { dimensions?: unknown } } })._core?._renderService?.dimensions;
     return dims !== undefined;
   } catch {
+    logger.debug('isTerminalReady check failed (terminal may be initializing)');
     return false;
   }
 };
@@ -49,7 +53,7 @@ const safeFit = (fitAddon: FitAddon | null, terminal: Terminal | null, container
     fitAddon.fit();
     return { cols: terminal.cols, rows: terminal.rows };
   } catch {
-    // Silently handle - terminal may be in transition state
+    logger.debug('safeFit failed (terminal in transition state)');
     return null;
   }
 };
@@ -86,7 +90,7 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
       try {
         xtermRef.current.write(data);
       } catch {
-        // Terminal may be disposed - ignore
+        logger.debug('handleOutput write failed (terminal may be disposed)');
       }
     }
   }, []);
@@ -106,6 +110,7 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
     // Guard against post-disposal calls
     if (isDisposedRef.current || !isReadyRef.current) return;
 
+    logger.debug('Fitting terminal');
     const result = safeFit(fitAddonRef.current, xtermRef.current, terminalRef.current);
     if (result) {
       resizeTerminal(sessionIdRef.current, result.cols, result.rows);
@@ -181,6 +186,7 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
       terminal.loadAddon(webLinksAddon);
 
       // Open terminal in container
+      logger.info('Terminal opened for session', sessionId);
       terminal.open(container);
 
       // Store refs AFTER opening (terminal is now attached to DOM)
@@ -202,6 +208,7 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
           // Guard against double-connection from React StrictMode's double-mounting
           if (!isDisposedRef.current && !connectionRef.current) {
             connectionRef.current = connectTerminal(sessionId, handleOutput, handleClose);
+            logger.info('Terminal connected for session', sessionId);
             setStatus('connected');
           }
         } else if (retriesLeft > 0) {
@@ -211,6 +218,7 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
           }, 50);
         } else {
           // Give up on retries, try to connect anyway
+          logger.warn('Fit retries exhausted, connecting anyway');
           isReadyRef.current = true;
           // Guard against double-connection from React StrictMode's double-mounting
           if (!isDisposedRef.current && !connectionRef.current) {
@@ -251,6 +259,7 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
 
     // Cleanup
     return () => {
+      logger.debug('Cleaning up terminal for session', sessionId);
       // Mark as disposed FIRST to prevent any new operations
       isDisposedRef.current = true;
       isReadyRef.current = false;
@@ -278,7 +287,7 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
         try {
           xtermRef.current.dispose();
         } catch {
-          // Safe to ignore - terminal may already be disposed
+          logger.debug('Terminal dispose failed (may already be disposed)');
         }
         xtermRef.current = null;
       }
@@ -294,7 +303,7 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
       try {
         xtermRef.current.focus();
       } catch {
-        // Safe to ignore - terminal may be in transition
+        logger.debug('Focus failed (terminal may be in transition)');
       }
     }
   }, [isFocused]);

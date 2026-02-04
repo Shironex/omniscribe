@@ -1,8 +1,11 @@
 import { useCallback, useMemo } from 'react';
+import { createLogger } from '@omniscribe/shared';
 import { useWorkspaceStore, type ProjectTab } from '@/stores/useWorkspaceStore';
 import { useSessionStore } from '@/stores/useSessionStore';
 import type { Tab } from '@/components';
 import type { UISessionStatus } from '@omniscribe/shared';
+
+const logger = createLogger('WorkspaceTabs');
 
 interface UseWorkspaceTabsReturn {
   /** All workspace tabs in UI format */
@@ -80,27 +83,29 @@ export function useWorkspaceTabs(): UseWorkspaceTabsReturn {
   // Directory selection handler
   const handleSelectDirectory = useCallback(async () => {
     if (!window.electronAPI?.dialog) {
-      console.warn('Electron dialog API not available');
+      logger.warn('Electron dialog API not available');
       return;
     }
 
     try {
       const selectedPath = await window.electronAPI.dialog.openDirectory();
       if (selectedPath) {
+        logger.info('Directory selected:', selectedPath);
         // Validate the project path if available
         if (window.electronAPI.app?.isValidProject) {
           const result = await window.electronAPI.app.isValidProject(selectedPath);
           if (!result.valid) {
-            console.warn('Invalid project:', result.reason);
+            logger.warn('Invalid project directory:', result.reason);
             // Could show a dialog here
           }
         }
 
+        logger.info('Opening project', selectedPath);
         // Open the project in workspace
         openProject(selectedPath);
       }
     } catch (error) {
-      console.error('Failed to select directory:', error);
+      logger.error('Failed to select directory:', error);
     }
   }, [openProject]);
 

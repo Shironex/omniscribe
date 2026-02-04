@@ -1,5 +1,8 @@
 import { useState, useCallback, useMemo } from 'react';
+import { createLogger } from '@omniscribe/shared';
 import { useSessionStore, type ExtendedSessionConfig } from '@/stores/useSessionStore';
+
+const logger = createLogger('ProjectSessions');
 import type { StatusCounts } from '@/components';
 import type { TerminalSession, PreLaunchSlot } from '@/components/terminal/TerminalGrid';
 import { mapSessionStatus } from '@omniscribe/shared';
@@ -86,7 +89,7 @@ export function useProjectSessions(
 
   // Handle session close from terminal
   const handleSessionClose = useCallback(async (sessionId: string, exitCode: number) => {
-    console.log(`Session ${sessionId} closed with exit code ${exitCode}`);
+    logger.info('Session closed', sessionId, 'exit code:', exitCode);
     // Session will be removed by the socket event handler
   }, []);
 

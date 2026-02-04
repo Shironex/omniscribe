@@ -1,7 +1,9 @@
 import { exec, spawn } from 'child_process';
 import { promisify } from 'util';
+import { createLogger } from '@omniscribe/shared';
 
 const execAsync = promisify(exec);
+const logger = createLogger('TerminalUtil');
 
 /**
  * Security: Escape a string for use in a shell command
@@ -64,6 +66,7 @@ export async function openTerminalWithCommand(command: string): Promise<void> {
   }
 
   const platform = process.platform;
+  logger.info(`Opening terminal with command on ${platform}`);
 
   if (platform === 'win32') {
     // Windows: Use spawn with argument array to avoid shell interpretation
@@ -103,6 +106,7 @@ export async function openTerminalWithCommand(command: string): Promise<void> {
 
       proc.on('error', () => {
         // Try konsole as fallback
+        logger.warn('gnome-terminal not available, falling back to konsole');
         const konsole = spawn('konsole', ['-e', 'bash', '-c', bashCommand], {
           detached: true,
           stdio: 'ignore',
@@ -111,6 +115,7 @@ export async function openTerminalWithCommand(command: string): Promise<void> {
 
         konsole.on('error', () => {
           // Try xterm as last resort
+          logger.warn('konsole not available, falling back to xterm');
           const xterm = spawn('xterm', ['-hold', '-e', command], {
             detached: true,
             stdio: 'ignore',

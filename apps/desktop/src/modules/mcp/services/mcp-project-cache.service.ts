@@ -21,7 +21,7 @@ export class McpProjectCacheService {
    */
   setServers(projectPath: string, servers: McpServerConfig[]): void {
     this.projectServers.set(projectPath, servers);
-    this.logger.log(`Cached ${servers.length} servers for ${projectPath}`);
+    this.logger.debug(`Cached ${servers.length} servers for ${projectPath}`);
   }
 
   /**
@@ -48,7 +48,7 @@ export class McpProjectCacheService {
    */
   clearServers(projectPath: string): void {
     if (this.projectServers.delete(projectPath)) {
-      this.logger.log(`Cleared cache for ${projectPath}`);
+      this.logger.debug(`Cleared cache for ${projectPath}`);
     }
   }
 
@@ -57,6 +57,6 @@ export class McpProjectCacheService {
    */
   clearAll(): void {
     this.projectServers.clear();
-    this.logger.log('Cleared all cached servers');
+    this.logger.debug('Cleared all cached servers');
   }
 }

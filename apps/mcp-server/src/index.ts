@@ -17,8 +17,9 @@
  */
 
 import { startServer } from './server.js';
+import { logger } from './utils/index.js';
 
 startServer().catch((error) => {
-  console.error('[omniscribe-mcp] Fatal error:', error);
+  logger.error('Fatal error:', error);
   process.exit(1);
 });

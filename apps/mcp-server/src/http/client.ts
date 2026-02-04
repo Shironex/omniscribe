@@ -45,7 +45,7 @@ export function createHttpClient(
       timestamp: new Date().toISOString(),
     };
 
-    logger.info(`Sending status to ${statusUrl}: state=${state}${message ? `, message=${message}` : ''}`);
+    logger.debug(`Sending status to ${statusUrl}: state=${state}${message ? `, message=${message}` : ''}`);
 
     try {
       const response = await fetch(statusUrl, {
@@ -55,7 +55,7 @@ export function createHttpClient(
         signal: AbortSignal.timeout(5000),
       });
 
-      logger.info(`Status response: ${response.status}`);
+      logger.debug(`Status response: ${response.status}`);
       return response.ok;
     } catch (error) {
       logger.error('Status report error:', error);

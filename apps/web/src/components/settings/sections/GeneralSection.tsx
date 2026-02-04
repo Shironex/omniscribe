@@ -1,4 +1,7 @@
 import { useState, useEffect } from 'react';
+import { createLogger } from '@omniscribe/shared';
+
+const logger = createLogger('GeneralSection');
 import { Info } from 'lucide-react';
 import { clsx } from 'clsx';
 import { APP_NAME } from '@omniscribe/shared';
@@ -10,10 +13,11 @@ export function GeneralSection() {
     async function fetchVersion() {
       if (window.electronAPI?.app?.getVersion) {
         try {
+          logger.debug('Fetching app version');
           const v = await window.electronAPI.app.getVersion();
           setVersion(v);
         } catch (error) {
-          console.error('Failed to get app version:', error);
+          logger.error('Failed to get app version:', error);
         }
       }
     }

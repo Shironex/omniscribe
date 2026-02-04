@@ -62,7 +62,9 @@ process.on('unhandledRejection', (reason) => {
   logger.error('Unhandled rejection:', reason);
 });
 
-app.whenReady().then(bootstrap);
+app.whenReady().then(bootstrap).catch((error) => {
+  logger.error('Failed to bootstrap application:', error);
+});
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
@@ -71,6 +73,7 @@ app.on('window-all-closed', () => {
 });
 
 app.on('activate', () => {
+  logger.info('App activated');
   if (BrowserWindow.getAllWindows().length === 0) {
     bootstrap();
   }

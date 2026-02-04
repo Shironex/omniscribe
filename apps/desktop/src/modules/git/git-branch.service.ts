@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { BranchInfo } from '@omniscribe/shared';
+import { BranchInfo, createLogger } from '@omniscribe/shared';
 import { GitBaseService } from './git-base.service';
 
 /**
@@ -56,6 +56,8 @@ function isValidGitRefName(name: string): boolean {
 
 @Injectable()
 export class GitBranchService {
+  private readonly logger = createLogger('GitBranchService');
+
   constructor(private readonly gitBase: GitBaseService) {}
 
   /**
@@ -233,7 +235,8 @@ export class GitBranchService {
           }
         }
       }
-    } catch {
+    } catch (error) {
+      this.logger.debug('Failed to enrich branches with tracking info:', error);
       // Continue without enrichment - basic branch info is still useful
     }
   }
@@ -338,8 +341,10 @@ export class GitBranchService {
   async checkout(repoPath: string, branch: string): Promise<void> {
     // Security: Validate branch name to prevent injection
     if (!isValidGitRefName(branch)) {
+      this.logger.warn(`Rejected invalid branch name for checkout: ${branch}`);
       throw new Error(`Invalid branch name: ${branch}`);
     }
+    this.logger.debug(`Checking out branch "${branch}" in ${repoPath}`);
     await this.gitBase.execGit(repoPath, ['checkout', branch]);
   }
 
@@ -353,12 +358,15 @@ export class GitBranchService {
   ): Promise<void> {
     // Security: Validate branch name to prevent injection
     if (!isValidGitRefName(name)) {
+      this.logger.warn(`Rejected invalid branch name for create: ${name}`);
       throw new Error(`Invalid branch name: ${name}`);
     }
     if (startPoint && !isValidGitRefName(startPoint)) {
+      this.logger.warn(`Rejected invalid start point: ${startPoint}`);
       throw new Error(`Invalid start point: ${startPoint}`);
     }
 
+    this.logger.debug(`Creating branch "${name}" in ${repoPath}${startPoint ? ` from ${startPoint}` : ''}`);
     const args = ['checkout', '-b', name];
     if (startPoint) {
       args.push(startPoint);
