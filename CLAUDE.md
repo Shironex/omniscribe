@@ -30,6 +30,11 @@ pnpm format
 # Package desktop app for distribution
 pnpm --filter @omniscribe/desktop package
 
+# Platform-specific builds
+pnpm package:win    # Windows
+pnpm package:mac    # macOS
+pnpm package:linux  # Linux
+
 # Rebuild node-pty after electron update
 pnpm --filter @omniscribe/desktop rebuild
 ```
@@ -66,7 +71,7 @@ Located in `apps/web/src/`:
 
 ### Shared Package
 
-`packages/shared/src/types/` contains TypeScript types shared between frontend and backend (session.ts, workspace.ts, mcp.ts, git.ts, payloads.ts).
+`packages/shared/src/types/` contains TypeScript types shared between frontend and backend (session.ts, workspace.ts, mcp.ts, git.ts, payloads.ts). The `payloads.ts` file defines typed request/response contracts for all WebSocket events - always reference these types when adding new socket communication.
 
 ## Key Patterns
 
@@ -81,4 +86,10 @@ Each backend module follows: `*.module.ts`, `*.service.ts`, `*.gateway.ts` (WebS
 
 ### State Management
 
-Zustand stores in `apps/web/src/stores/` connect to backend via Socket.io. The `createSocketStore` utility in `stores/utils/` provides common socket subscription patterns.
+Zustand stores in `apps/web/src/stores/` connect to backend via Socket.io. The `createSocketStore.ts` utility provides:
+- `SocketStoreSlice` - Common state (isLoading, error, listenersInitialized)
+- `createSocketListeners()` - Standardized socket event subscription with automatic cleanup
+
+### Logging (Backend)
+
+Services use NestJS Logger: `private readonly logger = new Logger(ServiceName.name);`
