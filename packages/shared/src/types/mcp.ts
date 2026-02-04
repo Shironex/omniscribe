@@ -218,3 +218,37 @@ export interface McpResourceReadResult {
   /** Whether content is base64 encoded */
   isBase64?: boolean;
 }
+
+/**
+ * Session status states for MCP status reporting
+ */
+export type SessionStatusState =
+  | 'idle'
+  | 'working'
+  | 'planning'
+  | 'needs_input'
+  | 'finished'
+  | 'error';
+
+/**
+ * Status payload received from MCP server via HTTP POST
+ */
+export interface StatusPayload {
+  /** Session identifier */
+  sessionId: string;
+
+  /** Omniscribe instance ID for validation */
+  instanceId: string;
+
+  /** Current agent state */
+  state: SessionStatusState;
+
+  /** Human-readable status message */
+  message: string;
+
+  /** Question or prompt for user when state is "needs_input" */
+  needsInputPrompt?: string;
+
+  /** ISO timestamp of status update */
+  timestamp: string;
+}

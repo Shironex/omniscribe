@@ -9,8 +9,7 @@ import {
   DEFAULT_WORKTREE_SETTINGS,
 } from '@omniscribe/shared';
 import { TerminalService } from '../terminal/terminal.service';
-import { McpConfigService } from '../mcp/mcp-config.service';
-import { McpService } from '../mcp/mcp.service';
+import { McpWriterService, McpDiscoveryService } from '../mcp';
 import { WorktreeService } from '../git/worktree.service';
 import { WorkspaceService } from '../workspace/workspace.service';
 import { CliCommandService } from './cli-command.service';
@@ -63,8 +62,8 @@ export class SessionService {
   constructor(
     private readonly eventEmitter: EventEmitter2,
     private readonly terminalService: TerminalService,
-    private readonly mcpConfigService: McpConfigService,
-    private readonly mcpService: McpService,
+    private readonly mcpWriterService: McpWriterService,
+    private readonly mcpDiscoveryService: McpDiscoveryService,
     private readonly worktreeService: WorktreeService,
     @Inject(forwardRef(() => WorkspaceService))
     private readonly workspaceService: WorkspaceService,
@@ -319,13 +318,13 @@ export class SessionService {
 
     try {
       // Discover all available MCP servers for this project
-      const allServers = await this.mcpService.discoverServers(projectPath);
+      const allServers = await this.mcpDiscoveryService.discoverServers(projectPath);
       this.logger.log(
         `Discovered ${allServers.length} MCP servers for session ${sessionId}`
       );
 
       // Write MCP config with all discovered servers
-      await this.mcpConfigService.writeConfig(
+      await this.mcpWriterService.writeConfig(
         worktreePath,
         sessionId,
         projectPath,
@@ -338,7 +337,7 @@ export class SessionService {
       const cliConfig = this.cliCommandService.getCliConfig(aiMode, session);
 
       // Generate project hash for MCP status file identification
-      const projectHash = this.mcpConfigService.generateProjectHash(projectPath);
+      const projectHash = this.mcpWriterService.generateProjectHash(projectPath);
 
       // Build environment variables
       // IMPORTANT: OMNISCRIBE_SESSION_ID and OMNISCRIBE_PROJECT_HASH are passed here

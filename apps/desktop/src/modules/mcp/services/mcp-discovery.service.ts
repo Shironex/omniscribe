@@ -35,8 +35,12 @@ interface McpConfigEntry {
  */
 const MCP_CONFIG_FILES = ['.mcp.json', 'mcp.json', '.mcp/config.json'];
 
+/**
+ * Service responsible for discovering and parsing MCP server configurations
+ * from project configuration files.
+ */
 @Injectable()
-export class McpService {
+export class McpDiscoveryService {
   /**
    * Discover MCP servers from a project's configuration files
    * @param projectPath Path to the project root
@@ -45,7 +49,7 @@ export class McpService {
   async discoverServers(projectPath: string): Promise<McpServerConfig[]> {
     // Validate projectPath before using it with path.join
     if (!projectPath || typeof projectPath !== 'string') {
-      console.warn('[McpService] discoverServers called with invalid projectPath:', projectPath);
+      console.warn('[McpDiscoveryService] discoverServers called with invalid projectPath:', projectPath);
       return [];
     }
 
@@ -62,11 +66,11 @@ export class McpService {
           servers.push(...parsedServers);
 
           console.log(
-            `[McpService] Discovered ${parsedServers.length} servers from ${configPath}`
+            `[McpDiscoveryService] Discovered ${parsedServers.length} servers from ${configPath}`
           );
         }
       } catch (error) {
-        console.error(`[McpService] Error reading ${configPath}:`, error);
+        console.error(`[McpDiscoveryService] Error reading ${configPath}:`, error);
       }
     }
 
@@ -133,14 +137,14 @@ export class McpService {
     // Validate required fields based on transport
     if (transport === 'stdio' && !entry.command) {
       console.warn(
-        `[McpService] Server "${id}" has stdio transport but no command specified`
+        `[McpDiscoveryService] Server "${id}" has stdio transport but no command specified`
       );
       return undefined;
     }
 
     if ((transport === 'sse' || transport === 'websocket') && !entry.url) {
       console.warn(
-        `[McpService] Server "${id}" has ${transport} transport but no URL specified`
+        `[McpDiscoveryService] Server "${id}" has ${transport} transport but no URL specified`
       );
       return undefined;
     }

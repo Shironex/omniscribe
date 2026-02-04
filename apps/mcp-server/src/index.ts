@@ -19,6 +19,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
+import type { StatusPayload, SessionStatusState } from '@omniscribe/shared';
 
 // ============================================================================
 // Environment Configuration
@@ -29,21 +30,8 @@ const SESSION_ID = process.env.OMNISCRIBE_SESSION_ID;
 const STATUS_URL = process.env.OMNISCRIBE_STATUS_URL;
 const INSTANCE_ID = process.env.OMNISCRIBE_INSTANCE_ID;
 
-// ============================================================================
-// HTTP Status Reporter
-// ============================================================================
-
-interface StatusPayload {
-  sessionId: string;
-  instanceId: string;
-  state: string;
-  message: string;
-  needsInputPrompt?: string;
-  timestamp: string;
-}
-
 async function reportStatus(
-  state: string,
+  state: SessionStatusState,
   message: string,
   needsInputPrompt?: string
 ): Promise<boolean> {

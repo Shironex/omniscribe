@@ -8,11 +8,7 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { OnEvent } from '@nestjs/event-emitter';
-import { McpService } from './mcp.service';
-import { McpConfigService } from './mcp-config.service';
-import { McpStatusServerService, SessionStatusEvent } from './mcp-status-server.service';
 import {
-  McpServerConfig,
   McpDiscoverPayload,
   McpSetEnabledPayload,
   McpWriteConfigPayload,
@@ -28,7 +24,25 @@ import {
   McpInternalStatusResponse,
   McpStatusServerInfoResponse,
 } from '@omniscribe/shared';
+import { McpStatusServerService, SessionStatusEvent } from './mcp-status-server.service';
+import {
+  McpDiscoveryService,
+  McpWriterService,
+  McpProjectCacheService,
+  McpSessionRegistryService,
+  McpTrackingService,
+} from './services';
 
+/**
+ * WebSocket gateway for MCP-related operations.
+ *
+ * This is a thin layer that delegates to specialized services:
+ * - McpDiscoveryService: Server discovery and parsing
+ * - McpWriterService: Config file writing
+ * - McpProjectCacheService: Server caching per project
+ * - McpSessionRegistryService: Session state management
+ * - McpTrackingService: Config tracking
+ */
 @WebSocketGateway({
   cors: {
     origin: '*',
@@ -38,15 +52,12 @@ export class McpGateway implements OnGatewayInit {
   @WebSocketServer()
   server!: Server;
 
-  /** Map of project paths to their discovered servers */
-  private projectServers = new Map<string, McpServerConfig[]>();
-
-  /** Map of session keys to enabled server IDs */
-  private sessionEnabled = new Map<string, string[]>();
-
   constructor(
-    private readonly mcpService: McpService,
-    private readonly configService: McpConfigService,
+    private readonly discoveryService: McpDiscoveryService,
+    private readonly writerService: McpWriterService,
+    private readonly projectCache: McpProjectCacheService,
+    private readonly sessionRegistry: McpSessionRegistryService,
+    private readonly trackingService: McpTrackingService,
     private readonly statusServer: McpStatusServerService
   ) {}
 
@@ -69,10 +80,10 @@ export class McpGateway implements OnGatewayInit {
         return { servers: [], error: 'projectPath is required' };
       }
 
-      const servers = await this.mcpService.discoverServers(payload.projectPath);
+      const servers = await this.discoveryService.discoverServers(payload.projectPath);
 
       // Cache the discovered servers
-      this.projectServers.set(payload.projectPath, servers);
+      this.projectCache.setServers(payload.projectPath, servers);
 
       console.log(
         `[McpGateway] Discovered ${servers.length} MCP servers for ${payload.projectPath}`
@@ -97,13 +108,11 @@ export class McpGateway implements OnGatewayInit {
     @ConnectedSocket() _client: Socket
   ): McpSetEnabledResponse {
     try {
-      const sessionKey = `${payload.projectPath}:${payload.sessionId}`;
-
-      // Store the enabled servers for this session
-      this.sessionEnabled.set(sessionKey, payload.serverIds);
-
-      console.log(
-        `[McpGateway] Set ${payload.serverIds.length} enabled servers for session ${payload.sessionId}`
+      // Store the enabled servers in the registry
+      this.sessionRegistry.setEnabledServers(
+        payload.projectPath,
+        payload.sessionId,
+        payload.serverIds
       );
 
       // Broadcast the change to all clients
@@ -135,7 +144,7 @@ export class McpGateway implements OnGatewayInit {
       // Filter to only enabled servers
       const enabledServers = payload.servers.filter((s) => s.enabled);
 
-      const configPath = await this.configService.writeConfig(
+      const configPath = await this.writerService.writeConfig(
         payload.workingDir,
         payload.sessionId,
         payload.projectPath,
@@ -164,8 +173,10 @@ export class McpGateway implements OnGatewayInit {
     @MessageBody() payload: McpGetEnabledPayload,
     @ConnectedSocket() _client: Socket
   ): McpGetEnabledResponse {
-    const sessionKey = `${payload.projectPath}:${payload.sessionId}`;
-    const serverIds = this.sessionEnabled.get(sessionKey) ?? [];
+    const serverIds = this.sessionRegistry.getEnabledServers(
+      payload.projectPath,
+      payload.sessionId
+    );
     return { serverIds };
   }
 
@@ -177,7 +188,7 @@ export class McpGateway implements OnGatewayInit {
     @MessageBody() payload: McpGetServersPayload,
     @ConnectedSocket() _client: Socket
   ): McpGetServersResponse {
-    const servers = this.projectServers.get(payload.projectPath) ?? [];
+    const servers = this.projectCache.getServers(payload.projectPath);
     return { servers };
   }
 
@@ -190,18 +201,20 @@ export class McpGateway implements OnGatewayInit {
     @ConnectedSocket() _client: Socket
   ): Promise<McpRemoveConfigResponse> {
     try {
-      const success = await this.configService.removeConfig(
+      const success = await this.writerService.removeConfig(
         payload.workingDir,
         payload.sessionId
       );
 
-      // Clean up enabled state
-      const sessionKey = `${payload.projectPath}:${payload.sessionId}`;
-      this.sessionEnabled.delete(sessionKey);
+      // Clean up enabled state in registry
+      this.sessionRegistry.clearEnabledServers(
+        payload.projectPath,
+        payload.sessionId
+      );
 
       // Clean up config tracking
-      const hash = this.configService.generateProjectHash(payload.projectPath);
-      await this.configService.cleanupTracking(hash, payload.sessionId);
+      const hash = this.writerService.generateProjectHash(payload.projectPath);
+      await this.trackingService.cleanup(hash, payload.sessionId);
 
       return { success };
     } catch (error) {
@@ -215,7 +228,7 @@ export class McpGateway implements OnGatewayInit {
    */
   @SubscribeMessage('mcp:get-internal-status')
   handleGetInternalStatus(): McpInternalStatusResponse {
-    return this.configService.getInternalMcpInfo();
+    return this.writerService.getInternalMcpInfo();
   }
 
   /**

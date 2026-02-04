@@ -1,4 +1,4 @@
-import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import { Injectable, OnModuleInit, OnModuleDestroy, Inject, forwardRef } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import * as http from 'http';
 import * as crypto from 'crypto';
@@ -6,26 +6,17 @@ import {
   MCP_STATUS_PORT_START,
   MCP_STATUS_PORT_END,
   LOCALHOST,
+  StatusPayload,
+  SessionStatusState,
 } from '@omniscribe/shared';
-
-/**
- * Status payload received from MCP server via HTTP POST
- */
-interface StatusPayload {
-  sessionId: string;
-  instanceId: string;
-  state: 'idle' | 'working' | 'needs_input' | 'finished' | 'error';
-  message: string;
-  needsInputPrompt?: string;
-  timestamp: string;
-}
+import { McpSessionRegistryService } from './services/mcp-session-registry.service';
 
 /**
  * Session status event emitted for UI updates
  */
 export interface SessionStatusEvent {
   sessionId: string;
-  status: 'idle' | 'working' | 'needs_input' | 'finished' | 'error';
+  status: SessionStatusState;
   message?: string;
   needsInputPrompt?: string;
 }
@@ -51,10 +42,11 @@ export class McpStatusServerService implements OnModuleInit, OnModuleDestroy {
   /** Unique instance ID for this Omniscribe instance */
   private readonly instanceId: string;
 
-  /** Maps session IDs to project paths for routing */
-  private sessionProjects = new Map<string, string>();
-
-  constructor(private readonly eventEmitter: EventEmitter2) {
+  constructor(
+    private readonly eventEmitter: EventEmitter2,
+    @Inject(forwardRef(() => McpSessionRegistryService))
+    private readonly sessionRegistry: McpSessionRegistryService
+  ) {
     // Generate unique instance ID on startup
     this.instanceId = crypto.randomUUID();
   }
@@ -219,13 +211,13 @@ export class McpStatusServerService implements OnModuleInit, OnModuleDestroy {
     }
 
     // Check if this session is registered
-    const projectPath = this.sessionProjects.get(payload.sessionId);
+    const projectPath = this.sessionRegistry.getProjectPath(payload.sessionId);
     if (!projectPath) {
       console.log(
         `[McpStatusServer] REJECTED - unknown session ${payload.sessionId}`
       );
       console.log(
-        `[McpStatusServer] Registered sessions: ${Array.from(this.sessionProjects.keys()).join(', ')}`
+        `[McpStatusServer] Registered sessions: ${this.sessionRegistry.getRegisteredSessions().join(', ')}`
       );
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ accepted: false, reason: 'unknown_session' }));
@@ -248,28 +240,6 @@ export class McpStatusServerService implements OnModuleInit, OnModuleDestroy {
 
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ accepted: true }));
-  }
-
-  /**
-   * Register a session for status updates
-   * @param sessionId Session identifier
-   * @param projectPath Project path for routing
-   */
-  registerSession(sessionId: string, projectPath: string): void {
-    this.sessionProjects.set(sessionId, projectPath);
-    console.log(
-      `[McpStatusServer] Registered session ${sessionId} for project '${projectPath}'`
-    );
-  }
-
-  /**
-   * Unregister a session when it ends
-   * @param sessionId Session identifier
-   */
-  unregisterSession(sessionId: string): void {
-    if (this.sessionProjects.delete(sessionId)) {
-      console.log(`[McpStatusServer] Unregistered session ${sessionId}`);
-    }
   }
 
   /**
