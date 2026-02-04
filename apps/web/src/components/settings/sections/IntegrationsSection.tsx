@@ -1,6 +1,5 @@
 import { useEffect, useCallback } from 'react';
 import {
-  Bot,
   CheckCircle2,
   XCircle,
   RefreshCw,
@@ -10,6 +9,7 @@ import {
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useSettingsStore } from '../../../stores';
+import { ClaudeIcon } from '../../icons/ClaudeIcon';
 
 export function IntegrationsSection() {
   const claudeCliStatus = useSettingsStore((state) => state.claudeCliStatus);
@@ -53,11 +53,11 @@ export function IntegrationsSection() {
         <div
           className={clsx(
             'w-10 h-10 rounded-xl flex items-center justify-center',
-            'bg-gradient-to-br from-primary/20 to-brand-600/10',
-            'ring-1 ring-primary/20',
+            'bg-gradient-to-br from-orange-500/20 to-orange-600/10',
+            'ring-1 ring-orange-500/20',
           )}
         >
-          <Bot className="w-5 h-5 text-primary" />
+          <ClaudeIcon size={20} className="text-orange-400" />
         </div>
         <div className="flex-1">
           <h2 className="text-lg font-semibold text-foreground">Claude CLI</h2>
