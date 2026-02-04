@@ -6,3 +6,6 @@ export type {
   LaunchSessionResult,
 } from './session.service';
 export { SessionGateway } from './session.gateway';
+export { CliCommandService } from './cli-command.service';
+export type { CliSessionContext } from './cli-command.service';
+export type { AiCliConfig } from './types';

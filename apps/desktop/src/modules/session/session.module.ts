@@ -5,6 +5,7 @@ import { GitModule } from '../git/git.module';
 import { WorkspaceModule } from '../workspace/workspace.module';
 import { SessionService } from './session.service';
 import { SessionGateway } from './session.gateway';
+import { CliCommandService } from './cli-command.service';
 
 @Module({
   imports: [
@@ -13,7 +14,7 @@ import { SessionGateway } from './session.gateway';
     GitModule,
     forwardRef(() => WorkspaceModule),
   ],
-  providers: [SessionService, SessionGateway],
-  exports: [SessionService],
+  providers: [CliCommandService, SessionService, SessionGateway],
+  exports: [SessionService, CliCommandService],
 })
 export class SessionModule {}

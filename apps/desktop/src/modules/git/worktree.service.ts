@@ -1,6 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { exec } from 'child_process';
-import { promisify } from 'util';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as os from 'os';
@@ -8,13 +6,11 @@ import * as crypto from 'crypto';
 import {
   WorktreeInfo,
   WorktreeLocation,
-  GIT_TIMEOUT_MS,
   USER_DATA_DIR,
   WORKTREES_DIR,
   APP_NAME_LOWER,
 } from '@omniscribe/shared';
-
-const execAsync = promisify(exec);
+import { GitBaseService } from './git-base.service';
 
 /** Central directory for worktrees (follows XDG spec on Linux, .omniscribe on Windows/macOS) */
 const CENTRAL_DIR =
@@ -25,39 +21,9 @@ const CENTRAL_DIR =
 /** Project-local worktree directory name */
 const PROJECT_WORKTREE_DIR = '.worktrees';
 
-/** Git environment variables to prevent interactive prompts */
-const GIT_ENV: Record<string, string> = {
-  GIT_TERMINAL_PROMPT: '0',
-  LC_ALL: 'C',
-};
-
 @Injectable()
 export class WorktreeService {
-  /**
-   * Execute a git command with timeout and proper environment
-   */
-  private async execGit(
-    cwd: string,
-    args: string[],
-    timeoutMs: number = GIT_TIMEOUT_MS,
-  ): Promise<{ stdout: string; stderr: string }> {
-    const command = `git ${args.join(' ')}`;
-
-    const result = await execAsync(command, {
-      cwd,
-      timeout: timeoutMs,
-      env: {
-        ...process.env,
-        ...GIT_ENV,
-      },
-      maxBuffer: 10 * 1024 * 1024,
-    });
-
-    return {
-      stdout: result.stdout,
-      stderr: result.stderr,
-    };
-  }
+  constructor(private readonly gitBase: GitBaseService) {}
 
   /**
    * Compute the worktree path for a given project, branch, and location preference
@@ -109,7 +75,7 @@ export class WorktreeService {
     }
 
     // Get the current branch
-    const { stdout: currentBranch } = await this.execGit(projectPath, [
+    const { stdout: currentBranch } = await this.gitBase.execGit(projectPath, [
       'rev-parse',
       '--abbrev-ref',
       'HEAD',
@@ -137,7 +103,7 @@ export class WorktreeService {
         return worktreePath;
       } catch {
         // Worktree directory doesn't exist, remove stale reference
-        await this.execGit(projectPath, ['worktree', 'prune']);
+        await this.gitBase.execGit(projectPath, ['worktree', 'prune']);
       }
     }
 
@@ -146,12 +112,12 @@ export class WorktreeService {
     let remoteBranchRef: string | null = null;
 
     try {
-      await this.execGit(projectPath, ['rev-parse', '--verify', branch]);
+      await this.gitBase.execGit(projectPath, ['rev-parse', '--verify', branch]);
       branchExists = true;
     } catch {
       // Check remote branches
       try {
-        const { stdout: remoteBranches } = await this.execGit(projectPath, [
+        const { stdout: remoteBranches } = await this.gitBase.execGit(projectPath, [
           'branch',
           '-r',
           '--list',
@@ -172,11 +138,11 @@ export class WorktreeService {
     try {
       if (branchExists) {
         // Branch exists - create worktree pointing to it
-        await this.execGit(projectPath, ['worktree', 'add', worktreePath, branch]);
+        await this.gitBase.execGit(projectPath, ['worktree', 'add', worktreePath, branch]);
       } else {
         // Branch doesn't exist - create a new branch with the worktree
         // git worktree add -b <new-branch> <path> HEAD
-        await this.execGit(projectPath, [
+        await this.gitBase.execGit(projectPath, [
           'worktree',
           'add',
           '-b',
@@ -189,7 +155,7 @@ export class WorktreeService {
       const errorStr = String(error);
       // If branch is already checked out elsewhere, try with --detach
       if (errorStr.includes('already checked out')) {
-        await this.execGit(projectPath, [
+        await this.gitBase.execGit(projectPath, [
           'worktree',
           'add',
           '--detach',
@@ -199,7 +165,7 @@ export class WorktreeService {
       } else if (errorStr.includes('already exists') && remoteBranchRef) {
         // Local branch already exists but wasn't found by rev-parse
         // This can happen with tracking branches - try tracking the remote
-        await this.execGit(projectPath, [
+        await this.gitBase.execGit(projectPath, [
           'worktree',
           'add',
           '--track',
@@ -222,12 +188,12 @@ export class WorktreeService {
   async cleanup(projectPath: string, worktreePath: string): Promise<void> {
     // Remove the worktree
     try {
-      await this.execGit(projectPath, ['worktree', 'remove', worktreePath, '--force']);
+      await this.gitBase.execGit(projectPath, ['worktree', 'remove', worktreePath, '--force']);
     } catch {
       // If git worktree remove fails, try manual cleanup
       try {
         await fs.rm(worktreePath, { recursive: true, force: true });
-        await this.execGit(projectPath, ['worktree', 'prune']);
+        await this.gitBase.execGit(projectPath, ['worktree', 'prune']);
       } catch {
         // Ignore cleanup errors
       }
@@ -240,7 +206,7 @@ export class WorktreeService {
   async list(projectPath: string): Promise<WorktreeInfo[]> {
     const worktrees: WorktreeInfo[] = [];
 
-    const { stdout } = await this.execGit(projectPath, [
+    const { stdout } = await this.gitBase.execGit(projectPath, [
       'worktree',
       'list',
       '--porcelain',

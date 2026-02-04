@@ -125,7 +125,7 @@ All stores in `apps/web/src/stores/` follow similar patterns with `createSocketL
 - [x] 1. Create constants file for app name ✅
 - [x] 2. Consolidate timeout constants (included in #1) ✅
 - [x] 3. Consolidate network constants (included in #1) ✅
-- [ ] 4. Split large files
+- [x] 4. Split large files
 - [ ] 5. Refactor MCP module
 - [ ] 6. Consolidate StatusPayload type
 - [ ] 7. Standardize logging
