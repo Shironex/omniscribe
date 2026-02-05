@@ -21,6 +21,7 @@ jest.mock('fs', () => ({
 // Import after mocks are set up
 import { execFileSync } from 'child_process';
 import * as fs from 'fs';
+import * as path from 'path';
 
 const mockedExecFileSync = execFileSync as jest.MockedFunction<typeof execFileSync>;
 const mockedExistsSync = fs.existsSync as jest.MockedFunction<typeof fs.existsSync>;
@@ -292,21 +293,24 @@ describe('CliCommandService', () => {
     it('should fall back to known paths when PATH lookup fails on Windows', () => {
       mockPlatform.mockReturnValue('win32');
       mockHomedir.mockReturnValue('C:\\Users\\test');
-      process.env.APPDATA = 'C:\\Users\\test\\AppData\\Roaming';
+      const appData = 'C:\\Users\\test\\AppData\\Roaming';
+      process.env.APPDATA = appData;
 
       // All PATH lookups fail
       mockedExecFileSync.mockImplementation(() => {
         throw new Error('not found');
       });
 
-      // A known Windows path exists
+      // A known Windows path exists — use path.join so the expected value
+      // matches regardless of which OS runs the test (CI uses Linux)
+      const expectedPath = path.join(appData, 'npm', 'claude.cmd');
       mockedExistsSync.mockImplementation((p: fs.PathLike) => {
-        return p === 'C:\\Users\\test\\AppData\\Roaming\\npm\\claude.cmd';
+        return p === expectedPath;
       });
 
       const config = service.getCliConfig('claude', {});
 
-      expect(config.command).toBe('C:\\Users\\test\\AppData\\Roaming\\npm\\claude.cmd');
+      expect(config.command).toBe(expectedPath);
     });
 
     it('should fall back to bare "claude" command when nothing found', () => {
