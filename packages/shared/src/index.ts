@@ -25,6 +25,9 @@ export * from './types/settings';
 // Usage types
 export * from './types/usage';
 
+// Updater types
+export * from './types/updater';
+
 // Utilities
 export * from './utils';
 

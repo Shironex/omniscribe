@@ -6,6 +6,8 @@ import type {
   ClaudeVersionList,
   ClaudeInstallCommandOptions,
   ClaudeInstallCommand,
+  UpdateInfo,
+  UpdateDownloadProgress,
 } from '@omniscribe/shared';
 
 export interface ElectronAPI {
@@ -48,6 +50,17 @@ export interface ElectronAPI {
   };
   github: {
     getStatus: () => Promise<GhCliStatus>;
+  };
+  updater: {
+    checkForUpdates: () => Promise<{ enabled: boolean }>;
+    startDownload: () => Promise<void>;
+    installNow: () => Promise<void>;
+    onCheckingForUpdate: (callback: () => void) => () => void;
+    onUpdateAvailable: (callback: (info: UpdateInfo) => void) => () => void;
+    onUpdateNotAvailable: (callback: (info: UpdateInfo) => void) => () => void;
+    onDownloadProgress: (callback: (progress: UpdateDownloadProgress) => void) => () => void;
+    onUpdateDownloaded: (callback: (info: UpdateInfo) => void) => () => void;
+    onUpdateError: (callback: (message: string) => void) => () => void;
   };
   platform: NodeJS.Platform;
 }
@@ -98,6 +111,54 @@ const electronAPI: ElectronAPI = {
   },
   github: {
     getStatus: () => ipcRenderer.invoke('github:get-status') as Promise<GhCliStatus>,
+  },
+  updater: {
+    checkForUpdates: () => ipcRenderer.invoke('updater:check-for-updates'),
+    startDownload: () => ipcRenderer.invoke('updater:start-download'),
+    installNow: () => ipcRenderer.invoke('updater:install-now'),
+    onCheckingForUpdate: (callback: () => void) => {
+      const listener = () => callback();
+      ipcRenderer.on('updater:checking-for-update', listener);
+      return () => {
+        ipcRenderer.removeListener('updater:checking-for-update', listener);
+      };
+    },
+    onUpdateAvailable: (callback: (info: UpdateInfo) => void) => {
+      const listener = (_event: Electron.IpcRendererEvent, info: UpdateInfo) => callback(info);
+      ipcRenderer.on('updater:update-available', listener);
+      return () => {
+        ipcRenderer.removeListener('updater:update-available', listener);
+      };
+    },
+    onUpdateNotAvailable: (callback: (info: UpdateInfo) => void) => {
+      const listener = (_event: Electron.IpcRendererEvent, info: UpdateInfo) => callback(info);
+      ipcRenderer.on('updater:update-not-available', listener);
+      return () => {
+        ipcRenderer.removeListener('updater:update-not-available', listener);
+      };
+    },
+    onDownloadProgress: (callback: (progress: UpdateDownloadProgress) => void) => {
+      const listener = (_event: Electron.IpcRendererEvent, progress: UpdateDownloadProgress) =>
+        callback(progress);
+      ipcRenderer.on('updater:download-progress', listener);
+      return () => {
+        ipcRenderer.removeListener('updater:download-progress', listener);
+      };
+    },
+    onUpdateDownloaded: (callback: (info: UpdateInfo) => void) => {
+      const listener = (_event: Electron.IpcRendererEvent, info: UpdateInfo) => callback(info);
+      ipcRenderer.on('updater:update-downloaded', listener);
+      return () => {
+        ipcRenderer.removeListener('updater:update-downloaded', listener);
+      };
+    },
+    onUpdateError: (callback: (message: string) => void) => {
+      const listener = (_event: Electron.IpcRendererEvent, message: string) => callback(message);
+      ipcRenderer.on('updater:error', listener);
+      return () => {
+        ipcRenderer.removeListener('updater:error', listener);
+      };
+    },
   },
   platform: process.platform,
 };

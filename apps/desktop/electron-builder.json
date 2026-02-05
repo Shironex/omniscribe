@@ -17,6 +17,11 @@
   "asarUnpack": ["**/node_modules/node-pty/**/*"],
   "nodeGypRebuild": false,
   "npmRebuild": false,
+  "publish": {
+    "provider": "github",
+    "owner": "Shironex",
+    "repo": "omniscribe"
+  },
   "mac": {
     "category": "public.app-category.developer-tools",
     "icon": "resources/icon.png",
@@ -24,7 +29,7 @@
   },
   "win": {
     "icon": "resources/icon.png",
-    "target": ["nsis", "portable"],
+    "target": ["nsis"],
     "signAndEditExecutable": false
   },
   "linux": {

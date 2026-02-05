@@ -28,6 +28,7 @@
     "@nestjs/websockets": "^10.4.0",
     "@omniscribe/shared": "workspace:*",
     "electron-store": "^8.2.0",
+    "electron-updater": "^6.7.3",
     "node-pty": "^1.1.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",

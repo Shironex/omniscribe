@@ -18,3 +18,6 @@ export { registerClaudeCliHandlers, cleanupClaudeCliHandlers } from './claude-cl
 
 // GitHub CLI handlers
 export { registerGithubCliHandlers, cleanupGithubCliHandlers } from './github-cli';
+
+// Updater handlers
+export { registerUpdaterHandlers, cleanupUpdaterHandlers } from './updater';

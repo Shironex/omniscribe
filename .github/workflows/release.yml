@@ -86,6 +86,7 @@ jobs:
           path: |
             apps/desktop/release/*.dmg
             apps/desktop/release/*.zip
+            apps/desktop/release/latest-mac.yml
           if-no-files-found: error
           retention-days: 30
 
@@ -96,6 +97,7 @@ jobs:
           name: windows-builds
           path: |
             apps/desktop/release/*.exe
+            apps/desktop/release/latest.yml
           if-no-files-found: error
           retention-days: 30
 
@@ -107,6 +109,7 @@ jobs:
           path: |
             apps/desktop/release/*.AppImage
             apps/desktop/release/*.deb
+            apps/desktop/release/latest-linux.yml
           if-no-files-found: error
           retention-days: 30
 
@@ -141,8 +144,11 @@ jobs:
           files: |
             artifacts/macos-builds/*.dmg
             artifacts/macos-builds/*.zip
+            artifacts/macos-builds/latest-mac.yml
             artifacts/windows-builds/*.exe
+            artifacts/windows-builds/latest.yml
             artifacts/linux-builds/*.AppImage
             artifacts/linux-builds/*.deb
+            artifacts/linux-builds/latest-linux.yml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

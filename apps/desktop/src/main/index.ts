@@ -5,6 +5,7 @@ import { IoAdapter } from '@nestjs/platform-socket.io';
 import { AppModule } from '../modules/app.module';
 import { createMainWindow } from './window';
 import { logger, getLogPath } from './logger';
+import { initializeAutoUpdater } from './updater';
 import { corsOriginCallback } from '../modules/shared/cors.config';
 import { NestLoggerAdapter } from '../modules/shared/nest-logger';
 
@@ -51,6 +52,7 @@ async function shutdownNestApp(): Promise<void> {
 async function bootstrap(): Promise<void> {
   await bootstrapNestApp();
   mainWindow = await createMainWindow();
+  initializeAutoUpdater(mainWindow, process.env.NODE_ENV === 'development');
 }
 
 // Global error handling
