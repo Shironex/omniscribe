@@ -303,12 +303,16 @@ export class WorktreeService {
    */
   async cleanupAll(projectPath: string): Promise<void> {
     const worktrees = await this.list(projectPath);
-    const projectWorktreeDir = path.join(projectPath, PROJECT_WORKTREE_DIR);
+    const projectWorktreeDir = path.join(projectPath, PROJECT_WORKTREE_DIR).replace(/\\/g, '/');
 
     for (const worktree of worktrees) {
+      // Normalize path separators for cross-platform comparison
+      const normalizedPath = worktree.path.replace(/\\/g, '/');
+      const normalizedCentralDir = CENTRAL_DIR.replace(/\\/g, '/');
+
       // Only clean up worktrees managed by Omniscribe (in .worktrees/ or central dir)
-      const isProjectWorktree = worktree.path.startsWith(projectWorktreeDir);
-      const isCentralWorktree = worktree.path.startsWith(CENTRAL_DIR);
+      const isProjectWorktree = normalizedPath.startsWith(projectWorktreeDir);
+      const isCentralWorktree = normalizedPath.startsWith(normalizedCentralDir);
 
       if (!worktree.isMain && (isProjectWorktree || isCentralWorktree)) {
         await this.cleanup(projectPath, worktree.path);

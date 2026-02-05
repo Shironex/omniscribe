@@ -650,6 +650,148 @@ describe('GithubService', () => {
     });
   });
 
+  // ==================== cross-platform CLI detection ====================
+
+  describe('cross-platform CLI detection', () => {
+    const originalPlatform = process.platform;
+
+    afterEach(() => {
+      Object.defineProperty(process, 'platform', { value: originalPlatform });
+    });
+
+    it('should use "where" on Windows for isAvailable', () => {
+      Object.defineProperty(process, 'platform', { value: 'win32' });
+      mockExecSync.mockReturnValue(Buffer.from('C:\\path\\gh.exe'));
+
+      service.isAvailable();
+
+      const command = mockExecSync.mock.calls[0][0];
+      expect(command).toBe('where gh');
+    });
+
+    it('should use "which" on Linux for isAvailable', () => {
+      Object.defineProperty(process, 'platform', { value: 'linux' });
+      mockExecSync.mockReturnValue(Buffer.from('/usr/bin/gh'));
+
+      service.isAvailable();
+
+      const command = mockExecSync.mock.calls[0][0];
+      expect(command).toBe('which gh');
+    });
+
+    it('should use "which" on macOS for isAvailable', () => {
+      Object.defineProperty(process, 'platform', { value: 'darwin' });
+      mockExecSync.mockReturnValue(Buffer.from('/usr/local/bin/gh'));
+
+      service.isAvailable();
+
+      const command = mockExecSync.mock.calls[0][0];
+      expect(command).toBe('which gh');
+    });
+
+    it('should use "where" on Windows for findCli', async () => {
+      Object.defineProperty(process, 'platform', { value: 'win32' });
+      mockExecAsync.mockResolvedValueOnce({ stdout: 'C:\\path\\gh.exe\n', stderr: '' });
+      mockExecAsync.mockResolvedValueOnce({ stdout: 'gh version 2.40.1\n', stderr: '' });
+      mockExecAsync.mockResolvedValueOnce({
+        stdout: 'Logged in to github.com account user',
+        stderr: '',
+      });
+
+      const status = await service.getStatus();
+
+      const findCliCommand = mockExecAsync.mock.calls[0][0];
+      expect(findCliCommand).toBe('where gh');
+      expect(status.installed).toBe(true);
+      expect(status.platform).toBe('win32');
+    });
+
+    it('should use "which" on Linux for findCli', async () => {
+      Object.defineProperty(process, 'platform', { value: 'linux' });
+      mockExecAsync.mockResolvedValueOnce({ stdout: '/usr/bin/gh\n', stderr: '' });
+      mockExecAsync.mockResolvedValueOnce({ stdout: 'gh version 2.40.1\n', stderr: '' });
+      mockExecAsync.mockResolvedValueOnce({
+        stdout: 'Logged in to github.com account user',
+        stderr: '',
+      });
+
+      const status = await service.getStatus();
+
+      const findCliCommand = mockExecAsync.mock.calls[0][0];
+      expect(findCliCommand).toBe('which gh');
+      expect(status.installed).toBe(true);
+      expect(status.platform).toBe('linux');
+    });
+
+    it('should check Windows-specific paths when not found in PATH on Windows', async () => {
+      Object.defineProperty(process, 'platform', { value: 'win32' });
+      // findCli: PATH lookup fails
+      mockExecAsync.mockRejectedValueOnce(new Error('not found'));
+      // Check local paths - one exists
+      mockExistsSync.mockImplementation((p: string) => p.includes('GitHub CLI'));
+      // getVersion
+      mockExecAsync.mockResolvedValueOnce({ stdout: 'gh version 2.40.1\n', stderr: '' });
+      // checkAuth
+      mockExecAsync.mockResolvedValueOnce({
+        stdout: 'Logged in to github.com account user',
+        stderr: '',
+      });
+
+      const status = await service.getStatus();
+
+      // Should have checked at least one Windows-specific path
+      const checkedPaths = mockExistsSync.mock.calls.map((c: unknown[]) => c[0] as string);
+      expect(
+        checkedPaths.some((p: string) => p.includes('GitHub CLI') || p.includes('scoop'))
+      ).toBe(true);
+      expect(status.installed).toBe(true);
+    });
+
+    it('should check Unix-specific paths when not found in PATH on Linux', async () => {
+      Object.defineProperty(process, 'platform', { value: 'linux' });
+      // findCli: PATH lookup fails
+      mockExecAsync.mockRejectedValueOnce(new Error('not found'));
+      // Check local paths - one exists
+      mockExistsSync.mockImplementation((p: string) => p === '/usr/local/bin/gh');
+      // getVersion
+      mockExecAsync.mockResolvedValueOnce({ stdout: 'gh version 2.40.1\n', stderr: '' });
+      // checkAuth
+      mockExecAsync.mockResolvedValueOnce({
+        stdout: 'Logged in to github.com account user',
+        stderr: '',
+      });
+
+      const status = await service.getStatus();
+
+      const checkedPaths = mockExistsSync.mock.calls.map((c: unknown[]) => c[0] as string);
+      expect(
+        checkedPaths.some((p: string) => p === '/usr/local/bin/gh' || p === '/usr/bin/gh')
+      ).toBe(true);
+      expect(status.installed).toBe(true);
+    });
+
+    it('should check macOS-specific paths (homebrew) on darwin', async () => {
+      Object.defineProperty(process, 'platform', { value: 'darwin' });
+      // findCli: PATH lookup fails
+      mockExecAsync.mockRejectedValueOnce(new Error('not found'));
+      // Check local paths - homebrew path exists
+      mockExistsSync.mockImplementation((p: string) => p === '/opt/homebrew/bin/gh');
+      // getVersion
+      mockExecAsync.mockResolvedValueOnce({ stdout: 'gh version 2.40.1\n', stderr: '' });
+      // checkAuth
+      mockExecAsync.mockResolvedValueOnce({
+        stdout: 'Logged in to github.com account user',
+        stderr: '',
+      });
+
+      const status = await service.getStatus();
+
+      const checkedPaths = mockExistsSync.mock.calls.map((c: unknown[]) => c[0] as string);
+      expect(checkedPaths.some((p: string) => p === '/opt/homebrew/bin/gh')).toBe(true);
+      expect(status.installed).toBe(true);
+    });
+  });
+
   // ==================== execGh (tested through public methods) ====================
 
   describe('execGh (via hasGitHubRemote)', () => {

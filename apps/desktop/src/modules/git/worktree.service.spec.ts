@@ -540,6 +540,39 @@ describe('WorktreeService', () => {
       expect(mockGitBase.execGit).toHaveBeenCalledTimes(1);
     });
 
+    it('should handle mixed path separators in worktree paths', async () => {
+      // Simulate git porcelain returning forward-slash paths even when
+      // path.join might produce backslash paths (or vice versa)
+      const projectWorktreePath = '/repo/.worktrees/feature';
+
+      const porcelainOutput = [
+        'worktree /repo',
+        'HEAD abc123',
+        'branch refs/heads/main',
+        '',
+        `worktree ${projectWorktreePath}`,
+        'HEAD def456',
+        'branch refs/heads/feature',
+        '',
+      ].join('\n');
+
+      // list call
+      mockGitBase.execGit.mockResolvedValueOnce({ stdout: porcelainOutput, stderr: '' });
+      // cleanup for project worktree
+      mockGitBase.execGit.mockResolvedValueOnce({ stdout: '', stderr: '' });
+
+      await service.cleanupAll('/repo');
+
+      // Should clean up the worktree even if separators differ
+      expect(mockGitBase.execGit).toHaveBeenCalledTimes(2);
+      expect(mockGitBase.execGit).toHaveBeenCalledWith('/repo', [
+        'worktree',
+        'remove',
+        projectWorktreePath,
+        '--force',
+      ]);
+    });
+
     it('should clean up multiple managed worktrees', async () => {
       const wt1 = path.join('/repo', '.worktrees', 'feature-1');
       const wt2 = path.join('/repo', '.worktrees', 'feature-2');

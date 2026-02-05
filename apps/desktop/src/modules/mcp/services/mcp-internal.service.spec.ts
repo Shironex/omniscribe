@@ -150,4 +150,93 @@ describe('McpInternalService', () => {
       expect(p).toBeDefined();
     });
   });
+
+  describe('cross-platform path candidates', () => {
+    const originalPlatform = process.platform;
+
+    afterEach(() => {
+      Object.defineProperty(process, 'platform', { value: originalPlatform });
+      existsSyncMock.mockReset();
+    });
+
+    it('should check Windows-specific paths on win32', async () => {
+      Object.defineProperty(process, 'platform', { value: 'win32' });
+
+      // Track which paths are checked
+      const checkedPaths: string[] = [];
+      existsSyncMock.mockImplementation((p: string) => {
+        checkedPaths.push(p);
+        return false;
+      });
+
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [McpInternalService],
+      }).compile();
+
+      service = module.get<McpInternalService>(McpInternalService);
+
+      // Should check Windows-style path (AppData\Local)
+      expect(checkedPaths.some(p => p.includes('AppData'))).toBe(true);
+      // Should NOT check Unix paths
+      expect(checkedPaths.some(p => p === '/usr/local/lib/omniscribe/mcp-server/index.js')).toBe(
+        false
+      );
+      expect(service.isAvailable()).toBe(false);
+    });
+
+    it('should check Unix-specific paths on linux', async () => {
+      Object.defineProperty(process, 'platform', { value: 'linux' });
+
+      const checkedPaths: string[] = [];
+      existsSyncMock.mockImplementation((p: string) => {
+        checkedPaths.push(p);
+        return false;
+      });
+
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [McpInternalService],
+      }).compile();
+
+      service = module.get<McpInternalService>(McpInternalService);
+
+      // Normalize separators for cross-platform assertion: path.join uses native
+      // separators even when process.platform is mocked, so check with both
+      const normalize = (s: string) => s.replace(/[\\/]/g, '/');
+      const normalized = checkedPaths.map(normalize);
+
+      // Should check Unix paths
+      expect(normalized.some(p => p.includes('/usr/local/lib') || p.includes('.local/lib'))).toBe(
+        true
+      );
+      // Should NOT check Windows AppData path
+      expect(checkedPaths.some(p => p.includes('AppData'))).toBe(false);
+      expect(service.isAvailable()).toBe(false);
+    });
+
+    it('should check Unix-specific paths on darwin', async () => {
+      Object.defineProperty(process, 'platform', { value: 'darwin' });
+
+      const checkedPaths: string[] = [];
+      existsSyncMock.mockImplementation((p: string) => {
+        checkedPaths.push(p);
+        return false;
+      });
+
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [McpInternalService],
+      }).compile();
+
+      service = module.get<McpInternalService>(McpInternalService);
+
+      // Normalize separators for cross-platform assertion
+      const normalize = (s: string) => s.replace(/[\\/]/g, '/');
+      const normalized = checkedPaths.map(normalize);
+
+      // macOS should use Unix paths (same as linux for non-XDG services)
+      expect(normalized.some(p => p.includes('/usr/local/lib') || p.includes('.local/lib'))).toBe(
+        true
+      );
+      expect(service.isAvailable()).toBe(false);
+    });
+  });
 });

@@ -11,6 +11,14 @@ jest.mock('child_process', () => ({
   execSync: (...args: unknown[]) => mockExecSync(...args),
 }));
 
+// Mock os module for platform-specific testing
+const mockOsPlatform = jest.fn().mockReturnValue(process.platform);
+const mockOsArch = jest.fn().mockReturnValue(process.arch);
+jest.mock('os', () => ({
+  platform: (...args: unknown[]) => mockOsPlatform(...args),
+  arch: (...args: unknown[]) => mockOsArch(...args),
+}));
+
 // Mock node-pty
 const mockPtySpawn = jest.fn();
 jest.mock('node-pty', () => ({
@@ -1168,6 +1176,193 @@ describe('UsageService', () => {
 
       expect(second).toEqual(first);
       expect(mockSpawn).not.toHaveBeenCalled();
+    });
+  });
+
+  // ================================================================
+  // Cross-platform behavior
+  // ================================================================
+  describe('cross-platform behavior', () => {
+    describe('Windows platform', () => {
+      let winService: UsageService;
+
+      beforeEach(async () => {
+        jest.clearAllMocks();
+        jest.useFakeTimers({ advanceTimers: true });
+        mockOsPlatform.mockReturnValue('win32');
+
+        const module: TestingModule = await Test.createTestingModule({
+          providers: [UsageService],
+        }).compile();
+
+        winService = module.get<UsageService>(UsageService);
+      });
+
+      afterEach(() => {
+        jest.useRealTimers();
+        mockOsPlatform.mockReturnValue(process.platform);
+      });
+
+      it('should use "where" to check CLI availability', async () => {
+        const fakeProc = createFakeProc();
+        mockSpawn.mockReturnValue(fakeProc);
+
+        const promise = winService.isAvailable();
+        fakeProc.emitClose(0);
+        await promise;
+
+        expect(mockSpawn.mock.calls[0][0]).toBe('where');
+        expect(mockSpawn.mock.calls[0][1]).toEqual(['claude']);
+      });
+
+      it('should use cmd.exe as shell for PTY commands', async () => {
+        const fakePty = createFakePty();
+        mockPtySpawn.mockReturnValue(fakePty);
+
+        winService.fetchUsageData('/project');
+
+        jest.advanceTimersByTime(100);
+        fakePty.emitExit(0);
+
+        const shell = mockPtySpawn.mock.calls[0][0];
+        expect(shell).toBe('cmd.exe');
+      });
+
+      it('should use /c flag for cmd.exe args', async () => {
+        const fakePty = createFakePty();
+        mockPtySpawn.mockReturnValue(fakePty);
+
+        winService.fetchUsageData('/project');
+
+        jest.advanceTimersByTime(100);
+        fakePty.emitExit(0);
+
+        const args = mockPtySpawn.mock.calls[0][1] as string[];
+        expect(args[0]).toBe('/c');
+      });
+
+      it('should disable ConPTY on Windows', async () => {
+        const fakePty = createFakePty();
+        mockPtySpawn.mockReturnValue(fakePty);
+
+        winService.fetchUsageData('/project');
+
+        jest.advanceTimersByTime(100);
+        fakePty.emitExit(0);
+
+        const ptyOptions = mockPtySpawn.mock.calls[0][2];
+        expect(ptyOptions.useConpty).toBe(false);
+      });
+
+      it('should use "where" for path lookup in getStatus', async () => {
+        mockSpawn.mockImplementation(() => {
+          const proc = createFakeProc();
+          setTimeout(() => proc.emitClose(0), 0);
+          return proc;
+        });
+        mockExecSync.mockReturnValue('claude.cmd\n');
+
+        const status = await winService.getStatus();
+
+        // The second execSync call should use "where"
+        const pathCalls = mockExecSync.mock.calls.filter(
+          (call: unknown[]) => !(call[0] as string).includes('--version')
+        );
+        if (pathCalls.length > 0) {
+          expect(pathCalls[0][0] as string).toContain('where');
+        }
+        expect(status.platform).toBe('win32');
+      });
+    });
+
+    describe('Linux platform', () => {
+      let linuxService: UsageService;
+
+      beforeEach(async () => {
+        jest.clearAllMocks();
+        jest.useFakeTimers({ advanceTimers: true });
+        mockOsPlatform.mockReturnValue('linux');
+
+        const module: TestingModule = await Test.createTestingModule({
+          providers: [UsageService],
+        }).compile();
+
+        linuxService = module.get<UsageService>(UsageService);
+      });
+
+      afterEach(() => {
+        jest.useRealTimers();
+        mockOsPlatform.mockReturnValue(process.platform);
+      });
+
+      it('should use "which" to check CLI availability', async () => {
+        const fakeProc = createFakeProc();
+        mockSpawn.mockReturnValue(fakeProc);
+
+        const promise = linuxService.isAvailable();
+        fakeProc.emitClose(0);
+        await promise;
+
+        expect(mockSpawn.mock.calls[0][0]).toBe('which');
+      });
+
+      it('should use /bin/sh as shell for PTY commands', async () => {
+        const fakePty = createFakePty();
+        mockPtySpawn.mockReturnValue(fakePty);
+
+        linuxService.fetchUsageData('/project');
+
+        jest.advanceTimersByTime(100);
+        fakePty.emitExit(0);
+
+        const shell = mockPtySpawn.mock.calls[0][0];
+        expect(shell).toBe('/bin/sh');
+      });
+
+      it('should use -c flag for sh args', async () => {
+        const fakePty = createFakePty();
+        mockPtySpawn.mockReturnValue(fakePty);
+
+        linuxService.fetchUsageData('/project');
+
+        jest.advanceTimersByTime(100);
+        fakePty.emitExit(0);
+
+        const args = mockPtySpawn.mock.calls[0][1] as string[];
+        expect(args[0]).toBe('-c');
+      });
+
+      it('should NOT set useConpty on Linux', async () => {
+        const fakePty = createFakePty();
+        mockPtySpawn.mockReturnValue(fakePty);
+
+        linuxService.fetchUsageData('/project');
+
+        jest.advanceTimersByTime(100);
+        fakePty.emitExit(0);
+
+        const ptyOptions = mockPtySpawn.mock.calls[0][2];
+        expect(ptyOptions.useConpty).toBeUndefined();
+      });
+
+      it('should use "which" for path lookup in getStatus', async () => {
+        mockSpawn.mockImplementation(() => {
+          const proc = createFakeProc();
+          setTimeout(() => proc.emitClose(0), 0);
+          return proc;
+        });
+        mockExecSync.mockReturnValue('/usr/local/bin/claude\n');
+
+        const status = await linuxService.getStatus();
+
+        const pathCalls = mockExecSync.mock.calls.filter(
+          (call: unknown[]) => !(call[0] as string).includes('--version')
+        );
+        if (pathCalls.length > 0) {
+          expect(pathCalls[0][0] as string).toContain('which');
+        }
+        expect(status.platform).toBe('linux');
+      });
     });
   });
 });

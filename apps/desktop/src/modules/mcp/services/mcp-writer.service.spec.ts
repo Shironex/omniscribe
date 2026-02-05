@@ -96,6 +96,14 @@ describe('McpWriterService', () => {
 
       expect(hash1).toBe(hash2);
     });
+
+    it('should produce the same hash regardless of path separator style', () => {
+      // Windows-style and Unix-style paths should produce the same hash
+      const hashUnix = service.generateProjectHash('/project/path');
+      const hashWindows = service.generateProjectHash('\\project\\path');
+
+      expect(hashUnix).toBe(hashWindows);
+    });
   });
 
   describe('writeConfig', () => {

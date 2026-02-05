@@ -3,6 +3,13 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { TerminalService } from './terminal.service';
 import { MockPty } from '../../../test/mocks';
 
+// Mock os module for platform-specific testing
+const mockOsPlatform = jest.fn().mockReturnValue(process.platform);
+jest.mock('os', () => ({
+  ...jest.requireActual('os'),
+  platform: (...args: unknown[]) => mockOsPlatform(...args),
+}));
+
 // Mock node-pty
 const mockPtyInstances: MockPty[] = [];
 jest.mock('node-pty', () => ({
@@ -189,6 +196,205 @@ describe('TerminalService', () => {
       const id2 = service.spawnCommand('bash', [], '/home');
 
       expect(service.getSessionIds()).toEqual([id1, id2]);
+    });
+  });
+
+  // ================================================================
+  // Cross-platform behavior
+  // ================================================================
+  describe('cross-platform behavior', () => {
+    describe('Windows platform', () => {
+      let winService: TerminalService;
+      let winEventEmitter: EventEmitter2;
+
+      beforeEach(async () => {
+        mockPtyInstances.length = 0;
+        mockOsPlatform.mockReturnValue('win32');
+
+        winEventEmitter = {
+          emit: jest.fn(),
+          on: jest.fn(),
+          removeAllListeners: jest.fn(),
+        } as unknown as EventEmitter2;
+
+        const module: TestingModule = await Test.createTestingModule({
+          providers: [TerminalService, { provide: EventEmitter2, useValue: winEventEmitter }],
+        }).compile();
+
+        winService = module.get<TerminalService>(TerminalService);
+      });
+
+      afterEach(() => {
+        mockOsPlatform.mockReturnValue(process.platform);
+        jest.clearAllTimers();
+      });
+
+      it('should use COMSPEC shell on Windows when spawning', () => {
+        const savedComspec = process.env.COMSPEC;
+        process.env.COMSPEC = 'C:\\Windows\\System32\\cmd.exe';
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const pty = require('node-pty');
+
+        winService.spawn('/project');
+
+        const spawnCall = pty.spawn.mock.calls[pty.spawn.mock.calls.length - 1];
+        expect(spawnCall[0]).toBe('C:\\Windows\\System32\\cmd.exe');
+
+        // Restore
+        if (savedComspec) {
+          process.env.COMSPEC = savedComspec;
+        } else {
+          delete process.env.COMSPEC;
+        }
+      });
+
+      it('should fall back to cmd.exe when COMSPEC is not set', () => {
+        const savedComspec = process.env.COMSPEC;
+        delete process.env.COMSPEC;
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const pty = require('node-pty');
+
+        winService.spawn('/project');
+
+        const spawnCall = pty.spawn.mock.calls[pty.spawn.mock.calls.length - 1];
+        expect(spawnCall[0]).toBe('cmd.exe');
+
+        if (savedComspec) process.env.COMSPEC = savedComspec;
+      });
+
+      it('should disable ConPTY on Windows', () => {
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const pty = require('node-pty');
+
+        winService.spawnCommand('cmd.exe', [], '/project');
+
+        const spawnCall = pty.spawn.mock.calls[pty.spawn.mock.calls.length - 1];
+        const options = spawnCall[2];
+        expect(options.useConpty).toBe(false);
+      });
+
+      it('should not pass --login args for cmd.exe', () => {
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const pty = require('node-pty');
+
+        winService.spawn('/project');
+
+        const spawnCall = pty.spawn.mock.calls[pty.spawn.mock.calls.length - 1];
+        const args = spawnCall[1];
+        expect(args).not.toContain('--login');
+      });
+
+      it('should use simple kill on Windows (no signal)', async () => {
+        const sessionId = winService.spawnCommand('cmd.exe', [], '/project');
+        const ptyInstance = mockPtyInstances[mockPtyInstances.length - 1];
+
+        await winService.kill(sessionId);
+
+        // On Windows, kill() is called without a signal argument
+        expect(ptyInstance.kill).toHaveBeenCalled();
+        const killCalls = ptyInstance.kill.mock.calls;
+        expect(killCalls[0]).toEqual([]); // no signal arg
+      });
+    });
+
+    describe('Linux/macOS platform', () => {
+      let unixService: TerminalService;
+      let unixEventEmitter: EventEmitter2;
+
+      beforeEach(async () => {
+        mockPtyInstances.length = 0;
+        mockOsPlatform.mockReturnValue('linux');
+
+        unixEventEmitter = {
+          emit: jest.fn(),
+          on: jest.fn(),
+          removeAllListeners: jest.fn(),
+        } as unknown as EventEmitter2;
+
+        const module: TestingModule = await Test.createTestingModule({
+          providers: [TerminalService, { provide: EventEmitter2, useValue: unixEventEmitter }],
+        }).compile();
+
+        unixService = module.get<TerminalService>(TerminalService);
+      });
+
+      afterEach(() => {
+        mockOsPlatform.mockReturnValue(process.platform);
+        jest.clearAllTimers();
+      });
+
+      it('should use SHELL env var on Linux when spawning', () => {
+        const savedShell = process.env.SHELL;
+        process.env.SHELL = '/bin/zsh';
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const pty = require('node-pty');
+
+        unixService.spawn('/project');
+
+        const spawnCall = pty.spawn.mock.calls[pty.spawn.mock.calls.length - 1];
+        expect(spawnCall[0]).toBe('/bin/zsh');
+
+        // Restore
+        if (savedShell) {
+          process.env.SHELL = savedShell;
+        } else {
+          delete process.env.SHELL;
+        }
+      });
+
+      it('should fall back to /bin/bash when SHELL is not set', () => {
+        const savedShell = process.env.SHELL;
+        delete process.env.SHELL;
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const pty = require('node-pty');
+
+        unixService.spawn('/project');
+
+        const spawnCall = pty.spawn.mock.calls[pty.spawn.mock.calls.length - 1];
+        expect(spawnCall[0]).toBe('/bin/bash');
+
+        if (savedShell) process.env.SHELL = savedShell;
+      });
+
+      it('should NOT set useConpty on Linux', () => {
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const pty = require('node-pty');
+
+        unixService.spawnCommand('bash', ['--login'], '/project');
+
+        const spawnCall = pty.spawn.mock.calls[pty.spawn.mock.calls.length - 1];
+        const options = spawnCall[2];
+        expect(options.useConpty).toBeUndefined();
+      });
+
+      it('should pass --login args for bash', () => {
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const pty = require('node-pty');
+
+        unixService.spawn('/project');
+
+        const spawnCall = pty.spawn.mock.calls[pty.spawn.mock.calls.length - 1];
+        const args = spawnCall[1];
+        expect(args).toContain('--login');
+      });
+
+      it('should send SIGTERM first when killing on Unix', async () => {
+        jest.useFakeTimers();
+        const sessionId = unixService.spawnCommand('bash', ['--login'], '/project');
+        const ptyInstance = mockPtyInstances[mockPtyInstances.length - 1];
+
+        const killPromise = unixService.kill(sessionId);
+
+        // Should have sent SIGTERM first
+        expect(ptyInstance.kill).toHaveBeenCalledWith('SIGTERM');
+
+        // Simulate the session being cleaned up (onExit fires)
+        ptyInstance.simulateExit(0);
+        jest.advanceTimersByTime(200);
+
+        await killPromise;
+        jest.useRealTimers();
+      });
     });
   });
 });

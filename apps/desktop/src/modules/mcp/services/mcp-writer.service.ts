@@ -44,7 +44,7 @@ export class McpWriterService {
    * @returns 12-character hex hash
    */
   generateProjectHash(projectPath: string): string {
-    const normalized = path.normalize(projectPath).toLowerCase();
+    const normalized = path.normalize(projectPath).replace(/\\/g, '/').toLowerCase();
     const hash = crypto.createHash('sha256').update(normalized).digest('hex');
     return hash.substring(0, 12);
   }
