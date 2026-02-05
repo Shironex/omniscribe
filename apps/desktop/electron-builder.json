@@ -6,13 +6,7 @@
     "output": "release",
     "buildResources": "resources"
   },
-  "files": [
-    "dist/**/*",
-    "package.json",
-    "!**/*.map",
-    "!**/*.d.ts",
-    "!dist/**/*.d.ts"
-  ],
+  "files": ["dist/**/*", "package.json", "!**/*.map", "!**/*.d.ts", "!dist/**/*.d.ts"],
   "extraResources": [
     {
       "from": "../mcp-server/dist",
@@ -20,20 +14,21 @@
       "filter": ["**/*", "!**/*.map", "!**/*.d.ts"]
     }
   ],
-  "asarUnpack": [
-    "**/node_modules/node-pty/**/*"
-  ],
+  "asarUnpack": ["**/node_modules/node-pty/**/*"],
   "nodeGypRebuild": false,
   "npmRebuild": false,
   "mac": {
     "category": "public.app-category.developer-tools",
+    "icon": "resources/icon.png",
     "target": ["dmg", "zip"]
   },
   "win": {
+    "icon": "resources/icon.png",
     "target": ["nsis", "portable"],
     "signAndEditExecutable": false
   },
   "linux": {
+    "icon": "resources/icon.png",
     "target": ["AppImage", "deb"],
     "category": "Development"
   },

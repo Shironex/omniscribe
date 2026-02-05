@@ -60,6 +60,7 @@ export async function createMainWindow(): Promise<BrowserWindow> {
     frame: false,
     titleBarStyle: 'hidden',
     backgroundColor: '#0a0a0f',
+    icon: path.join(__dirname, '../../resources/icon.png'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
@@ -82,7 +83,7 @@ export async function createMainWindow(): Promise<BrowserWindow> {
     mainWindow.webContents.openDevTools();
 
     // Load from Vite dev server
-    mainWindow.loadURL(`http://localhost:${VITE_DEV_PORT}`).catch((err) => {
+    mainWindow.loadURL(`http://localhost:${VITE_DEV_PORT}`).catch(err => {
       logger.error('Failed to load from Vite dev server:', err.message);
       logger.error('Make sure the web app is running: pnpm dev:web (in another terminal)');
     });
@@ -91,7 +92,7 @@ export async function createMainWindow(): Promise<BrowserWindow> {
     const indexPath = path.join(__dirname, '../renderer/index.html');
     logger.info('Running in production mode - loading from:', indexPath);
 
-    mainWindow.loadFile(indexPath).catch((err) => {
+    mainWindow.loadFile(indexPath).catch(err => {
       logger.error('Failed to load renderer:', err);
     });
 

@@ -1,0 +1,106 @@
+OMNISCRIBE LICENSE AGREEMENT
+
+This License Agreement ("Agreement") is entered into between you ("Licensee") and the copyright holders of Omniscribe ("Licensor"). By using, copying, modifying, downloading, cloning, or distributing the Software (as defined below), you agree to be bound by the terms of this Agreement.
+
+1. DEFINITIONS
+
+"Software" means the Omniscribe software, including all source code, object code, documentation, and related materials.
+
+"Derivative Work" means any work that is based on, derived from, or incorporates the Software or any substantial portion of it, including but not limited to modifications, forks, adaptations, translations, or any altered version of the Software.
+
+"Monetization" means any activity that generates revenue, income, or commercial benefit from the Software itself or any Derivative Work, including but not limited to:
+
+- Reselling, redistributing, or sublicensing the Software, any Derivative Work, or any substantial portion thereof
+- Including the Software, any Derivative Work, or substantial portions thereof in a product or service that you sell or distribute
+- Offering the Software, any Derivative Work, or substantial portions thereof as a standalone product or service for sale
+- Hosting the Software or any Derivative Work as a service (whether free or paid) for use by others, including cloud hosting, Software-as-a-Service (SaaS), or any other form of hosted access for third parties
+- Creating, distributing, or selling modified versions, forks, or Derivative Works of the Software
+
+Monetization does NOT include:
+
+- Using the Software internally within your organization, regardless of whether your organization is for-profit
+- Using the Software to build products or services that generate revenue, as long as you are not reselling or redistributing the Software itself
+- Hosting the Software anywhere for personal use by a single developer, as long as the Software is not made accessible to others
+
+2. GRANT OF LICENSE
+
+Subject to the terms and conditions of this Agreement, Licensor hereby grants to Licensee a non-exclusive, non-transferable license to use, copy, modify, and distribute the Software, provided that:
+
+a) Licensee may freely clone, install, and use the Software locally or within an organization for the purpose of building, developing, and maintaining other products, software, or services.
+
+b) Licensee may run the Software on personal or organizational infrastructure for internal use.
+
+c) Licensee may modify the Software for internal use within their organization.
+
+d) Licensee may submit contributions (pull requests, issues, bug fixes) to the official project repository.
+
+3. RESTRICTIONS
+
+Licensee may NOT:
+
+- Engage in any Monetization of the Software or any Derivative Work without explicit written permission from the Licensor
+- Resell, redistribute, or sublicense the Software, any Derivative Work, or any substantial portion thereof
+- Create, distribute, or sell modified versions, forks, or Derivative Works of the Software for any commercial purpose
+- Include the Software, any Derivative Work, or substantial portions thereof in a product or service that you sell or distribute
+- Offer the Software, any Derivative Work, or substantial portions thereof as a standalone product or service for sale
+- Host the Software or any Derivative Work as a service (whether free or paid) for use by others
+- Remove or alter any copyright notices or license terms
+- Use the Software in any manner that violates applicable laws or regulations
+
+Licensee MAY:
+
+- Use the Software internally within their organization (commercial or non-profit)
+- Use the Software to build other commercial products (products that do NOT contain the Software or Derivative Works)
+- Modify the Software for internal use within their organization (commercial or non-profit)
+- Submit contributions to the official project repository
+
+4. CONTRIBUTIONS
+
+By submitting, pushing, or contributing any code, documentation, pull requests, issues, or other materials ("Contributions") to the Omniscribe project, you agree to the following terms:
+
+a) You grant the Licensor a perpetual, worldwide, royalty-free, non-exclusive, irrevocable, sublicensable license to use, reproduce, modify, adapt, publish, distribute, and otherwise exploit your Contributions in any manner, including for any commercial purpose.
+
+b) You represent and warrant that you are the original author of the Contributions, or that you have sufficient rights to grant the rights conveyed by this section, and that your Contributions do not infringe upon the rights of any third party.
+
+5. TERMINATION
+
+This license will terminate automatically if Licensee breaches any term of this Agreement. Upon termination, Licensee must immediately cease all use of the Software and destroy all copies in their possession.
+
+6. DISCLAIMER AND LIMITATION OF LIABILITY
+
+a) AI RISKS: THE SOFTWARE ORCHESTRATES ARTIFICIAL INTELLIGENCE CODING ASSISTANTS THAT GENERATE CODE, EXECUTE COMMANDS, AND INTERACT WITH YOUR FILE SYSTEM. YOU ACKNOWLEDGE THAT AI SYSTEMS CAN BE UNPREDICTABLE, MAY GENERATE INCORRECT, INSECURE, OR DESTRUCTIVE CODE, AND MAY TAKE ACTIONS THAT COULD DAMAGE YOUR SYSTEM, FILES, OR DATA.
+
+b) USE AT YOUR OWN RISK: YOU AGREE THAT YOUR USE OF THE SOFTWARE IS SOLELY AT YOUR OWN RISK. THE LICENSOR DOES NOT GUARANTEE THAT THE SOFTWARE OR ANY CODE GENERATED BY AI ASSISTANTS ORCHESTRATED THROUGH IT WILL BE SAFE, BUG-FREE, OR FUNCTIONAL.
+
+c) NO WARRANTY: THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT.
+
+d) LIMITATION OF LIABILITY: IN NO EVENT SHALL THE LICENSOR OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE, INCLUDING BUT NOT LIMITED TO:
+
+- DAMAGE TO HARDWARE OR COMPUTER SYSTEMS
+- DATA LOSS OR CORRUPTION
+- GENERATION OF BAD, VULNERABLE, OR MALICIOUS CODE
+- FINANCIAL LOSSES
+- BUSINESS INTERRUPTION
+
+7. LICENSE AMENDMENTS
+
+Any amendment, modification, or update to this License Agreement must be agreed upon by the Licensor. No changes to this Agreement shall be effective unless approved in writing by the Licensor.
+
+8. CONTACT
+
+For inquiries regarding this license or permissions for Monetization, please contact:
+
+- GitHub: https://github.com/Shironex/omniscribe
+- Email: support@taketach.pl
+
+Any permission for Monetization requires the explicit written consent of the Licensor.
+
+9. GOVERNING LAW
+
+This Agreement shall be governed by and construed in accordance with applicable laws, without regard to conflict of law principles.
+
+By using the Software, you acknowledge that you have read this Agreement, understand it, and agree to be bound by its terms and conditions.
+
+---
+
+Copyright (c) 2026 Omniscribe Contributors

@@ -1,4 +1,5 @@
 import { useEffect, useCallback, useRef } from 'react';
+import { createLogger } from '@omniscribe/shared';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import {
@@ -13,16 +14,18 @@ import {
 import { useGitStore, selectCurrentBranch } from '@/stores';
 import { useWorkspaceStore, selectActiveTab } from '@/stores';
 
+const logger = createLogger('GitSection');
+
 interface GitSectionProps {
   className?: string;
 }
 
 export function GitSection({ className }: GitSectionProps) {
   const currentBranch = useGitStore(selectCurrentBranch);
-  const isLoading = useGitStore((state) => state.isLoading);
-  const error = useGitStore((state) => state.error);
-  const fetchBranches = useGitStore((state) => state.fetchBranches);
-  const clear = useGitStore((state) => state.clear);
+  const isLoading = useGitStore(state => state.isLoading);
+  const error = useGitStore(state => state.error);
+  const fetchBranches = useGitStore(state => state.fetchBranches);
+  const clear = useGitStore(state => state.clear);
 
   const activeTab = useWorkspaceStore(selectActiveTab);
 
@@ -52,7 +55,7 @@ export function GitSection({ className }: GitSectionProps) {
 
   const handleRefresh = useCallback(() => {
     if (activeTab?.projectPath) {
-      console.log('[GitSection] Refresh clicked, fetching branches for:', activeTab.projectPath);
+      logger.debug('Refresh clicked, fetching branches for:', activeTab.projectPath);
       fetchBranches(activeTab.projectPath);
     }
   }, [activeTab?.projectPath, fetchBranches]);
@@ -67,9 +70,7 @@ export function GitSection({ className }: GitSectionProps) {
         <div className="flex items-center gap-2 min-w-0 flex-1">
           <GitBranch size={14} className="text-muted-foreground flex-shrink-0" />
           {isLoading ? (
-            <span className="text-xs text-muted-foreground animate-pulse">
-              Loading...
-            </span>
+            <span className="text-xs text-muted-foreground animate-pulse">Loading...</span>
           ) : error ? (
             <div className="flex items-center gap-1 text-red-400">
               <AlertCircle size={12} />
@@ -80,9 +81,7 @@ export function GitSection({ className }: GitSectionProps) {
               {currentBranch.name}
             </span>
           ) : (
-            <span className="text-xs text-muted-foreground">
-              No repository
-            </span>
+            <span className="text-xs text-muted-foreground">No repository</span>
           )}
         </div>
 

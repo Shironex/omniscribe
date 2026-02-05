@@ -1,5 +1,6 @@
 {
   "name": "omniscribe",
+  "version": "0.1.0",
   "private": true,
   "pnpm": {
     "onlyBuiltDependencies": [
@@ -19,7 +20,21 @@
     "package:mac": "pnpm build && pnpm --filter @omniscribe/desktop package:mac",
     "package:linux": "pnpm build && pnpm --filter @omniscribe/desktop package:linux",
     "lint": "eslint . --ext .ts,.tsx",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "prepare": "husky"
+  },
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,yml,yaml,css}": [
+      "prettier --write"
+    ]
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^7.0.0",
@@ -27,6 +42,8 @@
     "concurrently": "^9.2.1",
     "eslint": "^8.57.0",
     "eslint-config-prettier": "^9.1.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
     "prettier": "^3.2.0",
     "typescript": "^5.5.0",
     "wait-on": "^9.0.3"

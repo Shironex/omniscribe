@@ -8,8 +8,8 @@
 [![React](https://img.shields.io/badge/React-18.3-61DAFB?logo=react&logoColor=white)](https://react.dev/)
 [![NestJS](https://img.shields.io/badge/NestJS-10.4-E0234E?logo=nestjs&logoColor=white)](https://nestjs.com/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![OS](https://img.shields.io/badge/OS-Windows%20%7C%20macOS%20%7C%20Linux-0078D4)](https://github.com/your-username/omniscribe)
-[![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
+[![OS](https://img.shields.io/badge/OS-Windows%20%7C%20macOS%20%7C%20Linux-0078D4)](https://github.com/Shironex/omniscribe)
+[![License](https://img.shields.io/badge/License-Custom-blue)](LICENSE)
 
 ## Table of Contents
 
@@ -28,29 +28,29 @@ Omniscribe is a desktop application for managing multiple AI coding assistant se
 
 ## Features
 
-| Feature | Description |
-|---------|-------------|
-| **Multi-Session Grid** | Run 1-6 AI sessions in parallel with live terminal views |
-| **Real-Time Status** | Track session states: idle, working, planning, needs_input, finished |
-| **Git Worktrees** | Isolate each session in its own git worktree for parallel development |
-| **MCP Integration** | Configure Model Context Protocol servers per session |
-| **Project Tabs** | Manage multiple projects with persistent recent history |
-| **Cross-Platform** | Native support for Windows, macOS, and Linux |
+| Feature                | Description                                                           |
+| ---------------------- | --------------------------------------------------------------------- |
+| **Multi-Session Grid** | Run 1-6 AI sessions in parallel with live terminal views              |
+| **Real-Time Status**   | Track session states: idle, working, planning, needs_input, finished  |
+| **Git Worktrees**      | Isolate each session in its own git worktree for parallel development |
+| **MCP Integration**    | Configure Model Context Protocol servers per session                  |
+| **Project Tabs**       | Manage multiple projects with persistent recent history               |
+| **Cross-Platform**     | Native support for Windows, macOS, and Linux                          |
 
 ## Keyboard Shortcuts
 
-| Shortcut | Action |
-|----------|--------|
-| `N` | Add new session slot |
-| `L` | Launch all pending sessions |
-| `1-6` | Launch individual session by position |
-| `Ctrl/Cmd + K` | Stop all running sessions |
+| Shortcut       | Action                                |
+| -------------- | ------------------------------------- |
+| `N`            | Add new session slot                  |
+| `L`            | Launch all pending sessions           |
+| `1-6`          | Launch individual session by position |
+| `Ctrl/Cmd + K` | Stop all running sessions             |
 
 ## Quick Start
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/omniscribe.git
+git clone https://github.com/Shironex/omniscribe.git
 cd omniscribe
 
 # Install dependencies
@@ -105,27 +105,27 @@ omniscribe/
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|------------|
-| Desktop | Electron 40 |
-| Backend | NestJS 10 |
-| Frontend | React 18, Zustand 5 |
-| Terminal | xterm.js, node-pty |
-| Styling | Tailwind CSS |
-| Build | Vite, esbuild |
-| IPC | Socket.io, Electron IPC |
+| Layer    | Technology              |
+| -------- | ----------------------- |
+| Desktop  | Electron 40             |
+| Backend  | NestJS 10               |
+| Frontend | React 18, Zustand 5     |
+| Terminal | xterm.js, node-pty      |
+| Styling  | Tailwind CSS            |
+| Build    | Vite, esbuild           |
+| IPC      | Socket.io, Electron IPC |
 
 ## Contributing
 
 Contributions are welcome! Feel free to:
 
-- [Submit an issue](https://github.com/your-username/omniscribe/issues) for bugs or feature requests
+- [Submit an issue](https://github.com/Shironex/omniscribe/issues) for bugs or feature requests
 - Open a pull request with improvements
 - Share feedback and suggestions
 
 ## License
 
-MIT
+This project is licensed under a custom license — free to use, but you may not resell or redistribute it. See the [LICENSE](LICENSE) file for details.
 
 ---
 
