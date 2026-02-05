@@ -37,6 +37,6 @@
     "cross-env": "^7.0.3",
     "electron": "^40.0.0",
     "electron-builder": "^26.0.0",
-    "esbuild": "^0.25.0"
+    "esbuild": "^0.27.2"
   }
 }
