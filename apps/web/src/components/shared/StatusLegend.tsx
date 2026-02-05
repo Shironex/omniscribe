@@ -65,9 +65,7 @@ export function StatusDot({ status, className }: { status: SessionStatus; classN
   const config = statusConfig[status];
   return (
     <span
-      className={twMerge(
-        clsx('w-2 h-2 rounded-full inline-block', config.color, className)
-      )}
+      className={twMerge(clsx('w-2 h-2 rounded-full inline-block', config.color, className))}
       title={config.label}
     />
   );

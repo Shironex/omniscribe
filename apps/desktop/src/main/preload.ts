@@ -77,13 +77,14 @@ const electronAPI: ElectronAPI = {
   dialog: {
     openDirectory: (options?: unknown) => ipcRenderer.invoke('dialog:open-directory', options),
     openFile: (options?: unknown) => ipcRenderer.invoke('dialog:open-file', options),
-    message: (options) => ipcRenderer.invoke('dialog:message', options),
+    message: options => ipcRenderer.invoke('dialog:message', options),
   },
   app: {
     getPath: (name: string) => ipcRenderer.invoke('app:get-path', name),
     getVersion: () => ipcRenderer.invoke('app:get-version'),
     checkCli: (tool: string) => ipcRenderer.invoke('app:check-cli', tool),
-    isValidProject: (projectPath: string) => ipcRenderer.invoke('app:is-valid-project', projectPath),
+    isValidProject: (projectPath: string) =>
+      ipcRenderer.invoke('app:is-valid-project', projectPath),
   },
   claude: {
     getStatus: () => ipcRenderer.invoke('claude:get-status') as Promise<ClaudeCliStatus>,
@@ -92,7 +93,8 @@ const electronAPI: ElectronAPI = {
     getVersions: () => ipcRenderer.invoke('claude:get-versions') as Promise<ClaudeVersionList>,
     getInstallCommand: (options: ClaudeInstallCommandOptions) =>
       ipcRenderer.invoke('claude:get-install-command', options) as Promise<ClaudeInstallCommand>,
-    runInstall: (command: string) => ipcRenderer.invoke('claude:run-install', command) as Promise<void>,
+    runInstall: (command: string) =>
+      ipcRenderer.invoke('claude:run-install', command) as Promise<void>,
   },
   github: {
     getStatus: () => ipcRenderer.invoke('github:get-status') as Promise<GhCliStatus>,

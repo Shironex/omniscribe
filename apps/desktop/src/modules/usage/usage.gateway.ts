@@ -8,11 +8,7 @@ import {
 import { Server, Socket } from 'socket.io';
 import { UsageService } from './usage.service';
 import { createLogger } from '@omniscribe/shared';
-import type {
-  UsageFetchPayload,
-  UsageFetchResponse,
-  ClaudeCliStatus,
-} from '@omniscribe/shared';
+import type { UsageFetchPayload, UsageFetchResponse, ClaudeCliStatus } from '@omniscribe/shared';
 import { CORS_CONFIG } from '../shared/cors.config';
 
 @WebSocketGateway({

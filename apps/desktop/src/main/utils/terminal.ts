@@ -22,11 +22,7 @@ function escapeShellArg(arg: string): string {
 function escapePowerShellArg(arg: string): string {
   // Escape special PowerShell characters
   // Replace backticks, dollars, and quotes
-  return arg
-    .replace(/`/g, '``')
-    .replace(/\$/g, '`$')
-    .replace(/"/g, '`"')
-    .replace(/'/g, "''");
+  return arg.replace(/`/g, '``').replace(/\$/g, '`$').replace(/"/g, '`"').replace(/'/g, "''");
 }
 
 /**
@@ -86,9 +82,7 @@ export async function openTerminalWithCommand(command: string): Promise<void> {
   } else if (platform === 'darwin') {
     // macOS: Use osascript with properly escaped command
     // AppleScript escaping: escape backslashes and quotes
-    const escapedForAppleScript = command
-      .replace(/\\/g, '\\\\')
-      .replace(/"/g, '\\"');
+    const escapedForAppleScript = command.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
     const terminalCommand = `osascript -e 'tell app "Terminal" to do script "${escapedForAppleScript}"' -e 'tell app "Terminal" to activate'`;
     await execAsync(terminalCommand);
   } else {

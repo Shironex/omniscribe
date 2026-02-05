@@ -9,13 +9,13 @@ import { useSettingsStore } from '@/stores';
 type TabValue = 'dark' | 'light';
 
 export function AppearanceSection() {
-  const theme = useSettingsStore((state) => state.theme);
-  const previewTheme = useSettingsStore((state) => state.previewTheme);
-  const setTheme = useSettingsStore((state) => state.setTheme);
-  const setPreviewTheme = useSettingsStore((state) => state.setPreviewTheme);
+  const theme = useSettingsStore(state => state.theme);
+  const previewTheme = useSettingsStore(state => state.previewTheme);
+  const setTheme = useSettingsStore(state => state.setTheme);
+  const setPreviewTheme = useSettingsStore(state => state.setPreviewTheme);
 
   const effectiveTheme = previewTheme ?? theme;
-  const currentTheme = themeOptions.find((t) => t.value === effectiveTheme);
+  const currentTheme = themeOptions.find(t => t.value === effectiveTheme);
   const [activeTab, setActiveTab] = useState<TabValue>(() => {
     return currentTheme?.isDark ? 'dark' : 'light';
   });
@@ -48,9 +48,13 @@ export function AppearanceSection() {
           className={clsx(
             'w-10 h-10 rounded-xl flex items-center justify-center',
             'bg-gradient-to-br from-primary/20 to-brand-600/10',
-            'ring-1',
+            'ring-1'
           )}
-          style={{ '--tw-ring-color': 'color-mix(in oklch, var(--primary), transparent 80%)' } as React.CSSProperties}
+          style={
+            {
+              '--tw-ring-color': 'color-mix(in oklch, var(--primary), transparent 80%)',
+            } as React.CSSProperties
+          }
         >
           <Palette className="w-5 h-5 text-primary" />
         </div>
@@ -72,7 +76,7 @@ export function AppearanceSection() {
               'flex-1 rounded-md px-4 py-2 text-sm font-medium transition-all duration-200',
               activeTab === 'dark'
                 ? 'bg-card shadow-sm text-foreground'
-                : 'text-muted-foreground hover:text-foreground',
+                : 'text-muted-foreground hover:text-foreground'
             )}
           >
             Dark Themes
@@ -83,7 +87,7 @@ export function AppearanceSection() {
               'flex-1 rounded-md px-4 py-2 text-sm font-medium transition-all duration-200',
               activeTab === 'light'
                 ? 'bg-card shadow-sm text-foreground'
-                : 'text-muted-foreground hover:text-foreground',
+                : 'text-muted-foreground hover:text-foreground'
             )}
           >
             Light Themes
@@ -92,7 +96,7 @@ export function AppearanceSection() {
 
         {/* Theme grid */}
         <div className="grid grid-cols-4 gap-2">
-          {themes.map((themeOption) => {
+          {themes.map(themeOption => {
             const Icon = themeOption.Icon;
             const isSelected = theme === themeOption.value;
 
@@ -107,7 +111,7 @@ export function AppearanceSection() {
                   'relative flex flex-col items-center gap-2 rounded-xl border p-4 transition-all duration-200',
                   isSelected
                     ? 'border-primary/50 bg-primary/10 ring-1 ring-primary/20'
-                    : 'border-border hover:border-primary/30 hover:bg-muted/50',
+                    : 'border-border hover:border-primary/30 hover:bg-muted/50'
                 )}
               >
                 {isSelected && (
@@ -116,9 +120,7 @@ export function AppearanceSection() {
                   </div>
                 )}
                 <Icon className="h-6 w-6" style={{ color: themeOption.color }} />
-                <span className="text-xs font-medium text-foreground">
-                  {themeOption.label}
-                </span>
+                <span className="text-xs font-medium text-foreground">{themeOption.label}</span>
               </button>
             );
           })}

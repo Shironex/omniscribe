@@ -54,11 +54,7 @@ export function WelcomeView({
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
-      if (
-        target.tagName === 'INPUT' ||
-        target.tagName === 'TEXTAREA' ||
-        target.isContentEditable
-      ) {
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
         return;
       }
 
@@ -123,18 +119,12 @@ export function WelcomeView({
                 'flex items-center justify-center'
               )}
             >
-              <Sparkles
-                size={40}
-                className="text-primary"
-                strokeWidth={1.5}
-              />
+              <Sparkles size={40} className="text-primary" strokeWidth={1.5} />
             </div>
           </div>
 
           {/* Tagline */}
-          <h1 className="text-xl font-semibold text-foreground mb-2">
-            Welcome to {APP_NAME}
-          </h1>
+          <h1 className="text-xl font-semibold text-foreground mb-2">Welcome to {APP_NAME}</h1>
           <p className="text-sm text-foreground-secondary text-center max-w-sm">
             Orchestrate multiple AI coding assistants in parallel
           </p>
@@ -145,9 +135,7 @@ export function WelcomeView({
           <div className="w-full mb-6">
             <div className="flex items-center gap-2 mb-3 px-1">
               <Clock size={14} className="text-foreground-secondary" />
-              <h2 className="text-sm font-medium text-foreground-secondary">
-                Recent Projects
-              </h2>
+              <h2 className="text-sm font-medium text-foreground-secondary">Recent Projects</h2>
             </div>
             <div className="space-y-2">
               {recentProjects.slice(0, 5).map((project, index) => (
@@ -174,9 +162,7 @@ export function WelcomeView({
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium text-foreground truncate">
-                        {project.name}
-                      </span>
+                      <span className="font-medium text-foreground truncate">{project.name}</span>
                       <kbd className="hidden group-hover:inline-flex px-1.5 py-0.5 rounded bg-muted border border-border font-mono text-[10px] text-foreground-secondary">
                         {index + 1}
                       </kbd>

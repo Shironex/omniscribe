@@ -7,12 +7,12 @@
 
 /** Allowed origins for CORS */
 export const ALLOWED_ORIGINS: (string | RegExp)[] = [
-  'http://localhost:5173',  // Vite dev server
+  'http://localhost:5173', // Vite dev server
   'http://127.0.0.1:5173',
-  'http://localhost:3001',  // NestJS server
+  'http://localhost:3001', // NestJS server
   'http://127.0.0.1:3001',
-  /^app:\/\//,              // Electron app protocol
-  /^file:\/\//,             // Local file protocol
+  /^app:\/\//, // Electron app protocol
+  /^file:\/\//, // Local file protocol
 ];
 
 /**
@@ -31,7 +31,7 @@ export function isOriginAllowed(origin: string | undefined): boolean {
     return true; // Allow requests with no origin (same-origin, Electron, etc.)
   }
 
-  return ALLOWED_ORIGINS.some((allowed) => {
+  return ALLOWED_ORIGINS.some(allowed => {
     if (allowed instanceof RegExp) {
       return allowed.test(origin);
     }
@@ -45,7 +45,7 @@ export function isOriginAllowed(origin: string | undefined): boolean {
  */
 export function corsOriginCallback(
   origin: string | undefined,
-  callback: (err: Error | null, allow?: boolean) => void,
+  callback: (err: Error | null, allow?: boolean) => void
 ): void {
   if (isOriginAllowed(origin)) {
     callback(null, true);

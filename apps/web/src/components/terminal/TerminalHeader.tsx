@@ -194,13 +194,13 @@ export function TerminalHeader({
           <div className="flex items-center gap-1 text-xs text-muted-foreground shrink-0 px-1.5 py-0.5 rounded bg-card/50">
             <GitBranch size={11} className="text-muted-foreground" />
             <span className="truncate max-w-24">{branchName}</span>
-            {(ahead !== undefined && ahead > 0) && (
+            {ahead !== undefined && ahead > 0 && (
               <span className="flex items-center gap-0.5 text-green-500 text-2xs">
                 <ArrowUp size={9} />
                 {ahead}
               </span>
             )}
-            {(behind !== undefined && behind > 0) && (
+            {behind !== undefined && behind > 0 && (
               <span className="flex items-center gap-0.5 text-orange-500 text-2xs">
                 <ArrowDown size={9} />
                 {behind}
@@ -253,15 +253,13 @@ export function TerminalHeader({
                 {groupedActions.map((group, groupIndex) => (
                   <div key={group.category}>
                     {/* Section divider (except first) */}
-                    {groupIndex > 0 && (
-                      <div className="my-1 border-t border-border" />
-                    )}
+                    {groupIndex > 0 && <div className="my-1 border-t border-border" />}
                     {/* Section header */}
                     <div className="px-3 py-1 text-2xs font-medium text-muted-foreground uppercase tracking-wide">
                       {group.label}
                     </div>
                     {/* Actions in this section */}
-                    {group.actions.map((action) => {
+                    {group.actions.map(action => {
                       const Icon = action.icon ? iconMap[action.icon] : null;
                       return (
                         <button
@@ -325,7 +323,6 @@ export function TerminalHeader({
             </div>
           )}
         </div>
-
       </div>
     </div>
   );

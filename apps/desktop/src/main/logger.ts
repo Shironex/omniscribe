@@ -1,7 +1,12 @@
 import { app } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
-import { LOG_FILE_PREFIX, createLogger, LoggerOptions, setTimestampsEnabled } from '@omniscribe/shared';
+import {
+  LOG_FILE_PREFIX,
+  createLogger,
+  LoggerOptions,
+  setTimestampsEnabled,
+} from '@omniscribe/shared';
 
 const isDev = process.env.NODE_ENV === 'development';
 

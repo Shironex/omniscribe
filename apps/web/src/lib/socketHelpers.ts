@@ -92,11 +92,7 @@ export async function emitWithErrorHandling<TPayload, TResponse>(
   payload: TPayload,
   options: EmitOptions = {}
 ): Promise<TResponse> {
-  const response = await emitAsync<TPayload, TResponse | ErrorResponse>(
-    event,
-    payload,
-    options
-  );
+  const response = await emitAsync<TPayload, TResponse | ErrorResponse>(event, payload, options);
 
   if (response && typeof response === 'object' && 'error' in response) {
     logger.warn('Error response for', event, (response as ErrorResponse).error);
@@ -125,11 +121,7 @@ export async function emitWithSuccessHandling<TPayload>(
   options: EmitOptions = {},
   errorMessage = 'Operation failed'
 ): Promise<void> {
-  const response = await emitAsync<TPayload, SuccessResponse>(
-    event,
-    payload,
-    options
-  );
+  const response = await emitAsync<TPayload, SuccessResponse>(event, payload, options);
 
   if (!response.success) {
     logger.warn('Failed response for', event, response.error ?? errorMessage);

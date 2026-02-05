@@ -36,7 +36,7 @@ function NavButton({
               'hover:bg-muted/50',
               'border border-transparent hover:border-border/40',
             ],
-        'hover:scale-[1.01] active:scale-[0.98]',
+        'hover:scale-[1.01] active:scale-[0.98]'
       )}
     >
       {/* Active indicator bar */}
@@ -47,53 +47,53 @@ function NavButton({
         size={16}
         className={clsx(
           'w-4 h-4 shrink-0 transition-all duration-200',
-          isActive
-            ? 'text-primary'
-            : 'group-hover:text-primary group-hover:scale-110',
+          isActive ? 'text-primary' : 'group-hover:text-primary group-hover:scale-110'
         )}
       />
-      <span className={clsx('truncate', isActive ? 'text-foreground' : 'text-muted-foreground group-hover:text-foreground')}>
+      <span
+        className={clsx(
+          'truncate',
+          isActive ? 'text-foreground' : 'text-muted-foreground group-hover:text-foreground'
+        )}
+      >
         {item.label}
       </span>
     </button>
   );
 }
 
-export function SettingsNavigation({
-  activeSection,
-  onNavigate,
-}: SettingsNavigationProps) {
+export function SettingsNavigation({ activeSection, onNavigate }: SettingsNavigationProps) {
   return (
     <nav
       className={clsx(
         'w-56 shrink-0 overflow-y-auto',
         'border-r border-border/50',
-        'bg-muted/95 backdrop-blur-xl',
+        'bg-muted/95 backdrop-blur-xl'
       )}
     >
       <div className="sticky top-0 p-4 space-y-1">
-          {/* Navigation Groups */}
-          {NAV_GROUPS.map((group) => (
-            <div key={group.label}>
-              {/* Group Label */}
-              <div className="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground opacity-70">
-                {group.label}
-              </div>
-
-              {/* Group Items */}
-              <div className="space-y-1">
-                {group.items.map((item) => (
-                  <NavButton
-                    key={item.id}
-                    item={item}
-                    isActive={activeSection === item.id}
-                    onNavigate={onNavigate}
-                  />
-                ))}
-              </div>
+        {/* Navigation Groups */}
+        {NAV_GROUPS.map(group => (
+          <div key={group.label}>
+            {/* Group Label */}
+            <div className="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground opacity-70">
+              {group.label}
             </div>
-          ))}
-        </div>
-      </nav>
+
+            {/* Group Items */}
+            <div className="space-y-1">
+              {group.items.map(item => (
+                <NavButton
+                  key={item.id}
+                  item={item}
+                  isActive={activeSection === item.id}
+                  onNavigate={onNavigate}
+                />
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </nav>
   );
 }

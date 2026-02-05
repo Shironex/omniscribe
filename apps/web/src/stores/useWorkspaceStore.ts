@@ -126,10 +126,8 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => {
   const socketActions = createSocketActions<WorkspaceState>(set);
 
   // Create socket listeners
-  const { initListeners: baseInitListeners, cleanupListeners } = createSocketListeners<WorkspaceStore>(
-    get,
-    set,
-    {
+  const { initListeners: baseInitListeners, cleanupListeners } =
+    createSocketListeners<WorkspaceStore>(get, set, {
       listeners: [
         {
           event: 'workspace:tabs-updated',
@@ -147,12 +145,11 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => {
           },
         },
       ],
-      onConnect: (get) => {
+      onConnect: get => {
         // Restore state on reconnect
         get().restoreState();
       },
-    }
-  );
+    });
 
   // Wrap initListeners to also call restoreState on initial setup
   const initListeners = () => {
@@ -178,20 +175,37 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => {
 
     // Custom actions
     openProject: (projectPath: string, name?: string) => {
-    logger.info('Opening project', projectPath);
-    const state = get();
-    const normalizedPath = projectPath.replace(/\\/g, '/');
+      logger.info('Opening project', projectPath);
+      const state = get();
+      const normalizedPath = projectPath.replace(/\\/g, '/');
 
-    // Check if project is already open
-    const existingTab = state.tabs.find(
-      (tab) => tab.projectPath.replace(/\\/g, '/') === normalizedPath
-    );
+      // Check if project is already open
+      const existingTab = state.tabs.find(
+        tab => tab.projectPath.replace(/\\/g, '/') === normalizedPath
+      );
 
-    if (existingTab) {
-      // Focus existing tab via backend
+      if (existingTab) {
+        // Focus existing tab via backend
+        socket.emit('workspace:select-tab', { tabId: existingTab.id }, (response: TabsResponse) => {
+          if (response.success) {
+            set({
+              tabs: response.tabs.map(convertBackendTab),
+              activeTabId: response.activeTabId,
+            });
+          }
+        });
+        return;
+      }
+
+      // Create new tab via backend
+      const tabId = generateTabId();
+      const tabName = name ?? extractProjectName(projectPath);
+      // New tabs inherit the current theme from settings
+      const currentTheme = useSettingsStore.getState().theme;
+
       socket.emit(
-        'workspace:select-tab',
-        { tabId: existingTab.id },
+        'workspace:add-tab',
+        { id: tabId, projectPath, name: tabName, theme: currentTheme },
         (response: TabsResponse) => {
           if (response.success) {
             set({
@@ -201,55 +215,27 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => {
           }
         }
       );
-      return;
-    }
+    },
 
-    // Create new tab via backend
-    const tabId = generateTabId();
-    const tabName = name ?? extractProjectName(projectPath);
-    // New tabs inherit the current theme from settings
-    const currentTheme = useSettingsStore.getState().theme;
-
-    socket.emit(
-      'workspace:add-tab',
-      { id: tabId, projectPath, name: tabName, theme: currentTheme },
-      (response: TabsResponse) => {
+    closeTab: (tabId: string) => {
+      logger.debug('closeTab', tabId);
+      socket.emit('workspace:remove-tab', { tabId }, (response: TabsResponse) => {
         if (response.success) {
           set({
             tabs: response.tabs.map(convertBackendTab),
             activeTabId: response.activeTabId,
           });
         }
-      }
-    );
-  },
+      });
+    },
 
-  closeTab: (tabId: string) => {
-    logger.debug('closeTab', tabId);
-    socket.emit(
-      'workspace:remove-tab',
-      { tabId },
-      (response: TabsResponse) => {
-        if (response.success) {
-          set({
-            tabs: response.tabs.map(convertBackendTab),
-            activeTabId: response.activeTabId,
-          });
-        }
-      }
-    );
-  },
+    selectTab: (tabId: string) => {
+      logger.debug('selectTab', tabId);
+      // Optimistic update: set activeTabId immediately to prevent race conditions
+      // This ensures activeTab computed value is accurate before socket response
+      set({ activeTabId: tabId });
 
-  selectTab: (tabId: string) => {
-    logger.debug('selectTab', tabId);
-    // Optimistic update: set activeTabId immediately to prevent race conditions
-    // This ensures activeTab computed value is accurate before socket response
-    set({ activeTabId: tabId });
-
-    socket.emit(
-      'workspace:select-tab',
-      { tabId },
-      (response: TabsResponse) => {
+      socket.emit('workspace:select-tab', { tabId }, (response: TabsResponse) => {
         if (response.success) {
           set({
             tabs: response.tabs.map(convertBackendTab),
@@ -260,79 +246,69 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => {
           // The tabs array still has the correct state
           logger.warn('selectTab rollback for', tabId);
         }
-      }
-    );
-  },
+      });
+    },
 
-  updateTabTheme: (tabId: string, theme: Theme) => {
-    socket.emit(
-      'workspace:update-tab-theme',
-      { tabId, theme },
-      (response: TabsOnlyResponse) => {
+    updateTabTheme: (tabId: string, theme: Theme) => {
+      socket.emit('workspace:update-tab-theme', { tabId, theme }, (response: TabsOnlyResponse) => {
         if (response.success) {
           set({ tabs: response.tabs.map(convertBackendTab) });
         }
+      });
+    },
+
+    addSessionToTab: (tabId: string, sessionId: string) => {
+      set(state => ({
+        tabs: state.tabs.map(tab =>
+          tab.id === tabId && !tab.sessionIds.includes(sessionId)
+            ? { ...tab, sessionIds: [...tab.sessionIds, sessionId] }
+            : tab
+        ),
+      }));
+    },
+
+    removeSessionFromTab: (tabId: string, sessionId: string) => {
+      set(state => ({
+        tabs: state.tabs.map(tab =>
+          tab.id === tabId
+            ? { ...tab, sessionIds: tab.sessionIds.filter(id => id !== sessionId) }
+            : tab
+        ),
+      }));
+    },
+
+    clearStaleSessions: (validSessionIds: string[]) => {
+      set(state => ({
+        tabs: state.tabs.map(tab => ({
+          ...tab,
+          sessionIds: tab.sessionIds.filter(id => validSessionIds.includes(id)),
+        })),
+      }));
+    },
+
+    getTabByProjectPath: (projectPath: string) => {
+      const normalizedPath = projectPath.replace(/\\/g, '/');
+      return get().tabs.find(tab => tab.projectPath.replace(/\\/g, '/') === normalizedPath);
+    },
+
+    getActiveTab: () => {
+      const state = get();
+      return state.tabs.find(tab => tab.id === state.activeTabId);
+    },
+
+    restoreState: () => {
+      const state = get();
+      if (state.isRestored) {
+        return; // Already restored
       }
-    );
-  },
 
-  addSessionToTab: (tabId: string, sessionId: string) => {
-    set((state) => ({
-      tabs: state.tabs.map((tab) =>
-        tab.id === tabId && !tab.sessionIds.includes(sessionId)
-          ? { ...tab, sessionIds: [...tab.sessionIds, sessionId] }
-          : tab
-      ),
-    }));
-  },
+      set({ isLoading: true });
 
-  removeSessionFromTab: (tabId: string, sessionId: string) => {
-    set((state) => ({
-      tabs: state.tabs.map((tab) =>
-        tab.id === tabId
-          ? { ...tab, sessionIds: tab.sessionIds.filter((id) => id !== sessionId) }
-          : tab
-      ),
-    }));
-  },
-
-  clearStaleSessions: (validSessionIds: string[]) => {
-    set((state) => ({
-      tabs: state.tabs.map((tab) => ({
-        ...tab,
-        sessionIds: tab.sessionIds.filter((id) => validSessionIds.includes(id)),
-      })),
-    }));
-  },
-
-  getTabByProjectPath: (projectPath: string) => {
-    const normalizedPath = projectPath.replace(/\\/g, '/');
-    return get().tabs.find(
-      (tab) => tab.projectPath.replace(/\\/g, '/') === normalizedPath
-    );
-  },
-
-  getActiveTab: () => {
-    const state = get();
-    return state.tabs.find((tab) => tab.id === state.activeTabId);
-  },
-
-  restoreState: () => {
-    const state = get();
-    if (state.isRestored) {
-      return; // Already restored
-    }
-
-    set({ isLoading: true });
-
-    socket.emit(
-      'workspace:get-state',
-      {},
-      (response: WorkspaceStateResponse) => {
+      socket.emit('workspace:get-state', {}, (response: WorkspaceStateResponse) => {
         if (response) {
           const tabs = (response.tabs ?? []).map(convertBackendTab);
           // Clear session IDs on restore - they'll be re-associated
-          const cleanedTabs = tabs.map((tab) => ({ ...tab, sessionIds: [] }));
+          const cleanedTabs = tabs.map(tab => ({ ...tab, sessionIds: [] }));
 
           logger.info('Restored state:', cleanedTabs.length, 'tabs');
           set({
@@ -351,29 +327,28 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => {
             error: null,
           });
         }
-      }
-    );
-  },
+      });
+    },
 
-  updatePreference: (key: string, value: unknown) => {
-    socket.emit(
-      'workspace:update-preference',
-      { key, value },
-      (response: PreferencesResponse) => {
-        if (response.success) {
-          set({ preferences: response.preferences });
+    updatePreference: (key: string, value: unknown) => {
+      socket.emit(
+        'workspace:update-preference',
+        { key, value },
+        (response: PreferencesResponse) => {
+          if (response.success) {
+            set({ preferences: response.preferences });
+          }
         }
-      }
-    );
-  },
+      );
+    },
 
-  setTabs: (tabs: ProjectTab[], activeTabId: string | null) => {
-    set({ tabs, activeTabId });
-  },
+    setTabs: (tabs: ProjectTab[], activeTabId: string | null) => {
+      set({ tabs, activeTabId });
+    },
 
-  setPreferences: (preferences: UserPreferences) => {
-    set({ preferences });
-  },
+    setPreferences: (preferences: UserPreferences) => {
+      set({ preferences });
+    },
   };
 });
 
@@ -388,16 +363,14 @@ export const selectTabs = (state: WorkspaceStore) => state.tabs;
  * Select active tab
  */
 export const selectActiveTab = (state: WorkspaceStore) =>
-  state.tabs.find((tab) => tab.id === state.activeTabId);
+  state.tabs.find(tab => tab.id === state.activeTabId);
 
 /**
  * Select tab by project path
  */
 export const selectTabByProjectPath = (projectPath: string) => (state: WorkspaceStore) => {
   const normalizedPath = projectPath.replace(/\\/g, '/');
-  return state.tabs.find(
-    (tab) => tab.projectPath.replace(/\\/g, '/') === normalizedPath
-  );
+  return state.tabs.find(tab => tab.projectPath.replace(/\\/g, '/') === normalizedPath);
 };
 
 /**
@@ -408,8 +381,10 @@ export const selectPreferences = (state: WorkspaceStore) => state.preferences;
 /**
  * Select a specific preference
  */
-export const selectPreference = <T>(key: string) => (state: WorkspaceStore) =>
-  state.preferences[key] as T | undefined;
+export const selectPreference =
+  <T>(key: string) =>
+  (state: WorkspaceStore) =>
+    state.preferences[key] as T | undefined;
 
 /**
  * Select whether state has been restored

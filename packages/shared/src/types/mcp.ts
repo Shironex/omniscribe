@@ -6,11 +6,7 @@ export type McpTransportType = 'stdio' | 'sse' | 'websocket';
 /**
  * MCP server status
  */
-export type McpServerStatus =
-  | 'disconnected'
-  | 'connecting'
-  | 'connected'
-  | 'error';
+export type McpServerStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
 
 /**
  * MCP server configuration

@@ -26,7 +26,7 @@ export class GitBaseService {
   async execGit(
     repoPath: string,
     args: string[],
-    timeoutMs: number = GIT_TIMEOUT_MS,
+    timeoutMs: number = GIT_TIMEOUT_MS
   ): Promise<ExecResult> {
     const command = `git ${args.join(' ')}`;
     this.logger.debug(`execGit: ${command} (cwd: ${repoPath})`);

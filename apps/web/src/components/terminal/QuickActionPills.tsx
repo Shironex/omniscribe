@@ -23,20 +23,12 @@ const variantStyles: Record<string, string> = {
   danger: 'bg-red-500/10 hover:bg-red-500/20 text-red-400',
 };
 
-export function QuickActionPills({
-  actions,
-  onRunAction,
-  className,
-}: QuickActionPillsProps) {
+export function QuickActionPills({ actions, onRunAction, className }: QuickActionPillsProps) {
   if (actions.length === 0) return null;
 
   return (
-    <div
-      className={twMerge(
-        clsx('flex items-center gap-1.5 flex-wrap', className)
-      )}
-    >
-      {actions.map((action) => {
+    <div className={twMerge(clsx('flex items-center gap-1.5 flex-wrap', className))}>
+      {actions.map(action => {
         const Icon = action.icon;
         const variant = action.variant || 'default';
 

@@ -10,11 +10,7 @@ interface TopBarProps {
   className?: string;
 }
 
-export function TopBar({
-  currentBranch,
-  statusCounts,
-  className,
-}: TopBarProps) {
+export function TopBar({ currentBranch, statusCounts, className }: TopBarProps) {
   return (
     <div
       className={twMerge(

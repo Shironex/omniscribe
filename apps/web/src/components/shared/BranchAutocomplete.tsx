@@ -50,7 +50,7 @@ export function BranchAutocomplete({
   // Measure trigger width for popover
   React.useEffect(() => {
     if (triggerRef.current) {
-      const observer = new ResizeObserver((entries) => {
+      const observer = new ResizeObserver(entries => {
         for (const entry of entries) {
           setTriggerWidth(entry.contentRect.width);
         }
@@ -64,17 +64,17 @@ export function BranchAutocomplete({
   const filteredBranches = React.useMemo(() => {
     if (!search) return branches;
     const lower = search.toLowerCase();
-    return branches.filter((b) => b.name.toLowerCase().includes(lower));
+    return branches.filter(b => b.name.toLowerCase().includes(lower));
   }, [branches, search]);
 
   // Separate local and remote branches
-  const localBranches = filteredBranches.filter((b) => !b.isRemote);
-  const remoteBranches = filteredBranches.filter((b) => b.isRemote);
+  const localBranches = filteredBranches.filter(b => !b.isRemote);
+  const remoteBranches = filteredBranches.filter(b => b.isRemote);
 
   // Check if search matches an existing branch
   const searchMatchesExisting = React.useMemo(() => {
     if (!search.trim()) return true;
-    return branches.some((b) => b.name.toLowerCase() === search.toLowerCase());
+    return branches.some(b => b.name.toLowerCase() === search.toLowerCase());
   }, [branches, search]);
 
   // Validate branch name
@@ -132,11 +132,7 @@ export function BranchAutocomplete({
         align={align}
       >
         <Command shouldFilter={false}>
-          <CommandInput
-            placeholder="Search branches..."
-            value={search}
-            onValueChange={setSearch}
-          />
+          <CommandInput placeholder="Search branches..." value={search} onValueChange={setSearch} />
           <CommandList>
             {/* Create new branch option - show at top when search doesn't match */}
             {canCreateBranch && (
@@ -162,7 +158,7 @@ export function BranchAutocomplete({
             {/* Local branches */}
             {localBranches.length > 0 && (
               <CommandGroup heading="Local">
-                {localBranches.map((branch) => (
+                {localBranches.map(branch => (
                   <CommandItem
                     key={branch.name}
                     value={branch.name}
@@ -187,7 +183,7 @@ export function BranchAutocomplete({
             {/* Remote branches */}
             {remoteBranches.length > 0 && (
               <CommandGroup heading="Remote">
-                {remoteBranches.map((branch) => (
+                {remoteBranches.map(branch => (
                   <CommandItem
                     key={branch.name}
                     value={branch.name}

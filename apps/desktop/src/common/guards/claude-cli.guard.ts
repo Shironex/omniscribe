@@ -25,25 +25,25 @@ export const SkipClaudeCliCheck = () => SetMetadata(SKIP_CLAUDE_CLI_CHECK, true)
 export class ClaudeCliGuard implements CanActivate {
   constructor(
     private reflector: Reflector,
-    private usageService: UsageService,
+    private usageService: UsageService
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     // Check if this endpoint should skip the check
-    const skipCheck = this.reflector.getAllAndOverride<boolean>(
-      SKIP_CLAUDE_CLI_CHECK,
-      [context.getHandler(), context.getClass()],
-    );
+    const skipCheck = this.reflector.getAllAndOverride<boolean>(SKIP_CLAUDE_CLI_CHECK, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
 
     if (skipCheck) {
       return true;
     }
 
     // Check if Claude CLI is required
-    const requiresClaude = this.reflector.getAllAndOverride<boolean>(
-      REQUIRES_CLAUDE_CLI,
-      [context.getHandler(), context.getClass()],
-    );
+    const requiresClaude = this.reflector.getAllAndOverride<boolean>(REQUIRES_CLAUDE_CLI, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
 
     if (!requiresClaude) {
       return true;
@@ -56,8 +56,7 @@ export class ClaudeCliGuard implements CanActivate {
         statusCode: 501,
         message: 'Claude CLI not installed',
         error: 'CLAUDE_CLI_NOT_INSTALLED',
-        details:
-          'Claude Code CLI is not installed. Please install it from https://claude.ai/code',
+        details: 'Claude Code CLI is not installed. Please install it from https://claude.ai/code',
       });
     }
 

@@ -16,10 +16,10 @@ import { clsx } from 'clsx';
 import { useSettingsStore } from '@/stores';
 
 export function GithubSection() {
-  const githubCliStatus = useSettingsStore((state) => state.githubCliStatus);
-  const isLoading = useSettingsStore((state) => state.isGithubCliLoading);
-  const setGithubCliStatus = useSettingsStore((state) => state.setGithubCliStatus);
-  const setGithubCliLoading = useSettingsStore((state) => state.setGithubCliLoading);
+  const githubCliStatus = useSettingsStore(state => state.githubCliStatus);
+  const isLoading = useSettingsStore(state => state.isGithubCliLoading);
+  const setGithubCliStatus = useSettingsStore(state => state.setGithubCliStatus);
+  const setGithubCliLoading = useSettingsStore(state => state.setGithubCliLoading);
 
   const refreshStatus = useCallback(async () => {
     logger.debug('Fetching GitHub CLI status');
@@ -57,17 +57,19 @@ export function GithubSection() {
           className={clsx(
             'w-10 h-10 rounded-xl flex items-center justify-center',
             'bg-gradient-to-br from-primary/20 to-brand-600/10',
-            'ring-1',
+            'ring-1'
           )}
-          style={{ '--tw-ring-color': 'color-mix(in oklch, var(--primary), transparent 80%)' } as React.CSSProperties}
+          style={
+            {
+              '--tw-ring-color': 'color-mix(in oklch, var(--primary), transparent 80%)',
+            } as React.CSSProperties
+          }
         >
           <Github className="w-5 h-5 text-primary" />
         </div>
         <div className="flex-1">
           <h2 className="text-lg font-semibold text-foreground">GitHub CLI</h2>
-          <p className="text-sm text-muted-foreground">
-            GitHub CLI (gh) for PRs, issues, and more
-          </p>
+          <p className="text-sm text-muted-foreground">GitHub CLI (gh) for PRs, issues, and more</p>
         </div>
         <button
           type="button"
@@ -77,7 +79,7 @@ export function GithubSection() {
           className={clsx(
             'p-2 rounded-lg transition-colors',
             'hover:bg-muted text-muted-foreground hover:text-foreground',
-            'disabled:opacity-50 disabled:cursor-not-allowed',
+            'disabled:opacity-50 disabled:cursor-not-allowed'
           )}
           title="Refresh status"
         >
@@ -109,12 +111,8 @@ export function GithubSection() {
                 <Terminal className="w-4 h-4 text-muted-foreground" />
               </div>
               <div className="flex-1">
-                <h3 className="text-sm font-medium text-foreground">
-                  CLI Installation
-                </h3>
-                <p className="text-xs text-muted-foreground">
-                  GitHub command-line interface
-                </p>
+                <h3 className="text-sm font-medium text-foreground">CLI Installation</h3>
+                <p className="text-xs text-muted-foreground">GitHub command-line interface</p>
               </div>
               {githubCliStatus.installed ? (
                 <span className="flex items-center gap-1.5 text-xs font-medium text-primary bg-primary/10 px-2 py-1 rounded-full">
@@ -134,9 +132,7 @@ export function GithubSection() {
                 {githubCliStatus.version && (
                   <div className="flex items-center justify-between py-2 border-b border-border/30">
                     <span className="text-muted-foreground">Version</span>
-                    <span className="text-foreground font-mono">
-                      {githubCliStatus.version}
-                    </span>
+                    <span className="text-foreground font-mono">{githubCliStatus.version}</span>
                   </div>
                 )}
                 {githubCliStatus.path && (
@@ -182,9 +178,7 @@ export function GithubSection() {
                 <Shield className="w-4 h-4 text-muted-foreground" />
               </div>
               <div className="flex-1">
-                <h3 className="text-sm font-medium text-foreground">
-                  Authentication
-                </h3>
+                <h3 className="text-sm font-medium text-foreground">Authentication</h3>
                 <p className="text-xs text-muted-foreground">GitHub account sign-in</p>
               </div>
               {githubCliStatus.auth.authenticated ? (
@@ -205,7 +199,9 @@ export function GithubSection() {
                 {githubCliStatus.auth.username && (
                   <div className="flex items-center gap-2 p-3 rounded-lg bg-primary/10 text-sm text-primary">
                     <User className="w-4 h-4" />
-                    <span>Logged in as <strong>{githubCliStatus.auth.username}</strong></span>
+                    <span>
+                      Logged in as <strong>{githubCliStatus.auth.username}</strong>
+                    </span>
                   </div>
                 )}
                 {githubCliStatus.auth.scopes && githubCliStatus.auth.scopes.length > 0 && (

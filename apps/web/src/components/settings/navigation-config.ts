@@ -45,4 +45,4 @@ export const NAV_GROUPS: NavigationGroup[] = [
 /**
  * Flat list of all nav items
  */
-export const NAV_ITEMS: NavigationItem[] = NAV_GROUPS.flatMap((group) => group.items);
+export const NAV_ITEMS: NavigationItem[] = NAV_GROUPS.flatMap(group => group.items);

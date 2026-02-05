@@ -27,10 +27,7 @@ export interface TerminalConnection {
  * @param env Environment variables to pass to the terminal
  * @returns Promise resolving to the session ID
  */
-export async function spawnTerminal(
-  cwd?: string,
-  env?: Record<string, string>,
-): Promise<number> {
+export async function spawnTerminal(cwd?: string, env?: Record<string, string>): Promise<number> {
   await connectSocket();
 
   return new Promise((resolve, reject) => {
@@ -45,7 +42,7 @@ export async function spawnTerminal(
           logger.info('Spawn success, sessionId:', response.sessionId);
           resolve(response.sessionId);
         }
-      },
+      }
     );
 
     // Timeout after 10 seconds
@@ -66,7 +63,7 @@ export async function spawnTerminal(
 export function connectTerminal(
   sessionId: number,
   onOutput: (data: string) => void,
-  onClose: (exitCode: number, signal?: number) => void,
+  onClose: (exitCode: number, signal?: number) => void
 ): TerminalConnection {
   const handleOutput = (event: TerminalOutputEvent) => {
     if (event.sessionId === sessionId) {
@@ -118,11 +115,7 @@ export function writeToTerminal(sessionId: number, data: string): void {
  * @param cols Number of columns
  * @param rows Number of rows
  */
-export function resizeTerminal(
-  sessionId: number,
-  cols: number,
-  rows: number,
-): void {
+export function resizeTerminal(sessionId: number, cols: number, rows: number): void {
   if (!socket.connected) {
     logger.warn('resizeTerminal: socket not connected, skipping');
     return;
@@ -153,14 +146,10 @@ export async function joinTerminal(sessionId: number): Promise<boolean> {
   await connectSocket();
 
   logger.debug('Joining terminal', sessionId);
-  return new Promise((resolve) => {
-    socket.emit(
-      'terminal:join',
-      { sessionId },
-      (response: { success: boolean }) => {
-        resolve(response.success);
-      },
-    );
+  return new Promise(resolve => {
+    socket.emit('terminal:join', { sessionId }, (response: { success: boolean }) => {
+      resolve(response.success);
+    });
 
     // Timeout after 5 seconds
     setTimeout(() => {

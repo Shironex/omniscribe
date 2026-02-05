@@ -92,7 +92,7 @@ type SettingsStore = SettingsState & SettingsActions;
 function applyThemeToDOM(theme: Theme) {
   logger.debug('applyThemeToDOM:', theme);
   const root = document.documentElement;
-  const allThemeClasses = themeOptions.map((t) => t.value);
+  const allThemeClasses = themeOptions.map(t => t.value);
 
   // Remove all theme classes
   root.classList.remove(...allThemeClasses);
@@ -114,97 +114,98 @@ export const useSettingsStore = create<SettingsStore>((set, get) => {
   }
 
   return {
-  // Initial state
-  isOpen: false,
-  activeSection: 'appearance',
-  theme: DEFAULT_THEME,
-  claudeCliStatus: null,
-  isClaudeCliLoading: false,
-  claudeVersionCheck: null,
-  isVersionCheckLoading: false,
-  availableVersions: [],
-  isVersionsLoading: false,
-  githubCliStatus: null,
-  isGithubCliLoading: false,
-  previewTheme: null,
+    // Initial state
+    isOpen: false,
+    activeSection: 'appearance',
+    theme: DEFAULT_THEME,
+    claudeCliStatus: null,
+    isClaudeCliLoading: false,
+    claudeVersionCheck: null,
+    isVersionCheckLoading: false,
+    availableVersions: [],
+    isVersionsLoading: false,
+    githubCliStatus: null,
+    isGithubCliLoading: false,
+    previewTheme: null,
 
-  // Actions
-  openSettings: (section?: SettingsSectionId) => {
-    set({
-      isOpen: true,
-      activeSection: section ?? get().activeSection,
-    });
-  },
+    // Actions
+    openSettings: (section?: SettingsSectionId) => {
+      set({
+        isOpen: true,
+        activeSection: section ?? get().activeSection,
+      });
+    },
 
-  closeSettings: () => {
-    const state = get();
-    // Clear preview theme when closing
-    if (state.previewTheme) {
-      applyThemeToDOM(state.theme);
-    }
-    set({
-      isOpen: false,
-      previewTheme: null,
-    });
-  },
+    closeSettings: () => {
+      const state = get();
+      // Clear preview theme when closing
+      if (state.previewTheme) {
+        applyThemeToDOM(state.theme);
+      }
+      set({
+        isOpen: false,
+        previewTheme: null,
+      });
+    },
 
-  navigateToSection: (section: SettingsSectionId) => {
-    set({ activeSection: section });
-  },
+    navigateToSection: (section: SettingsSectionId) => {
+      set({ activeSection: section });
+    },
 
-  setTheme: (theme: Theme) => {
-    set({ theme, previewTheme: null });
-    applyThemeToDOM(theme);
-  },
-
-  setPreviewTheme: (theme: Theme | null) => {
-    const state = get();
-    set({ previewTheme: theme });
-
-    if (theme) {
+    setTheme: (theme: Theme) => {
+      set({ theme, previewTheme: null });
       applyThemeToDOM(theme);
-    } else {
-      // Restore actual theme when preview ends
-      applyThemeToDOM(state.theme);
-    }
-  },
+    },
 
-  applyTheme: (theme: Theme) => {
-    applyThemeToDOM(theme);
-  },
+    setPreviewTheme: (theme: Theme | null) => {
+      const state = get();
+      set({ previewTheme: theme });
 
-  setClaudeCliStatus: (status: ClaudeCliStatus | null) => {
-    set({ claudeCliStatus: status, isClaudeCliLoading: false });
-  },
+      if (theme) {
+        applyThemeToDOM(theme);
+      } else {
+        // Restore actual theme when preview ends
+        applyThemeToDOM(state.theme);
+      }
+    },
 
-  setClaudeCliLoading: (loading: boolean) => {
-    set({ isClaudeCliLoading: loading });
-  },
+    applyTheme: (theme: Theme) => {
+      applyThemeToDOM(theme);
+    },
 
-  setClaudeVersionCheck: (result: ClaudeVersionCheckResult | null) => {
-    set({ claudeVersionCheck: result, isVersionCheckLoading: false });
-  },
+    setClaudeCliStatus: (status: ClaudeCliStatus | null) => {
+      set({ claudeCliStatus: status, isClaudeCliLoading: false });
+    },
 
-  setVersionCheckLoading: (loading: boolean) => {
-    set({ isVersionCheckLoading: loading });
-  },
+    setClaudeCliLoading: (loading: boolean) => {
+      set({ isClaudeCliLoading: loading });
+    },
 
-  setAvailableVersions: (versions: string[]) => {
-    set({ availableVersions: versions, isVersionsLoading: false });
-  },
+    setClaudeVersionCheck: (result: ClaudeVersionCheckResult | null) => {
+      set({ claudeVersionCheck: result, isVersionCheckLoading: false });
+    },
 
-  setVersionsLoading: (loading: boolean) => {
-    set({ isVersionsLoading: loading });
-  },
+    setVersionCheckLoading: (loading: boolean) => {
+      set({ isVersionCheckLoading: loading });
+    },
 
-  setGithubCliStatus: (status: GhCliStatus | null) => {
-    set({ githubCliStatus: status, isGithubCliLoading: false });
-  },
+    setAvailableVersions: (versions: string[]) => {
+      set({ availableVersions: versions, isVersionsLoading: false });
+    },
 
-  setGithubCliLoading: (loading: boolean) => {
-    set({ isGithubCliLoading: loading });
-  },
-}});
+    setVersionsLoading: (loading: boolean) => {
+      set({ isVersionsLoading: loading });
+    },
+
+    setGithubCliStatus: (status: GhCliStatus | null) => {
+      set({ githubCliStatus: status, isGithubCliLoading: false });
+    },
+
+    setGithubCliLoading: (loading: boolean) => {
+      set({ isGithubCliLoading: loading });
+    },
+  };
+});
 
 // Selectors
 
@@ -231,8 +232,7 @@ export const selectPreviewTheme = (state: SettingsStore) => state.previewTheme;
 /**
  * Select effective theme (preview or actual)
  */
-export const selectEffectiveTheme = (state: SettingsStore) =>
-  state.previewTheme ?? state.theme;
+export const selectEffectiveTheme = (state: SettingsStore) => state.previewTheme ?? state.theme;
 
 /**
  * Select Claude CLI status

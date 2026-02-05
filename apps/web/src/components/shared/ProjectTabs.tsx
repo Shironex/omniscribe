@@ -40,7 +40,7 @@ export function ProjectTabs({
     >
       {/* Tab list */}
       <div className="flex-1 flex items-center overflow-x-auto no-scrollbar">
-        {tabs.map((tab) => (
+        {tabs.map(tab => (
           <div
             key={tab.id}
             className={clsx(
@@ -55,7 +55,7 @@ export function ProjectTabs({
             {tab.status && <StatusDot status={tab.status} />}
             <span className="text-sm truncate max-w-32">{tab.label}</span>
             <button
-              onClick={(e) => {
+              onClick={e => {
                 e.stopPropagation();
                 onCloseTab(tab.id);
               }}

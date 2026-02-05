@@ -1,9 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import {
-  McpServerConfig,
-  MCP_SERVER_NAME,
-  createLogger,
-} from '@omniscribe/shared';
+import { McpServerConfig, MCP_SERVER_NAME, createLogger } from '@omniscribe/shared';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
@@ -138,11 +134,7 @@ export class McpWriterService {
     };
 
     // Write the config file
-    await fs.promises.writeFile(
-      configPath,
-      JSON.stringify(config, null, 2),
-      'utf-8'
-    );
+    await fs.promises.writeFile(configPath, JSON.stringify(config, null, 2), 'utf-8');
 
     const serverCount = Object.keys(mcpServers).length;
     this.logger.log(
@@ -191,11 +183,7 @@ export class McpWriterService {
       delete config['_metadata']; // Legacy field
 
       // Write back the config with remaining servers
-      await fs.promises.writeFile(
-        configPath,
-        JSON.stringify(config, null, 2),
-        'utf-8'
-      );
+      await fs.promises.writeFile(configPath, JSON.stringify(config, null, 2), 'utf-8');
 
       this.logger.log(
         `Removed omniscribe from ${configPath}, preserved ${Object.keys(mcpServers).length} other servers`

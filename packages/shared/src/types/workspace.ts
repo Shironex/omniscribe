@@ -1,13 +1,7 @@
 /**
  * Workspace tab type
  */
-export type WorkspaceTabType =
-  | 'session'
-  | 'file'
-  | 'terminal'
-  | 'diff'
-  | 'settings'
-  | 'welcome';
+export type WorkspaceTabType = 'session' | 'file' | 'terminal' | 'diff' | 'settings' | 'welcome';
 
 /**
  * Workspace tab
@@ -145,13 +139,7 @@ export interface QuickAction {
 /**
  * Workspace panel type
  */
-export type WorkspacePanelType =
-  | 'explorer'
-  | 'search'
-  | 'git'
-  | 'sessions'
-  | 'mcp'
-  | 'output';
+export type WorkspacePanelType = 'explorer' | 'search' | 'git' | 'sessions' | 'mcp' | 'output';
 
 /**
  * Workspace panel state

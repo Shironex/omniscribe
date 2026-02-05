@@ -69,11 +69,7 @@ export class GitRemoteService {
   /**
    * Push commits to a remote repository
    */
-  async push(
-    projectPath: string,
-    remote: string = 'origin',
-    branch?: string,
-  ): Promise<void> {
+  async push(projectPath: string, remote: string = 'origin', branch?: string): Promise<void> {
     this.logger.info(`Pushing to ${remote}${branch ? `/${branch}` : ''} in ${projectPath}`);
     const args = ['push', remote];
     if (branch) {
@@ -85,11 +81,7 @@ export class GitRemoteService {
   /**
    * Pull changes from a remote repository
    */
-  async pull(
-    projectPath: string,
-    remote: string = 'origin',
-    branch?: string,
-  ): Promise<void> {
+  async pull(projectPath: string, remote: string = 'origin', branch?: string): Promise<void> {
     this.logger.info(`Pulling from ${remote}${branch ? `/${branch}` : ''} in ${projectPath}`);
     const args = ['pull', remote];
     if (branch) {

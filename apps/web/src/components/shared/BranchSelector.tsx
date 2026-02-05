@@ -53,13 +53,13 @@ export function BranchSelector({
 
   // Filter and group branches
   const { localBranches, remoteBranches } = useMemo(() => {
-    const filtered = branches.filter((branch) =>
+    const filtered = branches.filter(branch =>
       branch.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
     return {
-      localBranches: filtered.filter((b) => !b.isRemote),
-      remoteBranches: filtered.filter((b) => b.isRemote),
+      localBranches: filtered.filter(b => !b.isRemote),
+      remoteBranches: filtered.filter(b => b.isRemote),
     };
   }, [branches, searchQuery]);
 
@@ -80,7 +80,7 @@ export function BranchSelector({
   const showCreateOption =
     searchQuery.trim() &&
     onCreateBranch &&
-    !branches.some((b) => b.name.toLowerCase() === searchQuery.toLowerCase());
+    !branches.some(b => b.name.toLowerCase() === searchQuery.toLowerCase());
 
   return (
     <div ref={containerRef} className={twMerge(clsx('relative', className))}>
@@ -102,10 +102,7 @@ export function BranchSelector({
         <span className="truncate max-w-32">{currentBranch}</span>
         <ChevronDown
           size={14}
-          className={clsx(
-            'text-muted-foreground transition-transform',
-            isOpen && 'rotate-180'
-          )}
+          className={clsx('text-muted-foreground transition-transform', isOpen && 'rotate-180')}
         />
       </button>
 
@@ -130,7 +127,7 @@ export function BranchSelector({
                 ref={inputRef}
                 type="text"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={e => setSearchQuery(e.target.value)}
                 placeholder="Search branches..."
                 className={clsx(
                   'w-full pl-8 pr-3 py-1.5 rounded',
@@ -150,7 +147,7 @@ export function BranchSelector({
                 <div className="px-3 py-1.5 text-2xs font-medium text-muted-foreground uppercase tracking-wide">
                   Local
                 </div>
-                {localBranches.map((branch) => (
+                {localBranches.map(branch => (
                   <button
                     key={branch.name}
                     onClick={() => handleSelect(branch.name)}
@@ -178,7 +175,7 @@ export function BranchSelector({
                 <div className="px-3 py-1.5 text-2xs font-medium text-muted-foreground uppercase tracking-wide border-t border-border mt-1 pt-2">
                   Remote
                 </div>
-                {remoteBranches.map((branch) => (
+                {remoteBranches.map(branch => (
                   <button
                     key={branch.name}
                     onClick={() => handleSelect(branch.name)}

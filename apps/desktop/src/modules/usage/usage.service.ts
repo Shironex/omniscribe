@@ -34,10 +34,10 @@ export class UsageService {
    * Check if Claude CLI is available on the system
    */
   async isAvailable(): Promise<boolean> {
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
       const checkCmd = this.isWindows ? 'where' : 'which';
       const proc = spawn(checkCmd, [this.claudeBinary]);
-      proc.on('close', (code) => {
+      proc.on('close', code => {
         resolve(code === 0);
       });
       proc.on('error', () => {
@@ -99,7 +99,9 @@ export class UsageService {
       cliPath = execSync(`${checkCmd} ${this.claudeBinary}`, {
         encoding: 'utf-8',
         timeout: 5000,
-      }).trim().split('\n')[0];
+      })
+        .trim()
+        .split('\n')[0];
     } catch {
       // Path check failed, continue without it
     }
@@ -126,7 +128,7 @@ export class UsageService {
    * This is a quick check that doesn't require PTY
    */
   private async checkAuth(): Promise<boolean> {
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
       try {
         // Run `claude --help` which should work if authenticated
         // If not authenticated, some commands may fail
@@ -134,7 +136,7 @@ export class UsageService {
           timeout: 10000,
         });
 
-        proc.on('close', (code) => {
+        proc.on('close', code => {
           // If help works, CLI is at least installed and runnable
           // A more thorough check would require PTY, which is expensive
           // For now, assume authenticated if CLI works
@@ -228,8 +230,7 @@ export class UsageService {
       try {
         ptyProcess = pty.spawn(shell, args, ptyOptions);
       } catch (spawnError) {
-        const errorMessage =
-          spawnError instanceof Error ? spawnError.message : String(spawnError);
+        const errorMessage = spawnError instanceof Error ? spawnError.message : String(spawnError);
         this.logger.error(`Failed to spawn PTY: ${errorMessage}`);
         reject(new Error(`Unable to access terminal: ${errorMessage}`));
         return;
@@ -363,10 +364,7 @@ export class UsageService {
         settled = true;
 
         // Check for auth errors
-        if (
-          output.includes('token_expired') ||
-          output.includes('"type":"authentication_error"')
-        ) {
+        if (output.includes('token_expired') || output.includes('"type":"authentication_error"')) {
           reject(new Error("Authentication required - please run 'claude login'"));
           return;
         }
@@ -442,8 +440,8 @@ export class UsageService {
     const output = this.stripAnsiCodes(rawOutput);
     const lines = output
       .split('\n')
-      .map((l) => l.trim())
-      .filter((l) => l);
+      .map(l => l.trim())
+      .filter(l => l);
 
     // Parse session usage
     const sessionData = this.parseSection(lines, 'Current session', 'session');
@@ -599,8 +597,18 @@ export class UsageService {
       else if (ampm === 'am' && hours === 12) hours = 0;
 
       const months: Record<string, number> = {
-        jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
-        jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11,
+        jan: 0,
+        feb: 1,
+        mar: 2,
+        apr: 3,
+        may: 4,
+        jun: 5,
+        jul: 6,
+        aug: 7,
+        sep: 8,
+        oct: 9,
+        nov: 10,
+        dec: 11,
       };
       const month = months[monthName.toLowerCase().substring(0, 3)];
 

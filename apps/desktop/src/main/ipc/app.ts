@@ -29,21 +29,24 @@ export function registerAppHandlers(): void {
     return checkCliAvailable(tool);
   });
 
-  ipcMain.handle('app:is-valid-project', async (_event, projectPath: string): Promise<ProjectValidationResult> => {
-    logger.debug(`app:is-valid-project invoked for "${projectPath}"`);
-    // Check if path exists and has common project indicators
-    if (!existsSync(projectPath)) {
-      return { valid: false, reason: 'Path does not exist' };
+  ipcMain.handle(
+    'app:is-valid-project',
+    async (_event, projectPath: string): Promise<ProjectValidationResult> => {
+      logger.debug(`app:is-valid-project invoked for "${projectPath}"`);
+      // Check if path exists and has common project indicators
+      if (!existsSync(projectPath)) {
+        return { valid: false, reason: 'Path does not exist' };
+      }
+
+      const indicators = ['package.json', 'Cargo.toml', 'go.mod', 'pyproject.toml', '.git'];
+      const hasIndicator = indicators.some(indicator => existsSync(join(projectPath, indicator)));
+
+      return {
+        valid: hasIndicator,
+        reason: hasIndicator ? undefined : 'No recognized project files found',
+      };
     }
-
-    const indicators = ['package.json', 'Cargo.toml', 'go.mod', 'pyproject.toml', '.git'];
-    const hasIndicator = indicators.some((indicator) => existsSync(join(projectPath, indicator)));
-
-    return {
-      valid: hasIndicator,
-      reason: hasIndicator ? undefined : 'No recognized project files found',
-    };
-  });
+  );
 }
 
 /**

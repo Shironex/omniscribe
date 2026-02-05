@@ -81,12 +81,7 @@ export async function updateSession(
  */
 export async function removeSession(sessionId: string): Promise<void> {
   logger.info('Removing session', sessionId);
-  return emitWithSuccessHandling(
-    'session:remove',
-    { sessionId },
-    {},
-    'Failed to remove session'
-  );
+  return emitWithSuccessHandling('session:remove', { sessionId }, {}, 'Failed to remove session');
 }
 
 /**
@@ -94,10 +89,9 @@ export async function removeSession(sessionId: string): Promise<void> {
  */
 export async function listSessions(projectPath?: string): Promise<ExtendedSessionConfig[]> {
   logger.debug('Listing sessions', projectPath);
-  return emitWithErrorHandling<
-    { projectPath?: string },
-    ExtendedSessionConfig[]
-  >('session:list', { projectPath });
+  return emitWithErrorHandling<{ projectPath?: string }, ExtendedSessionConfig[]>('session:list', {
+    projectPath,
+  });
 }
 
 /**
@@ -106,7 +100,12 @@ export async function listSessions(projectPath?: string): Promise<ExtendedSessio
  */
 export function initSessionListeners(
   onCreated: (session: ExtendedSessionConfig) => void,
-  onStatus: (update: { sessionId: string; status: string; message?: string; needsInputPrompt?: boolean }) => void,
+  onStatus: (update: {
+    sessionId: string;
+    status: string;
+    message?: string;
+    needsInputPrompt?: boolean;
+  }) => void,
   onRemoved: (payload: { sessionId: string }) => void
 ): () => void {
   socket.on('session:created', onCreated);

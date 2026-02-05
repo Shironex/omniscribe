@@ -54,17 +54,20 @@ async function bootstrap(): Promise<void> {
 }
 
 // Global error handling
-process.on('uncaughtException', (error) => {
+process.on('uncaughtException', error => {
   logger.error('Uncaught exception:', error);
 });
 
-process.on('unhandledRejection', (reason) => {
+process.on('unhandledRejection', reason => {
   logger.error('Unhandled rejection:', reason);
 });
 
-app.whenReady().then(bootstrap).catch((error) => {
-  logger.error('Failed to bootstrap application:', error);
-});
+app
+  .whenReady()
+  .then(bootstrap)
+  .catch(error => {
+    logger.error('Failed to bootstrap application:', error);
+  });
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
@@ -79,7 +82,7 @@ app.on('activate', () => {
   }
 });
 
-app.on('before-quit', (event) => {
+app.on('before-quit', event => {
   mainWindow = null;
 
   // If already shutting down, let the quit proceed

@@ -50,7 +50,8 @@ export class TerminalService implements OnModuleDestroy {
    * Get appropriate shell arguments based on shell type
    */
   private getShellArgs(shell: string): string[] {
-    const shellName = shell.toLowerCase().replace(/\\/g, '/').split('/').pop()?.replace('.exe', '') || '';
+    const shellName =
+      shell.toLowerCase().replace(/\\/g, '/').split('/').pop()?.replace('.exe', '') || '';
 
     // PowerShell and cmd don't need --login
     if (shellName === 'powershell' || shellName === 'pwsh' || shellName === 'cmd') {
@@ -127,7 +128,9 @@ export class TerminalService implements OnModuleDestroy {
       this.logger.debug(`[spawnCommand] Using winpty (ConPTY disabled for Windows compatibility)`);
     }
 
-    this.logger.debug(`[spawnCommand] PTY options: cols=${ptyOptions.cols}, rows=${ptyOptions.rows}, name=${ptyOptions.name}`);
+    this.logger.debug(
+      `[spawnCommand] PTY options: cols=${ptyOptions.cols}, rows=${ptyOptions.rows}, name=${ptyOptions.name}`
+    );
 
     let ptyProcess: pty.IPty;
     try {
@@ -257,7 +260,7 @@ export class TerminalService implements OnModuleDestroy {
       session.pty.kill('SIGTERM');
 
       // Wait for graceful shutdown, then force kill if needed
-      const gracefulTimeout = new Promise<boolean>((resolve) => {
+      const gracefulTimeout = new Promise<boolean>(resolve => {
         const checkInterval = setInterval(() => {
           if (!this.sessions.has(sessionId)) {
             clearInterval(checkInterval);
@@ -340,6 +343,6 @@ export class TerminalService implements OnModuleDestroy {
    */
   async onModuleDestroy(): Promise<void> {
     const sessionIds = Array.from(this.sessions.keys());
-    await Promise.all(sessionIds.map((id) => this.kill(id)));
+    await Promise.all(sessionIds.map(id => this.kill(id)));
   }
 }

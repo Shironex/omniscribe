@@ -9,6 +9,7 @@
     "dev": "tsc && cross-env NODE_ENV=development electron .",
     "build:dev": "tsc",
     "build": "tsc && node scripts/copy-renderer.mjs",
+    "typecheck": "tsc --noEmit",
     "package": "pnpm build && electron-builder",
     "package:win": "pnpm build && electron-builder --win",
     "package:mac": "pnpm build && electron-builder --mac",

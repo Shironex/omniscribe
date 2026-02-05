@@ -365,12 +365,12 @@ export const themeOptions: ReadonlyArray<ThemeOption> = [
 ];
 
 // Helper: Get only dark themes
-export const darkThemes = themeOptions.filter((t) => t.isDark);
+export const darkThemes = themeOptions.filter(t => t.isDark);
 
 // Helper: Get only light themes
-export const lightThemes = themeOptions.filter((t) => !t.isDark);
+export const lightThemes = themeOptions.filter(t => !t.isDark);
 
 // Helper: Get theme option by value
 export function getThemeOption(theme: Theme): ThemeOption | undefined {
-  return themeOptions.find((t) => t.value === theme);
+  return themeOptions.find(t => t.value === theme);
 }

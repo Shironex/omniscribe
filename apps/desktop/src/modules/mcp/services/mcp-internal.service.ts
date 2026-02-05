@@ -1,9 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import {
-  APP_NAME_LOWER,
-  MCP_SERVER_DIR,
-  createLogger,
-} from '@omniscribe/shared';
+import { APP_NAME_LOWER, MCP_SERVER_DIR, createLogger } from '@omniscribe/shared';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
@@ -58,13 +54,7 @@ export class McpInternalService {
     // 2. Development: from workspace root
     if (process.env.OMNISCRIBE_WORKSPACE_ROOT) {
       candidates.push(
-        path.join(
-          process.env.OMNISCRIBE_WORKSPACE_ROOT,
-          'apps',
-          'mcp-server',
-          'dist',
-          'index.js'
-        )
+        path.join(process.env.OMNISCRIBE_WORKSPACE_ROOT, 'apps', 'mcp-server', 'dist', 'index.js')
       );
     }
 

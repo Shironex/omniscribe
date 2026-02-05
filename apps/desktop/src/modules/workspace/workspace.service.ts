@@ -182,7 +182,7 @@ export class WorkspaceService implements OnModuleInit {
     const tabs = this.getTabs();
     // Check if project is already open
     const existingIndex = tabs.findIndex(
-      (t) => t.projectPath.replace(/\\/g, '/') === tab.projectPath.replace(/\\/g, '/'),
+      t => t.projectPath.replace(/\\/g, '/') === tab.projectPath.replace(/\\/g, '/')
     );
 
     if (existingIndex !== -1) {
@@ -204,7 +204,7 @@ export class WorkspaceService implements OnModuleInit {
     }
 
     // Deactivate all existing tabs
-    const updatedTabs = tabs.map((t) => ({ ...t, isActive: false }));
+    const updatedTabs = tabs.map(t => ({ ...t, isActive: false }));
     // Add new tab as active
     updatedTabs.push({ ...tab, isActive: true });
     this.setTabs(updatedTabs);
@@ -218,14 +218,14 @@ export class WorkspaceService implements OnModuleInit {
   removeTab(tabId: string): { tabs: ProjectTabDTO[]; activeTabId: string | null } {
     this.logger.debug(`Removing tab: ${tabId}`);
     const tabs = this.getTabs();
-    const tabIndex = tabs.findIndex((t) => t.id === tabId);
+    const tabIndex = tabs.findIndex(t => t.id === tabId);
 
     if (tabIndex === -1) {
       return { tabs, activeTabId: this.getActiveTabId() };
     }
 
     const isActiveTab = tabs[tabIndex].isActive;
-    const newTabs = tabs.filter((t) => t.id !== tabId);
+    const newTabs = tabs.filter(t => t.id !== tabId);
     let newActiveTabId = this.getActiveTabId();
 
     // If we removed the active tab, select an adjacent one
@@ -247,7 +247,7 @@ export class WorkspaceService implements OnModuleInit {
    */
   selectTab(tabId: string): ProjectTabDTO[] {
     const tabs = this.getTabs();
-    const updatedTabs = tabs.map((t) => ({
+    const updatedTabs = tabs.map(t => ({
       ...t,
       isActive: t.id === tabId,
       lastAccessedAt: t.id === tabId ? new Date().toISOString() : t.lastAccessedAt,
@@ -262,9 +262,7 @@ export class WorkspaceService implements OnModuleInit {
    */
   updateTabTheme(tabId: string, theme: string): ProjectTabDTO[] {
     const tabs = this.getTabs();
-    const updatedTabs = tabs.map((t) =>
-      t.id === tabId ? { ...t, theme } : t
-    );
+    const updatedTabs = tabs.map(t => (t.id === tabId ? { ...t, theme } : t));
     this.setTabs(updatedTabs);
     return updatedTabs;
   }

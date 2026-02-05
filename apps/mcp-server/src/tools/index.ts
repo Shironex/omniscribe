@@ -11,9 +11,7 @@ import { OmniscribeStatusTool } from './status/index.js';
  * All available tool constructors
  * Add new tools here to register them with the server
  */
-const TOOL_CONSTRUCTORS: ToolConstructor[] = [
-  OmniscribeStatusTool,
-];
+const TOOL_CONSTRUCTORS: ToolConstructor[] = [OmniscribeStatusTool];
 
 /**
  * Register all tools with the MCP server
@@ -29,7 +27,7 @@ export function registerTools(server: McpServer, deps: ToolDependencies): void {
         description: tool.metadata.description,
         inputSchema: tool.inputSchema,
       },
-      async (input) => tool.execute(input)
+      async input => tool.execute(input)
     );
 
     deps.logger.debug(`Registered tool: ${tool.metadata.name}`);
@@ -39,4 +37,10 @@ export function registerTools(server: McpServer, deps: ToolDependencies): void {
 }
 
 // Re-export types
-export type { Tool, ToolConstructor, ToolDependencies, ToolMetadata, ToolResponse } from './types.js';
+export type {
+  Tool,
+  ToolConstructor,
+  ToolDependencies,
+  ToolMetadata,
+  ToolResponse,
+} from './types.js';

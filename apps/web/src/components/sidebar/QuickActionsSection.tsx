@@ -67,15 +67,12 @@ function getCategoryColor(category: QuickAction['category']): string {
   }
 }
 
-export function QuickActionsSection({
-  className,
-  onActionExecute,
-}: QuickActionsSectionProps) {
+export function QuickActionsSection({ className, onActionExecute }: QuickActionsSectionProps) {
   // Select the raw actions array (stable reference) and filter with useMemo
   // to avoid infinite loop from creating new array on every render
   const allActions = useQuickActionStore(selectActions);
   const actions = useMemo(
-    () => allActions.filter((action) => action.enabled !== false),
+    () => allActions.filter(action => action.enabled !== false),
     [allActions]
   );
 
@@ -94,16 +91,14 @@ export function QuickActionsSection({
   if (actions.length === 0) {
     return (
       <div className={twMerge(clsx('py-2', className))}>
-        <p className="text-xs text-muted-foreground">
-          No quick actions configured
-        </p>
+        <p className="text-xs text-muted-foreground">No quick actions configured</p>
       </div>
     );
   }
 
   return (
     <div className={twMerge(clsx('space-y-1', className))}>
-      {actions.map((action) => {
+      {actions.map(action => {
         const Icon = getActionIcon(action.icon);
         const categoryColor = getCategoryColor(action.category);
 

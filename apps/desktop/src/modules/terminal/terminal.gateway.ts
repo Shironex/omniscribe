@@ -38,9 +38,7 @@ interface TerminalClosedEvent {
 @WebSocketGateway({
   cors: CORS_CONFIG,
 })
-export class TerminalGateway
-  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
-{
+export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
   private readonly logger = createLogger('TerminalGateway');
 
   @WebSocketServer()
@@ -91,7 +89,7 @@ export class TerminalGateway
   @SubscribeMessage('terminal:spawn')
   handleSpawn(
     @ConnectedSocket() client: Socket,
-    @MessageBody() payload: TerminalSpawnPayload,
+    @MessageBody() payload: TerminalSpawnPayload
   ): TerminalSpawnResponse {
     this.logger.info(`Spawning terminal for client ${client.id} (cwd: ${payload?.cwd})`);
     const sessionId = this.terminalService.spawn(payload?.cwd, payload?.env);
@@ -111,7 +109,7 @@ export class TerminalGateway
   @SubscribeMessage('terminal:input')
   handleInput(
     @ConnectedSocket() _client: Socket,
-    @MessageBody() payload: TerminalInputPayload,
+    @MessageBody() payload: TerminalInputPayload
   ): void {
     const { sessionId, data } = payload;
 
@@ -145,7 +143,7 @@ export class TerminalGateway
   @SubscribeMessage('terminal:resize')
   handleResize(
     @ConnectedSocket() _client: Socket,
-    @MessageBody() payload: TerminalResizePayload,
+    @MessageBody() payload: TerminalResizePayload
   ): void {
     const { sessionId, cols, rows } = payload;
 
@@ -158,7 +156,7 @@ export class TerminalGateway
   @SubscribeMessage('terminal:kill')
   async handleKill(
     @ConnectedSocket() client: Socket,
-    @MessageBody() payload: TerminalKillPayload,
+    @MessageBody() payload: TerminalKillPayload
   ): Promise<SuccessResponse> {
     const { sessionId } = payload;
 
@@ -181,7 +179,7 @@ export class TerminalGateway
   @SubscribeMessage('terminal:join')
   handleJoin(
     @ConnectedSocket() client: Socket,
-    @MessageBody() payload: TerminalJoinPayload,
+    @MessageBody() payload: TerminalJoinPayload
   ): TerminalJoinResponse {
     const { sessionId } = payload;
 

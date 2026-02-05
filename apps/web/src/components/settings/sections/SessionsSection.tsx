@@ -23,8 +23,8 @@ const AI_MODE_OPTIONS: {
 ];
 
 export function SessionsSection() {
-  const preferences = useWorkspaceStore((state) => state.preferences);
-  const updatePreference = useWorkspaceStore((state) => state.updatePreference);
+  const preferences = useWorkspaceStore(state => state.preferences);
+  const updatePreference = useWorkspaceStore(state => state.updatePreference);
 
   const sessionSettings: SessionSettings = preferences.session ?? DEFAULT_SESSION_SETTINGS;
 
@@ -43,9 +43,13 @@ export function SessionsSection() {
           className={clsx(
             'w-10 h-10 rounded-xl flex items-center justify-center',
             'bg-gradient-to-br from-primary/20 to-brand-600/10',
-            'ring-1',
+            'ring-1'
           )}
-          style={{ '--tw-ring-color': 'color-mix(in oklch, var(--primary), transparent 80%)' } as React.CSSProperties}
+          style={
+            {
+              '--tw-ring-color': 'color-mix(in oklch, var(--primary), transparent 80%)',
+            } as React.CSSProperties
+          }
         >
           <Monitor className="w-5 h-5 text-primary" />
         </div>
@@ -62,14 +66,14 @@ export function SessionsSection() {
         <h3 className="text-sm font-medium text-foreground">Default Mode</h3>
 
         <div className="rounded-xl border border-border/50 bg-card/50 p-4 space-y-3">
-          {AI_MODE_OPTIONS.map((option) => (
+          {AI_MODE_OPTIONS.map(option => (
             <label
               key={option.value}
               className={clsx(
                 'flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-colors',
                 sessionSettings.defaultMode === option.value
                   ? 'bg-primary/10 border border-primary/30'
-                  : 'hover:bg-muted/50 border border-transparent',
+                  : 'hover:bg-muted/50 border border-transparent'
               )}
             >
               <input
@@ -86,12 +90,8 @@ export function SessionsSection() {
                 <Monitor className="w-4 h-4 mt-0.5 text-muted-foreground" />
               )}
               <div className="flex-1">
-                <div className="text-sm font-medium text-foreground">
-                  {option.label}
-                </div>
-                <div className="text-xs text-muted-foreground mt-0.5">
-                  {option.description}
-                </div>
+                <div className="text-sm font-medium text-foreground">{option.label}</div>
+                <div className="text-xs text-muted-foreground mt-0.5">{option.description}</div>
               </div>
             </label>
           ))}
@@ -105,8 +105,8 @@ export function SessionsSection() {
             <strong className="text-foreground">What does this control?</strong>
           </p>
           <p>
-            This setting determines the default AI mode when adding new session slots.
-            You can still change the mode for individual slots before launching them.
+            This setting determines the default AI mode when adding new session slots. You can still
+            change the mode for individual slots before launching them.
           </p>
         </div>
       </div>

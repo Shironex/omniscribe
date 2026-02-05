@@ -24,7 +24,6 @@ interface AiActionContext {
   projectPath?: string;
 }
 
-
 /**
  * Service for executing quick actions
  */
@@ -36,7 +35,7 @@ export class QuickActionService {
     private readonly terminalService: TerminalService,
     private readonly gitService: GitService,
     private readonly sessionService: SessionService,
-    private readonly eventEmitter: EventEmitter2,
+    private readonly eventEmitter: EventEmitter2
   ) {}
 
   /**
@@ -59,23 +58,17 @@ export class QuickActionService {
   async executeAction(
     sessionId: string,
     action: QuickAction,
-    context?: { projectPath?: string; terminalSessionId?: number },
+    context?: { projectPath?: string; terminalSessionId?: number }
   ): Promise<QuickActionResult> {
     this.logger.log(`Executing quick action: ${action.handler} (${action.id})`);
 
     try {
       switch (action.handler) {
         case 'terminal:execute':
-          return await this.handleTerminalExecute(
-            action.params as { command: string },
-            context,
-          );
+          return await this.handleTerminalExecute(action.params as { command: string }, context);
 
         case 'git:commit-push':
-          return await this.handleGitCommitPush(
-            action.params as { message?: string },
-            context,
-          );
+          return await this.handleGitCommitPush(action.params as { message?: string }, context);
 
         case 'git:pull':
           return await this.handleGitPull(context);
@@ -87,7 +80,7 @@ export class QuickActionService {
           return await this.handleAiExplain(
             sessionId,
             action.params as { target?: string },
-            context,
+            context
           );
 
         default:
@@ -97,8 +90,7 @@ export class QuickActionService {
           };
       }
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error occurred';
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       this.logger.error(`Quick action failed: ${errorMessage}`, error);
 
       return {
@@ -114,7 +106,7 @@ export class QuickActionService {
    */
   private async handleTerminalExecute(
     params: { command: string },
-    context?: { projectPath?: string; terminalSessionId?: number },
+    context?: { projectPath?: string; terminalSessionId?: number }
   ): Promise<QuickActionResult> {
     if (!params.command) {
       return {
@@ -157,7 +149,7 @@ export class QuickActionService {
    */
   private async handleGitCommitPush(
     params: { message?: string },
-    context?: { projectPath?: string },
+    context?: { projectPath?: string }
   ): Promise<QuickActionResult> {
     const repoPath = context?.projectPath;
 
@@ -181,19 +173,14 @@ export class QuickActionService {
     const terminalId = this.terminalService.spawn(repoPath);
 
     // Generate commit message if not provided
-    const commitMessage =
-      params.message || `Auto-commit: ${new Date().toISOString()}`;
+    const commitMessage = params.message || `Auto-commit: ${new Date().toISOString()}`;
 
     // Security: Properly escape commit message for shell
     // Use single quotes with proper escaping to prevent command injection
     const safeCommitMessage = this.escapeShellArg(commitMessage);
 
     // Stage all, commit, and push
-    const commands = [
-      'git add -A',
-      `git commit -m ${safeCommitMessage}`,
-      'git push',
-    ].join(' && ');
+    const commands = ['git add -A', `git commit -m ${safeCommitMessage}`, 'git push'].join(' && ');
 
     this.terminalService.write(terminalId, `${commands}\n`);
 
@@ -220,9 +207,7 @@ export class QuickActionService {
    * Handle git:pull action
    * Pulls latest changes from remote
    */
-  private async handleGitPull(context?: {
-    projectPath?: string;
-  }): Promise<QuickActionResult> {
+  private async handleGitPull(context?: { projectPath?: string }): Promise<QuickActionResult> {
     const repoPath = context?.projectPath;
 
     if (!repoPath) {
@@ -269,7 +254,7 @@ export class QuickActionService {
    */
   private async handleAiFixErrors(
     sessionId: string,
-    context?: { projectPath?: string },
+    context?: { projectPath?: string }
   ): Promise<QuickActionResult> {
     const session = this.sessionService.get(sessionId);
 
@@ -317,7 +302,7 @@ export class QuickActionService {
   private async handleAiExplain(
     sessionId: string,
     params: { target?: string },
-    context?: { projectPath?: string },
+    context?: { projectPath?: string }
   ): Promise<QuickActionResult> {
     const session = this.sessionService.get(sessionId);
 

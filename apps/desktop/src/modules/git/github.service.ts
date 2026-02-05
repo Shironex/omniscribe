@@ -4,10 +4,7 @@ import { promisify } from 'util';
 import { existsSync } from 'fs';
 import { homedir } from 'os';
 import { join } from 'path';
-import {
-  GH_TIMEOUT_MS,
-  createLogger,
-} from '@omniscribe/shared';
+import { GH_TIMEOUT_MS, createLogger } from '@omniscribe/shared';
 import type {
   GhCliStatus,
   GhCliAuthStatus,
@@ -66,8 +63,7 @@ function getGhCliPaths(): string[] {
 
   if (isWindows) {
     const programFiles = process.env['ProgramFiles'] || 'C:\\Program Files';
-    const localAppData =
-      process.env['LOCALAPPDATA'] || joinPaths(home, 'AppData/Local');
+    const localAppData = process.env['LOCALAPPDATA'] || joinPaths(home, 'AppData/Local');
     return [
       joinPaths(programFiles, 'GitHub CLI/gh.exe'),
       joinPaths(localAppData, 'Programs/GitHub CLI/gh.exe'),
@@ -101,7 +97,7 @@ export class GithubService {
   private async execGh(
     repoPath: string,
     args: string[],
-    timeoutMs: number = GH_TIMEOUT_MS,
+    timeoutMs: number = GH_TIMEOUT_MS
   ): Promise<ExecResult> {
     const command = `gh ${args.join(' ')}`;
 
@@ -194,24 +190,19 @@ export class GithubService {
    */
   private async checkAuth(cliPath: string): Promise<GhCliAuthStatus> {
     try {
-      const { stdout, stderr } = await execAsync(
-        `"${cliPath}" auth status`,
-        {
-          timeout: 10000,
-          env: {
-            ...process.env,
-            ...GH_ENV,
-          },
+      const { stdout, stderr } = await execAsync(`"${cliPath}" auth status`, {
+        timeout: 10000,
+        env: {
+          ...process.env,
+          ...GH_ENV,
         },
-      );
+      });
       const output = stdout + stderr;
 
       // Check if authenticated
       if (output.includes('Logged in to')) {
         // Extract username from output like "Logged in to github.com account username"
-        const usernameMatch = output.match(
-          /Logged in to [^\s]+ account ([^\s(]+)/,
-        );
+        const usernameMatch = output.match(/Logged in to [^\s]+ account ([^\s(]+)/);
         const username = usernameMatch ? usernameMatch[1] : undefined;
 
         // Extract scopes if present
@@ -219,7 +210,7 @@ export class GithubService {
         const scopes = scopesMatch
           ? scopesMatch[1]
               .split(',')
-              .map((s) => s.trim())
+              .map(s => s.trim())
               .filter(Boolean)
           : undefined;
 
@@ -229,8 +220,7 @@ export class GithubService {
       return { authenticated: false };
     } catch (error) {
       // gh auth status returns non-zero exit code when not logged in
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
 
       // Check if the error message indicates not logged in vs actual error
       if (
@@ -266,7 +256,7 @@ export class GithubService {
     // Use pending promise pattern to prevent race conditions
     if (!this.pendingStatus) {
       this.pendingStatus = this.fetchStatus()
-        .then((status) => {
+        .then(status => {
           this.cachedStatus = status;
           this.cacheTimestamp = Date.now();
           return status;
@@ -378,7 +368,7 @@ export class GithubService {
    */
   async listPullRequests(
     repoPath: string,
-    options?: ListPullRequestsOptions,
+    options?: ListPullRequestsOptions
   ): Promise<PullRequest[]> {
     const args = [
       'pr',
@@ -406,7 +396,9 @@ export class GithubService {
       number: pr.number,
       title: pr.title,
       body: pr.body || undefined,
-      state: (pr.state === 'MERGED' ? 'merged' : (pr.state as string).toLowerCase()) as PullRequestState,
+      state: (pr.state === 'MERGED'
+        ? 'merged'
+        : (pr.state as string).toLowerCase()) as PullRequestState,
       author: {
         login: (pr.author as Record<string, unknown>)?.login || 'unknown',
         name: (pr.author as Record<string, unknown>)?.name,
@@ -426,7 +418,7 @@ export class GithubService {
    */
   async createPullRequest(
     repoPath: string,
-    options: CreatePullRequestOptions,
+    options: CreatePullRequestOptions
   ): Promise<PullRequest> {
     const args = [
       'pr',
@@ -460,7 +452,9 @@ export class GithubService {
       number: data.number,
       title: data.title,
       body: data.body || undefined,
-      state: (data.state === 'MERGED' ? 'merged' : (data.state as string).toLowerCase()) as PullRequestState,
+      state: (data.state === 'MERGED'
+        ? 'merged'
+        : (data.state as string).toLowerCase()) as PullRequestState,
       author: {
         login: data.author?.login || 'unknown',
         name: data.author?.name,
@@ -477,10 +471,7 @@ export class GithubService {
   /**
    * List issues
    */
-  async listIssues(
-    repoPath: string,
-    options?: ListIssuesOptions,
-  ): Promise<Issue[]> {
+  async listIssues(repoPath: string, options?: ListIssuesOptions): Promise<Issue[]> {
     const args = [
       'issue',
       'list',
@@ -517,12 +508,10 @@ export class GithubService {
         name: (issue.author as Record<string, unknown>)?.name,
       },
       url: issue.url,
-      labels: ((issue.labels as Array<Record<string, unknown>>) || []).map(
-        (label) => ({
-          name: label.name as string,
-          color: label.color as string | undefined,
-        }),
-      ),
+      labels: ((issue.labels as Array<Record<string, unknown>>) || []).map(label => ({
+        name: label.name as string,
+        color: label.color as string | undefined,
+      })),
       createdAt: issue.createdAt,
       updatedAt: issue.updatedAt,
       closedAt: issue.closedAt || undefined,
@@ -532,10 +521,7 @@ export class GithubService {
   /**
    * View a specific pull request
    */
-  async getPullRequest(
-    repoPath: string,
-    prNumber: number,
-  ): Promise<PullRequest | null> {
+  async getPullRequest(repoPath: string, prNumber: number): Promise<PullRequest | null> {
     try {
       const { stdout } = await this.execGh(repoPath, [
         'pr',
@@ -550,7 +536,9 @@ export class GithubService {
         number: data.number,
         title: data.title,
         body: data.body || undefined,
-        state: (data.state === 'MERGED' ? 'merged' : (data.state as string).toLowerCase()) as PullRequestState,
+        state: (data.state === 'MERGED'
+          ? 'merged'
+          : (data.state as string).toLowerCase()) as PullRequestState,
         author: {
           login: data.author?.login || 'unknown',
           name: data.author?.name,
@@ -593,12 +581,10 @@ export class GithubService {
           name: data.author?.name,
         },
         url: data.url,
-        labels: (data.labels || []).map(
-          (label: Record<string, unknown>) => ({
-            name: label.name as string,
-            color: label.color as string | undefined,
-          }),
-        ),
+        labels: (data.labels || []).map((label: Record<string, unknown>) => ({
+          name: label.name as string,
+          color: label.color as string | undefined,
+        })),
         createdAt: data.createdAt,
         updatedAt: data.updatedAt,
         closedAt: data.closedAt || undefined,

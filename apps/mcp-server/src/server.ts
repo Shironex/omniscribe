@@ -14,7 +14,10 @@ const VERSION = '0.1.0';
 /**
  * Create and configure the MCP server
  */
-export function createServer(): { server: McpServer; config: ReturnType<typeof loadEnvironmentConfig> } {
+export function createServer(): {
+  server: McpServer;
+  config: ReturnType<typeof loadEnvironmentConfig>;
+} {
   const config = loadEnvironmentConfig();
   const httpClient = createHttpClient(config, logger);
 

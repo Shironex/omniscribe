@@ -19,7 +19,7 @@
 import { startServer } from './server.js';
 import { logger } from './utils/index.js';
 
-startServer().catch((error) => {
+startServer().catch(error => {
   logger.error('Fatal error:', error);
   process.exit(1);
 });

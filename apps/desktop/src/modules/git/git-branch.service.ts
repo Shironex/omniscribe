@@ -147,7 +147,7 @@ export class GitBranchService {
   async enrichBranchesWithTrackingInfo(
     repoPath: string,
     branches: BranchInfo[],
-    _currentBranch: string,
+    _currentBranch: string
   ): Promise<void> {
     try {
       // Get local branch details
@@ -158,12 +158,15 @@ export class GitBranchService {
         'refs/heads/',
       ]);
 
-      const localRefMap = new Map<string, {
-        hash: string;
-        message: string;
-        upstream: string;
-        track: string;
-      }>();
+      const localRefMap = new Map<
+        string,
+        {
+          hash: string;
+          message: string;
+          upstream: string;
+          track: string;
+        }
+      >();
 
       for (const line of localRefOutput.split('\n')) {
         if (!line.trim()) continue;
@@ -244,10 +247,7 @@ export class GitBranchService {
   /**
    * Fallback: Get branches using for-each-ref directly
    */
-  async getBranchesWithForEachRef(
-    repoPath: string,
-    currentBranch: string,
-  ): Promise<BranchInfo[]> {
+  async getBranchesWithForEachRef(repoPath: string, currentBranch: string): Promise<BranchInfo[]> {
     const branches: BranchInfo[] = [];
 
     // Get local branches
@@ -351,11 +351,7 @@ export class GitBranchService {
   /**
    * Create a new branch
    */
-  async createBranch(
-    repoPath: string,
-    name: string,
-    startPoint?: string,
-  ): Promise<void> {
+  async createBranch(repoPath: string, name: string, startPoint?: string): Promise<void> {
     // Security: Validate branch name to prevent injection
     if (!isValidGitRefName(name)) {
       this.logger.warn(`Rejected invalid branch name for create: ${name}`);
@@ -366,7 +362,9 @@ export class GitBranchService {
       throw new Error(`Invalid start point: ${startPoint}`);
     }
 
-    this.logger.debug(`Creating branch "${name}" in ${repoPath}${startPoint ? ` from ${startPoint}` : ''}`);
+    this.logger.debug(
+      `Creating branch "${name}" in ${repoPath}${startPoint ? ` from ${startPoint}` : ''}`
+    );
     const args = ['checkout', '-b', name];
     if (startPoint) {
       args.push(startPoint);

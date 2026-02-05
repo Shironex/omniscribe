@@ -14,21 +14,21 @@ const logger = createLogger('AppInit');
  */
 export function useAppInitialization(): void {
   // Session store
-  const initSessionListeners = useSessionStore((state) => state.initListeners);
-  const cleanupSessionListeners = useSessionStore((state) => state.cleanupListeners);
+  const initSessionListeners = useSessionStore(state => state.initListeners);
+  const cleanupSessionListeners = useSessionStore(state => state.cleanupListeners);
 
   // Workspace store
-  const initWorkspaceListeners = useWorkspaceStore((state) => state.initListeners);
-  const cleanupWorkspaceListeners = useWorkspaceStore((state) => state.cleanupListeners);
+  const initWorkspaceListeners = useWorkspaceStore(state => state.initListeners);
+  const cleanupWorkspaceListeners = useWorkspaceStore(state => state.cleanupListeners);
 
   // Git store
-  const initGitListeners = useGitStore((state) => state.initListeners);
-  const cleanupGitListeners = useGitStore((state) => state.cleanupListeners);
+  const initGitListeners = useGitStore(state => state.initListeners);
+  const cleanupGitListeners = useGitStore(state => state.cleanupListeners);
 
   // MCP store
-  const initMcpListeners = useMcpStore((state) => state.initListeners);
-  const cleanupMcpListeners = useMcpStore((state) => state.cleanupListeners);
-  const fetchInternalMcpStatus = useMcpStore((state) => state.fetchInternalMcpStatus);
+  const initMcpListeners = useMcpStore(state => state.initListeners);
+  const cleanupMcpListeners = useMcpStore(state => state.cleanupListeners);
+  const fetchInternalMcpStatus = useMcpStore(state => state.fetchInternalMcpStatus);
 
   // Initialize stores and socket on mount
   useEffect(() => {

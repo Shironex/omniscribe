@@ -5,11 +5,7 @@ const logger = createLogger('TerminalView');
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
-import {
-  connectTerminal,
-  writeToTerminal,
-  resizeTerminal,
-} from '@/lib/terminal';
+import { connectTerminal, writeToTerminal, resizeTerminal } from '@/lib/terminal';
 import '@xterm/xterm/css/xterm.css';
 
 export interface TerminalViewProps {
@@ -30,7 +26,8 @@ const isTerminalReady = (terminal: Terminal | null): terminal is Terminal => {
     const element = terminal.element;
     if (!element) return false;
     // Check if dimensions are available (required for fit operations)
-    const dims = (terminal as unknown as { _core?: { _renderService?: { dimensions?: unknown } } })._core?._renderService?.dimensions;
+    const dims = (terminal as unknown as { _core?: { _renderService?: { dimensions?: unknown } } })
+      ._core?._renderService?.dimensions;
     return dims !== undefined;
   } catch {
     logger.debug('isTerminalReady check failed (terminal may be initializing)');
@@ -39,7 +36,11 @@ const isTerminalReady = (terminal: Terminal | null): terminal is Terminal => {
 };
 
 // Helper to safely call fitAddon.fit()
-const safeFit = (fitAddon: FitAddon | null, terminal: Terminal | null, container: HTMLDivElement | null): { cols: number; rows: number } | null => {
+const safeFit = (
+  fitAddon: FitAddon | null,
+  terminal: Terminal | null,
+  container: HTMLDivElement | null
+): { cols: number; rows: number } | null => {
   if (!fitAddon || !terminal || !container) return null;
 
   // Check container has dimensions
@@ -96,14 +97,11 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
   }, []);
 
   // Handle terminal close - use ref to avoid re-initialization
-  const handleClose = useCallback(
-    (exitCode: number, signal?: number) => {
-      if (isDisposedRef.current) return;
-      setStatus('disconnected');
-      onCloseRef.current?.(exitCode, signal);
-    },
-    [],
-  );
+  const handleClose = useCallback((exitCode: number, signal?: number) => {
+    if (isDisposedRef.current) return;
+    setStatus('disconnected');
+    onCloseRef.current?.(exitCode, signal);
+  }, []);
 
   // Handle resize - only fit if container has dimensions and terminal is ready
   const handleResize = useCallback(() => {
@@ -147,7 +145,8 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
       // Create terminal instance
       terminal = new Terminal({
         fontSize: 13,
-        fontFamily: '"JetBrains Mono", "Fira Code", "Cascadia Code", Menlo, Monaco, "Courier New", monospace',
+        fontFamily:
+          '"JetBrains Mono", "Fira Code", "Cascadia Code", Menlo, Monaco, "Courier New", monospace',
         cursorBlink: true,
         cursorStyle: 'block',
         scrollback: 10000,
@@ -232,7 +231,7 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
       requestAnimationFrame(() => performInitialFit(5));
 
       // Handle user input
-      terminal.onData((data) => {
+      terminal.onData(data => {
         if (!isDisposedRef.current) {
           writeToTerminal(sessionId, data);
         }

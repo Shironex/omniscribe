@@ -68,13 +68,10 @@ export class SessionService {
     private readonly worktreeService: WorktreeService,
     @Inject(forwardRef(() => WorkspaceService))
     private readonly workspaceService: WorkspaceService,
-    private readonly cliCommandService: CliCommandService,
+    private readonly cliCommandService: CliCommandService
   ) {
     // Listen for terminal close events to update session status
-    this.eventEmitter.on(
-      'terminal.closed',
-      this.handleTerminalClosed.bind(this)
-    );
+    this.eventEmitter.on('terminal.closed', this.handleTerminalClosed.bind(this));
   }
 
   /**
@@ -98,9 +95,7 @@ export class SessionService {
         this.updateStatus(event.externalId, status, message);
         session.terminalSessionId = undefined;
 
-        this.logger.log(
-          `Session ${event.externalId} terminal closed (exit=${event.exitCode})`
-        );
+        this.logger.log(`Session ${event.externalId} terminal closed (exit=${event.exitCode})`);
       }
     }
   }
@@ -153,7 +148,9 @@ export class SessionService {
       return undefined;
     }
 
-    this.logger.debug(`Updating status for session ${sessionId}: ${status}${message ? ` (${message})` : ''}`);
+    this.logger.debug(
+      `Updating status for session ${sessionId}: ${status}${message ? ` (${message})` : ''}`
+    );
     session.status = status;
     session.statusMessage = message;
     session.needsInputPrompt = needsInputPrompt;
@@ -226,7 +223,9 @@ export class SessionService {
       if (worktreeSettings.autoCleanup) {
         try {
           await this.worktreeService.cleanup(session.projectPath, session.worktreePath);
-          this.logger.log(`Cleaned up worktree at ${session.worktreePath} for session ${sessionId}`);
+          this.logger.log(
+            `Cleaned up worktree at ${session.worktreePath} for session ${sessionId}`
+          );
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : String(error);
           this.logger.warn(`Failed to cleanup worktree for session ${sessionId}: ${errorMessage}`);
@@ -265,7 +264,7 @@ export class SessionService {
    */
   getForProject(projectPath: string): ExtendedSessionConfig[] {
     return Array.from(this.sessions.values()).filter(
-      (session) => session.projectPath === projectPath
+      session => session.projectPath === projectPath
     );
   }
 
@@ -323,17 +322,10 @@ export class SessionService {
     try {
       // Discover all available MCP servers for this project
       const allServers = await this.mcpDiscoveryService.discoverServers(projectPath);
-      this.logger.log(
-        `Discovered ${allServers.length} MCP servers for session ${sessionId}`
-      );
+      this.logger.log(`Discovered ${allServers.length} MCP servers for session ${sessionId}`);
 
       // Write MCP config with all discovered servers
-      await this.mcpWriterService.writeConfig(
-        worktreePath,
-        sessionId,
-        projectPath,
-        allServers
-      );
+      await this.mcpWriterService.writeConfig(worktreePath, sessionId, projectPath, allServers);
 
       this.logger.log(`MCP config written to ${worktreePath}/.mcp.json`);
 
@@ -387,21 +379,16 @@ export class SessionService {
         `Running ${this.cliCommandService.getAiModeName(aiMode)}`
       );
 
-      this.logger.log(
-        `Session ${sessionId} launched with terminal ${terminalSessionId}`
-      );
+      this.logger.log(`Session ${sessionId} launched with terminal ${terminalSessionId}`);
 
       return {
         success: true,
         terminalSessionId,
       };
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
 
-      this.logger.error(
-        `Failed to launch session ${sessionId}: ${errorMessage}`
-      );
+      this.logger.error(`Failed to launch session ${sessionId}: ${errorMessage}`);
 
       this.updateStatus(sessionId, 'error', `Launch failed: ${errorMessage}`);
 
@@ -433,7 +420,9 @@ export class SessionService {
     const terminalId = session.terminalSessionId;
 
     if (!this.terminalService.hasSession(terminalId)) {
-      this.logger.debug(`stopSession: terminal ${terminalId} for session ${sessionId} no longer exists`);
+      this.logger.debug(
+        `stopSession: terminal ${terminalId} for session ${sessionId} no longer exists`
+      );
       session.terminalSessionId = undefined;
       return false;
     }
@@ -501,5 +490,4 @@ export class SessionService {
 
     return this.terminalService.hasSession(session.terminalSessionId);
   }
-
 }

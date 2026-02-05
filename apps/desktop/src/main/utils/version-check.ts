@@ -23,17 +23,12 @@ const VERSION_LIST_CACHE_MS = 60 * 60 * 1000;
  */
 export async function fetchLatestVersion(): Promise<string | null> {
   // Check cache first
-  if (
-    cachedLatestVersion &&
-    Date.now() - cachedLatestVersion.timestamp < LATEST_VERSION_CACHE_MS
-  ) {
+  if (cachedLatestVersion && Date.now() - cachedLatestVersion.timestamp < LATEST_VERSION_CACHE_MS) {
     return cachedLatestVersion.version;
   }
 
   try {
-    const response = await fetch(
-      'https://registry.npmjs.org/@anthropic-ai/claude-code/latest',
-    );
+    const response = await fetch('https://registry.npmjs.org/@anthropic-ai/claude-code/latest');
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`);
     }
@@ -57,17 +52,12 @@ export async function fetchLatestVersion(): Promise<string | null> {
  */
 export async function fetchAvailableVersions(limit = 20): Promise<string[]> {
   // Check cache first
-  if (
-    cachedVersionList &&
-    Date.now() - cachedVersionList.timestamp < VERSION_LIST_CACHE_MS
-  ) {
+  if (cachedVersionList && Date.now() - cachedVersionList.timestamp < VERSION_LIST_CACHE_MS) {
     return cachedVersionList.versions.slice(0, limit);
   }
 
   try {
-    const response = await fetch(
-      'https://registry.npmjs.org/@anthropic-ai/claude-code',
-    );
+    const response = await fetch('https://registry.npmjs.org/@anthropic-ai/claude-code');
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`);
     }
@@ -76,7 +66,7 @@ export async function fetchAvailableVersions(limit = 20): Promise<string[]> {
 
     // Sort by semver descending (newest first) and filter out pre-release versions
     const sortedVersions = versions
-      .filter((v) => semver.valid(v) && !semver.prerelease(v))
+      .filter(v => semver.valid(v) && !semver.prerelease(v))
       .sort((a, b) => semver.rcompare(a, b));
 
     cachedVersionList = { versions: sortedVersions, timestamp: Date.now() };
@@ -101,7 +91,7 @@ export function cleanVersionString(version: string): string | null {
  * Check version and return comparison result
  */
 export async function checkClaudeVersion(
-  installedVersion?: string,
+  installedVersion?: string
 ): Promise<ClaudeVersionCheckResult | null> {
   const latestVersion = await fetchLatestVersion();
 
@@ -110,13 +100,9 @@ export async function checkClaudeVersion(
   }
 
   // Clean the installed version string (e.g., "2.1.31 (Claude Code)" -> "2.1.31")
-  const cleanInstalled = installedVersion
-    ? cleanVersionString(installedVersion)
-    : null;
+  const cleanInstalled = installedVersion ? cleanVersionString(installedVersion) : null;
 
-  const isOutdated = cleanInstalled
-    ? semver.lt(cleanInstalled, latestVersion)
-    : true;
+  const isOutdated = cleanInstalled ? semver.lt(cleanInstalled, latestVersion) : true;
 
   return {
     installedVersion: cleanInstalled ?? installedVersion,

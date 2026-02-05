@@ -15,7 +15,7 @@ const ALLOWED_STORE_KEYS = new Set([
   'workspace.activeTabId',
   'workspace.preferences',
   'workspace.quickActions',
-  'quick-actions',  // Legacy key format
+  'quick-actions', // Legacy key format
   // Window state
   'window.bounds',
   'window.maximized',
@@ -26,7 +26,7 @@ const ALLOWED_STORE_KEYS = new Set([
   'preferences.terminalFontSize',
   'preferences.autoSave',
   'preferences.worktree',
-  'preferences',  // Root preferences object
+  'preferences', // Root preferences object
   // Recent projects
   'recentProjects',
   // MCP settings

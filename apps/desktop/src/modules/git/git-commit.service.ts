@@ -14,33 +14,28 @@ export class GitCommitService {
   async getCommitLog(
     repoPath: string,
     limit: number = 50,
-    allBranches: boolean = true,
+    allBranches: boolean = true
   ): Promise<CommitInfo[]> {
     const commits: CommitInfo[] = [];
 
     // Format: hash|shortHash|subject|body|authorName|authorEmail|authorDate|committerName|committerEmail|commitDate|parents|refs
     // Note: Double quotes around format string for Windows compatibility (prevents % variable expansion)
     const format = [
-      '%H',      // hash
-      '%h',      // shortHash
-      '%s',      // subject
-      '%b',      // body
-      '%an',     // authorName
-      '%ae',     // authorEmail
-      '%aI',     // authorDate (ISO 8601)
-      '%cn',     // committerName
-      '%ce',     // committerEmail
-      '%cI',     // commitDate (ISO 8601)
-      '%P',      // parents (space-separated)
-      '%D',      // refs
+      '%H', // hash
+      '%h', // shortHash
+      '%s', // subject
+      '%b', // body
+      '%an', // authorName
+      '%ae', // authorEmail
+      '%aI', // authorDate (ISO 8601)
+      '%cn', // committerName
+      '%ce', // committerEmail
+      '%cI', // commitDate (ISO 8601)
+      '%P', // parents (space-separated)
+      '%D', // refs
     ].join('%x00'); // Use null byte as separator
 
-    const args = [
-      'log',
-      `--format="${format}"`,
-      `-n${limit}`,
-      '--date=iso-strict',
-    ];
+    const args = ['log', `--format="${format}"`, `-n${limit}`, '--date=iso-strict'];
 
     if (allBranches) {
       args.push('--all');

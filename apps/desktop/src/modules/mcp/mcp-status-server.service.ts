@@ -68,7 +68,7 @@ export class McpStatusServerService implements OnModuleInit, OnModuleDestroy {
    * Find an available port in the configured range
    */
   private findAvailablePort(): Promise<number | null> {
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
       let currentPort = this.PORT_RANGE_START;
 
       const tryPort = (): void => {
@@ -122,7 +122,7 @@ export class McpStatusServerService implements OnModuleInit, OnModuleDestroy {
     });
 
     return new Promise((resolve, reject) => {
-      this.server!.once('error', (err) => {
+      this.server!.once('error', err => {
         this.logger.error('Server error:', err);
         reject(err);
       });
@@ -140,7 +140,7 @@ export class McpStatusServerService implements OnModuleInit, OnModuleDestroy {
    * Stop the HTTP status server
    */
   private async stopServer(): Promise<void> {
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
       if (this.server) {
         this.server.close(() => {
           this.logger.log('Stopped');
@@ -167,7 +167,7 @@ export class McpStatusServerService implements OnModuleInit, OnModuleDestroy {
 
     let body = '';
 
-    req.on('data', (chunk) => {
+    req.on('data', chunk => {
       body += chunk.toString();
       // Limit body size to prevent abuse
       if (body.length > 10000) {
@@ -186,7 +186,7 @@ export class McpStatusServerService implements OnModuleInit, OnModuleDestroy {
       }
     });
 
-    req.on('error', (error) => {
+    req.on('error', error => {
       this.logger.error('Request error:', error);
       res.writeHead(500, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: 'Internal error' }));

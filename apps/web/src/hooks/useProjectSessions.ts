@@ -38,8 +38,8 @@ export function useProjectSessions(
   preLaunchSlots: PreLaunchSlot[]
 ): UseProjectSessionsReturn {
   // Session store
-  const sessions = useSessionStore((state) => state.sessions);
-  const updateSession = useSessionStore((state) => state.updateSession);
+  const sessions = useSessionStore(state => state.sessions);
+  const updateSession = useSessionStore(state => state.updateSession);
 
   // Focused session state
   const [focusedSessionId, setFocusedSessionId] = useState<string | null>(null);
@@ -47,7 +47,7 @@ export function useProjectSessions(
   // Filter sessions for the active project
   const activeProjectSessions = useMemo(() => {
     if (!activeProjectPath) return [];
-    return sessions.filter((s) => s.projectPath === activeProjectPath);
+    return sessions.filter(s => s.projectPath === activeProjectPath);
   }, [sessions, activeProjectPath]);
 
   // Convert sessions to TerminalSession format for TerminalGrid
@@ -65,7 +65,7 @@ export function useProjectSessions(
 
   // Check if we have any running sessions (sessions with a terminal)
   const hasActiveSessions = activeProjectSessions.some(
-    (s) => s.terminalSessionId !== undefined && s.status !== 'disconnected'
+    s => s.terminalSessionId !== undefined && s.status !== 'disconnected'
   );
 
   // Compute status counts (mapping backend status to UI status)

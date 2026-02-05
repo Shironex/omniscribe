@@ -126,7 +126,7 @@ function formatFileLog(level: string, context: string, args: unknown[]): string 
     args.length > 0
       ? ' ' +
         args
-          .map((a) => {
+          .map(a => {
             if (typeof a === 'string') return a;
             try {
               return JSON.stringify(a);

@@ -25,10 +25,7 @@ export class GitRepoService {
    * Get the repository root path
    */
   async getRepositoryRoot(repoPath: string): Promise<string> {
-    const { stdout } = await this.gitBase.execGit(repoPath, [
-      'rev-parse',
-      '--show-toplevel',
-    ]);
+    const { stdout } = await this.gitBase.execGit(repoPath, ['rev-parse', '--show-toplevel']);
     return stdout.trim();
   }
 
@@ -70,7 +67,7 @@ export class GitRepoService {
     repoPath: string,
     name?: string,
     email?: string,
-    global: boolean = false,
+    global: boolean = false
   ): Promise<void> {
     const scope = global ? '--global' : '--local';
 

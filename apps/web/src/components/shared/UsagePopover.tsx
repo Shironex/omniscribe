@@ -1,7 +1,15 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, AlertTriangle, CheckCircle, XCircle, Clock, ExternalLink, Loader2 } from 'lucide-react';
+import {
+  RefreshCw,
+  AlertTriangle,
+  CheckCircle,
+  XCircle,
+  Clock,
+  ExternalLink,
+  Loader2,
+} from 'lucide-react';
 import { clsx } from 'clsx';
 import { ClaudeIcon } from '@/components/shared/ClaudeIcon';
 import { useUsageStore } from '@/stores/useUsageStore';
@@ -30,8 +38,7 @@ const ERROR_MESSAGES: Record<UsageError, { title: string; description: string }>
   },
   trust_prompt: {
     title: 'Folder permission needed',
-    description:
-      'Run "claude" in your terminal and approve folder access to continue.',
+    description: 'Run "claude" in your terminal and approve folder access to continue.',
   },
   unknown: {
     title: 'Failed to fetch usage',
@@ -42,7 +49,8 @@ const ERROR_MESSAGES: Record<UsageError, { title: string; description: string }>
 /** Get status color/icon based on percentage used */
 function getStatusInfo(percentage: number) {
   if (percentage >= 75) return { color: 'text-status-error', icon: XCircle, bg: 'bg-status-error' };
-  if (percentage >= 50) return { color: 'text-status-warning', icon: AlertTriangle, bg: 'bg-status-warning' };
+  if (percentage >= 50)
+    return { color: 'text-status-warning', icon: AlertTriangle, bg: 'bg-status-warning' };
   return { color: 'text-primary', icon: CheckCircle, bg: 'bg-primary' };
 }
 
@@ -131,20 +139,20 @@ export function UsagePopover() {
   const [open, setOpen] = useState(false);
 
   // Usage store
-  const claudeUsage = useUsageStore((s) => s.claudeUsage);
-  const status = useUsageStore((s) => s.status);
-  const error = useUsageStore((s) => s.error);
-  const errorMessage = useUsageStore((s) => s.errorMessage);
-  const fetchUsage = useUsageStore((s) => s.fetchUsage);
-  const setWorkingDir = useUsageStore((s) => s.setWorkingDir);
-  const startPolling = useUsageStore((s) => s.startPolling);
-  const stopPolling = useUsageStore((s) => s.stopPolling);
-  const lastFetched = useUsageStore((s) => s.lastFetched);
+  const claudeUsage = useUsageStore(s => s.claudeUsage);
+  const status = useUsageStore(s => s.status);
+  const error = useUsageStore(s => s.error);
+  const errorMessage = useUsageStore(s => s.errorMessage);
+  const fetchUsage = useUsageStore(s => s.fetchUsage);
+  const setWorkingDir = useUsageStore(s => s.setWorkingDir);
+  const startPolling = useUsageStore(s => s.startPolling);
+  const stopPolling = useUsageStore(s => s.stopPolling);
+  const lastFetched = useUsageStore(s => s.lastFetched);
 
   // Get active project path from workspace store
-  const activeTabId = useWorkspaceStore((s) => s.activeTabId);
-  const tabs = useWorkspaceStore((s) => s.tabs);
-  const activeTab = tabs.find((t) => t.id === activeTabId);
+  const activeTabId = useWorkspaceStore(s => s.activeTabId);
+  const tabs = useWorkspaceStore(s => s.tabs);
+  const activeTab = tabs.find(t => t.id === activeTabId);
   const projectPath = activeTab?.projectPath;
 
   // Update working directory when project changes
@@ -188,11 +196,7 @@ export function UsagePopover() {
   const errorInfo = error ? ERROR_MESSAGES[error] : null;
 
   const trigger = (
-    <Button
-      variant="ghost"
-      size="sm"
-      className="h-8 gap-2 px-2 hover:bg-accent"
-    >
+    <Button variant="ghost" size="sm" className="h-8 gap-2 px-2 hover:bg-accent">
       <ClaudeIcon className={clsx('w-4 h-4', claudeUsage && statusColor)} size={16} />
       {claudeUsage && (
         <div

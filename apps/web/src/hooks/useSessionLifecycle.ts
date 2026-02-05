@@ -34,7 +34,7 @@ export function useSessionLifecycle(
 
     // Use Promise.all for parallel execution to avoid race conditions with re-renders
     await Promise.all(
-      sessions.map(async (session) => {
+      sessions.map(async session => {
         // Skip only disconnected sessions (already closed)
         // Note: 'idle' status means Claude is waiting for input - still a running session
         if (session.status === 'disconnected') {
@@ -60,7 +60,7 @@ export function useSessionLifecycle(
     logger.info('Killing session', sessionId);
     try {
       // Find the session to get the correct terminalSessionId
-      const session = sessionsRef.current.find((s) => s.id === sessionId);
+      const session = sessionsRef.current.find(s => s.id === sessionId);
       if (session?.terminalSessionId !== undefined) {
         killTerminal(session.terminalSessionId);
       }

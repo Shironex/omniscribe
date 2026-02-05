@@ -87,9 +87,7 @@ export class McpGateway implements OnGatewayInit {
       // Cache the discovered servers
       this.projectCache.setServers(payload.projectPath, servers);
 
-      this.logger.log(
-        `Discovered ${servers.length} MCP servers for ${payload.projectPath}`
-      );
+      this.logger.log(`Discovered ${servers.length} MCP servers for ${payload.projectPath}`);
 
       return { servers };
     } catch (error) {
@@ -144,7 +142,7 @@ export class McpGateway implements OnGatewayInit {
   ): Promise<McpWriteConfigResponse> {
     try {
       // Filter to only enabled servers
-      const enabledServers = payload.servers.filter((s) => s.enabled);
+      const enabledServers = payload.servers.filter(s => s.enabled);
 
       const configPath = await this.writerService.writeConfig(
         payload.workingDir,
@@ -153,9 +151,7 @@ export class McpGateway implements OnGatewayInit {
         enabledServers
       );
 
-      this.logger.log(
-        `Wrote MCP config for session ${payload.sessionId} to ${configPath}`
-      );
+      this.logger.log(`Wrote MCP config for session ${payload.sessionId} to ${configPath}`);
 
       return { success: true, configPath };
     } catch (error) {
@@ -203,16 +199,10 @@ export class McpGateway implements OnGatewayInit {
     @ConnectedSocket() _client: Socket
   ): Promise<McpRemoveConfigResponse> {
     try {
-      const success = await this.writerService.removeConfig(
-        payload.workingDir,
-        payload.sessionId
-      );
+      const success = await this.writerService.removeConfig(payload.workingDir, payload.sessionId);
 
       // Clean up enabled state in registry
-      this.sessionRegistry.clearEnabledServers(
-        payload.projectPath,
-        payload.sessionId
-      );
+      this.sessionRegistry.clearEnabledServers(payload.projectPath, payload.sessionId);
 
       // Clean up config tracking
       const hash = this.writerService.generateProjectHash(payload.projectPath);

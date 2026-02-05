@@ -77,53 +77,57 @@ function App() {
   const { handleStopAll, handleKillSession } = useSessionLifecycle(activeProjectSessions);
 
   // Quick actions - use raw actions and filter with useMemo to avoid infinite loop
-  const allQuickActions = useQuickActionStore((state) => state.actions);
-  const quickActions = useMemo(() =>
-    allQuickActions.filter((a) => a.enabled !== false),
+  const allQuickActions = useQuickActionStore(state => state.actions);
+  const quickActions = useMemo(
+    () => allQuickActions.filter(a => a.enabled !== false),
     [allQuickActions]
   );
 
   // Quick actions for terminal header dropdown (with icon and category)
-  const quickActionsForTerminal = useMemo(() =>
-    quickActions.map(a => ({ id: a.id, label: a.title, icon: a.icon, category: a.category })),
+  const quickActionsForTerminal = useMemo(
+    () => quickActions.map(a => ({ id: a.id, label: a.title, icon: a.icon, category: a.category })),
     [quickActions]
   );
 
   // Handle quick action execution (writes command to terminal)
-  const handleQuickAction = useCallback((sessionId: string, actionId: string) => {
-    const action = quickActions.find(a => a.id === actionId);
-    if (!action) return;
+  const handleQuickAction = useCallback(
+    (sessionId: string, actionId: string) => {
+      const action = quickActions.find(a => a.id === actionId);
+      if (!action) return;
 
-    // Find the session to get terminalSessionId
-    const session = terminalSessions.find(s => s.id === sessionId);
-    if (!session?.terminalSessionId) {
-      logger.warn('No terminal session for quick action');
-      return;
-    }
+      // Find the session to get terminalSessionId
+      const session = terminalSessions.find(s => s.id === sessionId);
+      if (!session?.terminalSessionId) {
+        logger.warn('No terminal session for quick action');
+        return;
+      }
 
-    logger.debug('Executing quick action', actionId, 'on session', sessionId);
+      logger.debug('Executing quick action', actionId, 'on session', sessionId);
 
-    // Build command based on handler type
-    const params = action.params ?? {};
-    let command = '';
-    if (action.handler === 'terminal:execute' || action.handler === 'shell') {
-      command = String(params.command ?? params.cmd ?? '');
-    } else if (action.handler === 'script') {
-      command = String(params.path ?? params.script ?? '');
-    } else {
-      // For other handlers, use command param or action id
-      command = String(params.command ?? params.cmd ?? action.id);
-    }
+      // Build command based on handler type
+      const params = action.params ?? {};
+      let command = '';
+      if (action.handler === 'terminal:execute' || action.handler === 'shell') {
+        command = String(params.command ?? params.cmd ?? '');
+      } else if (action.handler === 'script') {
+        command = String(params.path ?? params.script ?? '');
+      } else {
+        // For other handlers, use command param or action id
+        command = String(params.command ?? params.cmd ?? action.id);
+      }
 
-    if (command) {
-      writeToTerminal(session.terminalSessionId, command + '\n');
-    }
-  }, [quickActions, terminalSessions]);
+      if (command) {
+        writeToTerminal(session.terminalSessionId, command + '\n');
+      }
+    },
+    [quickActions, terminalSessions]
+  );
 
   // Recent projects for welcome view (sorted by last accessed)
-  const workspaceTabs = useWorkspaceStore((state) => state.tabs);
+  const workspaceTabs = useWorkspaceStore(state => state.tabs);
   const recentProjects = useMemo(
-    () => [...workspaceTabs].sort((a, b) => b.lastAccessedAt.getTime() - a.lastAccessedAt.getTime()),
+    () =>
+      [...workspaceTabs].sort((a, b) => b.lastAccessedAt.getTime() - a.lastAccessedAt.getTime()),
     [workspaceTabs]
   );
 
@@ -135,9 +139,7 @@ function App() {
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
       const isTyping =
-        target.tagName === 'INPUT' ||
-        target.tagName === 'TEXTAREA' ||
-        target.isContentEditable;
+        target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
 
       const key = e.key.toLowerCase();
       const isMod = e.metaKey || e.ctrlKey;
@@ -184,7 +186,19 @@ function App() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [canLaunch, isLaunching, hasActiveSessions, terminalSessions.length, preLaunchSlots, launchingSlotIds, activeProjectPath, handleAddSession, handleLaunch, handleLaunchSlot, handleStopAll]);
+  }, [
+    canLaunch,
+    isLaunching,
+    hasActiveSessions,
+    terminalSessions.length,
+    preLaunchSlots,
+    launchingSlotIds,
+    activeProjectPath,
+    handleAddSession,
+    handleLaunch,
+    handleLaunchSlot,
+    handleStopAll,
+  ]);
 
   return (
     <div className="h-screen w-screen bg-background text-foreground flex flex-col overflow-hidden">
@@ -198,10 +212,7 @@ function App() {
       />
 
       {/* Top bar with branch and status */}
-      <TopBar
-        currentBranch={currentBranch}
-        statusCounts={statusCounts}
-      />
+      <TopBar currentBranch={currentBranch} statusCounts={statusCounts} />
 
       {/* Main content */}
       <main className="flex-1 flex overflow-hidden bg-background">

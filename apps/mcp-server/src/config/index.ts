@@ -1,5 +1,1 @@
-export {
-  type EnvironmentConfig,
-  loadEnvironmentConfig,
-  isConfigured,
-} from './environment.js';
+export { type EnvironmentConfig, loadEnvironmentConfig, isConfigured } from './environment.js';

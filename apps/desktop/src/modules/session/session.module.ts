@@ -8,12 +8,7 @@ import { SessionGateway } from './session.gateway';
 import { CliCommandService } from './cli-command.service';
 
 @Module({
-  imports: [
-    TerminalModule,
-    McpModule,
-    GitModule,
-    forwardRef(() => WorkspaceModule),
-  ],
+  imports: [TerminalModule, McpModule, GitModule, forwardRef(() => WorkspaceModule)],
   providers: [CliCommandService, SessionService, SessionGateway],
   exports: [SessionService, CliCommandService],
 })

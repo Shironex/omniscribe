@@ -94,41 +94,37 @@ export const useMcpStore = create<McpStore>((set, get) => {
   const socketActions = createSocketActions<McpState>(set);
 
   // Create socket listeners
-  const { initListeners, cleanupListeners } = createSocketListeners<McpStore>(
-    get,
-    set,
-    {
-      listeners: [
-        {
-          event: 'mcp:servers:discovered',
-          handler: (data, get) => {
-            const result = data as McpDiscoveryResult;
-            get().setServers(result.servers);
-          },
+  const { initListeners, cleanupListeners } = createSocketListeners<McpStore>(get, set, {
+    listeners: [
+      {
+        event: 'mcp:servers:discovered',
+        handler: (data, get) => {
+          const result = data as McpDiscoveryResult;
+          get().setServers(result.servers);
         },
-        {
-          event: 'mcp:status',
-          handler: (data, get) => {
-            const update = data as McpStatusUpdate;
-            logger.debug('mcp:status', update.serverId, update.status);
-            get().updateServerStatus(update.serverId, update.status, update.errorMessage);
-          },
-        },
-        {
-          event: 'mcp:state',
-          handler: (data, get) => {
-            const update = data as McpServerStateUpdate;
-            logger.debug('mcp:state', update.serverId);
-            get().updateServerState(update.serverId, update.state);
-          },
-        },
-      ],
-      onConnect: (get) => {
-        // Refresh server list on reconnect
-        get().discoverServers();
       },
-    }
-  );
+      {
+        event: 'mcp:status',
+        handler: (data, get) => {
+          const update = data as McpStatusUpdate;
+          logger.debug('mcp:status', update.serverId, update.status);
+          get().updateServerStatus(update.serverId, update.status, update.errorMessage);
+        },
+      },
+      {
+        event: 'mcp:state',
+        handler: (data, get) => {
+          const update = data as McpServerStateUpdate;
+          logger.debug('mcp:state', update.serverId);
+          get().updateServerState(update.serverId, update.state);
+        },
+      },
+    ],
+    onConnect: get => {
+      // Refresh server list on reconnect
+      get().discoverServers();
+    },
+  });
 
   return {
     // Initial state (spread common state + custom state)
@@ -149,14 +145,18 @@ export const useMcpStore = create<McpStore>((set, get) => {
     discoverServers: (projectPath?: string) => {
       logger.info('Discovering servers', projectPath);
       set({ isDiscovering: true, error: null });
-      socket.emit('mcp:discover', { projectPath }, (response: { servers: McpServerConfig[]; error?: string }) => {
-        if (response.error) {
-          logger.error('Discovery failed:', response.error);
-          set({ error: response.error, isDiscovering: false });
-        } else {
-          set({ servers: response.servers ?? [], isDiscovering: false, error: null });
+      socket.emit(
+        'mcp:discover',
+        { projectPath },
+        (response: { servers: McpServerConfig[]; error?: string }) => {
+          if (response.error) {
+            logger.error('Discovery failed:', response.error);
+            set({ error: response.error, isDiscovering: false });
+          } else {
+            set({ servers: response.servers ?? [], isDiscovering: false, error: null });
+          }
         }
-      });
+      );
     },
 
     setServers: (servers: McpServerConfig[]) => {
@@ -164,7 +164,7 @@ export const useMcpStore = create<McpStore>((set, get) => {
     },
 
     updateServerState: (serverId: string, state: McpServerState) => {
-      set((currentState) => {
+      set(currentState => {
         const newServerStates = new Map(currentState.serverStates);
         newServerStates.set(serverId, state);
         return { serverStates: newServerStates };
@@ -172,7 +172,7 @@ export const useMcpStore = create<McpStore>((set, get) => {
     },
 
     updateServerStatus: (serverId: string, status: McpServerStatus, errorMessage?: string) => {
-      set((state) => {
+      set(state => {
         const newServerStates = new Map(state.serverStates);
         const existingState = newServerStates.get(serverId);
 
@@ -222,7 +222,7 @@ export const selectServers = (state: McpStore) => state.servers;
  * Select server by ID
  */
 export const selectServerById = (serverId: string) => (state: McpStore) =>
-  state.servers.find((server) => server.id === serverId);
+  state.servers.find(server => server.id === serverId);
 
 /**
  * Select server state by ID

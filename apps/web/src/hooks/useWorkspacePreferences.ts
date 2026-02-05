@@ -12,20 +12,20 @@ const logger = createLogger('Preferences');
  */
 export function useWorkspacePreferences(): void {
   // Workspace store - use stable selectors
-  const workspaceTabs = useWorkspaceStore((state) => state.tabs);
-  const activeWorkspaceTabId = useWorkspaceStore((state) => state.activeTabId);
-  const workspacePreferences = useWorkspaceStore((state) => state.preferences);
-  const updateTabTheme = useWorkspaceStore((state) => state.updateTabTheme);
-  const isWorkspaceRestored = useWorkspaceStore((state) => state.isRestored);
+  const workspaceTabs = useWorkspaceStore(state => state.tabs);
+  const activeWorkspaceTabId = useWorkspaceStore(state => state.activeTabId);
+  const workspacePreferences = useWorkspaceStore(state => state.preferences);
+  const updateTabTheme = useWorkspaceStore(state => state.updateTabTheme);
+  const isWorkspaceRestored = useWorkspaceStore(state => state.isRestored);
 
   // Settings store
-  const settingsTheme = useSettingsStore((state) => state.theme);
-  const setSettingsTheme = useSettingsStore((state) => state.setTheme);
+  const settingsTheme = useSettingsStore(state => state.theme);
+  const setSettingsTheme = useSettingsStore(state => state.setTheme);
 
   // Compute active tab using useMemo (stable reference)
   const activeTab = useMemo(() => {
     if (!activeWorkspaceTabId) return undefined;
-    return workspaceTabs.find((tab) => tab.id === activeWorkspaceTabId);
+    return workspaceTabs.find(tab => tab.id === activeWorkspaceTabId);
   }, [workspaceTabs, activeWorkspaceTabId]);
 
   // Track if initial theme sync has happened
@@ -57,7 +57,13 @@ export function useWorkspacePreferences(): void {
       logger.debug('Initial theme sync:', themeToApply);
       setSettingsTheme(themeToApply as Theme);
     }
-  }, [isWorkspaceRestored, activeTab?.theme, workspacePreferences.theme, settingsTheme, setSettingsTheme]);
+  }, [
+    isWorkspaceRestored,
+    activeTab?.theme,
+    workspacePreferences.theme,
+    settingsTheme,
+    setSettingsTheme,
+  ]);
 
   // Tab switch: Apply the active tab's theme when switching projects
   useEffect(() => {

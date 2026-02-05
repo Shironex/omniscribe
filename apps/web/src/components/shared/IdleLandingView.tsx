@@ -83,18 +83,12 @@ export function IdleLandingView({ onAddSession, className }: IdleLandingViewProp
               'flex items-center justify-center'
             )}
           >
-            <BrainCircuit
-              size={48}
-              className="text-primary"
-              strokeWidth={1.5}
-            />
+            <BrainCircuit size={48} className="text-primary" strokeWidth={1.5} />
           </div>
         </div>
 
         {/* Text */}
-        <h2 className="text-lg font-medium text-foreground mb-2">
-          No Active Sessions
-        </h2>
+        <h2 className="text-lg font-medium text-foreground mb-2">No Active Sessions</h2>
         <p className="text-sm text-foreground-secondary mb-8 text-center max-w-xs">
           Add sessions to start orchestrating your AI coding assistants
         </p>
@@ -123,7 +117,11 @@ export function IdleLandingView({ onAddSession, className }: IdleLandingViewProp
 
         {/* Keyboard shortcut hint */}
         <p className="mt-6 text-xs text-muted-foreground">
-          Press <kbd className="px-1.5 py-0.5 rounded bg-muted border border-border font-mono text-foreground-secondary">N</kbd> to add a session
+          Press{' '}
+          <kbd className="px-1.5 py-0.5 rounded bg-muted border border-border font-mono text-foreground-secondary">
+            N
+          </kbd>{' '}
+          to add a session
         </p>
       </div>
     </div>

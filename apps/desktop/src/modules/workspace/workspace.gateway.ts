@@ -65,7 +65,7 @@ export class WorkspaceGateway implements OnGatewayInit {
 
   constructor(
     private readonly quickActionService: QuickActionService,
-    private readonly workspaceService: WorkspaceService,
+    private readonly workspaceService: WorkspaceService
   ) {}
 
   afterInit(): void {
@@ -78,14 +78,14 @@ export class WorkspaceGateway implements OnGatewayInit {
   @SubscribeMessage('quickaction:execute')
   async handleExecuteQuickAction(
     @MessageBody() payload: ExecuteQuickActionPayload,
-    @ConnectedSocket() client: Socket,
+    @ConnectedSocket() client: Socket
   ): Promise<QuickActionResult> {
     this.logger.log(`Executing quick action: ${payload.action.handler}`);
 
     const result = await this.quickActionService.executeAction(
       payload.sessionId,
       payload.action,
-      payload.context,
+      payload.context
     );
 
     // Emit result to the client
@@ -104,18 +104,18 @@ export class WorkspaceGateway implements OnGatewayInit {
   @SubscribeMessage('quickaction:list')
   handleGetQuickActions(
     @MessageBody() payload: GetQuickActionsPayload,
-    @ConnectedSocket() _client: Socket,
+    @ConnectedSocket() _client: Socket
   ): QuickAction[] {
     let actions = this.workspaceService.getQuickActions();
 
     // Filter by category if specified
     if (payload.category) {
-      actions = actions.filter((action) => action.category === payload.category);
+      actions = actions.filter(action => action.category === payload.category);
     }
 
     // Filter by enabled status if specified
     if (payload.enabledOnly) {
-      actions = actions.filter((action) => action.enabled !== false);
+      actions = actions.filter(action => action.enabled !== false);
     }
 
     return actions;
@@ -127,7 +127,7 @@ export class WorkspaceGateway implements OnGatewayInit {
   @SubscribeMessage('quickaction:update')
   handleUpdateQuickActions(
     @MessageBody() payload: UpdateQuickActionsPayload,
-    @ConnectedSocket() _client: Socket,
+    @ConnectedSocket() _client: Socket
   ): SuccessResponse {
     this.workspaceService.setQuickActions(payload.actions);
 
@@ -143,9 +143,7 @@ export class WorkspaceGateway implements OnGatewayInit {
    * Handle reset quick actions to defaults request
    */
   @SubscribeMessage('quickaction:reset')
-  handleResetQuickActions(
-    @ConnectedSocket() _client: Socket,
-  ): QuickActionsResponse {
+  handleResetQuickActions(@ConnectedSocket() _client: Socket): QuickActionsResponse {
     this.workspaceService.resetQuickActionsToDefaults();
 
     const actions = this.workspaceService.getQuickActions();
@@ -182,9 +180,7 @@ export class WorkspaceGateway implements OnGatewayInit {
    * Handle get workspace state request - returns saved state on app start
    */
   @SubscribeMessage('workspace:get-state')
-  handleGetWorkspaceState(
-    @ConnectedSocket() _client: Socket,
-  ): WorkspaceState {
+  handleGetWorkspaceState(@ConnectedSocket() _client: Socket): WorkspaceState {
     this.logger.debug('Getting workspace state');
     return this.workspaceService.getWorkspaceState();
   }
@@ -195,7 +191,7 @@ export class WorkspaceGateway implements OnGatewayInit {
   @SubscribeMessage('workspace:save-state')
   handleSaveWorkspaceState(
     @MessageBody() payload: SaveStatePayload,
-    @ConnectedSocket() _client: Socket,
+    @ConnectedSocket() _client: Socket
   ): SuccessResponse {
     this.logger.debug('Saving workspace state');
     this.workspaceService.saveWorkspaceState(payload);
@@ -208,7 +204,7 @@ export class WorkspaceGateway implements OnGatewayInit {
   @SubscribeMessage('workspace:add-tab')
   handleAddTab(
     @MessageBody() payload: AddTabPayload,
-    @ConnectedSocket() client: Socket,
+    @ConnectedSocket() client: Socket
   ): TabsResponse {
     this.logger.log(`Adding tab for project: ${payload.projectPath}`);
 
@@ -240,7 +236,7 @@ export class WorkspaceGateway implements OnGatewayInit {
   @SubscribeMessage('workspace:update-tab-theme')
   handleUpdateTabTheme(
     @MessageBody() payload: UpdateTabThemePayload,
-    @ConnectedSocket() client: Socket,
+    @ConnectedSocket() client: Socket
   ): TabsOnlyResponse {
     this.logger.log(`Updating tab theme: ${payload.tabId} -> ${payload.theme}`);
 
@@ -261,7 +257,7 @@ export class WorkspaceGateway implements OnGatewayInit {
   @SubscribeMessage('workspace:remove-tab')
   handleRemoveTab(
     @MessageBody() payload: RemoveTabPayload,
-    @ConnectedSocket() client: Socket,
+    @ConnectedSocket() client: Socket
   ): TabsResponse {
     this.logger.log(`Removing tab: ${payload.tabId}`);
 
@@ -282,7 +278,7 @@ export class WorkspaceGateway implements OnGatewayInit {
   @SubscribeMessage('workspace:select-tab')
   handleSelectTab(
     @MessageBody() payload: SelectTabPayload,
-    @ConnectedSocket() client: Socket,
+    @ConnectedSocket() client: Socket
   ): TabsResponse {
     this.logger.debug(`Selecting tab: ${payload.tabId}`);
 
@@ -303,7 +299,7 @@ export class WorkspaceGateway implements OnGatewayInit {
   @SubscribeMessage('workspace:update-preference')
   handleUpdatePreference(
     @MessageBody() payload: UpdatePreferencePayload,
-    @ConnectedSocket() client: Socket,
+    @ConnectedSocket() client: Socket
   ): PreferencesResponse {
     this.logger.debug(`Updating preference: ${payload.key}`);
 
@@ -321,9 +317,7 @@ export class WorkspaceGateway implements OnGatewayInit {
    * Handle get preferences request
    */
   @SubscribeMessage('workspace:get-preferences')
-  handleGetPreferences(
-    @ConnectedSocket() _client: Socket,
-  ): UserPreferences {
+  handleGetPreferences(@ConnectedSocket() _client: Socket): UserPreferences {
     return this.workspaceService.getPreferences();
   }
 }

@@ -22,10 +22,7 @@ export function getClaudeConfigDir(): string {
  */
 export function getClaudeCredentialPaths(): string[] {
   const claudeDir = getClaudeConfigDir();
-  return [
-    joinPaths(claudeDir, '.credentials.json'),
-    joinPaths(claudeDir, 'credentials.json'),
-  ];
+  return [joinPaths(claudeDir, '.credentials.json'), joinPaths(claudeDir, 'credentials.json')];
 }
 
 /**

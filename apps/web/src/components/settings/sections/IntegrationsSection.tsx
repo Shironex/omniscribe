@@ -21,20 +21,20 @@ import { useSettingsStore } from '@/stores';
 import { ClaudeIcon } from '@/components/shared/ClaudeIcon';
 
 export function IntegrationsSection() {
-  const claudeCliStatus = useSettingsStore((state) => state.claudeCliStatus);
-  const isLoading = useSettingsStore((state) => state.isClaudeCliLoading);
-  const setClaudeCliStatus = useSettingsStore((state) => state.setClaudeCliStatus);
-  const setClaudeCliLoading = useSettingsStore((state) => state.setClaudeCliLoading);
+  const claudeCliStatus = useSettingsStore(state => state.claudeCliStatus);
+  const isLoading = useSettingsStore(state => state.isClaudeCliLoading);
+  const setClaudeCliStatus = useSettingsStore(state => state.setClaudeCliStatus);
+  const setClaudeCliLoading = useSettingsStore(state => state.setClaudeCliLoading);
 
-  const claudeVersionCheck = useSettingsStore((state) => state.claudeVersionCheck);
-  const isVersionCheckLoading = useSettingsStore((state) => state.isVersionCheckLoading);
-  const setClaudeVersionCheck = useSettingsStore((state) => state.setClaudeVersionCheck);
-  const setVersionCheckLoading = useSettingsStore((state) => state.setVersionCheckLoading);
+  const claudeVersionCheck = useSettingsStore(state => state.claudeVersionCheck);
+  const isVersionCheckLoading = useSettingsStore(state => state.isVersionCheckLoading);
+  const setClaudeVersionCheck = useSettingsStore(state => state.setClaudeVersionCheck);
+  const setVersionCheckLoading = useSettingsStore(state => state.setVersionCheckLoading);
 
-  const availableVersions = useSettingsStore((state) => state.availableVersions);
-  const isVersionsLoading = useSettingsStore((state) => state.isVersionsLoading);
-  const setAvailableVersions = useSettingsStore((state) => state.setAvailableVersions);
-  const setVersionsLoading = useSettingsStore((state) => state.setVersionsLoading);
+  const availableVersions = useSettingsStore(state => state.availableVersions);
+  const isVersionsLoading = useSettingsStore(state => state.isVersionsLoading);
+  const setAvailableVersions = useSettingsStore(state => state.setAvailableVersions);
+  const setVersionsLoading = useSettingsStore(state => state.setVersionsLoading);
 
   const [showVersionPicker, setShowVersionPicker] = useState(false);
   const [installCommand, setInstallCommand] = useState<{
@@ -94,22 +94,19 @@ export function IntegrationsSection() {
     }
   }, [setAvailableVersions, setVersionsLoading]);
 
-  const getInstallCommand = useCallback(
-    async (isUpdate: boolean, version?: string) => {
-      try {
-        if (window.electronAPI?.claude?.getInstallCommand) {
-          const result = await window.electronAPI.claude.getInstallCommand({
-            isUpdate,
-            version,
-          });
-          setInstallCommand(result);
-        }
-      } catch (error) {
-        logger.error('Failed to get install command:', error);
+  const getInstallCommand = useCallback(async (isUpdate: boolean, version?: string) => {
+    try {
+      if (window.electronAPI?.claude?.getInstallCommand) {
+        const result = await window.electronAPI.claude.getInstallCommand({
+          isUpdate,
+          version,
+        });
+        setInstallCommand(result);
       }
-    },
-    [],
-  );
+    } catch (error) {
+      logger.error('Failed to get install command:', error);
+    }
+  }, []);
 
   const copyCommand = useCallback(async () => {
     if (installCommand?.command) {
@@ -146,7 +143,13 @@ export function IntegrationsSection() {
     ) {
       checkVersion();
     }
-  }, [claudeCliStatus, claudeVersionCheck, isVersionCheckLoading, versionCheckAttempted, checkVersion]);
+  }, [
+    claudeCliStatus,
+    claudeVersionCheck,
+    isVersionCheckLoading,
+    versionCheckAttempted,
+    checkVersion,
+  ]);
 
   // Handle version picker open
   const handleVersionPickerOpen = () => {
@@ -177,16 +180,14 @@ export function IntegrationsSection() {
           className={clsx(
             'w-10 h-10 rounded-xl flex items-center justify-center',
             'bg-gradient-to-br from-orange-500/20 to-orange-600/10',
-            'ring-1 ring-orange-500/20',
+            'ring-1 ring-orange-500/20'
           )}
         >
           <ClaudeIcon size={20} className="text-orange-400" />
         </div>
         <div className="flex-1">
           <h2 className="text-lg font-semibold text-foreground">Claude CLI</h2>
-          <p className="text-sm text-muted-foreground">
-            Claude Code CLI installation status
-          </p>
+          <p className="text-sm text-muted-foreground">Claude Code CLI installation status</p>
         </div>
         <button
           type="button"
@@ -200,11 +201,11 @@ export function IntegrationsSection() {
           className={clsx(
             'p-2 rounded-lg transition-colors',
             'hover:bg-muted text-muted-foreground hover:text-foreground',
-            'disabled:opacity-50 disabled:cursor-not-allowed',
+            'disabled:opacity-50 disabled:cursor-not-allowed'
           )}
           title="Refresh status"
         >
-          {(isLoading || isVersionCheckLoading) ? (
+          {isLoading || isVersionCheckLoading ? (
             <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
           ) : (
             <RefreshCw className="w-4 h-4" />
@@ -232,12 +233,8 @@ export function IntegrationsSection() {
                 <Terminal className="w-4 h-4 text-muted-foreground" />
               </div>
               <div className="flex-1">
-                <h3 className="text-sm font-medium text-foreground">
-                  CLI Installation
-                </h3>
-                <p className="text-xs text-muted-foreground">
-                  Claude Code command-line interface
-                </p>
+                <h3 className="text-sm font-medium text-foreground">CLI Installation</h3>
+                <p className="text-xs text-muted-foreground">Claude Code command-line interface</p>
               </div>
               <div className="flex items-center gap-2">
                 {/* Update Available Badge */}
@@ -268,9 +265,7 @@ export function IntegrationsSection() {
                   <div className="flex items-center justify-between py-2 border-b border-border/30">
                     <span className="text-muted-foreground">Version</span>
                     <div className="flex items-center gap-2">
-                      <span className="text-foreground font-mono">
-                        {claudeCliStatus.version}
-                      </span>
+                      <span className="text-foreground font-mono">{claudeCliStatus.version}</span>
                       {claudeVersionCheck?.isOutdated && claudeVersionCheck.latestVersion && (
                         <>
                           <ArrowRight className="w-3 h-3 text-muted-foreground" />
@@ -312,7 +307,7 @@ export function IntegrationsSection() {
                       className={clsx(
                         'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium',
                         'bg-primary text-primary-foreground',
-                        'hover:bg-primary/90 transition-colors',
+                        'hover:bg-primary/90 transition-colors'
                       )}
                     >
                       <ArrowUpCircle className="w-3.5 h-3.5" />
@@ -328,7 +323,7 @@ export function IntegrationsSection() {
                       className={clsx(
                         'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium',
                         'bg-muted text-muted-foreground',
-                        'hover:bg-muted/80 hover:text-foreground transition-colors',
+                        'hover:bg-muted/80 hover:text-foreground transition-colors'
                       )}
                     >
                       Change Version
@@ -344,10 +339,10 @@ export function IntegrationsSection() {
                         className={clsx(
                           'absolute top-full left-0 mt-1 z-50',
                           'w-40 max-h-60 overflow-y-auto',
-                          'rounded-lg border border-border bg-popover shadow-lg',
+                          'rounded-lg border border-border bg-popover shadow-lg'
                         )}
                       >
-                        {availableVersions.map((version) => (
+                        {availableVersions.map(version => (
                           <button
                             type="button"
                             key={version}
@@ -356,7 +351,7 @@ export function IntegrationsSection() {
                               'w-full px-3 py-2 text-left text-xs font-mono',
                               'hover:bg-muted transition-colors',
                               version === claudeCliStatus.version &&
-                                'bg-muted text-foreground font-medium',
+                                'bg-muted text-foreground font-medium'
                             )}
                           >
                             {version}
@@ -379,7 +374,7 @@ export function IntegrationsSection() {
                   className={clsx(
                     'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium',
                     'bg-primary text-primary-foreground',
-                    'hover:bg-primary/90 transition-colors',
+                    'hover:bg-primary/90 transition-colors'
                   )}
                 >
                   <Terminal className="w-3.5 h-3.5" />
@@ -405,7 +400,7 @@ export function IntegrationsSection() {
                       'hover:bg-muted transition-colors',
                       copiedCommand
                         ? 'text-status-success'
-                        : 'text-muted-foreground hover:text-foreground',
+                        : 'text-muted-foreground hover:text-foreground'
                     )}
                   >
                     {copiedCommand ? (
@@ -435,7 +430,7 @@ export function IntegrationsSection() {
                   className={clsx(
                     'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium',
                     'bg-primary text-primary-foreground',
-                    'hover:bg-primary/90 transition-colors',
+                    'hover:bg-primary/90 transition-colors'
                   )}
                 >
                   <Play className="w-3.5 h-3.5" />
@@ -452,9 +447,7 @@ export function IntegrationsSection() {
                 <Shield className="w-4 h-4 text-muted-foreground" />
               </div>
               <div className="flex-1">
-                <h3 className="text-sm font-medium text-foreground">
-                  Authentication
-                </h3>
+                <h3 className="text-sm font-medium text-foreground">Authentication</h3>
                 <p className="text-xs text-muted-foreground">OAuth sign-in status</p>
               </div>
               {claudeCliStatus.auth.authenticated ? (

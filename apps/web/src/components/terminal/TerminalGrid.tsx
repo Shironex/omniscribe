@@ -27,7 +27,10 @@ interface TerminalGridProps {
   onFocusSession: (sessionId: string) => void;
   onAddSlot: () => void;
   onRemoveSlot: (slotId: string) => void;
-  onUpdateSlot: (slotId: string, updates: Partial<Pick<PreLaunchSlot, 'aiMode' | 'branch'>>) => void;
+  onUpdateSlot: (
+    slotId: string,
+    updates: Partial<Pick<PreLaunchSlot, 'aiMode' | 'branch'>>
+  ) => void;
   onLaunch: (slotId: string) => void;
   onKill: (sessionId: string) => void;
   onSessionClose?: (sessionId: string, exitCode: number) => void;
@@ -88,7 +91,7 @@ export function TerminalGrid({
       {/* Main grid area for active sessions */}
       <div className={clsx('flex-1 min-h-0 grid gap-2 p-2', gridClasses)}>
         {/* Render active sessions */}
-        {sessions.map((session) => (
+        {sessions.map(session => (
           <div
             key={session.id}
             className={clsx(
@@ -105,7 +108,9 @@ export function TerminalGrid({
               session={session}
               quickActions={quickActions}
               onClose={() => onKill(session.id)}
-              onQuickAction={onQuickAction ? (actionId) => onQuickAction(session.id, actionId) : undefined}
+              onQuickAction={
+                onQuickAction ? actionId => onQuickAction(session.id, actionId) : undefined
+              }
             />
 
             {/* Terminal - only render if terminalSessionId is available */}
@@ -114,7 +119,7 @@ export function TerminalGrid({
                 <TerminalView
                   sessionId={session.terminalSessionId}
                   isFocused={focusedSessionId === session.id}
-                  onClose={(exitCode) => onSessionClose?.(session.id, exitCode)}
+                  onClose={exitCode => onSessionClose?.(session.id, exitCode)}
                 />
               ) : (
                 <div className="flex items-center justify-center h-full bg-muted text-muted-foreground text-sm">

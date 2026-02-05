@@ -72,7 +72,7 @@ export class WorktreeService {
   getWorktreePath(
     projectPath: string,
     branch: string,
-    location: WorktreeLocation = 'project',
+    location: WorktreeLocation = 'project'
   ): string {
     // Security: Sanitize branch name to prevent path traversal
     const safeBranch = sanitizeBranchForPath(branch);
@@ -108,7 +108,7 @@ export class WorktreeService {
   async prepare(
     projectPath: string,
     branch?: string,
-    location: WorktreeLocation = 'project',
+    location: WorktreeLocation = 'project'
   ): Promise<string | null> {
     this.logger.info(`Preparing worktree for branch "${branch || 'current'}" in ${projectPath}`);
 
@@ -137,7 +137,7 @@ export class WorktreeService {
 
     // Check if worktree already exists
     const existingWorktrees = await this.list(projectPath);
-    const existingWorktree = existingWorktrees.find((wt) => wt.path === worktreePath);
+    const existingWorktree = existingWorktrees.find(wt => wt.path === worktreePath);
 
     if (existingWorktree) {
       // Worktree exists, verify it's still valid
@@ -251,11 +251,7 @@ export class WorktreeService {
   async list(projectPath: string): Promise<WorktreeInfo[]> {
     const worktrees: WorktreeInfo[] = [];
 
-    const { stdout } = await this.gitBase.execGit(projectPath, [
-      'worktree',
-      'list',
-      '--porcelain',
-    ]);
+    const { stdout } = await this.gitBase.execGit(projectPath, ['worktree', 'list', '--porcelain']);
 
     let current: Partial<WorktreeInfo> = {};
 
@@ -295,7 +291,7 @@ export class WorktreeService {
     }
 
     // Mark the first worktree as main (it's the original repo)
-    if (worktrees.length > 0 && !worktrees.some((wt) => wt.isMain)) {
+    if (worktrees.length > 0 && !worktrees.some(wt => wt.isMain)) {
       worktrees[0].isMain = true;
     }
 

@@ -32,17 +32,19 @@ export function GeneralSection() {
           className={clsx(
             'w-10 h-10 rounded-xl flex items-center justify-center',
             'bg-gradient-to-br from-primary/20 to-brand-600/10',
-            'ring-1',
+            'ring-1'
           )}
-          style={{ '--tw-ring-color': 'color-mix(in oklch, var(--primary), transparent 80%)' } as React.CSSProperties}
+          style={
+            {
+              '--tw-ring-color': 'color-mix(in oklch, var(--primary), transparent 80%)',
+            } as React.CSSProperties
+          }
         >
           <Info className="w-5 h-5 text-primary" />
         </div>
         <div>
           <h2 className="text-lg font-semibold text-foreground">About</h2>
-          <p className="text-sm text-muted-foreground">
-            Application information
-          </p>
+          <p className="text-sm text-muted-foreground">Application information</p>
         </div>
       </div>
 
@@ -50,12 +52,8 @@ export function GeneralSection() {
       <div className="rounded-xl border border-border/50 bg-card/50 p-6">
         <div className="text-center space-y-3">
           <div className="text-xl font-bold text-gradient">{APP_NAME}</div>
-          {version && (
-            <div className="text-sm font-mono text-primary">v{version}</div>
-          )}
-          <div className="text-sm text-muted-foreground">
-            AI-powered development workspace
-          </div>
+          {version && <div className="text-sm font-mono text-primary">v{version}</div>}
+          <div className="text-sm text-muted-foreground">AI-powered development workspace</div>
         </div>
       </div>
     </div>

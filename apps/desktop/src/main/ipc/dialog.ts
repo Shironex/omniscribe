@@ -32,14 +32,11 @@ function sanitizeOpenDialogOptions(
     sanitized.filters = options.filters
       .slice(0, 10) // Limit number of filters
       .filter(
-        (f) =>
-          typeof f === 'object' &&
-          typeof f.name === 'string' &&
-          Array.isArray(f.extensions)
+        f => typeof f === 'object' && typeof f.name === 'string' && Array.isArray(f.extensions)
       )
-      .map((f) => ({
+      .map(f => ({
         name: f.name.slice(0, 100),
-        extensions: f.extensions.slice(0, 20).filter((e) => typeof e === 'string'),
+        extensions: f.extensions.slice(0, 20).filter(e => typeof e === 'string'),
       }));
   }
 
@@ -54,7 +51,7 @@ function sanitizeOpenDialogOptions(
  */
 function sanitizeMessageDialogOptions(options: MessageDialogOptions): MessageDialogOptions {
   const allowedTypes = ['none', 'info', 'error', 'question', 'warning'] as const;
-  const type = allowedTypes.includes(options.type as typeof allowedTypes[number])
+  const type = allowedTypes.includes(options.type as (typeof allowedTypes)[number])
     ? options.type
     : 'info';
 
@@ -64,7 +61,10 @@ function sanitizeMessageDialogOptions(options: MessageDialogOptions): MessageDia
     message: typeof options.message === 'string' ? options.message.slice(0, 2000) : '',
     detail: typeof options.detail === 'string' ? options.detail.slice(0, 2000) : undefined,
     buttons: Array.isArray(options.buttons)
-      ? options.buttons.slice(0, 5).filter((b) => typeof b === 'string').map((b) => b.slice(0, 50))
+      ? options.buttons
+          .slice(0, 5)
+          .filter(b => typeof b === 'string')
+          .map(b => b.slice(0, 50))
       : ['OK'],
   };
 }
@@ -91,20 +91,17 @@ export function registerDialogHandlers(mainWindow: BrowserWindow): void {
     return result.canceled ? null : result.filePaths[0];
   });
 
-  ipcMain.handle(
-    'dialog:message',
-    async (_event, options: MessageDialogOptions) => {
-      const sanitized = sanitizeMessageDialogOptions(options);
-      const result = await dialog.showMessageBox(mainWindow, {
-        type: sanitized.type ?? 'info',
-        title: sanitized.title ?? 'Omniscribe',
-        message: sanitized.message,
-        detail: sanitized.detail,
-        buttons: sanitized.buttons ?? ['OK'],
-      });
-      return result.response;
-    }
-  );
+  ipcMain.handle('dialog:message', async (_event, options: MessageDialogOptions) => {
+    const sanitized = sanitizeMessageDialogOptions(options);
+    const result = await dialog.showMessageBox(mainWindow, {
+      type: sanitized.type ?? 'info',
+      title: sanitized.title ?? 'Omniscribe',
+      message: sanitized.message,
+      detail: sanitized.detail,
+      buttons: sanitized.buttons ?? ['OK'],
+    });
+    return result.response;
+  });
 }
 
 /**

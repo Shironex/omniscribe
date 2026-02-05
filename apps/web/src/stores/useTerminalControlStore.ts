@@ -38,12 +38,12 @@ export const useTerminalControlStore = create<TerminalControlStore>((set, get) =
   addSlotRequestCounter: 0,
 
   // Actions
-  setFocusedSessionId: (sessionId) => {
+  setFocusedSessionId: sessionId => {
     set({ focusedSessionId: sessionId });
   },
 
   requestAddSlot: () => {
-    set((state) => ({ addSlotRequestCounter: state.addSlotRequestCounter + 1 }));
+    set(state => ({ addSlotRequestCounter: state.addSlotRequestCounter + 1 }));
   },
 
   resetAddSlotRequest: () => {
@@ -62,4 +62,5 @@ export const selectFocusedSessionId = (state: TerminalControlStore) => state.foc
 /**
  * Select add slot request counter
  */
-export const selectAddSlotRequestCounter = (state: TerminalControlStore) => state.addSlotRequestCounter;
+export const selectAddSlotRequestCounter = (state: TerminalControlStore) =>
+  state.addSlotRequestCounter;

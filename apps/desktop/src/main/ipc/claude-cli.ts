@@ -1,8 +1,5 @@
 import { ipcMain } from 'electron';
-import type {
-  ClaudeVersionList,
-  ClaudeInstallCommandOptions,
-} from '@omniscribe/shared';
+import type { ClaudeVersionList, ClaudeInstallCommandOptions } from '@omniscribe/shared';
 import { createLogger } from '@omniscribe/shared';
 import {
   getClaudeCliStatus,
@@ -56,7 +53,7 @@ export function registerClaudeCliHandlers(): void {
         logger.error('Failed to get install command:', error);
         throw error;
       }
-    },
+    }
   );
 
   ipcMain.handle('claude:run-install', async (_event, command: string) => {

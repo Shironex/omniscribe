@@ -64,7 +64,7 @@ export function PreLaunchBar({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const selectedMode = aiModeOptions.find((m) => m.value === slot.aiMode) || aiModeOptions[0];
+  const selectedMode = aiModeOptions.find(m => m.value === slot.aiMode) || aiModeOptions[0];
   const SelectedIcon = selectedMode.icon;
 
   return (
@@ -109,7 +109,7 @@ export function PreLaunchBar({
               'overflow-hidden animate-fade-in min-w-[120px]'
             )}
           >
-            {aiModeOptions.map((option) => {
+            {aiModeOptions.map(option => {
               const Icon = option.icon;
               return (
                 <button
@@ -139,7 +139,7 @@ export function PreLaunchBar({
       <BranchAutocomplete
         branches={branches}
         value={slot.branch}
-        onChange={(branchName) => onUpdate(slot.id, { branch: branchName })}
+        onChange={branchName => onUpdate(slot.id, { branch: branchName })}
         onCreateBranch={onCreateBranch}
         placeholder="Select branch"
         side="top"

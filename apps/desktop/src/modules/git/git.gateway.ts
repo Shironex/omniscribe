@@ -76,13 +76,13 @@ export class GitGateway {
   constructor(
     private readonly gitService: GitService,
     private readonly worktreeService: WorktreeService,
-    private readonly githubService: GithubService,
+    private readonly githubService: GithubService
   ) {}
 
   @SubscribeMessage('git:branches')
   async handleBranches(
     @ConnectedSocket() client: Socket,
-    @MessageBody() payload: GitBranchesPayload,
+    @MessageBody() payload: GitBranchesPayload
   ): Promise<GitBranchesResponse> {
     try {
       const { projectPath } = payload;
@@ -122,7 +122,7 @@ export class GitGateway {
   @SubscribeMessage('git:commits')
   async handleCommits(
     @ConnectedSocket() client: Socket,
-    @MessageBody() payload: GitCommitsPayload,
+    @MessageBody() payload: GitCommitsPayload
   ): Promise<GitCommitsResponse> {
     try {
       const { projectPath, limit = 50, allBranches = true } = payload;
@@ -134,11 +134,7 @@ export class GitGateway {
         };
       }
 
-      const commits = await this.gitService.getCommitLog(
-        projectPath,
-        limit,
-        allBranches,
-      );
+      const commits = await this.gitService.getCommitLog(projectPath, limit, allBranches);
 
       // Emit to all clients watching this project
       client.join(`git:${projectPath}`);
@@ -160,7 +156,7 @@ export class GitGateway {
   @SubscribeMessage('git:checkout')
   async handleCheckout(
     @ConnectedSocket() _client: Socket,
-    @MessageBody() payload: GitCheckoutPayload,
+    @MessageBody() payload: GitCheckoutPayload
   ): Promise<GitCheckoutResponse> {
     try {
       const { projectPath, branch } = payload;
@@ -199,7 +195,7 @@ export class GitGateway {
   @SubscribeMessage('git:create-branch')
   async handleCreateBranch(
     @ConnectedSocket() _client: Socket,
-    @MessageBody() payload: GitCreateBranchPayload,
+    @MessageBody() payload: GitCreateBranchPayload
   ): Promise<GitCreateBranchResponse> {
     try {
       const { projectPath, name, startPoint } = payload;
@@ -215,7 +211,7 @@ export class GitGateway {
 
       // Get the newly created branch info
       const branches = await this.gitService.getBranches(projectPath);
-      const newBranch = branches.find((b) => b.name === name);
+      const newBranch = branches.find(b => b.name === name);
 
       // Notify all clients watching this project
       this.server.to(`git:${projectPath}`).emit('git:branches', {
@@ -242,7 +238,7 @@ export class GitGateway {
   @SubscribeMessage('git:current-branch')
   async handleCurrentBranch(
     @ConnectedSocket() client: Socket,
-    @MessageBody() payload: GitCurrentBranchPayload,
+    @MessageBody() payload: GitCurrentBranchPayload
   ): Promise<GitCurrentBranchResponse> {
     try {
       const { projectPath } = payload;
@@ -276,7 +272,7 @@ export class GitGateway {
   @SubscribeMessage('git:worktrees')
   async handleWorktrees(
     @ConnectedSocket() _client: Socket,
-    @MessageBody() payload: GitWorktreesPayload,
+    @MessageBody() payload: GitWorktreesPayload
   ): Promise<GitWorktreesResponse> {
     try {
       const { projectPath } = payload;
@@ -307,7 +303,7 @@ export class GitGateway {
   @SubscribeMessage('git:worktree:cleanup')
   async handleWorktreeCleanup(
     @ConnectedSocket() _client: Socket,
-    @MessageBody() payload: GitWorktreeCleanupPayload,
+    @MessageBody() payload: GitWorktreeCleanupPayload
   ): Promise<SuccessResponse> {
     try {
       const { projectPath, worktreePath } = payload;
@@ -342,7 +338,7 @@ export class GitGateway {
   @SubscribeMessage('github:status')
   async handleGithubStatus(
     @ConnectedSocket() _client: Socket,
-    @MessageBody() payload: GithubStatusPayload,
+    @MessageBody() payload: GithubStatusPayload
   ): Promise<GithubStatusResponse> {
     try {
       if (payload?.refresh) {
@@ -373,7 +369,7 @@ export class GitGateway {
   @SubscribeMessage('github:repo-info')
   async handleGithubRepoInfo(
     @ConnectedSocket() _client: Socket,
-    @MessageBody() payload: GithubProjectPayload,
+    @MessageBody() payload: GithubProjectPayload
   ): Promise<GithubRepoInfoResponse> {
     try {
       const { projectPath } = payload;
@@ -404,7 +400,7 @@ export class GitGateway {
   @SubscribeMessage('github:prs')
   async handleGithubPRs(
     @ConnectedSocket() _client: Socket,
-    @MessageBody() payload: GithubListPRsPayload,
+    @MessageBody() payload: GithubListPRsPayload
   ): Promise<GithubPRsResponse> {
     try {
       const { projectPath, state, limit } = payload;
@@ -416,10 +412,7 @@ export class GitGateway {
         };
       }
 
-      const pullRequests = await this.githubService.listPullRequests(
-        projectPath,
-        { state, limit },
-      );
+      const pullRequests = await this.githubService.listPullRequests(projectPath, { state, limit });
 
       return {
         pullRequests,
@@ -438,7 +431,7 @@ export class GitGateway {
   @SubscribeMessage('github:pr')
   async handleGithubPR(
     @ConnectedSocket() _client: Socket,
-    @MessageBody() payload: GithubGetPRPayload,
+    @MessageBody() payload: GithubGetPRPayload
   ): Promise<GithubPRResponse> {
     try {
       const { projectPath, prNumber } = payload;
@@ -450,10 +443,7 @@ export class GitGateway {
         };
       }
 
-      const pullRequest = await this.githubService.getPullRequest(
-        projectPath,
-        prNumber,
-      );
+      const pullRequest = await this.githubService.getPullRequest(projectPath, prNumber);
 
       return {
         pullRequest,
@@ -472,7 +462,7 @@ export class GitGateway {
   @SubscribeMessage('github:create-pr')
   async handleGithubCreatePR(
     @ConnectedSocket() _client: Socket,
-    @MessageBody() payload: GithubCreatePRPayload,
+    @MessageBody() payload: GithubCreatePRPayload
   ): Promise<GithubCreatePRResponse> {
     try {
       const { projectPath, title, body, base, head, draft } = payload;
@@ -484,10 +474,13 @@ export class GitGateway {
         };
       }
 
-      const pullRequest = await this.githubService.createPullRequest(
-        projectPath,
-        { title, body, base, head, draft },
-      );
+      const pullRequest = await this.githubService.createPullRequest(projectPath, {
+        title,
+        body,
+        base,
+        head,
+        draft,
+      });
 
       return {
         success: true,
@@ -507,7 +500,7 @@ export class GitGateway {
   @SubscribeMessage('github:issues')
   async handleGithubIssues(
     @ConnectedSocket() _client: Socket,
-    @MessageBody() payload: GithubListIssuesPayload,
+    @MessageBody() payload: GithubListIssuesPayload
   ): Promise<GithubIssuesResponse> {
     try {
       const { projectPath, state, limit, labels } = payload;
@@ -542,7 +535,7 @@ export class GitGateway {
   @SubscribeMessage('github:issue')
   async handleGithubIssue(
     @ConnectedSocket() _client: Socket,
-    @MessageBody() payload: GithubGetIssuePayload,
+    @MessageBody() payload: GithubGetIssuePayload
   ): Promise<GithubIssueResponse> {
     try {
       const { projectPath, issueNumber } = payload;

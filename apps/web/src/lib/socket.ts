@@ -72,19 +72,19 @@ socket.on('connect', () => {
   logger.info('Connected to server');
 });
 
-socket.on('disconnect', (reason) => {
+socket.on('disconnect', reason => {
   logger.warn('Disconnected:', reason);
 });
 
-socket.on('reconnect', (attemptNumber) => {
+socket.on('reconnect', attemptNumber => {
   logger.info('Reconnected after', attemptNumber, 'attempts');
 });
 
-socket.on('reconnect_attempt', (attemptNumber) => {
+socket.on('reconnect_attempt', attemptNumber => {
   logger.debug('Reconnection attempt', attemptNumber);
 });
 
-socket.on('reconnect_error', (error) => {
+socket.on('reconnect_error', error => {
   logger.error('Reconnection error:', error);
 });
 

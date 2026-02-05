@@ -21,6 +21,8 @@
     "package:linux": "pnpm build && pnpm --filter @omniscribe/desktop package:linux",
     "lint": "eslint . --ext .ts,.tsx",
     "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "pnpm build:packages && pnpm --filter @omniscribe/web typecheck && pnpm --filter @omniscribe/mcp-server typecheck && pnpm --filter @omniscribe/desktop typecheck",
     "prepare": "husky"
   },
   "engines": {

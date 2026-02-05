@@ -85,16 +85,14 @@ export async function checkGhAuth(cliPath: string): Promise<GhCliAuthStatus> {
     const output = stdout + stderr;
 
     if (output.includes('Logged in to')) {
-      const usernameMatch = output.match(
-        /Logged in to [^\s]+ account ([^\s(]+)/,
-      );
+      const usernameMatch = output.match(/Logged in to [^\s]+ account ([^\s(]+)/);
       const username = usernameMatch ? usernameMatch[1] : undefined;
 
       const scopesMatch = output.match(/Token scopes: ([^\n]+)/);
       const scopes = scopesMatch
         ? scopesMatch[1]
             .split(',')
-            .map((s) => s.trim())
+            .map(s => s.trim())
             .filter(Boolean)
         : undefined;
 
@@ -103,8 +101,7 @@ export async function checkGhAuth(cliPath: string): Promise<GhCliAuthStatus> {
 
     return { authenticated: false };
   } catch (error) {
-    const errorMessage =
-      error instanceof Error ? error.message : String(error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
 
     if (
       errorMessage.includes('not logged in') ||

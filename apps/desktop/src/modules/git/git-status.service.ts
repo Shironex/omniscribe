@@ -12,7 +12,7 @@ export class GitStatusService {
   constructor(
     private readonly gitBase: GitBaseService,
     private readonly gitRepo: GitRepoService,
-    private readonly gitBranch: GitBranchService,
+    private readonly gitBranch: GitBranchService
   ) {}
 
   /**
@@ -161,10 +161,7 @@ export class GitStatusService {
    * Get count of uncommitted changes
    */
   async getUncommittedCount(repoPath: string): Promise<number> {
-    const { stdout } = await this.gitBase.execGit(repoPath, [
-      'status',
-      '--porcelain',
-    ]);
+    const { stdout } = await this.gitBase.execGit(repoPath, ['status', '--porcelain']);
 
     return stdout.trim().split('\n').filter(Boolean).length;
   }
@@ -211,19 +208,15 @@ export class GitStatusService {
       const rebaseApplyPath = rebaseApplyOutput.trim();
 
       // Check if either rebase directory exists
-      const { stdout: lsOutput } = await this.gitBase.execGit(projectPath, [
-        'ls-files',
-        '--error-unmatch',
-        rebaseMergePath,
-      ]).catch(() => ({ stdout: '' }));
+      const { stdout: lsOutput } = await this.gitBase
+        .execGit(projectPath, ['ls-files', '--error-unmatch', rebaseMergePath])
+        .catch(() => ({ stdout: '' }));
 
       if (lsOutput) return true;
 
-      const { stdout: lsApplyOutput } = await this.gitBase.execGit(projectPath, [
-        'ls-files',
-        '--error-unmatch',
-        rebaseApplyPath,
-      ]).catch(() => ({ stdout: '' }));
+      const { stdout: lsApplyOutput } = await this.gitBase
+        .execGit(projectPath, ['ls-files', '--error-unmatch', rebaseApplyPath])
+        .catch(() => ({ stdout: '' }));
 
       return !!lsApplyOutput;
     } catch (error) {

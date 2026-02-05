@@ -32,29 +32,29 @@ interface UseWorkspaceTabsReturn {
  */
 export function useWorkspaceTabs(): UseWorkspaceTabsReturn {
   // Workspace store
-  const workspaceTabs = useWorkspaceStore((state) => state.tabs);
-  const activeWorkspaceTabId = useWorkspaceStore((state) => state.activeTabId);
-  const openProject = useWorkspaceStore((state) => state.openProject);
-  const closeWorkspaceTab = useWorkspaceStore((state) => state.closeTab);
-  const selectWorkspaceTab = useWorkspaceStore((state) => state.selectTab);
+  const workspaceTabs = useWorkspaceStore(state => state.tabs);
+  const activeWorkspaceTabId = useWorkspaceStore(state => state.activeTabId);
+  const openProject = useWorkspaceStore(state => state.openProject);
+  const closeWorkspaceTab = useWorkspaceStore(state => state.closeTab);
+  const selectWorkspaceTab = useWorkspaceStore(state => state.selectTab);
 
   // Session store for status
-  const sessions = useSessionStore((state) => state.sessions);
+  const sessions = useSessionStore(state => state.sessions);
 
   // Get active tab and project path using useMemo to avoid recalculating on every render
   const activeTab = useMemo(() => {
     if (!activeWorkspaceTabId) return undefined;
-    return workspaceTabs.find((tab) => tab.id === activeWorkspaceTabId);
+    return workspaceTabs.find(tab => tab.id === activeWorkspaceTabId);
   }, [workspaceTabs, activeWorkspaceTabId]);
   const activeProjectPath = activeTab?.projectPath ?? null;
 
   // Convert workspace tabs to UI tabs format
   const tabs: Tab[] = useMemo(() => {
-    return workspaceTabs.map((tab) => {
+    return workspaceTabs.map(tab => {
       // Count sessions for this project
-      const projectSessions = sessions.filter((s) => s.projectPath === tab.projectPath);
+      const projectSessions = sessions.filter(s => s.projectPath === tab.projectPath);
       const hasActive = projectSessions.some(
-        (s) => s.status !== 'idle' && s.status !== 'disconnected'
+        s => s.status !== 'idle' && s.status !== 'disconnected'
       );
 
       return {

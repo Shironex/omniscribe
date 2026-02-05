@@ -81,7 +81,7 @@ export class SessionGateway implements OnGatewayInit {
     private readonly worktreeService: WorktreeService,
     private readonly gitService: GitService,
     @Inject(forwardRef(() => WorkspaceService))
-    private readonly workspaceService: WorkspaceService,
+    private readonly workspaceService: WorkspaceService
   ) {}
 
   afterInit(): void {
@@ -118,12 +118,13 @@ export class SessionGateway implements OnGatewayInit {
         if (worktreeSettings.mode === 'always') {
           // Always create a new worktree with unique suffix for full isolation
           const uniqueSuffix = crypto.randomUUID().slice(0, 8);
-          const branchName = branch ?? await this.gitService.getCurrentBranch(payload.projectPath);
+          const branchName =
+            branch ?? (await this.gitService.getCurrentBranch(payload.projectPath));
           const isolatedBranch = `${branchName}-${uniqueSuffix}`;
           worktreePath = await this.worktreeService.prepare(
             payload.projectPath,
             isolatedBranch,
-            worktreeSettings.location,
+            worktreeSettings.location
           );
           this.logger.log(`Created isolated worktree at ${worktreePath} for session ${session.id}`);
         } else if (worktreeSettings.mode === 'branch' && branch) {
@@ -133,7 +134,7 @@ export class SessionGateway implements OnGatewayInit {
             worktreePath = await this.worktreeService.prepare(
               payload.projectPath,
               branch,
-              worktreeSettings.location,
+              worktreeSettings.location
             );
             this.logger.log(`Created branch worktree at ${worktreePath} for session ${session.id}`);
           }
@@ -173,7 +174,9 @@ export class SessionGateway implements OnGatewayInit {
       client.join(`terminal:${launchResult.terminalSessionId}`);
       // Register client ownership in TerminalGateway so terminal:input works
       this.terminalGateway.registerClientSession(client.id, launchResult.terminalSessionId);
-      this.logger.log(`Client ${client.id} joined terminal room terminal:${launchResult.terminalSessionId}`);
+      this.logger.log(
+        `Client ${client.id} joined terminal room terminal:${launchResult.terminalSessionId}`
+      );
     }
 
     // Return the updated session with terminalSessionId populated

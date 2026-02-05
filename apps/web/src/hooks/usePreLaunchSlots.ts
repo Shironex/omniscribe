@@ -48,11 +48,11 @@ export function usePreLaunchSlots(
 
   // Read default AI mode from workspace preferences
   const defaultAiMode = useWorkspaceStore(
-    (state) => state.preferences.session?.defaultMode ?? DEFAULT_SESSION_SETTINGS.defaultMode
+    state => state.preferences.session?.defaultMode ?? DEFAULT_SESSION_SETTINGS.defaultMode
   );
 
   // Listen to add slot requests from other components (e.g., sidebar + button)
-  const addSlotRequestCounter = useTerminalControlStore((state) => state.addSlotRequestCounter);
+  const addSlotRequestCounter = useTerminalControlStore(state => state.addSlotRequestCounter);
   const prevCounterRef = useRef(addSlotRequestCounter);
 
   // Can launch if we have a project selected and have pre-launch slots
@@ -65,7 +65,7 @@ export function usePreLaunchSlots(
       aiMode: defaultAiMode,
       branch: currentBranch,
     };
-    setPreLaunchSlots((prev) => [...prev, newSlot]);
+    setPreLaunchSlots(prev => [...prev, newSlot]);
   }, [currentBranch, defaultAiMode]);
 
   // Listen to external add slot requests (from sidebar + button)
@@ -78,14 +78,14 @@ export function usePreLaunchSlots(
 
   // Remove pre-launch slot handler
   const handleRemoveSlot = useCallback((slotId: string) => {
-    setPreLaunchSlots((prev) => prev.filter((s) => s.id !== slotId));
+    setPreLaunchSlots(prev => prev.filter(s => s.id !== slotId));
   }, []);
 
   // Update pre-launch slot handler
   const handleUpdateSlot = useCallback(
     (slotId: string, updates: Partial<Pick<PreLaunchSlot, 'aiMode' | 'branch'>>) => {
-      setPreLaunchSlots((prev) =>
-        prev.map((slot) => (slot.id === slotId ? { ...slot, ...updates } : slot))
+      setPreLaunchSlots(prev =>
+        prev.map(slot => (slot.id === slotId ? { ...slot, ...updates } : slot))
       );
     },
     []
@@ -99,7 +99,7 @@ export function usePreLaunchSlots(
         return;
       }
 
-      const slot = preLaunchSlots.find((s) => s.id === slotId);
+      const slot = preLaunchSlots.find(s => s.id === slotId);
       if (!slot) return;
 
       // Prevent double-launch: skip if this slot is already being launched
@@ -108,7 +108,7 @@ export function usePreLaunchSlots(
       }
 
       // Mark slot as launching
-      setLaunchingSlotIds((prev) => new Set(prev).add(slotId));
+      setLaunchingSlotIds(prev => new Set(prev).add(slotId));
 
       try {
         logger.info('Launching slot', slotId, slot.aiMode);
@@ -124,12 +124,12 @@ export function usePreLaunchSlots(
         }
 
         // Remove the pre-launch slot
-        setPreLaunchSlots((prev) => prev.filter((s) => s.id !== slotId));
+        setPreLaunchSlots(prev => prev.filter(s => s.id !== slotId));
       } catch (error) {
         logger.error('Failed to launch session:', error);
       } finally {
         // Clear launching state (whether success or failure)
-        setLaunchingSlotIds((prev) => {
+        setLaunchingSlotIds(prev => {
           const next = new Set(prev);
           next.delete(slotId);
           return next;

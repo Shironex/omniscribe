@@ -28,27 +28,27 @@ export function ConnectedTerminalGrid({ className }: ConnectedTerminalGridProps)
   const [preLaunchSlots, setPreLaunchSlots] = useState<PreLaunchSlot[]>([]);
 
   // Shared terminal control store for focus state
-  const focusedSessionId = useTerminalControlStore((state) => state.focusedSessionId);
-  const setFocusedSessionId = useTerminalControlStore((state) => state.setFocusedSessionId);
-  const addSlotRequestCounter = useTerminalControlStore((state) => state.addSlotRequestCounter);
+  const focusedSessionId = useTerminalControlStore(state => state.focusedSessionId);
+  const setFocusedSessionId = useTerminalControlStore(state => state.setFocusedSessionId);
+  const addSlotRequestCounter = useTerminalControlStore(state => state.addSlotRequestCounter);
   const prevAddSlotRequestRef = useRef(addSlotRequestCounter);
 
   // Session store
-  const sessions = useSessionStore((state) => state.sessions);
-  const updateSession = useSessionStore((state) => state.updateSession);
+  const sessions = useSessionStore(state => state.sessions);
+  const updateSession = useSessionStore(state => state.updateSession);
 
   // Workspace store
   const activeTab = useWorkspaceStore(selectActiveTab);
   const activeProjectPath = activeTab?.projectPath ?? null;
   const defaultAiMode = useWorkspaceStore(
-    (state) => state.preferences.session?.defaultMode ?? DEFAULT_SESSION_SETTINGS.defaultMode
+    state => state.preferences.session?.defaultMode ?? DEFAULT_SESSION_SETTINGS.defaultMode
   );
 
   // Git store
   const gitBranches = useGitStore(selectBranches);
   const currentGitBranch = useGitStore(selectCurrentBranch);
-  const fetchBranches = useGitStore((state) => state.fetchBranches);
-  const setGitProjectPath = useGitStore((state) => state.setProjectPath);
+  const fetchBranches = useGitStore(state => state.fetchBranches);
+  const setGitProjectPath = useGitStore(state => state.setProjectPath);
 
   // Current branch name
   const currentBranch = currentGitBranch?.name ?? 'main';
@@ -71,7 +71,7 @@ export function ConnectedTerminalGrid({ className }: ConnectedTerminalGridProps)
         aiMode: defaultAiMode,
         branch: currentBranch,
       };
-      setPreLaunchSlots((prev) => [...prev, newSlot]);
+      setPreLaunchSlots(prev => [...prev, newSlot]);
     }
     prevAddSlotRequestRef.current = addSlotRequestCounter;
   }, [addSlotRequestCounter, currentBranch, defaultAiMode]);
@@ -79,7 +79,7 @@ export function ConnectedTerminalGrid({ className }: ConnectedTerminalGridProps)
   // Filter sessions for the active project
   const activeProjectSessions = useMemo(() => {
     if (!activeProjectPath) return [];
-    return sessions.filter((s) => s.projectPath === activeProjectPath);
+    return sessions.filter(s => s.projectPath === activeProjectPath);
   }, [sessions, activeProjectPath]);
 
   // Convert sessions to TerminalSession format
@@ -98,7 +98,7 @@ export function ConnectedTerminalGrid({ className }: ConnectedTerminalGridProps)
 
   // Convert git branches to Branch format
   const branches: Branch[] = useMemo(() => {
-    return gitBranches.map((b) => ({
+    return gitBranches.map(b => ({
       name: b.name,
       isRemote: b.isRemote,
       isCurrent: currentGitBranch?.name === b.name,
@@ -112,19 +112,19 @@ export function ConnectedTerminalGrid({ className }: ConnectedTerminalGridProps)
       aiMode: defaultAiMode,
       branch: currentBranch,
     };
-    setPreLaunchSlots((prev) => [...prev, newSlot]);
+    setPreLaunchSlots(prev => [...prev, newSlot]);
   }, [currentBranch, defaultAiMode]);
 
   // Remove pre-launch slot handler
   const handleRemoveSlot = useCallback((slotId: string) => {
-    setPreLaunchSlots((prev) => prev.filter((s) => s.id !== slotId));
+    setPreLaunchSlots(prev => prev.filter(s => s.id !== slotId));
   }, []);
 
   // Update pre-launch slot handler
   const handleUpdateSlot = useCallback(
     (slotId: string, updates: Partial<Pick<PreLaunchSlot, 'aiMode' | 'branch'>>) => {
-      setPreLaunchSlots((prev) =>
-        prev.map((slot) => (slot.id === slotId ? { ...slot, ...updates } : slot))
+      setPreLaunchSlots(prev =>
+        prev.map(slot => (slot.id === slotId ? { ...slot, ...updates } : slot))
       );
     },
     []
@@ -138,7 +138,7 @@ export function ConnectedTerminalGrid({ className }: ConnectedTerminalGridProps)
         return;
       }
 
-      const slot = preLaunchSlots.find((s) => s.id === slotId);
+      const slot = preLaunchSlots.find(s => s.id === slotId);
       if (!slot) return;
 
       try {
@@ -154,7 +154,7 @@ export function ConnectedTerminalGrid({ className }: ConnectedTerminalGridProps)
         }
 
         // Remove the pre-launch slot
-        setPreLaunchSlots((prev) => prev.filter((s) => s.id !== slotId));
+        setPreLaunchSlots(prev => prev.filter(s => s.id !== slotId));
       } catch (error) {
         logger.error('Failed to launch session:', error);
       }
@@ -182,9 +182,12 @@ export function ConnectedTerminalGrid({ className }: ConnectedTerminalGridProps)
   }, []);
 
   // Focus session handler
-  const handleFocusSession = useCallback((sessionId: string) => {
-    setFocusedSessionId(sessionId);
-  }, [setFocusedSessionId]);
+  const handleFocusSession = useCallback(
+    (sessionId: string) => {
+      setFocusedSessionId(sessionId);
+    },
+    [setFocusedSessionId]
+  );
 
   return (
     <TerminalGrid

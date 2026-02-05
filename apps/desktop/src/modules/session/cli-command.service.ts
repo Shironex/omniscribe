@@ -150,7 +150,9 @@ Report status at key transitions so the user can see your progress in the Omnisc
     }
 
     // Fall back to the bare command (will likely fail, but provides clear error)
-    this.logger.info(`CLI not found in PATH or known locations, falling back to bare command: ${command}`);
+    this.logger.info(
+      `CLI not found in PATH or known locations, falling back to bare command: ${command}`
+    );
     return command;
   }
 
@@ -181,10 +183,8 @@ Report status at key transitions so the user can see your progress in the Omnisc
     const homeDir = os.homedir();
 
     if (os.platform() === 'win32') {
-      const appData =
-        process.env.APPDATA || path.join(homeDir, 'AppData', 'Roaming');
-      const localAppData =
-        process.env.LOCALAPPDATA || path.join(homeDir, 'AppData', 'Local');
+      const appData = process.env.APPDATA || path.join(homeDir, 'AppData', 'Roaming');
+      const localAppData = process.env.LOCALAPPDATA || path.join(homeDir, 'AppData', 'Local');
 
       return [
         // npm global installations

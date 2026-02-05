@@ -21,13 +21,13 @@ interface UseProjectGitReturn {
  */
 export function useProjectGit(activeProjectPath: string | null): UseProjectGitReturn {
   // Git store
-  const gitBranches = useGitStore((state) => state.branches);
-  const currentGitBranch = useGitStore((state) => state.currentBranch);
-  const fetchBranches = useGitStore((state) => state.fetchBranches);
-  const clearGitState = useGitStore((state) => state.clear);
+  const gitBranches = useGitStore(state => state.branches);
+  const currentGitBranch = useGitStore(state => state.currentBranch);
+  const fetchBranches = useGitStore(state => state.fetchBranches);
+  const clearGitState = useGitStore(state => state.clear);
 
   // MCP store
-  const discoverMcpServers = useMcpStore((state) => state.discoverServers);
+  const discoverMcpServers = useMcpStore(state => state.discoverServers);
 
   // Track previous project path for change detection
   const prevProjectPathRef = useRef<string | null>(null);
@@ -54,7 +54,7 @@ export function useProjectGit(activeProjectPath: string | null): UseProjectGitRe
 
   // Convert git branches to Branch format
   const branches: Branch[] = useMemo(() => {
-    return gitBranches.map((b) => ({
+    return gitBranches.map(b => ({
       name: b.name,
       isRemote: b.isRemote,
       isCurrent: currentGitBranch?.name === b.name,

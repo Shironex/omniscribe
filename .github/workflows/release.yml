@@ -1,0 +1,148 @@
+name: Release Build
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+
+    env:
+      HUSKY: 0
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Extract version from tag
+        id: version
+        shell: bash
+        run: |
+          VERSION="${{ github.event.release.tag_name }}"
+          VERSION="${VERSION#v}"
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "Extracted version: ${VERSION}"
+
+      - name: Update package.json versions
+        shell: bash
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          node -e "
+            const fs = require('fs');
+            const files = [
+              'package.json',
+              'apps/desktop/package.json',
+              'apps/web/package.json',
+              'apps/mcp-server/package.json',
+              'packages/shared/package.json'
+            ];
+            for (const file of files) {
+              const pkg = JSON.parse(fs.readFileSync(file, 'utf8'));
+              if (pkg.version !== undefined) {
+                pkg.version = '${VERSION}';
+                fs.writeFileSync(file, JSON.stringify(pkg, null, 2) + '\n');
+                console.log('Updated', file, 'to', '${VERSION}');
+              }
+            }
+          "
+
+      - name: Setup project
+        uses: ./.github/actions/setup-project
+
+      - name: Install RPM build tools (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        run: sudo apt-get update && sudo apt-get install -y rpm
+
+      - name: Build Electron app (macOS)
+        if: matrix.os == 'macos-latest'
+        shell: bash
+        run: pnpm --filter @omniscribe/desktop package:mac
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+
+      - name: Build Electron app (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: bash
+        run: pnpm --filter @omniscribe/desktop package:win
+
+      - name: Build Electron app (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        run: pnpm --filter @omniscribe/desktop package:linux
+
+      - name: Upload macOS artifacts
+        if: matrix.os == 'macos-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-builds
+          path: |
+            apps/desktop/release/*.dmg
+            apps/desktop/release/*.zip
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload Windows artifacts
+        if: matrix.os == 'windows-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-builds
+          path: |
+            apps/desktop/release/*.exe
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload Linux artifacts
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-builds
+          path: |
+            apps/desktop/release/*.AppImage
+            apps/desktop/release/*.deb
+          if-no-files-found: error
+          retention-days: 30
+
+  upload:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event.release.draft == false
+
+    steps:
+      - name: Download macOS artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-builds
+          path: artifacts/macos-builds
+
+      - name: Download Windows artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-builds
+          path: artifacts/windows-builds
+
+      - name: Download Linux artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-builds
+          path: artifacts/linux-builds
+
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          fail_on_unmatched_files: true
+          files: |
+            artifacts/macos-builds/*.dmg
+            artifacts/macos-builds/*.zip
+            artifacts/windows-builds/*.exe
+            artifacts/linux-builds/*.AppImage
+            artifacts/linux-builds/*.deb
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,10 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import {
-  BranchInfo,
-  CommitInfo,
-  RemoteInfo,
-  GitUserConfig,
-} from '@omniscribe/shared';
+import { BranchInfo, CommitInfo, RemoteInfo, GitUserConfig } from '@omniscribe/shared';
 import type { GitRepoStatus } from '@omniscribe/shared';
 import { GitBranchService } from './git-branch.service';
 import { GitStatusService } from './git-status.service';
@@ -23,7 +18,7 @@ export class GitService {
     private readonly gitStatus: GitStatusService,
     private readonly gitCommit: GitCommitService,
     private readonly gitRemote: GitRemoteService,
-    private readonly gitRepo: GitRepoService,
+    private readonly gitRepo: GitRepoService
   ) {}
 
   // ==================== Branch Operations ====================
@@ -52,11 +47,7 @@ export class GitService {
   /**
    * Create a new branch
    */
-  async createBranch(
-    repoPath: string,
-    name: string,
-    startPoint?: string,
-  ): Promise<void> {
+  async createBranch(repoPath: string, name: string, startPoint?: string): Promise<void> {
     return this.gitBranch.createBranch(repoPath, name, startPoint);
   }
 
@@ -84,7 +75,7 @@ export class GitService {
   async getCommitLog(
     repoPath: string,
     limit: number = 50,
-    allBranches: boolean = true,
+    allBranches: boolean = true
   ): Promise<CommitInfo[]> {
     return this.gitCommit.getCommitLog(repoPath, limit, allBranches);
   }
@@ -130,22 +121,14 @@ export class GitService {
   /**
    * Push commits to a remote repository
    */
-  async push(
-    projectPath: string,
-    remote: string = 'origin',
-    branch?: string,
-  ): Promise<void> {
+  async push(projectPath: string, remote: string = 'origin', branch?: string): Promise<void> {
     return this.gitRemote.push(projectPath, remote, branch);
   }
 
   /**
    * Pull changes from a remote repository
    */
-  async pull(
-    projectPath: string,
-    remote: string = 'origin',
-    branch?: string,
-  ): Promise<void> {
+  async pull(projectPath: string, remote: string = 'origin', branch?: string): Promise<void> {
     return this.gitRemote.pull(projectPath, remote, branch);
   }
 
@@ -186,7 +169,7 @@ export class GitService {
     repoPath: string,
     name?: string,
     email?: string,
-    global: boolean = false,
+    global: boolean = false
   ): Promise<void> {
     return this.gitRepo.setUserConfig(repoPath, name, email, global);
   }

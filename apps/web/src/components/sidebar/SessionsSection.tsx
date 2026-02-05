@@ -13,22 +13,18 @@ interface SessionsSectionProps {
   onNewSession?: () => void;
 }
 
-export function SessionsSection({
-  className,
-  onSessionClick,
-  onNewSession,
-}: SessionsSectionProps) {
+export function SessionsSection({ className, onSessionClick, onNewSession }: SessionsSectionProps) {
   const activeTab = useWorkspaceStore(selectActiveTab);
 
   // Get stable references from stores - avoid selectors that create new arrays
-  const allSessions = useSessionStore((state) => state.sessions);
-  const isLoading = useSessionStore((state) => state.isLoading);
-  const error = useSessionStore((state) => state.error);
+  const allSessions = useSessionStore(state => state.sessions);
+  const isLoading = useSessionStore(state => state.isLoading);
+  const error = useSessionStore(state => state.error);
 
   // Memoize filtered sessions to avoid creating new arrays on every render
   const sessions = useMemo(() => {
     if (activeTab?.projectPath) {
-      return allSessions.filter((session) => session.projectPath === activeTab.projectPath);
+      return allSessions.filter(session => session.projectPath === activeTab.projectPath);
     }
     return allSessions;
   }, [allSessions, activeTab?.projectPath]);
@@ -36,12 +32,15 @@ export function SessionsSection({
   // Note: Listeners are initialized centrally in useAppInitialization
 
   // Memoize derived counts to avoid recalculation on every render
-  const { sessionCount, activeCount } = useMemo(() => ({
-    sessionCount: sessions.length,
-    activeCount: sessions.filter(
-      (s) => s.status === 'active' || s.status === 'thinking' || s.status === 'executing'
-    ).length,
-  }), [sessions]);
+  const { sessionCount, activeCount } = useMemo(
+    () => ({
+      sessionCount: sessions.length,
+      activeCount: sessions.filter(
+        s => s.status === 'active' || s.status === 'thinking' || s.status === 'executing'
+      ).length,
+    }),
+    [sessions]
+  );
 
   return (
     <div className={twMerge(clsx('space-y-2', className))}>
@@ -51,11 +50,7 @@ export function SessionsSection({
           <span className="text-xs text-foreground-secondary">
             {sessionCount} session{sessionCount !== 1 ? 's' : ''}
           </span>
-          {activeCount > 0 && (
-            <span className="text-xs text-blue-400">
-              ({activeCount} active)
-            </span>
-          )}
+          {activeCount > 0 && <span className="text-xs text-blue-400">({activeCount} active)</span>}
         </div>
         {onNewSession && (
           <button
@@ -74,9 +69,7 @@ export function SessionsSection({
 
       {/* Loading state */}
       {isLoading && (
-        <div className="text-xs text-muted-foreground animate-pulse py-2">
-          Loading sessions...
-        </div>
+        <div className="text-xs text-muted-foreground animate-pulse py-2">Loading sessions...</div>
       )}
 
       {/* Error state */}
@@ -89,14 +82,12 @@ export function SessionsSection({
 
       {/* Sessions list */}
       {!isLoading && sessions.length === 0 && !error && (
-        <div className="text-xs text-muted-foreground py-2">
-          No active sessions
-        </div>
+        <div className="text-xs text-muted-foreground py-2">No active sessions</div>
       )}
 
       {sessions.length > 0 && (
         <div className="space-y-1 max-h-48 overflow-y-auto">
-          {sessions.map((session) => (
+          {sessions.map(session => (
             <button
               key={session.id}
               onClick={() => onSessionClick?.(session.id)}
@@ -110,9 +101,7 @@ export function SessionsSection({
               <StatusDot status={mapSessionStatus(session.status)} />
               <Terminal size={12} className="text-muted-foreground flex-shrink-0" />
               <div className="min-w-0 flex-1">
-                <div className="text-xs text-foreground-secondary truncate">
-                  {session.name}
-                </div>
+                <div className="text-xs text-foreground-secondary truncate">{session.name}</div>
                 {session.statusMessage && (
                   <div className="text-xs text-muted-foreground truncate">
                     {session.statusMessage}

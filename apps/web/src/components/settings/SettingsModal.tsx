@@ -14,10 +14,10 @@ import {
 } from './sections';
 
 export function SettingsModal() {
-  const isOpen = useSettingsStore((state) => state.isOpen);
-  const activeSection = useSettingsStore((state) => state.activeSection);
-  const closeSettings = useSettingsStore((state) => state.closeSettings);
-  const navigateToSection = useSettingsStore((state) => state.navigateToSection);
+  const isOpen = useSettingsStore(state => state.isOpen);
+  const activeSection = useSettingsStore(state => state.activeSection);
+  const closeSettings = useSettingsStore(state => state.closeSettings);
+  const navigateToSection = useSettingsStore(state => state.navigateToSection);
 
   // Handle escape key to close modal
   useEffect(() => {
@@ -81,7 +81,7 @@ export function SettingsModal() {
           'bg-background rounded-2xl shadow-2xl',
           'border border-border',
           'flex flex-col overflow-hidden',
-          'animate-in',
+          'animate-in'
         )}
         role="dialog"
         aria-modal="true"
@@ -89,10 +89,7 @@ export function SettingsModal() {
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-          <h1
-            id="settings-modal-title"
-            className="text-xl font-semibold text-foreground"
-          >
+          <h1 id="settings-modal-title" className="text-xl font-semibold text-foreground">
             Settings
           </h1>
           <button
@@ -107,10 +104,7 @@ export function SettingsModal() {
         {/* Content Area with Sidebar */}
         <div className="flex-1 flex overflow-hidden">
           {/* Side Navigation */}
-          <SettingsNavigation
-            activeSection={activeSection}
-            onNavigate={navigateToSection}
-          />
+          <SettingsNavigation activeSection={activeSection} onNavigate={navigateToSection} />
 
           {/* Content Panel */}
           <div className="flex-1 overflow-y-auto p-8">

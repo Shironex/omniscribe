@@ -78,11 +78,7 @@ export class McpSessionRegistryService {
    * @param sessionId Session identifier
    * @param serverIds Array of enabled server IDs
    */
-  setEnabledServers(
-    projectPath: string,
-    sessionId: string,
-    serverIds: string[]
-  ): void {
+  setEnabledServers(projectPath: string, sessionId: string, serverIds: string[]): void {
     const sessionKey = `${projectPath}:${sessionId}`;
     this.sessionEnabled.set(sessionKey, serverIds);
     this.logger.log(`Set ${serverIds.length} enabled servers for session ${sessionId}`);

@@ -20,10 +20,7 @@ export interface OmniscribeHttpClient {
 /**
  * Create an HTTP client for Omniscribe communication
  */
-export function createHttpClient(
-  config: EnvironmentConfig,
-  logger: Logger
-): OmniscribeHttpClient {
+export function createHttpClient(config: EnvironmentConfig, logger: Logger): OmniscribeHttpClient {
   const { sessionId, instanceId, statusUrl } = config;
 
   async function reportStatus(
@@ -45,7 +42,9 @@ export function createHttpClient(
       timestamp: new Date().toISOString(),
     };
 
-    logger.debug(`Sending status to ${statusUrl}: state=${state}${message ? `, message=${message}` : ''}`);
+    logger.debug(
+      `Sending status to ${statusUrl}: state=${state}${message ? `, message=${message}` : ''}`
+    );
 
     try {
       const response = await fetch(statusUrl, {

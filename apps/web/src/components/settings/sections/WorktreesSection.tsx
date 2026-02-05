@@ -1,4 +1,11 @@
-import { GitBranch, Trash2, FolderOpen, HardDrive, FlaskConical, AlertTriangle } from 'lucide-react';
+import {
+  GitBranch,
+  Trash2,
+  FolderOpen,
+  HardDrive,
+  FlaskConical,
+  AlertTriangle,
+} from 'lucide-react';
 import { clsx } from 'clsx';
 import { useWorkspaceStore } from '@/stores';
 import type { WorktreeMode, WorktreeLocation, WorktreeSettings } from '@omniscribe/shared';
@@ -47,8 +54,8 @@ const WORKTREE_LOCATION_OPTIONS: {
 ];
 
 export function WorktreesSection() {
-  const preferences = useWorkspaceStore((state) => state.preferences);
-  const updatePreference = useWorkspaceStore((state) => state.updatePreference);
+  const preferences = useWorkspaceStore(state => state.preferences);
+  const updatePreference = useWorkspaceStore(state => state.updatePreference);
 
   // Get worktree settings with defaults
   const worktreeSettings: WorktreeSettings = preferences.worktree ?? DEFAULT_WORKTREE_SETTINGS;
@@ -82,9 +89,13 @@ export function WorktreesSection() {
           className={clsx(
             'w-10 h-10 rounded-xl flex items-center justify-center',
             'bg-gradient-to-br from-primary/20 to-brand-600/10',
-            'ring-1',
+            'ring-1'
           )}
-          style={{ '--tw-ring-color': 'color-mix(in oklch, var(--primary), transparent 80%)' } as React.CSSProperties}
+          style={
+            {
+              '--tw-ring-color': 'color-mix(in oklch, var(--primary), transparent 80%)',
+            } as React.CSSProperties
+          }
         >
           <GitBranch className="w-5 h-5 text-primary" />
         </div>
@@ -107,14 +118,14 @@ export function WorktreesSection() {
         <h3 className="text-sm font-medium text-foreground">Worktree Mode</h3>
 
         <div className="rounded-xl border border-border/50 bg-card/50 p-4 space-y-3">
-          {WORKTREE_MODE_OPTIONS.map((option) => (
+          {WORKTREE_MODE_OPTIONS.map(option => (
             <label
               key={option.value}
               className={clsx(
                 'flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-colors',
                 worktreeSettings.mode === option.value
                   ? 'bg-primary/10 border border-primary/30'
-                  : 'hover:bg-muted/50 border border-transparent',
+                  : 'hover:bg-muted/50 border border-transparent'
               )}
             >
               <input
@@ -126,12 +137,8 @@ export function WorktreesSection() {
                 className="mt-1 w-4 h-4 text-primary accent-primary"
               />
               <div className="flex-1">
-                <div className="text-sm font-medium text-foreground">
-                  {option.label}
-                </div>
-                <div className="text-xs text-muted-foreground mt-0.5">
-                  {option.description}
-                </div>
+                <div className="text-sm font-medium text-foreground">{option.label}</div>
+                <div className="text-xs text-muted-foreground mt-0.5">{option.description}</div>
               </div>
             </label>
           ))}
@@ -143,7 +150,7 @@ export function WorktreesSection() {
         <h3 className="text-sm font-medium text-foreground">Storage Location</h3>
 
         <div className="rounded-xl border border-border/50 bg-card/50 p-4 space-y-3">
-          {WORKTREE_LOCATION_OPTIONS.map((option) => {
+          {WORKTREE_LOCATION_OPTIONS.map(option => {
             const Icon = option.icon;
             return (
               <label
@@ -152,7 +159,7 @@ export function WorktreesSection() {
                   'flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-colors',
                   worktreeSettings.location === option.value
                     ? 'bg-primary/10 border border-primary/30'
-                    : 'hover:bg-muted/50 border border-transparent',
+                    : 'hover:bg-muted/50 border border-transparent'
                 )}
               >
                 <input
@@ -165,12 +172,8 @@ export function WorktreesSection() {
                 />
                 <Icon className="w-4 h-4 mt-0.5 text-muted-foreground" />
                 <div className="flex-1">
-                  <div className="text-sm font-medium text-foreground">
-                    {option.label}
-                  </div>
-                  <div className="text-xs text-muted-foreground mt-0.5">
-                    {option.description}
-                  </div>
+                  <div className="text-sm font-medium text-foreground">{option.label}</div>
+                  <div className="text-xs text-muted-foreground mt-0.5">{option.description}</div>
                 </div>
               </label>
             );
@@ -187,9 +190,7 @@ export function WorktreesSection() {
             <div className="flex items-center gap-3">
               <Trash2 className="w-4 h-4 text-muted-foreground" />
               <div>
-                <div className="text-sm font-medium text-foreground">
-                  Auto-cleanup worktrees
-                </div>
+                <div className="text-sm font-medium text-foreground">Auto-cleanup worktrees</div>
                 <div className="text-xs text-muted-foreground">
                   Automatically remove worktrees when session ends
                 </div>
@@ -199,9 +200,7 @@ export function WorktreesSection() {
               onClick={handleAutoCleanupToggle}
               className={clsx(
                 'relative w-11 h-6 rounded-full transition-colors duration-200',
-                worktreeSettings.autoCleanup
-                  ? 'bg-primary'
-                  : 'bg-border',
+                worktreeSettings.autoCleanup ? 'bg-primary' : 'bg-border'
               )}
               role="switch"
               aria-checked={worktreeSettings.autoCleanup}
@@ -209,7 +208,7 @@ export function WorktreesSection() {
               <div
                 className={clsx(
                   'absolute top-1 w-4 h-4 rounded-full bg-white transition-transform duration-200',
-                  worktreeSettings.autoCleanup ? 'translate-x-6' : 'translate-x-1',
+                  worktreeSettings.autoCleanup ? 'translate-x-6' : 'translate-x-1'
                 )}
               />
             </button>
@@ -236,17 +235,24 @@ export function WorktreesSection() {
           </p>
           <p>
             Git worktrees allow you to have multiple working directories for the same repository.
-            This enables running sessions on different branches simultaneously without switching branches.
+            This enables running sessions on different branches simultaneously without switching
+            branches.
           </p>
           <p>
             <strong className="text-foreground">Storage locations:</strong>
           </p>
           <ul className="list-disc list-inside space-y-1 ml-2">
             <li>
-              <strong>Project directory:</strong> Creates <code className="bg-muted px-1 py-0.5 rounded">.worktrees/</code> in your project root (recommended)
+              <strong>Project directory:</strong> Creates{' '}
+              <code className="bg-muted px-1 py-0.5 rounded">.worktrees/</code> in your project root
+              (recommended)
             </li>
             <li>
-              <strong>Central location:</strong> Uses <code className="bg-muted px-1 py-0.5 rounded">~/{USER_DATA_DIR}/{WORKTREES_DIR}/</code> for all projects
+              <strong>Central location:</strong> Uses{' '}
+              <code className="bg-muted px-1 py-0.5 rounded">
+                ~/{USER_DATA_DIR}/{WORKTREES_DIR}/
+              </code>{' '}
+              for all projects
             </li>
           </ul>
         </div>

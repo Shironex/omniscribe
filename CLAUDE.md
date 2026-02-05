@@ -87,6 +87,7 @@ Each backend module follows: `*.module.ts`, `*.service.ts`, `*.gateway.ts` (WebS
 ### State Management
 
 Zustand stores in `apps/web/src/stores/` connect to backend via Socket.io. The `createSocketStore.ts` utility provides:
+
 - `SocketStoreSlice` - Common state (isLoading, error, listenersInitialized)
 - `createSocketListeners()` - Standardized socket event subscription with automatic cleanup
 

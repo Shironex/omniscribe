@@ -75,7 +75,7 @@ const DEFAULT_QUICK_ACTIONS: QuickAction[] = [
     handler: 'terminal:execute',
     params: {
       command:
-        'Read the review comments on the current PR and address any feedback. Review the PR diff, understand the reviewer\'s concerns, and make the necessary changes to address their feedback.',
+        "Read the review comments on the current PR and address any feedback. Review the PR diff, understand the reviewer's concerns, and make the necessary changes to address their feedback.",
     },
   },
   // Terminal Actions
@@ -123,7 +123,7 @@ const DEFAULT_QUICK_ACTIONS: QuickAction[] = [
     handler: 'terminal:execute',
     params: {
       command:
-        'Create a brief implementation plan for this task:\n1. Goal: What we\'re accomplishing\n2. Approach: How we\'ll do it\n3. Files to modify and what changes\n4. Tasks (numbered list)\n5. Potential risks or gotchas',
+        "Create a brief implementation plan for this task:\n1. Goal: What we're accomplishing\n2. Approach: How we'll do it\n3. Files to modify and what changes\n4. Tasks (numbered list)\n5. Potential risks or gotchas",
     },
   },
 ];
@@ -213,9 +213,9 @@ export const useQuickActionStore = create<QuickActionStore>()(
       },
 
       addAction: (action: QuickAction) => {
-        set((state) => {
+        set(state => {
           // Check for duplicate ID
-          if (state.actions.some((a) => a.id === action.id)) {
+          if (state.actions.some(a => a.id === action.id)) {
             logger.warn('Duplicate quick action ID:', action.id);
             return state;
           }
@@ -224,21 +224,21 @@ export const useQuickActionStore = create<QuickActionStore>()(
       },
 
       updateAction: (id: string, updates: Partial<QuickAction>) => {
-        set((state) => ({
-          actions: state.actions.map((action) =>
+        set(state => ({
+          actions: state.actions.map(action =>
             action.id === id ? { ...action, ...updates } : action
           ),
         }));
       },
 
       removeAction: (id: string) => {
-        set((state) => ({
-          actions: state.actions.filter((action) => action.id !== id),
+        set(state => ({
+          actions: state.actions.filter(action => action.id !== id),
         }));
       },
 
       reorderActions: (fromIndex: number, toIndex: number) => {
-        set((state) => {
+        set(state => {
           const actions = [...state.actions];
           const [removed] = actions.splice(fromIndex, 1);
           if (removed) {
@@ -254,21 +254,21 @@ export const useQuickActionStore = create<QuickActionStore>()(
       },
 
       getAction: (id: string) => {
-        return get().actions.find((action) => action.id === id);
+        return get().actions.find(action => action.id === id);
       },
 
       getActionsByCategory: (category: QuickAction['category']) => {
-        return get().actions.filter((action) => action.category === category);
+        return get().actions.filter(action => action.category === category);
       },
 
       getEnabledActions: () => {
-        return get().actions.filter((action) => action.enabled !== false);
+        return get().actions.filter(action => action.enabled !== false);
       },
     }),
     {
       name: 'quick-actions',
       storage: createJSONStorage(() => electronStorage),
-      partialize: (state) => ({
+      partialize: state => ({
         actions: state.actions,
       }),
     }
@@ -286,17 +286,17 @@ export const selectActions = (state: QuickActionStore) => state.actions;
  * Select enabled actions only
  */
 export const selectEnabledActions = (state: QuickActionStore) =>
-  state.actions.filter((action) => action.enabled !== false);
+  state.actions.filter(action => action.enabled !== false);
 
 /**
  * Select actions by category
  */
 export const selectActionsByCategory =
   (category: QuickAction['category']) => (state: QuickActionStore) =>
-    state.actions.filter((action) => action.category === category);
+    state.actions.filter(action => action.category === category);
 
 /**
  * Select action by ID
  */
 export const selectActionById = (id: string) => (state: QuickActionStore) =>
-  state.actions.find((action) => action.id === id);
+  state.actions.find(action => action.id === id);

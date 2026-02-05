@@ -25,25 +25,25 @@ export const SkipGhCliCheck = () => SetMetadata(SKIP_GH_CLI_CHECK, true);
 export class GitHubCliGuard implements CanActivate {
   constructor(
     private reflector: Reflector,
-    private githubService: GithubService,
+    private githubService: GithubService
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     // Check if this endpoint should skip the check
-    const skipCheck = this.reflector.getAllAndOverride<boolean>(
-      SKIP_GH_CLI_CHECK,
-      [context.getHandler(), context.getClass()],
-    );
+    const skipCheck = this.reflector.getAllAndOverride<boolean>(SKIP_GH_CLI_CHECK, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
 
     if (skipCheck) {
       return true;
     }
 
     // Check if GitHub CLI is required
-    const requiresGh = this.reflector.getAllAndOverride<boolean>(
-      REQUIRES_GH_CLI,
-      [context.getHandler(), context.getClass()],
-    );
+    const requiresGh = this.reflector.getAllAndOverride<boolean>(REQUIRES_GH_CLI, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
 
     if (!requiresGh) {
       return true;
@@ -56,8 +56,7 @@ export class GitHubCliGuard implements CanActivate {
         statusCode: 501,
         message: 'GitHub CLI not installed',
         error: 'GH_CLI_NOT_INSTALLED',
-        details:
-          'GitHub CLI (gh) is not installed. Please install it from https://cli.github.com',
+        details: 'GitHub CLI (gh) is not installed. Please install it from https://cli.github.com',
       });
     }
 

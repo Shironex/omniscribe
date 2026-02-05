@@ -112,10 +112,7 @@ export class McpDiscoveryService {
    * @param entry Server configuration entry
    * @returns Parsed server configuration or undefined if invalid
    */
-  private parseServerEntry(
-    id: string,
-    entry: McpConfigEntry
-  ): McpServerConfig | undefined {
+  private parseServerEntry(id: string, entry: McpConfigEntry): McpServerConfig | undefined {
     // Determine transport type
     let transport: 'stdio' | 'sse' | 'websocket' = 'stdio';
 
@@ -125,10 +122,7 @@ export class McpDiscoveryService {
       // Infer transport from URL
       if (entry.url.startsWith('ws://') || entry.url.startsWith('wss://')) {
         transport = 'websocket';
-      } else if (
-        entry.url.startsWith('http://') ||
-        entry.url.startsWith('https://')
-      ) {
+      } else if (entry.url.startsWith('http://') || entry.url.startsWith('https://')) {
         transport = 'sse';
       }
     }
@@ -174,10 +168,7 @@ export class McpDiscoveryService {
       return false;
     }
 
-    if (
-      (config.transport === 'sse' || config.transport === 'websocket') &&
-      !config.url
-    ) {
+    if ((config.transport === 'sse' || config.transport === 'websocket') && !config.url) {
       return false;
     }
 

@@ -20,7 +20,7 @@ export function BottomBar({
   hasActiveSessions,
   className,
 }: BottomBarProps) {
-  const openSettings = useSettingsStore((state) => state.openSettings);
+  const openSettings = useSettingsStore(state => state.openSettings);
 
   return (
     <div

@@ -1,9 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import {
-  APP_NAME_LOWER,
-  MCP_CONFIGS_DIR,
-  createLogger,
-} from '@omniscribe/shared';
+import { APP_NAME_LOWER, MCP_CONFIGS_DIR, createLogger } from '@omniscribe/shared';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
@@ -62,11 +58,7 @@ export class McpTrackingService {
    * @param sessionId Session identifier
    * @param configPath Path to the written config
    */
-  async track(
-    projectHash: string,
-    sessionId: string,
-    configPath: string
-  ): Promise<void> {
+  async track(projectHash: string, sessionId: string, configPath: string): Promise<void> {
     const trackingDir = this.getTrackingDir(projectHash);
 
     try {
@@ -79,11 +71,7 @@ export class McpTrackingService {
         createdAt: new Date().toISOString(),
       };
 
-      await fs.promises.writeFile(
-        trackingFile,
-        JSON.stringify(trackingData, null, 2),
-        'utf-8'
-      );
+      await fs.promises.writeFile(trackingFile, JSON.stringify(trackingData, null, 2), 'utf-8');
     } catch (error) {
       this.logger.error('Error tracking config:', error);
     }
@@ -120,10 +108,7 @@ export class McpTrackingService {
    * @param projectHash Hash of the project path
    * @param sessionId Session identifier
    */
-  async cleanup(
-    projectHash: string,
-    sessionId: string
-  ): Promise<void> {
+  async cleanup(projectHash: string, sessionId: string): Promise<void> {
     const trackingDir = this.getTrackingDir(projectHash);
     const trackingFile = path.join(trackingDir, `${sessionId}.json`);
 
@@ -142,10 +127,7 @@ export class McpTrackingService {
    * @param sessionId Session identifier
    * @returns Tracking data or undefined if not found
    */
-  async getTrackingData(
-    projectHash: string,
-    sessionId: string
-  ): Promise<TrackingData | undefined> {
+  async getTrackingData(projectHash: string, sessionId: string): Promise<TrackingData | undefined> {
     const trackingDir = this.getTrackingDir(projectHash);
     const trackingFile = path.join(trackingDir, `${sessionId}.json`);
 

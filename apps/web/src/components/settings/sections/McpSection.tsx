@@ -5,10 +5,10 @@ import { MCP_SERVER_NAME } from '@omniscribe/shared';
 import { useMcpStore, useWorkspaceStore, selectActiveTab, selectInternalMcp } from '@/stores';
 
 export function McpSection() {
-  const servers = useMcpStore((state) => state.servers);
-  const serverStates = useMcpStore((state) => state.serverStates);
-  const isLoading = useMcpStore((state) => state.isDiscovering);
-  const discoverServers = useMcpStore((state) => state.discoverServers);
+  const servers = useMcpStore(state => state.servers);
+  const serverStates = useMcpStore(state => state.serverStates);
+  const isLoading = useMcpStore(state => state.isDiscovering);
+  const discoverServers = useMcpStore(state => state.discoverServers);
   const internalMcp = useMcpStore(selectInternalMcp);
 
   // Get active project path for refresh
@@ -23,9 +23,7 @@ export function McpSection() {
 
   // Count connected servers from serverStates map
   const connectedCount = useMemo(() => {
-    return Array.from(serverStates.values()).filter(
-      (state) => state.status === 'connected'
-    ).length;
+    return Array.from(serverStates.values()).filter(state => state.status === 'connected').length;
   }, [serverStates]);
 
   const handleRefresh = useCallback(() => {
@@ -40,17 +38,19 @@ export function McpSection() {
           className={clsx(
             'w-10 h-10 rounded-xl flex items-center justify-center',
             'bg-gradient-to-br from-primary/20 to-brand-600/10',
-            'ring-1',
+            'ring-1'
           )}
-          style={{ '--tw-ring-color': 'color-mix(in oklch, var(--primary), transparent 80%)' } as React.CSSProperties}
+          style={
+            {
+              '--tw-ring-color': 'color-mix(in oklch, var(--primary), transparent 80%)',
+            } as React.CSSProperties
+          }
         >
           <Server className="w-5 h-5 text-primary" />
         </div>
         <div className="flex-1">
           <h2 className="text-lg font-semibold text-foreground">MCP Servers</h2>
-          <p className="text-sm text-muted-foreground">
-            Model Context Protocol server connections
-          </p>
+          <p className="text-sm text-muted-foreground">Model Context Protocol server connections</p>
         </div>
         <button
           type="button"
@@ -60,7 +60,7 @@ export function McpSection() {
           className={clsx(
             'p-2 rounded-lg transition-colors',
             'hover:bg-muted text-muted-foreground hover:text-foreground',
-            'disabled:opacity-50 disabled:cursor-not-allowed',
+            'disabled:opacity-50 disabled:cursor-not-allowed'
           )}
           title="Refresh servers"
         >
@@ -106,9 +106,7 @@ export function McpSection() {
       <div className="rounded-xl border border-border/50 bg-card/50 p-4">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-sm font-medium text-foreground">
-              Server Status
-            </h3>
+            <h3 className="text-sm font-medium text-foreground">Server Status</h3>
             <p className="text-xs text-muted-foreground mt-1">
               {servers.length} server{servers.length !== 1 ? 's' : ''} configured
               {connectedCount > 0 && `, ${connectedCount} active`}
@@ -155,7 +153,7 @@ export function McpSection() {
             These servers will connect when you start a session
           </p>
           <div className="space-y-2">
-            {servers.map((server) => {
+            {servers.map(server => {
               const serverState = serverStates.get(server.id);
               const hasActiveState = serverState?.status && serverState.status !== 'disconnected';
               const status = hasActiveState ? serverState.status : 'ready';
@@ -171,17 +169,13 @@ export function McpSection() {
               }[status] ?? { color: 'bg-muted-foreground', label: status };
 
               // Check if this is the internal omniscribe MCP
-              const isInternalMcp = server.id === MCP_SERVER_NAME || server.name === MCP_SERVER_NAME;
+              const isInternalMcp =
+                server.id === MCP_SERVER_NAME || server.name === MCP_SERVER_NAME;
 
               return (
-                <div
-                  key={server.id}
-                  className="rounded-lg border border-border/50 bg-card/30 p-3"
-                >
+                <div key={server.id} className="rounded-lg border border-border/50 bg-card/30 p-3">
                   <div className="flex items-center gap-3">
-                    <div
-                      className={clsx('w-2.5 h-2.5 rounded-full', statusConfig.color)}
-                    />
+                    <div className={clsx('w-2.5 h-2.5 rounded-full', statusConfig.color)} />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium text-foreground truncate">
@@ -199,14 +193,15 @@ export function McpSection() {
                         </div>
                       )}
                       {serverState?.errorMessage && (
-                        <div className="text-xs text-status-error truncate" title={serverState.errorMessage}>
+                        <div
+                          className="text-xs text-status-error truncate"
+                          title={serverState.errorMessage}
+                        >
                           {serverState.errorMessage}
                         </div>
                       )}
                     </div>
-                    <span className="text-xs text-muted-foreground">
-                      {statusConfig.label}
-                    </span>
+                    <span className="text-xs text-muted-foreground">{statusConfig.label}</span>
                   </div>
                 </div>
               );
@@ -221,9 +216,7 @@ export function McpSection() {
           <div className="text-center text-muted-foreground">
             <Server className="w-8 h-8 mx-auto mb-2 opacity-50" />
             <p className="text-sm">No MCP servers discovered</p>
-            <p className="text-xs mt-1">
-              MCP servers will appear here when a project is open
-            </p>
+            <p className="text-xs mt-1">MCP servers will appear here when a project is open</p>
           </div>
         </div>
       )}

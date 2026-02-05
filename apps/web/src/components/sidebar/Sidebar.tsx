@@ -69,31 +69,25 @@ function CollapsibleSection({
       </button>
       {isExpanded && (
         <div className="p-3">
-          {children || (
-            <p className="text-xs text-muted-foreground">No items configured</p>
-          )}
+          {children || <p className="text-xs text-muted-foreground">No items configured</p>}
         </div>
       )}
     </div>
   );
 }
 
-export function Sidebar({
-  collapsed,
-  width,
-  onWidthChange,
-  className,
-}: SidebarProps) {
+export function Sidebar({ collapsed, width, onWidthChange, className }: SidebarProps) {
   const [activeTab, setActiveTab] = useState<SidebarTab>('config');
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
 
   // Get sessions for the Processes tab - use stable selector
-  const sessions = useSessionStore((state) => state.sessions);
-  const activeSessionCount = useMemo(() =>
-    sessions.filter(
-      (s) => s.status === 'active' || s.status === 'thinking' || s.status === 'executing'
-    ).length,
+  const sessions = useSessionStore(state => state.sessions);
+  const activeSessionCount = useMemo(
+    () =>
+      sessions.filter(
+        s => s.status === 'active' || s.status === 'thinking' || s.status === 'executing'
+      ).length,
     [sessions]
   );
 
@@ -103,54 +97,60 @@ export function Sidebar({
   }, []);
 
   // Terminal control store for focus and session management
-  const setFocusedSessionId = useTerminalControlStore((state) => state.setFocusedSessionId);
-  const requestAddSlot = useTerminalControlStore((state) => state.requestAddSlot);
-  const focusedSessionId = useTerminalControlStore((state) => state.focusedSessionId);
+  const setFocusedSessionId = useTerminalControlStore(state => state.setFocusedSessionId);
+  const requestAddSlot = useTerminalControlStore(state => state.requestAddSlot);
+  const focusedSessionId = useTerminalControlStore(state => state.focusedSessionId);
 
-  const handleSessionClick = useCallback((sessionId: string) => {
-    // Set the focused session in the shared store
-    setFocusedSessionId(sessionId);
-  }, [setFocusedSessionId]);
+  const handleSessionClick = useCallback(
+    (sessionId: string) => {
+      // Set the focused session in the shared store
+      setFocusedSessionId(sessionId);
+    },
+    [setFocusedSessionId]
+  );
 
   const handleNewSession = useCallback(() => {
     // Request a new pre-launch slot via the shared store
     requestAddSlot();
   }, [requestAddSlot]);
 
-  const handleActionExecute = useCallback((action: QuickAction) => {
-    // Find the focused session to send the command to
-    const focusedSession = focusedSessionId
-      ? sessions.find((s) => s.id === focusedSessionId)
-      : null;
+  const handleActionExecute = useCallback(
+    (action: QuickAction) => {
+      // Find the focused session to send the command to
+      const focusedSession = focusedSessionId
+        ? sessions.find(s => s.id === focusedSessionId)
+        : null;
 
-    // If no focused session, try to use the first active session
-    const targetSession = focusedSession
-      ?? sessions.find((s) => s.status === 'active' || s.status === 'executing');
+      // If no focused session, try to use the first active session
+      const targetSession =
+        focusedSession ?? sessions.find(s => s.status === 'active' || s.status === 'executing');
 
-    if (!targetSession?.terminalSessionId) {
-      logger.warn('No active terminal session to execute action');
-      return;
-    }
+      if (!targetSession?.terminalSessionId) {
+        logger.warn('No active terminal session to execute action');
+        return;
+      }
 
-    // Build the command based on the action handler and params
-    const params = action.params ?? {};
-    let command = '';
-    if (action.handler === 'shell') {
-      // For shell actions, the command is in params
-      command = String(params.command ?? params.cmd ?? '');
-    } else if (action.handler === 'script') {
-      // For script actions, run the script file
-      command = String(params.path ?? params.script ?? '');
-    } else {
-      // For other handlers, try to construct a command
-      command = String(params.command ?? params.cmd ?? action.id);
-    }
+      // Build the command based on the action handler and params
+      const params = action.params ?? {};
+      let command = '';
+      if (action.handler === 'shell') {
+        // For shell actions, the command is in params
+        command = String(params.command ?? params.cmd ?? '');
+      } else if (action.handler === 'script') {
+        // For script actions, run the script file
+        command = String(params.path ?? params.script ?? '');
+      } else {
+        // For other handlers, try to construct a command
+        command = String(params.command ?? params.cmd ?? action.id);
+      }
 
-    if (command) {
-      // Write the command to the terminal with a newline to execute it
-      writeToTerminal(targetSession.terminalSessionId, command + '\n');
-    }
-  }, [focusedSessionId, sessions]);
+      if (command) {
+        // Write the command to the terminal with a newline to execute it
+        writeToTerminal(targetSession.terminalSessionId, command + '\n');
+      }
+    },
+    [focusedSessionId, sessions]
+  );
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -248,9 +248,7 @@ export function Sidebar({
           <div className="space-y-3">
             {activeSessionCount > 0 ? (
               <CollapsibleSection icon={Layers} title={`Active Sessions (${activeSessionCount})`}>
-                <SessionsSection
-                  onSessionClick={handleSessionClick}
-                />
+                <SessionsSection onSessionClick={handleSessionClick} />
               </CollapsibleSection>
             ) : (
               <div className="text-xs text-muted-foreground text-center py-8">
