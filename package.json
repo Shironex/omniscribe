@@ -23,6 +23,8 @@
     "lint": "eslint . --ext .ts,.tsx",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "test": "pnpm build:packages && pnpm --filter @omniscribe/desktop test",
+    "test:cov": "pnpm build:packages && pnpm --filter @omniscribe/desktop test:cov",
     "typecheck": "pnpm build:packages && pnpm --filter @omniscribe/web typecheck && pnpm --filter @omniscribe/mcp-server typecheck && pnpm --filter @omniscribe/desktop typecheck",
     "prepare": "husky"
   },
