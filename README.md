@@ -14,6 +14,7 @@
 ## Table of Contents
 
 - [About](#about)
+- [Screenshots](#screenshots)
 - [Features](#features)
 - [Keyboard Shortcuts](#keyboard-shortcuts)
 - [Quick Start](#quick-start)
@@ -25,6 +26,20 @@
 ## About
 
 Omniscribe is a desktop application for managing multiple AI coding assistant sessions (Claude Code, etc.) simultaneously. Run 1-6 sessions in parallel, each with its own terminal, optional git worktree isolation, and MCP server configuration.
+
+## Screenshots
+
+### Multi-Session Grid with Quick Actions
+
+![Multi-session grid with quick actions menu](assets/quick_actions.png)
+
+### Main View
+
+![Main grid view with 6 parallel sessions](assets/main.png)
+
+### Settings
+
+![Settings dialog with Claude CLI integration](assets/settings.png)
 
 ## Features
 
