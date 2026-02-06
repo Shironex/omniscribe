@@ -304,6 +304,22 @@ export function TerminalGrid({
   // Max terminals: 12
   const canAddMore = sessionCount + preLaunchSlots.length < 12;
 
+  const renderTerminalCard = (session: TerminalSession) => (
+    <SortableTerminalWrapper id={session.id}>
+      <TerminalCard
+        session={session}
+        quickActions={quickActions}
+        isFocused={focusedSessionId === session.id}
+        onFocus={() => onFocusSession(session.id)}
+        onKill={() => onKill(session.id)}
+        onSessionClose={
+          onSessionClose ? exitCode => onSessionClose(session.id, exitCode) : undefined
+        }
+        onQuickAction={onQuickAction ? actionId => onQuickAction(session.id, actionId) : undefined}
+      />
+    </SortableTerminalWrapper>
+  );
+
   return (
     <div className={twMerge(clsx('h-full w-full flex flex-col', className))}>
       {/* Main grid area for active sessions */}
@@ -357,25 +373,7 @@ export function TerminalGrid({
                                   minSize={15}
                                   className="min-h-0 min-w-0 overflow-hidden"
                                 >
-                                  <SortableTerminalWrapper id={session.id}>
-                                    <TerminalCard
-                                      session={session}
-                                      quickActions={quickActions}
-                                      isFocused={focusedSessionId === session.id}
-                                      onFocus={() => onFocusSession(session.id)}
-                                      onKill={() => onKill(session.id)}
-                                      onSessionClose={
-                                        onSessionClose
-                                          ? exitCode => onSessionClose(session.id, exitCode)
-                                          : undefined
-                                      }
-                                      onQuickAction={
-                                        onQuickAction
-                                          ? actionId => onQuickAction(session.id, actionId)
-                                          : undefined
-                                      }
-                                    />
-                                  </SortableTerminalWrapper>
+                                  {renderTerminalCard(session)}
                                 </Panel>
                               </React.Fragment>
                             );
@@ -427,25 +425,7 @@ export function TerminalGrid({
                                   minSize={15}
                                   className="min-h-0 min-w-0 overflow-hidden"
                                 >
-                                  <SortableTerminalWrapper id={session.id}>
-                                    <TerminalCard
-                                      session={session}
-                                      quickActions={quickActions}
-                                      isFocused={focusedSessionId === session.id}
-                                      onFocus={() => onFocusSession(session.id)}
-                                      onKill={() => onKill(session.id)}
-                                      onSessionClose={
-                                        onSessionClose
-                                          ? exitCode => onSessionClose(session.id, exitCode)
-                                          : undefined
-                                      }
-                                      onQuickAction={
-                                        onQuickAction
-                                          ? actionId => onQuickAction(session.id, actionId)
-                                          : undefined
-                                      }
-                                    />
-                                  </SortableTerminalWrapper>
+                                  {renderTerminalCard(session)}
                                 </Panel>
                               </React.Fragment>
                             );
