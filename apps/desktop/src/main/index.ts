@@ -4,6 +4,7 @@ import { type INestApplication } from '@nestjs/common';
 import { IoAdapter } from '@nestjs/platform-socket.io';
 import { AppModule } from '../modules/app.module';
 import { createMainWindow } from './window';
+import { cleanupIpcHandlers } from './ipc-handlers';
 import { logger, getLogPath } from './logger';
 import { initializeAutoUpdater } from './updater';
 import { corsOriginCallback } from '../modules/shared/cors.config';
@@ -77,10 +78,15 @@ app.on('window-all-closed', () => {
   }
 });
 
-app.on('activate', () => {
+app.on('activate', async () => {
   logger.info('App activated');
-  if (BrowserWindow.getAllWindows().length === 0) {
-    bootstrap();
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.show();
+  } else if (BrowserWindow.getAllWindows().length === 0) {
+    // NestJS is already running, clean up old IPC handlers and recreate the window
+    cleanupIpcHandlers();
+    mainWindow = await createMainWindow();
+    initializeAutoUpdater(mainWindow, process.env.NODE_ENV === 'development');
   }
 });
 

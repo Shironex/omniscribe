@@ -27,6 +27,7 @@ export function ProjectTabs({
   className,
 }: ProjectTabsProps) {
   const isElectron = typeof window !== 'undefined' && !!window.electronAPI;
+  const isMac = isElectron && window.electronAPI?.platform === 'darwin';
 
   return (
     <div
@@ -34,6 +35,7 @@ export function ProjectTabs({
         clsx(
           'h-10 bg-muted border-b border-border',
           'flex items-center select-none drag',
+          isMac && 'pl-[78px]',
           className
         )
       )}
@@ -85,8 +87,8 @@ export function ProjectTabs({
         </button>
       </div>
 
-      {/* Window controls (Electron only) */}
-      {isElectron && (
+      {/* Window controls (Electron only, hidden on macOS which uses native traffic lights) */}
+      {isElectron && !isMac && (
         <div className="no-drag flex items-center gap-1 px-2">
           <button
             onClick={() => window.electronAPI?.window.minimize()}
