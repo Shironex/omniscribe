@@ -20,6 +20,8 @@ All notable changes to this project will be documented in this file.
 - AI-powered quick actions for git and development workflows
 - Welcome view with recent projects
 - Idle landing view with greeting and keyboard shortcut hints
+- Auto-update system with download progress tracking and user-controlled installation
+- Default session mode setting
 
 ### Security
 
