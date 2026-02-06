@@ -56,6 +56,10 @@ jobs:
       - name: Setup project
         uses: ./.github/actions/setup-project
 
+      - name: Build all packages
+        shell: bash
+        run: pnpm build
+
       - name: Install RPM build tools (Linux)
         if: matrix.os == 'ubuntu-latest'
         shell: bash
