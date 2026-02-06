@@ -23,6 +23,11 @@ test.describe('Reconnection Overlay', () => {
     );
     await addButton.first().click();
 
+    // Verify the slot defaults to plain mode (Claude CLI not available in test env)
+    await expect(page.locator('[data-testid="ai-mode-label"]').first()).toHaveText('Plain', {
+      timeout: 5_000,
+    });
+
     const launchButton = page.locator('[data-testid="launch-button"]');
     await expect(launchButton).toBeEnabled({ timeout: 5_000 });
     await launchButton.click();
