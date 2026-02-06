@@ -2,9 +2,11 @@ import { create } from 'zustand';
 import {
   SessionConfig,
   SessionStatus,
+  HealthLevel,
   MAX_CONCURRENT_SESSIONS,
   createLogger,
 } from '@omniscribe/shared';
+import { toast } from 'sonner';
 import { socket } from '@/lib/socket';
 
 const logger = createLogger('SessionStore');
@@ -28,6 +30,8 @@ export interface ExtendedSessionConfig extends SessionConfig {
   needsInputPrompt?: boolean;
   /** Terminal PTY session ID - set after session is launched */
   terminalSessionId?: number;
+  /** Health level from periodic health checks */
+  health?: HealthLevel;
 }
 
 /**
@@ -48,6 +52,8 @@ interface SessionState extends SocketStoreState {
   sessions: ExtendedSessionConfig[];
   /** Pending status updates for race condition handling */
   pendingStatusUpdates: Map<string, SessionStatusUpdate[]>;
+  /** Set of terminal session IDs currently under backpressure */
+  backpressured: Set<number>;
 }
 
 /**
@@ -75,6 +81,8 @@ interface SessionActions extends SocketStoreActions {
   cleanupListeners: () => void;
   /** Process pending status updates for a session */
   processPendingUpdates: (sessionId: string) => void;
+  /** Set backpressure state for a terminal */
+  setBackpressure: (terminalSessionId: number, paused: boolean) => void;
 }
 
 /**
@@ -121,6 +129,33 @@ export const useSessionStore = create<SessionStore>((set, get) => {
           get().removeSession(payload.sessionId);
         },
       },
+      {
+        event: 'terminal:backpressure',
+        handler: (data, get) => {
+          const payload = data as { sessionId: number; paused: boolean };
+          logger.debug('terminal:backpressure', payload.sessionId, payload.paused);
+          get().setBackpressure(payload.sessionId, payload.paused);
+        },
+      },
+      {
+        event: 'session:health',
+        handler: (data, get) => {
+          const payload = data as { sessionId: string; health: HealthLevel; reason?: string };
+          logger.debug('session:health', payload.sessionId, payload.health);
+          get().updateSession(payload.sessionId, { health: payload.health });
+        },
+      },
+      {
+        event: 'zombie:cleanup',
+        handler: data => {
+          const payload = data as { sessionId: string; sessionName: string; reason: string };
+          logger.warn('zombie:cleanup', payload.sessionId, payload.reason);
+          toast.error(`Session "${payload.sessionName}" terminated unexpectedly`, {
+            description: payload.reason,
+            duration: 10000,
+          });
+        },
+      },
     ],
     onConnect: get => {
       // Request fresh session list on reconnect
@@ -146,6 +181,7 @@ export const useSessionStore = create<SessionStore>((set, get) => {
     ...initialSocketState,
     sessions: [],
     pendingStatusUpdates: new Map(),
+    backpressured: new Set(),
 
     // Common socket actions
     ...socketActions,
@@ -253,6 +289,18 @@ export const useSessionStore = create<SessionStore>((set, get) => {
         const newMap = new Map(state.pendingStatusUpdates);
         newMap.delete(sessionId);
         return { pendingStatusUpdates: newMap };
+      });
+    },
+
+    setBackpressure: (terminalSessionId, paused) => {
+      set(state => {
+        const next = new Set(state.backpressured);
+        if (paused) {
+          next.add(terminalSessionId);
+        } else {
+          next.delete(terminalSessionId);
+        }
+        return { backpressured: next };
       });
     },
   };

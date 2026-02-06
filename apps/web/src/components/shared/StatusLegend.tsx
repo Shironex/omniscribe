@@ -61,12 +61,20 @@ export function StatusLegend({ counts, showCounts = true, className }: StatusLeg
   );
 }
 
-export function StatusDot({ status, className }: { status: SessionStatus; className?: string }) {
+export function StatusDot({
+  status,
+  className,
+  title,
+}: {
+  status: SessionStatus;
+  className?: string;
+  title?: string;
+}) {
   const config = statusConfig[status];
   return (
     <span
       className={twMerge(clsx('w-2 h-2 rounded-full inline-block', config.color, className))}
-      title={config.label}
+      title={title ?? config.label}
     />
   );
 }
