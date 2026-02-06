@@ -163,7 +163,8 @@ export type SettingsSectionId =
   | 'mcp'
   | 'general'
   | 'worktrees'
-  | 'sessions';
+  | 'sessions'
+  | 'terminal';
 
 /**
  * Worktree creation mode

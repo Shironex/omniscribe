@@ -11,6 +11,7 @@ import {
   GeneralSection,
   WorktreesSection,
   SessionsSection,
+  TerminalSection,
 } from './sections';
 
 export function SettingsModal() {
@@ -56,6 +57,8 @@ export function SettingsModal() {
         return <WorktreesSection />;
       case 'sessions':
         return <SessionsSection />;
+      case 'terminal':
+        return <TerminalSection />;
       default:
         return <AppearanceSection />;
     }

@@ -99,7 +99,7 @@ describe('TerminalService', () => {
       jest.useRealTimers();
     });
 
-    it('should batch output and emit after BATCH_INTERVAL_MS', () => {
+    it('should batch output and emit after OUTPUT_THROTTLE_MS (4ms)', () => {
       const sessionId = service.spawnCommand('bash', [], '/home');
       const ptyInstance = mockPtyInstances[0];
 
@@ -109,13 +109,272 @@ describe('TerminalService', () => {
       // Not emitted yet (still within batch interval)
       expect(eventEmitter.emit).not.toHaveBeenCalledWith('terminal.output', expect.anything());
 
-      // Advance timers past the 16ms batch interval
-      jest.advanceTimersByTime(20);
+      // Advance timers past the 4ms batch interval
+      jest.advanceTimersByTime(10);
 
       expect(eventEmitter.emit).toHaveBeenCalledWith('terminal.output', {
         sessionId,
         data: 'hello world',
       });
+    });
+
+    it('should chunk large output (>4KB) across multiple flushes', () => {
+      const sessionId = service.spawnCommand('bash', [], '/home');
+      const ptyInstance = mockPtyInstances[0];
+
+      // Simulate 8KB of data
+      const bigData = 'x'.repeat(8192);
+      ptyInstance.simulateData(bigData);
+
+      // First flush at 4ms
+      jest.advanceTimersByTime(5);
+
+      // First chunk should be 4096 bytes
+      expect(eventEmitter.emit).toHaveBeenCalledWith('terminal.output', {
+        sessionId,
+        data: 'x'.repeat(4096),
+      });
+
+      // Second flush at 4ms later
+      jest.advanceTimersByTime(5);
+
+      // Second chunk should be remaining 4096 bytes
+      expect(eventEmitter.emit).toHaveBeenCalledWith('terminal.output', {
+        sessionId,
+        data: 'x'.repeat(4096),
+      });
+    });
+
+    it('should cap output buffer at MAX_OUTPUT_BUFFER_SIZE (100KB)', () => {
+      service.spawnCommand('bash', [], '/home');
+      const ptyInstance = mockPtyInstances[0];
+
+      // Simulate 150KB of data
+      const bigData = 'x'.repeat(150_000);
+      ptyInstance.simulateData(bigData);
+
+      // The buffer should be capped internally; we verify indirectly
+      // by checking that no error occurred
+      jest.advanceTimersByTime(500);
+
+      // Should have emitted multiple chunks without error
+      expect(eventEmitter.emit).toHaveBeenCalledWith(
+        'terminal.output',
+        expect.objectContaining({ sessionId: 1 })
+      );
+    });
+  });
+
+  describe('scrollback', () => {
+    it('should accumulate scrollback data', () => {
+      jest.useFakeTimers();
+      const sessionId = service.spawnCommand('bash', [], '/home');
+      const ptyInstance = mockPtyInstances[0];
+
+      ptyInstance.simulateData('line1\n');
+      ptyInstance.simulateData('line2\n');
+      jest.advanceTimersByTime(10);
+
+      const scrollback = service.getScrollback(sessionId);
+      expect(scrollback).toBe('line1\nline2\n');
+      jest.useRealTimers();
+    });
+
+    it('should return null for non-existent session', () => {
+      expect(service.getScrollback(999)).toBeNull();
+    });
+
+    it('should return null for empty scrollback', () => {
+      const sessionId = service.spawnCommand('bash', [], '/home');
+      // New session with no data should return null (empty string is falsy)
+      expect(service.getScrollback(sessionId)).toBeNull();
+    });
+
+    it('should trim scrollback at MAX_SCROLLBACK_SIZE (50KB)', () => {
+      const sessionId = service.spawnCommand('bash', [], '/home');
+      const ptyInstance = mockPtyInstances[0];
+
+      // Simulate 60KB of data
+      const bigData = 'x'.repeat(60_000);
+      ptyInstance.simulateData(bigData);
+
+      const scrollback = service.getScrollback(sessionId);
+      expect(scrollback).not.toBeNull();
+      expect(scrollback!.length).toBeLessThanOrEqual(50_000);
+    });
+  });
+
+  describe('write queue serialization', () => {
+    it('should write data to the PTY process', async () => {
+      const sessionId = service.spawnCommand('bash', [], '/home');
+      const ptyInstance = mockPtyInstances[0];
+
+      service.write(sessionId, 'ls\n');
+
+      // Write is async via promise chain, await the microtask
+      await Promise.resolve();
+
+      expect(ptyInstance.write).toHaveBeenCalledWith('ls\n');
+    });
+
+    it('should do nothing for non-existent sessions', () => {
+      // Should not throw
+      service.write(999, 'data');
+    });
+
+    it('should chunk large writes (>1000 chars)', async () => {
+      const sessionId = service.spawnCommand('bash', [], '/home');
+      const ptyInstance = mockPtyInstances[0];
+
+      const largeData = 'y'.repeat(1500);
+      service.write(sessionId, largeData);
+
+      // Allow entire write chain to complete (15 chunks of 100, each with setImmediate)
+      // Wait for the writeChain promise to resolve
+      const session = (
+        service as unknown as { sessions: Map<number, { writeChain: Promise<void> }> }
+      ).sessions.get(sessionId);
+      await session!.writeChain;
+
+      // Should have been called multiple times for chunked writes
+      const totalWritten = ptyInstance.write.mock.calls.reduce(
+        (sum: number, call: [string]) => sum + call[0].length,
+        0
+      );
+      expect(totalWritten).toBe(1500);
+    });
+  });
+
+  describe('resize', () => {
+    it('should resize the PTY process', () => {
+      const sessionId = service.spawnCommand('bash', [], '/home');
+      const ptyInstance = mockPtyInstances[0];
+
+      service.resize(sessionId, 120, 40);
+
+      expect(ptyInstance.resize).toHaveBeenCalledWith(120, 40);
+    });
+
+    it('should reject invalid dimensions (zero)', () => {
+      const sessionId = service.spawnCommand('bash', [], '/home');
+      const ptyInstance = mockPtyInstances[0];
+
+      service.resize(sessionId, 0, 0);
+
+      expect(ptyInstance.resize).not.toHaveBeenCalled();
+    });
+
+    it('should reject invalid dimensions (negative)', () => {
+      const sessionId = service.spawnCommand('bash', [], '/home');
+      const ptyInstance = mockPtyInstances[0];
+
+      service.resize(sessionId, -10, 24);
+
+      expect(ptyInstance.resize).not.toHaveBeenCalled();
+    });
+
+    it('should reject non-finite dimensions', () => {
+      const sessionId = service.spawnCommand('bash', [], '/home');
+      const ptyInstance = mockPtyInstances[0];
+
+      service.resize(sessionId, NaN, 24);
+
+      expect(ptyInstance.resize).not.toHaveBeenCalled();
+    });
+
+    it('should round dimensions to integers', () => {
+      const sessionId = service.spawnCommand('bash', [], '/home');
+      const ptyInstance = mockPtyInstances[0];
+
+      service.resize(sessionId, 80.7, 24.3);
+
+      expect(ptyInstance.resize).toHaveBeenCalledWith(81, 24);
+    });
+
+    it('should suppress output during resize (except first)', () => {
+      jest.useFakeTimers();
+      const sessionId = service.spawnCommand('bash', [], '/home');
+      const ptyInstance = mockPtyInstances[0];
+
+      // First resize - should NOT suppress output
+      service.resize(sessionId, 80, 24);
+      ptyInstance.simulateData('after-first-resize');
+      jest.advanceTimersByTime(10);
+      expect(eventEmitter.emit).toHaveBeenCalledWith('terminal.output', {
+        sessionId,
+        data: 'after-first-resize',
+      });
+
+      // Reset mock
+      (eventEmitter.emit as jest.Mock).mockClear();
+
+      // Second resize - should suppress output for 150ms
+      service.resize(sessionId, 120, 40);
+      ptyInstance.simulateData('during-resize');
+      jest.advanceTimersByTime(10);
+      // Output should be suppressed
+      expect(eventEmitter.emit).not.toHaveBeenCalledWith(
+        'terminal.output',
+        expect.objectContaining({ data: 'during-resize' })
+      );
+
+      // After 150ms debounce, output should resume
+      jest.advanceTimersByTime(200);
+      ptyInstance.simulateData('after-resize');
+      jest.advanceTimersByTime(10);
+      expect(eventEmitter.emit).toHaveBeenCalledWith('terminal.output', {
+        sessionId,
+        data: 'after-resize',
+      });
+
+      jest.useRealTimers();
+    });
+  });
+
+  describe('shutdown guard', () => {
+    it('should prevent onData processing during shutdown', () => {
+      jest.useFakeTimers();
+      const sessionId = service.spawnCommand('bash', [], '/home');
+      const ptyInstance = mockPtyInstances[0];
+
+      // Trigger shutdown
+      service.onModuleDestroy();
+
+      // Data arriving after shutdown should be ignored
+      ptyInstance.simulateData('after-shutdown');
+      jest.advanceTimersByTime(100);
+
+      // Should NOT have emitted terminal.output for the data
+      const outputCalls = (eventEmitter.emit as jest.Mock).mock.calls.filter(
+        (call: [string, unknown]) => call[0] === 'terminal.output'
+      );
+
+      // The output buffer was empty before shutdown, so no cleanup flush either
+      expect(outputCalls.length).toBe(0);
+
+      // Verify session cleanup happened
+      expect(service.hasSession(sessionId)).toBe(false);
+      jest.useRealTimers();
+    });
+
+    it('should prevent onExit processing during shutdown', () => {
+      jest.useFakeTimers();
+      service.spawnCommand('bash', [], '/home');
+      const ptyInstance = mockPtyInstances[0];
+
+      // Trigger shutdown
+      service.onModuleDestroy();
+
+      // Exit arriving after shutdown should be ignored
+      ptyInstance.simulateExit(0);
+
+      // terminal.closed should NOT be emitted (shutdown guard prevents it)
+      const closedCalls = (eventEmitter.emit as jest.Mock).mock.calls.filter(
+        (call: [string, unknown]) => call[0] === 'terminal.closed'
+      );
+      expect(closedCalls.length).toBe(0);
+
+      jest.useRealTimers();
     });
   });
 
@@ -133,33 +392,6 @@ describe('TerminalService', () => {
         signal: undefined,
       });
       expect(service.hasSession(sessionId)).toBe(false);
-    });
-  });
-
-  describe('write', () => {
-    it('should write data to the PTY process', () => {
-      const sessionId = service.spawnCommand('bash', [], '/home');
-      const ptyInstance = mockPtyInstances[0];
-
-      service.write(sessionId, 'ls\n');
-
-      expect(ptyInstance.write).toHaveBeenCalledWith('ls\n');
-    });
-
-    it('should do nothing for non-existent sessions', () => {
-      // Should not throw
-      service.write(999, 'data');
-    });
-  });
-
-  describe('resize', () => {
-    it('should resize the PTY process', () => {
-      const sessionId = service.spawnCommand('bash', [], '/home');
-      const ptyInstance = mockPtyInstances[0];
-
-      service.resize(sessionId, 120, 40);
-
-      expect(ptyInstance.resize).toHaveBeenCalledWith(120, 40);
     });
   });
 

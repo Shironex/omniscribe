@@ -178,7 +178,9 @@ export interface TerminalSpawnResponse {
 /**
  * Response for terminal join
  */
-export interface TerminalJoinResponse extends SuccessResponse {}
+export interface TerminalJoinResponse extends SuccessResponse {
+  scrollback?: string;
+}
 
 // ============================================
 // MCP Payloads

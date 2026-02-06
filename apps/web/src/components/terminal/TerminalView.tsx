@@ -5,7 +5,19 @@ const logger = createLogger('TerminalView');
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
-import { connectTerminal, writeToTerminal, resizeTerminal } from '@/lib/terminal';
+import { SearchAddon } from '@xterm/addon-search';
+import { WebglAddon } from '@xterm/addon-webgl';
+import {
+  connectTerminal,
+  writeToTerminal,
+  writeToTerminalChunked,
+  resizeTerminal,
+} from '@/lib/terminal';
+import { useTerminalSettingsStore } from '@/stores/useTerminalSettingsStore';
+import { getTerminalTheme } from '@/lib/terminal-themes';
+import { FilePathLinkProvider } from '@/lib/terminal-link-provider';
+import { LARGE_PASTE_WARNING_THRESHOLD } from '@/lib/terminal-constants';
+import { TerminalSearchBar, type SearchOptions } from './TerminalSearchBar';
 import '@xterm/xterm/css/xterm.css';
 
 export interface TerminalViewProps {
@@ -17,15 +29,14 @@ export interface TerminalViewProps {
 
 type TerminalStatus = 'connecting' | 'connected' | 'disconnected' | 'error';
 
+const RESIZE_DEBOUNCE_MS = 100;
+
 // Helper to safely check if terminal is ready for operations
 const isTerminalReady = (terminal: Terminal | null): terminal is Terminal => {
   if (!terminal) return false;
   try {
-    // Check if terminal has been disposed or is not fully initialized
-    // Access the element property which will be null/undefined if disposed
     const element = terminal.element;
     if (!element) return false;
-    // Check if dimensions are available (required for fit operations)
     const dims = (terminal as unknown as { _core?: { _renderService?: { dimensions?: unknown } } })
       ._core?._renderService?.dimensions;
     return dims !== undefined;
@@ -43,11 +54,9 @@ const safeFit = (
 ): { cols: number; rows: number } | null => {
   if (!fitAddon || !terminal || !container) return null;
 
-  // Check container has dimensions
   const { offsetWidth, offsetHeight } = container;
   if (offsetWidth <= 0 || offsetHeight <= 0) return null;
 
-  // Check terminal is ready
   if (!isTerminalReady(terminal)) return null;
 
   try {
@@ -68,20 +77,31 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
   const terminalRef = useRef<HTMLDivElement>(null);
   const xtermRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
+  const searchAddonRef = useRef<SearchAddon | null>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
   const connectionRef = useRef<ReturnType<typeof connectTerminal> | null>(null);
-  // Track if the terminal has been disposed to prevent post-cleanup operations
   const isDisposedRef = useRef<boolean>(false);
-  // Track if terminal is fully ready (opened and first fit completed)
   const isReadyRef = useRef<boolean>(false);
+  const resizeDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Store callbacks in refs to prevent re-initialization when they change
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
 
   const [status, setStatus] = useState<TerminalStatus>('connecting');
+  const [showSearch, setShowSearch] = useState(false);
 
-  // Handle terminal output - use ref to avoid dependency on sessionId for logging
+  // Terminal settings from store
+  const fontSize = useTerminalSettingsStore(s => s.fontSize);
+  const fontFamily = useTerminalSettingsStore(s => s.fontFamily);
+  const fontWeight = useTerminalSettingsStore(s => s.fontWeight);
+  const lineHeight = useTerminalSettingsStore(s => s.lineHeight);
+  const letterSpacing = useTerminalSettingsStore(s => s.letterSpacing);
+  const cursorStyle = useTerminalSettingsStore(s => s.cursorStyle);
+  const cursorBlink = useTerminalSettingsStore(s => s.cursorBlink);
+  const scrollback = useTerminalSettingsStore(s => s.scrollback);
+  const terminalThemeName = useTerminalSettingsStore(s => s.terminalThemeName);
+
   const sessionIdRef = useRef(sessionId);
   sessionIdRef.current = sessionId;
 
@@ -96,130 +116,205 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
     }
   }, []);
 
-  // Handle terminal close - use ref to avoid re-initialization
   const handleClose = useCallback((exitCode: number, signal?: number) => {
     if (isDisposedRef.current) return;
     setStatus('disconnected');
     onCloseRef.current?.(exitCode, signal);
   }, []);
 
-  // Handle resize - only fit if container has dimensions and terminal is ready
+  // Debounced resize handler
   const handleResize = useCallback(() => {
-    // Guard against post-disposal calls
     if (isDisposedRef.current || !isReadyRef.current) return;
 
-    logger.debug('Fitting terminal');
-    const result = safeFit(fitAddonRef.current, xtermRef.current, terminalRef.current);
-    if (result) {
-      resizeTerminal(sessionIdRef.current, result.cols, result.rows);
+    // Clear pending debounce
+    if (resizeDebounceRef.current) {
+      clearTimeout(resizeDebounceRef.current);
     }
+
+    resizeDebounceRef.current = setTimeout(() => {
+      resizeDebounceRef.current = null;
+      if (isDisposedRef.current || !isReadyRef.current) return;
+
+      const result = safeFit(fitAddonRef.current, xtermRef.current, terminalRef.current);
+      if (result) {
+        resizeTerminal(sessionIdRef.current, result.cols, result.rows);
+      }
+    }, RESIZE_DEBOUNCE_MS);
+  }, []);
+
+  // Search handlers
+  const handleSearch = useCallback((term: string, options: SearchOptions) => {
+    if (!searchAddonRef.current) return;
+    if (!term) {
+      searchAddonRef.current.clearDecorations();
+      return;
+    }
+    searchAddonRef.current.findNext(term, {
+      caseSensitive: options.caseSensitive,
+      regex: options.regex,
+    });
+  }, []);
+
+  const handleSearchNext = useCallback(() => {
+    searchAddonRef.current?.findNext('');
+  }, []);
+
+  const handleSearchPrevious = useCallback(() => {
+    searchAddonRef.current?.findPrevious('');
+  }, []);
+
+  const handleSearchClose = useCallback(() => {
+    searchAddonRef.current?.clearDecorations();
+    setShowSearch(false);
+    xtermRef.current?.focus();
   }, []);
 
   // Initialize terminal
   useEffect(() => {
     if (!terminalRef.current) return;
 
-    // Reset disposal state on mount
     isDisposedRef.current = false;
     isReadyRef.current = false;
 
     const container = terminalRef.current;
     let terminal: Terminal | null = null;
     let fitAddon: FitAddon | null = null;
+    let searchAddon: SearchAddon | null = null;
     let isInitialized = false;
     let initRetryTimeout: ReturnType<typeof setTimeout> | null = null;
 
-    // Function to initialize terminal once container has dimensions
+    const theme = getTerminalTheme(terminalThemeName);
+
     const initializeTerminal = () => {
-      // Guard against multiple initializations or post-disposal calls
       if (isInitialized || isDisposedRef.current || !container) return;
 
-      // Check that container has actual dimensions
       const { offsetWidth, offsetHeight } = container;
-      if (offsetWidth === 0 || offsetHeight === 0) {
-        return; // Container not ready yet
-      }
+      if (offsetWidth === 0 || offsetHeight === 0) return;
 
       isInitialized = true;
 
-      // Create terminal instance
       terminal = new Terminal({
-        fontSize: 13,
-        fontFamily:
-          '"JetBrains Mono", "Fira Code", "Cascadia Code", Menlo, Monaco, "Courier New", monospace',
-        cursorBlink: true,
-        cursorStyle: 'block',
-        scrollback: 10000,
-        theme: {
-          background: '#1a1b26',
-          foreground: '#c0caf5',
-          cursor: '#c0caf5',
-          cursorAccent: '#1a1b26',
-          selectionBackground: '#33467c',
-          selectionForeground: '#c0caf5',
-          black: '#15161e',
-          red: '#f7768e',
-          green: '#9ece6a',
-          yellow: '#e0af68',
-          blue: '#7aa2f7',
-          magenta: '#bb9af7',
-          cyan: '#7dcfff',
-          white: '#a9b1d6',
-          brightBlack: '#414868',
-          brightRed: '#f7768e',
-          brightGreen: '#9ece6a',
-          brightYellow: '#e0af68',
-          brightBlue: '#7aa2f7',
-          brightMagenta: '#bb9af7',
-          brightCyan: '#7dcfff',
-          brightWhite: '#c0caf5',
-        },
+        fontSize,
+        fontFamily: fontFamily.join(', '),
+        fontWeight,
+        lineHeight,
+        letterSpacing,
+        cursorBlink,
+        cursorStyle,
+        scrollback,
+        theme,
         allowProposedApi: true,
       });
 
-      // Create and load addons
       fitAddon = new FitAddon();
       const webLinksAddon = new WebLinksAddon();
+      searchAddon = new SearchAddon();
 
       terminal.loadAddon(fitAddon);
       terminal.loadAddon(webLinksAddon);
+      terminal.loadAddon(searchAddon);
 
-      // Open terminal in container
       logger.info('Terminal opened for session', sessionId);
       terminal.open(container);
 
-      // Store refs AFTER opening (terminal is now attached to DOM)
+      // Try WebGL rendering with canvas fallback
+      try {
+        const webglAddon = new WebglAddon();
+        webglAddon.onContextLoss(() => {
+          webglAddon.dispose();
+        });
+        terminal.loadAddon(webglAddon);
+        logger.debug('WebGL addon loaded successfully');
+      } catch {
+        logger.debug('WebGL addon failed, using canvas fallback');
+      }
+
+      // Register file path link provider
+      terminal.registerLinkProvider(new FilePathLinkProvider(terminal));
+
       xtermRef.current = terminal;
       fitAddonRef.current = fitAddon;
+      searchAddonRef.current = searchAddon;
 
-      // Delayed initial fit - wait for terminal to be fully rendered
-      // Use multiple frames to ensure xterm's internal render service is ready
+      // Smart keyboard handler
+      const terminalInstance = terminal;
+      terminal.attachCustomKeyEventHandler((e: KeyboardEvent) => {
+        // Ctrl+Shift+F: toggle search
+        if (e.ctrlKey && e.shiftKey && e.key === 'F' && e.type === 'keydown') {
+          setShowSearch(prev => !prev);
+          return false;
+        }
+
+        // Ctrl+C: copy if selected, send ^C otherwise
+        if (e.ctrlKey && !e.shiftKey && e.key === 'c' && e.type === 'keydown') {
+          if (terminalInstance.hasSelection()) {
+            navigator.clipboard.writeText(terminalInstance.getSelection());
+            terminalInstance.clearSelection();
+            return false;
+          }
+          return true; // Let ^C pass through to terminal
+        }
+
+        // Ctrl+V: paste
+        if (e.ctrlKey && !e.shiftKey && e.key === 'v' && e.type === 'keydown') {
+          navigator.clipboard.readText().then(text => {
+            if (text.length > LARGE_PASTE_WARNING_THRESHOLD) {
+              writeToTerminalChunked(sessionIdRef.current, text);
+            } else {
+              writeToTerminal(sessionIdRef.current, text);
+            }
+          });
+          return false;
+        }
+
+        // Ctrl+Shift+C/V: Linux-style copy/paste
+        if (e.ctrlKey && e.shiftKey && e.key === 'C' && e.type === 'keydown') {
+          if (terminalInstance.hasSelection()) {
+            navigator.clipboard.writeText(terminalInstance.getSelection());
+            terminalInstance.clearSelection();
+          }
+          return false;
+        }
+        if (e.ctrlKey && e.shiftKey && e.key === 'V' && e.type === 'keydown') {
+          navigator.clipboard.readText().then(text => {
+            if (text.length > LARGE_PASTE_WARNING_THRESHOLD) {
+              writeToTerminalChunked(sessionIdRef.current, text);
+            } else {
+              writeToTerminal(sessionIdRef.current, text);
+            }
+          });
+          return false;
+        }
+
+        // Let Ctrl+Number pass through for tab switching
+        if (e.ctrlKey && e.key >= '1' && e.key <= '9') {
+          return false;
+        }
+
+        return true;
+      });
+
+      // Delayed initial fit
       const performInitialFit = (retriesLeft: number) => {
         if (isDisposedRef.current || !terminal || !fitAddon) return;
 
         const result = safeFit(fitAddon, terminal, container);
         if (result) {
-          // Success - terminal is ready
           isReadyRef.current = true;
           resizeTerminal(sessionId, result.cols, result.rows);
 
-          // Now connect to terminal session (after terminal is fully ready)
-          // Guard against double-connection from React StrictMode's double-mounting
           if (!isDisposedRef.current && !connectionRef.current) {
             connectionRef.current = connectTerminal(sessionId, handleOutput, handleClose);
             logger.info('Terminal connected for session', sessionId);
             setStatus('connected');
           }
         } else if (retriesLeft > 0) {
-          // Retry after a short delay
           initRetryTimeout = setTimeout(() => {
             requestAnimationFrame(() => performInitialFit(retriesLeft - 1));
           }, 50);
         } else {
-          // Give up on retries, try to connect anyway
           logger.warn('Fit retries exhausted, connecting anyway');
           isReadyRef.current = true;
-          // Guard against double-connection from React StrictMode's double-mounting
           if (!isDisposedRef.current && !connectionRef.current) {
             connectionRef.current = connectTerminal(sessionId, handleOutput, handleClose);
             setStatus('connected');
@@ -227,7 +322,6 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
         }
       };
 
-      // Start fit attempts after next frame
       requestAnimationFrame(() => performInitialFit(5));
 
       // Handle user input
@@ -238,50 +332,55 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
       });
     };
 
-    // Set up ResizeObserver to detect when container gets dimensions and for auto-fit
+    // ResizeObserver with init detection
     resizeObserverRef.current = new ResizeObserver(() => {
-      // Guard against post-disposal calls
       if (isDisposedRef.current) return;
 
-      // Try to initialize if not yet done
       if (!isInitialized) {
         initializeTerminal();
       } else if (isReadyRef.current) {
-        // Already initialized and ready, just handle resize
         handleResize();
       }
     });
     resizeObserverRef.current.observe(container);
 
-    // Try immediate initialization in case container already has dimensions
     initializeTerminal();
 
-    // Cleanup
+    // Listen for refit-all events (from panel resizes, DnD)
+    const handleRefitAll = () => {
+      if (!isDisposedRef.current && isReadyRef.current) {
+        handleResize();
+      }
+    };
+    window.addEventListener('terminal-refit-all', handleRefitAll);
+
     return () => {
       logger.debug('Cleaning up terminal for session', sessionId);
-      // Mark as disposed FIRST to prevent any new operations
       isDisposedRef.current = true;
       isReadyRef.current = false;
 
-      // Clear any pending retry timeout
+      window.removeEventListener('terminal-refit-all', handleRefitAll);
+
+      if (resizeDebounceRef.current) {
+        clearTimeout(resizeDebounceRef.current);
+        resizeDebounceRef.current = null;
+      }
+
       if (initRetryTimeout) {
         clearTimeout(initRetryTimeout);
         initRetryTimeout = null;
       }
 
-      // Disconnect resize observer BEFORE disposing terminal
       if (resizeObserverRef.current) {
         resizeObserverRef.current.disconnect();
         resizeObserverRef.current = null;
       }
 
-      // Cleanup connection
       if (connectionRef.current) {
         connectionRef.current.cleanup();
         connectionRef.current = null;
       }
 
-      // Dispose terminal last
       if (xtermRef.current) {
         try {
           xtermRef.current.dispose();
@@ -292,9 +391,48 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
       }
 
       fitAddonRef.current = null;
+      searchAddonRef.current = null;
     };
-    // Only re-initialize when sessionId changes - callbacks are stored in refs
   }, [sessionId]);
+
+  // Apply settings changes live
+  useEffect(() => {
+    const terminal = xtermRef.current;
+    if (!terminal || isDisposedRef.current || !isReadyRef.current) return;
+
+    const theme = getTerminalTheme(terminalThemeName);
+
+    try {
+      terminal.options.fontSize = fontSize;
+      terminal.options.fontFamily = fontFamily.join(', ');
+      terminal.options.fontWeight = fontWeight;
+      terminal.options.lineHeight = lineHeight;
+      terminal.options.letterSpacing = letterSpacing;
+      terminal.options.cursorBlink = cursorBlink;
+      terminal.options.cursorStyle = cursorStyle;
+      terminal.options.scrollback = scrollback;
+      terminal.options.theme = theme;
+
+      terminal.refresh(0, terminal.rows - 1);
+
+      const result = safeFit(fitAddonRef.current, terminal, terminalRef.current);
+      if (result) {
+        resizeTerminal(sessionIdRef.current, result.cols, result.rows);
+      }
+    } catch {
+      logger.debug('Failed to apply settings update');
+    }
+  }, [
+    fontSize,
+    fontFamily,
+    fontWeight,
+    lineHeight,
+    letterSpacing,
+    cursorBlink,
+    cursorStyle,
+    scrollback,
+    terminalThemeName,
+  ]);
 
   // Handle focus changes
   useEffect(() => {
@@ -310,7 +448,6 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
   // Handle window resize
   useEffect(() => {
     const handleWindowResize = () => {
-      // Guard against post-disposal calls
       if (!isDisposedRef.current && isReadyRef.current) {
         handleResize();
       }
@@ -322,17 +459,14 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
     };
   }, [handleResize]);
 
-  // NOTE: We intentionally do NOT kill the terminal on unmount.
-  // The terminal is a backend resource that should persist even if the view unmounts.
-  // Terminal lifecycle is controlled by explicit user actions (close button) or session deletion.
+  const theme = getTerminalTheme(terminalThemeName);
 
-  // Get border color based on status
   const getBorderStyle = (): React.CSSProperties => {
     const borderColors: Record<TerminalStatus, string> = {
-      connecting: '#e0af68', // yellow
-      connected: '#9ece6a', // green
-      disconnected: '#f7768e', // red
-      error: '#f7768e', // red
+      connecting: '#e0af68',
+      connected: '#9ece6a',
+      disconnected: '#f7768e',
+      error: '#f7768e',
     };
 
     return {
@@ -350,9 +484,18 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
         height: '100%',
         overflow: 'hidden',
         borderRadius: '4px',
+        position: 'relative',
         ...getBorderStyle(),
       }}
     >
+      {showSearch && (
+        <TerminalSearchBar
+          onSearch={handleSearch}
+          onNext={handleSearchNext}
+          onPrevious={handleSearchPrevious}
+          onClose={handleSearchClose}
+        />
+      )}
       <div
         ref={terminalRef}
         style={{
@@ -360,7 +503,7 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
           height: '100%',
           padding: '4px',
           boxSizing: 'border-box',
-          backgroundColor: '#1a1b26',
+          backgroundColor: theme.background ?? '#1a1b26',
         }}
       />
     </div>

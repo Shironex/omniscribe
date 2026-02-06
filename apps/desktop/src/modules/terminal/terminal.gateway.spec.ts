@@ -45,6 +45,7 @@ describe('TerminalGateway', () => {
       resize: jest.fn(),
       kill: jest.fn().mockResolvedValue(undefined),
       hasSession: jest.fn().mockReturnValue(true),
+      getScrollback: jest.fn().mockReturnValue(null),
     } as unknown as jest.Mocked<TerminalService>;
 
     const module: TestingModule = await Test.createTestingModule({
@@ -100,10 +101,6 @@ describe('TerminalGateway', () => {
       const client1Reconnect = createMockSocket('c1');
       gateway.handleConnection(client1Reconnect);
 
-      // The session set should still contain 42
-      // We verify indirectly: spawn uses the sessions set, but we can check
-      // via the handleTerminalOutput fallback path
-      // Instead, directly inspect the static map
       const sessions = (TerminalGateway as any).clientSessions.get('c1') as Set<number>;
       expect(sessions).toBeDefined();
       expect(sessions.has(42)).toBe(true);
@@ -240,6 +237,25 @@ describe('TerminalGateway', () => {
 
       expect(terminalService.write).not.toHaveBeenCalled();
     });
+
+    it('should reject non-string data', () => {
+      const client = createMockSocket('c1');
+      terminalService.hasSession.mockReturnValue(true);
+
+      gateway.handleInput(client, { sessionId: 1, data: 123 as any });
+
+      expect(terminalService.write).not.toHaveBeenCalled();
+    });
+
+    it('should reject data exceeding 1MB', () => {
+      const client = createMockSocket('c1');
+      terminalService.hasSession.mockReturnValue(true);
+
+      const largeData = 'x'.repeat(1_048_577); // 1MB + 1 byte
+      gateway.handleInput(client, { sessionId: 1, data: largeData });
+
+      expect(terminalService.write).not.toHaveBeenCalled();
+    });
   });
 
   // =========================================================================
@@ -261,6 +277,33 @@ describe('TerminalGateway', () => {
       terminalService.hasSession.mockReturnValue(false);
 
       gateway.handleResize(client, { sessionId: 999, cols: 80, rows: 24 });
+
+      expect(terminalService.resize).not.toHaveBeenCalled();
+    });
+
+    it('should reject invalid dimensions (zero)', () => {
+      const client = createMockSocket('c1');
+      terminalService.hasSession.mockReturnValue(true);
+
+      gateway.handleResize(client, { sessionId: 1, cols: 0, rows: 0 });
+
+      expect(terminalService.resize).not.toHaveBeenCalled();
+    });
+
+    it('should reject invalid dimensions (negative)', () => {
+      const client = createMockSocket('c1');
+      terminalService.hasSession.mockReturnValue(true);
+
+      gateway.handleResize(client, { sessionId: 1, cols: -10, rows: 24 });
+
+      expect(terminalService.resize).not.toHaveBeenCalled();
+    });
+
+    it('should reject non-finite dimensions', () => {
+      const client = createMockSocket('c1');
+      terminalService.hasSession.mockReturnValue(true);
+
+      gateway.handleResize(client, { sessionId: 1, cols: NaN, rows: 24 });
 
       expect(terminalService.resize).not.toHaveBeenCalled();
     });
@@ -339,10 +382,21 @@ describe('TerminalGateway', () => {
       const result = gateway.handleJoin(client, { sessionId: 10 });
 
       expect(client.join).toHaveBeenCalledWith('terminal:10');
-      expect(result).toEqual({ success: true });
+      expect(result).toEqual({ success: true, scrollback: undefined });
 
       const sessions = (TerminalGateway as any).clientSessions.get('c1') as Set<number>;
       expect(sessions.has(10)).toBe(true);
+    });
+
+    it('should return scrollback data when available', () => {
+      const client = createMockSocket('c1');
+      gateway.handleConnection(client);
+      terminalService.hasSession.mockReturnValue(true);
+      terminalService.getScrollback.mockReturnValue('previous output data');
+
+      const result = gateway.handleJoin(client, { sessionId: 10 });
+
+      expect(result).toEqual({ success: true, scrollback: 'previous output data' });
     });
 
     it('should return error for non-existent session', () => {
