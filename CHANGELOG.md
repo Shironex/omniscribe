@@ -2,6 +2,60 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.1.4 (2026-02-06)
+
+### Bug Fixes
+
+- Use native `.ico` icon for Windows builds instead of `.png` to fix missing/broken taskbar and window icon
+- Use platform-conditional icon format in BrowserWindow (`.ico` on Windows, `.png` elsewhere)
+
+## 0.1.3 (2026-02-06)
+
+### Security
+
+- **[P0]** Fix shell injection: replace `exec()` with `execFile()` in git and GitHub CLI services — arguments are now passed as arrays, preventing shell metacharacter injection
+- **[P1]** Bind NestJS backend to `127.0.0.1` instead of `0.0.0.0`, preventing LAN exposure
+
+### Bug Fixes
+
+- **[P2]** Fix socket connection hang when concurrent callers race during initial connect — replaced `setInterval` polling (no timeout) with a pending callers queue and 30-second timeout
+- **[P3]** Fix MCP server version drift: version is now injected from `package.json` at build time instead of being hardcoded
+
+### Docs
+
+- Update SECURITY.md to reflect `execFile` with argument arrays
+
+## 0.1.2 (2026-02-06)
+
+### Features
+
+- Toast notifications for auto-update events (available, downloaded, error)
+- macOS graceful fallback: directs users to GitHub Releases instead of attempting auto-install (code signing not yet available)
+- Reusable Markdown component for rendering HTML release notes from GitHub
+- Centralized `GITHUB_RELEASES_URL` in shared constants
+
+### Bug Fixes
+
+- Updater listeners now initialize at app startup instead of only when Settings > About is opened, so the 5-second startup check is no longer missed
+- Generic update errors are now surfaced to users instead of being silently swallowed
+- Prevent potential listener leak if app unmounts during async initialization
+
+### Improvements
+
+- Centralized platform detection (`IS_MAC`) in shared utility
+- Extracted `MacDownloadFallback` component to reduce duplication in About section
+- Use project `cn()` utility consistently in Markdown component
+- Named constants for toast durations
+
+## 0.1.1 (2026-02-06)
+
+### Bug Fixes
+
+- Add left padding on macOS to prevent traffic light buttons from overlapping tab text
+- Hide redundant custom window controls on macOS (native traffic lights suffice)
+- Fix app crash (EADDRINUSE) when reopening from macOS dock after closing window
+- Fix duplicate IPC handler registration on macOS window recreate
+
 ## 0.1.0 (2026-02-05)
 
 ### Features
@@ -20,12 +74,14 @@ All notable changes to this project will be documented in this file.
 - AI-powered quick actions for git and development workflows
 - Welcome view with recent projects
 - Idle landing view with greeting and keyboard shortcut hints
+- Auto-update system with download progress tracking and user-controlled installation
+- Default session mode setting
 
 ### Security
 
 - Content Security Policy (CSP) for renderer process
 - CORS hardening restricted to localhost origins
-- Input validation and shell escaping for CLI commands
+- Safe argument passing for CLI commands (execFile with argument arrays)
 - Electron security: nodeIntegration disabled, contextIsolation enabled
 
 ### Architecture

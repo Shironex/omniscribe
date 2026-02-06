@@ -1,9 +1,12 @@
 <a name="top"></a>
 
-# Omniscribe
+<div align="center">
+  <img src="assets/icon.png" alt="Omniscribe" width="128" height="128" />
+  <h1>Omniscribe</h1>
+  <p><strong>Orchestrate multiple AI coding sessions in parallel</strong></p>
 
-**Orchestrate multiple AI coding sessions in parallel**
-
+[![GitHub Release](https://img.shields.io/github/v/release/Shironex/omniscribe?style=flat&color=blue)](https://github.com/Shironex/omniscribe/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/Shironex/omniscribe/total?style=flat&color=green)](https://github.com/Shironex/omniscribe/releases/latest)
 [![Electron](https://img.shields.io/badge/Electron-40.0-47848F?logo=electron&logoColor=white)](https://www.electronjs.org/)
 [![React](https://img.shields.io/badge/React-18.3-61DAFB?logo=react&logoColor=white)](https://react.dev/)
 [![NestJS](https://img.shields.io/badge/NestJS-10.4-E0234E?logo=nestjs&logoColor=white)](https://nestjs.com/)
@@ -11,9 +14,14 @@
 [![OS](https://img.shields.io/badge/OS-Windows%20%7C%20macOS%20%7C%20Linux-0078D4)](https://github.com/Shironex/omniscribe)
 [![License](https://img.shields.io/badge/License-Custom-blue)](LICENSE)
 
+**[Download Latest Release](https://github.com/Shironex/omniscribe/releases/latest)** | [macOS](https://github.com/Shironex/omniscribe/releases/latest) | [Windows](https://github.com/Shironex/omniscribe/releases/latest) | [Linux](https://github.com/Shironex/omniscribe/releases/latest)
+
+</div>
+
 ## Table of Contents
 
 - [About](#about)
+- [Screenshots](#screenshots)
 - [Features](#features)
 - [Keyboard Shortcuts](#keyboard-shortcuts)
 - [Quick Start](#quick-start)
@@ -25,6 +33,20 @@
 ## About
 
 Omniscribe is a desktop application for managing multiple AI coding assistant sessions (Claude Code, etc.) simultaneously. Run 1-6 sessions in parallel, each with its own terminal, optional git worktree isolation, and MCP server configuration.
+
+## Screenshots
+
+### Multi-Session Grid with Quick Actions
+
+![Multi-session grid with quick actions menu](assets/quick_actions.png)
+
+### Main View
+
+![Main grid view with 6 parallel sessions](assets/main.png)
+
+### Settings
+
+![Settings dialog with Claude CLI integration](assets/settings.png)
 
 ## Features
 

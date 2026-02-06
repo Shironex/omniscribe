@@ -15,6 +15,7 @@
     }
   ],
   "asarUnpack": ["**/node_modules/node-pty/**/*"],
+  "artifactName": "${productName}-${version}-${arch}.${ext}",
   "nodeGypRebuild": false,
   "npmRebuild": false,
   "publish": {
@@ -28,14 +29,15 @@
     "target": ["dmg", "zip"]
   },
   "win": {
-    "icon": "resources/icon.png",
+    "icon": "resources/icon.ico",
     "target": ["nsis"],
     "signAndEditExecutable": false
   },
   "linux": {
     "icon": "resources/icon.png",
     "target": ["AppImage", "deb"],
-    "category": "Development"
+    "category": "Development",
+    "executableName": "omniscribe"
   },
   "nsis": {
     "oneClick": false,

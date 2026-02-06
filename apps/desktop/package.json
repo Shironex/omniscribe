@@ -1,8 +1,12 @@
 {
   "name": "@omniscribe/desktop",
-  "version": "0.1.0",
+  "version": "0.1.4",
   "description": "Omniscribe - AI coding assistant orchestration desktop app",
-  "author": "Omniscribe",
+  "author": {
+    "name": "Shironex",
+    "email": "support@taketach.pl"
+  },
+  "homepage": "https://github.com/Shironex/omniscribe",
   "private": true,
   "main": "dist/main/index.js",
   "scripts": {

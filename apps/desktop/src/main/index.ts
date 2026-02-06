@@ -4,10 +4,12 @@ import { type INestApplication } from '@nestjs/common';
 import { IoAdapter } from '@nestjs/platform-socket.io';
 import { AppModule } from '../modules/app.module';
 import { createMainWindow } from './window';
+import { cleanupIpcHandlers } from './ipc-handlers';
 import { logger, getLogPath } from './logger';
 import { initializeAutoUpdater } from './updater';
 import { corsOriginCallback } from '../modules/shared/cors.config';
 import { NestLoggerAdapter } from '../modules/shared/nest-logger';
+import { LOCALHOST } from '@omniscribe/shared';
 
 export let mainWindow: BrowserWindow | null = null;
 let nestApp: INestApplication | null = null;
@@ -31,7 +33,7 @@ async function bootstrapNestApp(): Promise<void> {
     });
 
     logger.info('Starting to listen on port 3001...');
-    await nestApp.listen(3001);
+    await nestApp.listen(3001, LOCALHOST);
     logger.info('NestJS server running on port 3001');
     logger.info('Log file location:', getLogPath());
   } catch (error) {
@@ -77,10 +79,15 @@ app.on('window-all-closed', () => {
   }
 });
 
-app.on('activate', () => {
+app.on('activate', async () => {
   logger.info('App activated');
-  if (BrowserWindow.getAllWindows().length === 0) {
-    bootstrap();
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.show();
+  } else if (BrowserWindow.getAllWindows().length === 0) {
+    // NestJS is already running, clean up old IPC handlers and recreate the window
+    cleanupIpcHandlers();
+    mainWindow = await createMainWindow();
+    initializeAutoUpdater(mainWindow, process.env.NODE_ENV === 'development');
   }
 });
 
