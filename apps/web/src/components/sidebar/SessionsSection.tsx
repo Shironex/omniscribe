@@ -2,10 +2,10 @@ import { useMemo } from 'react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { Terminal, Plus, AlertCircle } from 'lucide-react';
-import { useSessionStore } from '@/stores';
+import { useSessionStore, selectRunningSessionCount, selectIsAtSessionLimit } from '@/stores';
 import { useWorkspaceStore, selectActiveTab } from '@/stores';
 import { StatusDot } from '@/components/shared/StatusLegend';
-import { mapSessionStatus } from '@omniscribe/shared';
+import { mapSessionStatus, MAX_CONCURRENT_SESSIONS } from '@omniscribe/shared';
 
 interface SessionsSectionProps {
   className?: string;
@@ -20,6 +20,8 @@ export function SessionsSection({ className, onSessionClick, onNewSession }: Ses
   const allSessions = useSessionStore(state => state.sessions);
   const isLoading = useSessionStore(state => state.isLoading);
   const error = useSessionStore(state => state.error);
+  const runningCount = useSessionStore(selectRunningSessionCount);
+  const isAtLimit = useSessionStore(selectIsAtSessionLimit);
 
   // Memoize filtered sessions to avoid creating new arrays on every render
   const sessions = useMemo(() => {
@@ -55,12 +57,18 @@ export function SessionsSection({ className, onSessionClick, onNewSession }: Ses
         {onNewSession && (
           <button
             onClick={onNewSession}
+            disabled={isAtLimit}
             className={clsx(
               'p-1 rounded transition-colors',
-              'hover:bg-muted',
-              'text-muted-foreground hover:text-foreground-secondary'
+              isAtLimit
+                ? 'opacity-50 cursor-not-allowed text-muted-foreground'
+                : 'hover:bg-muted text-muted-foreground hover:text-foreground-secondary'
             )}
-            title="New Session"
+            title={
+              isAtLimit
+                ? `Session limit reached (${runningCount}/${MAX_CONCURRENT_SESSIONS}). Close a session to start a new one.`
+                : 'New Session'
+            }
           >
             <Plus size={14} />
           </button>

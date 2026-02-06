@@ -1,7 +1,7 @@
 import { socket } from './socket';
 import { AiMode, UpdateSessionOptions, createLogger } from '@omniscribe/shared';
 import { ExtendedSessionConfig } from '@/stores/useSessionStore';
-import { emitWithErrorHandling, emitWithSuccessHandling } from './socketHelpers';
+import { emitAsync, emitWithErrorHandling, emitWithSuccessHandling } from './socketHelpers';
 
 const logger = createLogger('SessionAPI');
 
@@ -17,7 +17,16 @@ interface CreateSessionOptions {
 }
 
 /**
- * Response type for session creation/update
+ * Response type for session creation (includes limit response fields)
+ */
+interface CreateSessionResponse {
+  session?: ExtendedSessionConfig;
+  error?: string;
+  idleSessions?: string[];
+}
+
+/**
+ * Response type for session update
  */
 interface SessionResponse {
   session?: ExtendedSessionConfig;
@@ -25,7 +34,9 @@ interface SessionResponse {
 }
 
 /**
- * Create a new session
+ * Create a new session.
+ * When the server rejects due to session limit, the error message includes
+ * the names of idle sessions the user could close.
  */
 export async function createSession(
   mode: AiMode,
@@ -34,15 +45,27 @@ export async function createSession(
   options?: CreateSessionOptions
 ): Promise<ExtendedSessionConfig> {
   logger.info('Creating session', mode, projectPath, branch);
-  const response = await emitWithErrorHandling<
+
+  // Use emitAsync directly to handle the limit response with idleSessions
+  const response = await emitAsync<
     { mode: AiMode; projectPath: string; branch?: string } & CreateSessionOptions,
-    SessionResponse
+    CreateSessionResponse
   >('session:create', {
     mode,
     projectPath,
     branch,
     ...options,
   });
+
+  if (response.error) {
+    // Include idle session names in the error for the toast
+    const idleHint =
+      response.idleSessions && response.idleSessions.length > 0
+        ? `\nIdle sessions you could close: ${response.idleSessions.join(', ')}`
+        : '';
+    logger.warn('Session creation rejected:', response.error);
+    throw new Error(response.error + idleHint);
+  }
 
   if (!response.session) {
     logger.error('No session returned from server');

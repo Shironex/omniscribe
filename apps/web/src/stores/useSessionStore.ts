@@ -1,5 +1,10 @@
 import { create } from 'zustand';
-import { SessionConfig, SessionStatus, createLogger } from '@omniscribe/shared';
+import {
+  SessionConfig,
+  SessionStatus,
+  MAX_CONCURRENT_SESSIONS,
+  createLogger,
+} from '@omniscribe/shared';
 import { socket } from '@/lib/socket';
 
 const logger = createLogger('SessionStore');
@@ -270,3 +275,17 @@ export const selectSessionsByStatus = (status: SessionStatus) => (state: Session
  */
 export const selectActiveSessions = () => (state: SessionStore) =>
   state.sessions.filter(session => session.status !== 'idle' && session.status !== 'disconnected');
+
+/**
+ * Get count of running sessions (those with active terminals).
+ * Only sessions with a terminalSessionId are considered "running".
+ * Done/Error sessions without terminals do not count.
+ */
+export const selectRunningSessionCount = (state: SessionStore) =>
+  state.sessions.filter(s => s.terminalSessionId !== undefined).length;
+
+/**
+ * Check if the concurrent session limit has been reached.
+ */
+export const selectIsAtSessionLimit = (state: SessionStore) =>
+  selectRunningSessionCount(state) >= MAX_CONCURRENT_SESSIONS;

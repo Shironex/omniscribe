@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { toast } from 'sonner';
 import { createLogger, DEFAULT_SESSION_SETTINGS } from '@omniscribe/shared';
 
 const logger = createLogger('TerminalGrid');
@@ -203,7 +204,9 @@ export function ConnectedTerminalGrid({ className }: ConnectedTerminalGridProps)
         // Remove the pre-launch slot
         setPreLaunchSlots(prev => prev.filter(s => s.id !== slotId));
       } catch (error) {
+        const message = error instanceof Error ? error.message : 'Failed to launch session';
         logger.error('Failed to launch session:', error);
+        toast.error(message);
       }
     },
     [activeProjectPath, preLaunchSlots, updateSession]
