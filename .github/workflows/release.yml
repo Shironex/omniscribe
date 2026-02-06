@@ -32,26 +32,7 @@ jobs:
 
       - name: Update package.json versions
         shell: bash
-        run: |
-          VERSION="${{ steps.version.outputs.version }}"
-          node -e "
-            const fs = require('fs');
-            const files = [
-              'package.json',
-              'apps/desktop/package.json',
-              'apps/web/package.json',
-              'apps/mcp-server/package.json',
-              'packages/shared/package.json'
-            ];
-            for (const file of files) {
-              const pkg = JSON.parse(fs.readFileSync(file, 'utf8'));
-              if (pkg.version !== undefined) {
-                pkg.version = '${VERSION}';
-                fs.writeFileSync(file, JSON.stringify(pkg, null, 2) + '\n');
-                console.log('Updated', file, 'to', '${VERSION}');
-              }
-            }
-          "
+        run: ./scripts/bump-version.sh "${{ steps.version.outputs.version }}"
 
       - name: Setup project
         uses: ./.github/actions/setup-project
@@ -159,3 +140,40 @@ jobs:
             artifacts/linux-builds/latest-linux.yml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  version-sync:
+    needs: upload
+    runs-on: ubuntu-latest
+    if: github.event.release.draft == false
+
+    env:
+      HUSKY: 0
+
+    steps:
+      - name: Checkout master
+        uses: actions/checkout@v6
+        with:
+          ref: master
+          fetch-depth: 1
+
+      - name: Extract version from tag
+        id: version
+        shell: bash
+        run: |
+          VERSION="${{ github.event.release.tag_name }}"
+          VERSION="${VERSION#v}"
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+
+      - name: Bump package versions
+        shell: bash
+        run: ./scripts/bump-version.sh "${{ steps.version.outputs.version }}"
+
+      - name: Commit and push if changed
+        shell: bash
+        run: |
+          git diff --quiet && exit 0
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add package.json apps/desktop/package.json apps/web/package.json apps/mcp-server/package.json packages/shared/package.json
+          git commit -m "chore: sync package versions to ${{ steps.version.outputs.version }} [skip ci]"
+          git push origin master
