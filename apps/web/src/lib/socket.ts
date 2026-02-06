@@ -128,6 +128,13 @@ socket.on('reconnect_failed', () => {
 
 export default socket;
 
+// Expose socket instance on window for E2E testing.
+// Allows Playwright to trigger disconnect/reconnect scenarios and open projects.
+// The socket is already accessible via browser devtools so this adds no security risk.
+if (typeof window !== 'undefined') {
+  (window as unknown as Record<string, unknown>).__testSocket = socket;
+}
+
 // Re-export socket helpers for convenient access
 export {
   emitAsync,

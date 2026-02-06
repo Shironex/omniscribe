@@ -11,6 +11,13 @@ import { corsOriginCallback } from '../modules/shared/cors.config';
 import { NestLoggerAdapter } from '../modules/shared/nest-logger';
 import { LOCALHOST } from '@omniscribe/shared';
 
+// Allow E2E tests to isolate userData by setting ELECTRON_USER_DATA_DIR.
+// Must run before app.ready so electron-store and other userData consumers
+// see the overridden path.
+if (process.env.ELECTRON_USER_DATA_DIR) {
+  app.setPath('userData', process.env.ELECTRON_USER_DATA_DIR);
+}
+
 export let mainWindow: BrowserWindow | null = null;
 let nestApp: INestApplication | null = null;
 let isShuttingDown = false;
