@@ -35,7 +35,8 @@
   "linux": {
     "icon": "resources/icon.png",
     "target": ["AppImage", "deb"],
-    "category": "Development"
+    "category": "Development",
+    "executableName": "omniscribe"
   },
   "nsis": {
     "oneClick": false,
