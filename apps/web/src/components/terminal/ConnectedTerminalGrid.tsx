@@ -7,7 +7,7 @@ import { TerminalGrid } from './TerminalGrid';
 import { useSessionStore } from '@/stores/useSessionStore';
 import { useWorkspaceStore, selectActiveTab } from '@/stores/useWorkspaceStore';
 import { useGitStore, selectBranches, selectCurrentBranch } from '@/stores/useGitStore';
-import { useTerminalControlStore } from '@/stores/useTerminalControlStore';
+import { useTerminalStore } from '@/stores/useTerminalStore';
 import { createSession, removeSession } from '@/lib/session';
 import { killTerminal } from '@/lib/terminal';
 import { mapAiModeToBackend, mapAiModeToUI } from '@/lib/aiMode';
@@ -31,13 +31,13 @@ export function ConnectedTerminalGrid({ className }: ConnectedTerminalGridProps)
   const [preLaunchSlots, setPreLaunchSlots] = useState<PreLaunchSlot[]>([]);
 
   // Shared terminal control store for focus state
-  const focusedSessionId = useTerminalControlStore(state => state.focusedSessionId);
-  const setFocusedSessionId = useTerminalControlStore(state => state.setFocusedSessionId);
-  const addSlotRequestCounter = useTerminalControlStore(state => state.addSlotRequestCounter);
+  const focusedSessionId = useTerminalStore(state => state.focusedSessionId);
+  const setFocusedSessionId = useTerminalStore(state => state.setFocusedSessionId);
+  const addSlotRequestCounter = useTerminalStore(state => state.addSlotRequestCounter);
   const prevAddSlotRequestRef = useRef(addSlotRequestCounter);
-  const sessionOrder = useTerminalControlStore(state => state.sessionOrder);
-  const setSessionOrder = useTerminalControlStore(state => state.setSessionOrder);
-  const reorderSessions = useTerminalControlStore(state => state.reorderSessions);
+  const sessionOrder = useTerminalStore(state => state.sessionOrder);
+  const setSessionOrder = useTerminalStore(state => state.setSessionOrder);
+  const reorderSessions = useTerminalStore(state => state.reorderSessions);
 
   // Session store
   const sessions = useSessionStore(state => state.sessions);

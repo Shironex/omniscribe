@@ -1,4 +1,4 @@
-import { useTerminalSettingsStore, type CursorStyle } from '@/stores/useTerminalSettingsStore';
+import { useTerminalStore, type CursorStyle } from '@/stores/useTerminalStore';
 import { terminalThemes, type TerminalThemeName } from '@/lib/terminal-themes';
 
 const CURSOR_STYLES: { value: CursorStyle; label: string }[] = [
@@ -8,20 +8,20 @@ const CURSOR_STYLES: { value: CursorStyle; label: string }[] = [
 ];
 
 export function TerminalSection() {
-  const fontSize = useTerminalSettingsStore(s => s.fontSize);
-  const cursorStyle = useTerminalSettingsStore(s => s.cursorStyle);
-  const cursorBlink = useTerminalSettingsStore(s => s.cursorBlink);
-  const scrollback = useTerminalSettingsStore(s => s.scrollback);
-  const lineHeight = useTerminalSettingsStore(s => s.lineHeight);
-  const themeName = useTerminalSettingsStore(s => s.terminalThemeName);
+  const fontSize = useTerminalStore(s => s.fontSize);
+  const cursorStyle = useTerminalStore(s => s.cursorStyle);
+  const cursorBlink = useTerminalStore(s => s.cursorBlink);
+  const scrollback = useTerminalStore(s => s.scrollback);
+  const lineHeight = useTerminalStore(s => s.lineHeight);
+  const themeName = useTerminalStore(s => s.terminalThemeName);
 
-  const setFontSize = useTerminalSettingsStore(s => s.setFontSize);
-  const setCursorStyle = useTerminalSettingsStore(s => s.setCursorStyle);
-  const setCursorBlink = useTerminalSettingsStore(s => s.setCursorBlink);
-  const setScrollback = useTerminalSettingsStore(s => s.setScrollback);
-  const setLineHeight = useTerminalSettingsStore(s => s.setLineHeight);
-  const setTerminalThemeName = useTerminalSettingsStore(s => s.setTerminalThemeName);
-  const resetToDefaults = useTerminalSettingsStore(s => s.resetToDefaults);
+  const setFontSize = useTerminalStore(s => s.setFontSize);
+  const setCursorStyle = useTerminalStore(s => s.setCursorStyle);
+  const setCursorBlink = useTerminalStore(s => s.setCursorBlink);
+  const setScrollback = useTerminalStore(s => s.setScrollback);
+  const setLineHeight = useTerminalStore(s => s.setLineHeight);
+  const setTerminalThemeName = useTerminalStore(s => s.setTerminalThemeName);
+  const resetToDefaults = useTerminalStore(s => s.resetToDefaults);
 
   return (
     <div className="space-y-8">

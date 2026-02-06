@@ -4,7 +4,7 @@ import { createLogger, DEFAULT_SESSION_SETTINGS } from '@omniscribe/shared';
 import type { PreLaunchSlot } from '@/components/terminal/TerminalGrid';
 import { createSession } from '@/lib/session';
 import { mapAiModeToBackend } from '@/lib/aiMode';
-import { useTerminalControlStore, useWorkspaceStore } from '@/stores';
+import { useTerminalStore, useWorkspaceStore } from '@/stores';
 import { getNextAvailablePrelaunchShortcut } from '@/lib/prelaunch-shortcuts';
 
 const logger = createLogger('PreLaunchSlots');
@@ -55,7 +55,7 @@ export function usePreLaunchSlots(
   );
 
   // Listen to add slot requests from other components (e.g., sidebar + button)
-  const addSlotRequestCounter = useTerminalControlStore(state => state.addSlotRequestCounter);
+  const addSlotRequestCounter = useTerminalStore(state => state.addSlotRequestCounter);
   const prevCounterRef = useRef(addSlotRequestCounter);
 
   // Can launch if we have a project selected and have pre-launch slots

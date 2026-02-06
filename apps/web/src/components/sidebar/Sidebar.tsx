@@ -16,7 +16,7 @@ import {
 import { GitSection } from './GitSection';
 import { SessionsSection } from './SessionsSection';
 import { QuickActionsSection } from './QuickActionsSection';
-import { useSessionStore, useTerminalControlStore } from '@/stores';
+import { useSessionStore, useTerminalStore } from '@/stores';
 import { writeToTerminal } from '@/lib/terminal';
 import { QuickAction } from '@omniscribe/shared';
 import { useSidebarResize } from '@/hooks/useSidebarResize';
@@ -90,9 +90,9 @@ export function Sidebar({ collapsed, width, onWidthChange, className }: SidebarP
   );
 
   // Terminal control store for focus and session management
-  const setFocusedSessionId = useTerminalControlStore(state => state.setFocusedSessionId);
-  const requestAddSlot = useTerminalControlStore(state => state.requestAddSlot);
-  const focusedSessionId = useTerminalControlStore(state => state.focusedSessionId);
+  const setFocusedSessionId = useTerminalStore(state => state.setFocusedSessionId);
+  const requestAddSlot = useTerminalStore(state => state.requestAddSlot);
+  const focusedSessionId = useTerminalStore(state => state.focusedSessionId);
 
   const handleSessionClick = useCallback(
     (sessionId: string) => {

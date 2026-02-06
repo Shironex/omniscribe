@@ -20,7 +20,7 @@ import {
   useQuickActionExecution,
 } from '@/hooks';
 import { useUpdateToast } from '@/hooks/useUpdateToast';
-import { useTerminalControlStore, useWorkspaceStore } from '@/stores';
+import { useTerminalStore, useWorkspaceStore } from '@/stores';
 
 function App() {
   useAppInitialization();
@@ -63,8 +63,8 @@ function App() {
     handleSessionClose,
   } = useProjectSessions(activeProjectPath, preLaunchSlots);
 
-  const sessionOrder = useTerminalControlStore(state => state.sessionOrder);
-  const setSessionOrder = useTerminalControlStore(state => state.setSessionOrder);
+  const sessionOrder = useTerminalStore(state => state.sessionOrder);
+  const setSessionOrder = useTerminalStore(state => state.setSessionOrder);
 
   const orderedTerminalSessions = useMemo(() => {
     if (sessionOrder.length === 0) {
