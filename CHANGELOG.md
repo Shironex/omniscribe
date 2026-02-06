@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.1.2 (2026-02-06)
+
+### Features
+
+- Toast notifications for auto-update events (available, downloaded, error)
+- macOS graceful fallback: directs users to GitHub Releases instead of attempting auto-install (code signing not yet available)
+- Reusable Markdown component for rendering HTML release notes from GitHub
+- Centralized `GITHUB_RELEASES_URL` in shared constants
+
+### Bug Fixes
+
+- Updater listeners now initialize at app startup instead of only when Settings > About is opened, so the 5-second startup check is no longer missed
+- Generic update errors are now surfaced to users instead of being silently swallowed
+- Prevent potential listener leak if app unmounts during async initialization
+
+### Improvements
+
+- Centralized platform detection (`IS_MAC`) in shared utility
+- Extracted `MacDownloadFallback` component to reduce duplication in About section
+- Use project `cn()` utility consistently in Markdown component
+- Named constants for toast durations
+
 ## 0.1.1 (2026-02-06)
 
 ### Bug Fixes
