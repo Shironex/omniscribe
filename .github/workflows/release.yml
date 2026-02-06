@@ -24,10 +24,12 @@ jobs:
       - name: Extract version from tag
         id: version
         shell: bash
+        env:
+          TAG_NAME: ${{ github.event.release.tag_name }}
         run: |
-          VERSION="${{ github.event.release.tag_name }}"
+          VERSION="${TAG_NAME}"
           VERSION="${VERSION#v}"
-          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "Extracted version: ${VERSION}"
 
       - name: Update package.json versions
@@ -156,13 +158,20 @@ jobs:
           ref: master
           fetch-depth: 1
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+
       - name: Extract version from tag
         id: version
         shell: bash
+        env:
+          TAG_NAME: ${{ github.event.release.tag_name }}
         run: |
-          VERSION="${{ github.event.release.tag_name }}"
+          VERSION="${TAG_NAME}"
           VERSION="${VERSION#v}"
-          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Bump package versions
         shell: bash
@@ -174,6 +183,6 @@ jobs:
           git diff --quiet && exit 0
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add package.json apps/desktop/package.json apps/web/package.json apps/mcp-server/package.json packages/shared/package.json
+          git add -A
           git commit -m "chore: sync package versions to ${{ steps.version.outputs.version }} [skip ci]"
           git push origin master

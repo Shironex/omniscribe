@@ -19,7 +19,7 @@ PACKAGES=(
 )
 
 # Read current version from root package.json
-CURRENT=$(node -p "require('$ROOT_DIR/package.json').version")
+CURRENT=$(FILE="$ROOT_DIR/package.json" node -p 'JSON.parse(require("fs").readFileSync(process.env.FILE, "utf8")).version')
 
 if [ -z "${1:-}" ]; then
   echo "Usage: $0 <version|patch|minor|major>"
@@ -40,8 +40,8 @@ case "$1" in
     ;;
   *)
     VERSION="$1"
-    # Validate semver format
-    if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+'; then
+    # Validate semver format (anchored to prevent injection)
+    if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
       echo "Error: '$VERSION' is not a valid semver version"
       exit 1
     fi
@@ -53,12 +53,16 @@ echo ""
 
 for FILE in "${PACKAGES[@]}"; do
   REL_PATH="${FILE#"$ROOT_DIR/"}"
-  node -e "
-    const fs = require('fs');
-    const pkg = JSON.parse(fs.readFileSync('$FILE', 'utf8'));
-    pkg.version = '$VERSION';
-    fs.writeFileSync('$FILE', JSON.stringify(pkg, null, 2) + '\n');
-  "
+  if [ ! -f "$FILE" ]; then
+    echo "Error: $REL_PATH not found" >&2
+    exit 1
+  fi
+  VERSION="$VERSION" FILE="$FILE" node -e '
+    const fs = require("fs");
+    const pkg = JSON.parse(fs.readFileSync(process.env.FILE, "utf8"));
+    pkg.version = process.env.VERSION;
+    fs.writeFileSync(process.env.FILE, JSON.stringify(pkg, null, 2) + "\n");
+  '
   echo "  Updated $REL_PATH"
 done
 
