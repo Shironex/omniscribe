@@ -41,16 +41,20 @@ export class HealthService {
     for (const session of sessions) {
       if (session.terminalSessionId === undefined) continue;
 
-      const health = this.determineHealth(session);
+      try {
+        const health = this.determineHealth(session);
 
-      this.eventEmitter.emit('session.health', {
-        sessionId: session.id,
-        health: health.level,
-        reason: health.reason,
-      });
+        this.eventEmitter.emit('session.health', {
+          sessionId: session.id,
+          health: health.level,
+          reason: health.reason,
+        });
 
-      if (health.level === 'failed') {
-        this.cleanupZombie(session);
+        if (health.level === 'failed') {
+          this.cleanupZombie(session);
+        }
+      } catch (error) {
+        this.logger.error(`Health check failed for session ${session.id}: ${error}`);
       }
     }
   }

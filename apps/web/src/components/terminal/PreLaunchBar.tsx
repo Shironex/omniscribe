@@ -121,6 +121,7 @@ export function PreLaunchBar({
               const isDisabled = option.value === 'claude' && !claudeAvailable;
               return (
                 <button
+                  type="button"
                   key={option.value}
                   onClick={() => {
                     if (isDisabled) return;

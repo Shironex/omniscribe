@@ -52,6 +52,7 @@ export async function launchApp(): Promise<AppFixture> {
 
   const page = await electronApp.firstWindow();
   await page.waitForLoadState('domcontentloaded');
+  await page.waitForSelector('[data-testid="app-ready"]', { timeout: 30_000 });
 
   return { electronApp, page, tempDir, userDataDir };
 }

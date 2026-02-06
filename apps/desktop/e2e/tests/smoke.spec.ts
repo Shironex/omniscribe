@@ -1,5 +1,6 @@
 import { test, expect } from 'playwright/test';
 import { launchApp, closeApp, type AppFixture } from '../fixtures/electron-app';
+import { screenshotOnFailure } from '../fixtures/helpers';
 
 test.describe('Smoke Test', () => {
   let fixture: AppFixture;
@@ -12,17 +13,8 @@ test.describe('Smoke Test', () => {
     await closeApp(fixture);
   });
 
-  // eslint-disable-next-line no-empty-pattern
-  test.afterEach(async ({}, testInfo) => {
-    if (testInfo.status !== testInfo.expectedStatus && fixture?.page) {
-      const screenshotPath = `e2e/test-results/failure-${testInfo.title.replace(/\s+/g, '-')}-${Date.now()}.png`;
-      await fixture.page.screenshot({ path: screenshotPath });
-      testInfo.attachments.push({
-        name: 'screenshot',
-        path: screenshotPath,
-        contentType: 'image/png',
-      });
-    }
+  test.afterEach(async (_, testInfo) => {
+    await screenshotOnFailure(fixture, testInfo);
   });
 
   test('should launch the app and show the main window', async () => {

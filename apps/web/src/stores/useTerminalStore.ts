@@ -37,7 +37,6 @@ interface TerminalActions {
   // Control actions
   setFocusedSessionId: (sessionId: string | null) => void;
   requestAddSlot: () => void;
-  resetAddSlotRequest: () => number;
   setSessionOrder: (order: string[]) => void;
   reorderSessions: (activeId: string, overId: string) => void;
 }
@@ -140,10 +139,6 @@ export const useTerminalStore = create<TerminalStore>()(
             undefined,
             'terminal/requestAddSlot'
           ),
-        resetAddSlotRequest: () => {
-          const current = get().addSlotRequestCounter;
-          return current;
-        },
         setSessionOrder: order =>
           set({ sessionOrder: order }, undefined, 'terminal/setSessionOrder'),
         reorderSessions: (activeId, overId) => {

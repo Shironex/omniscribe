@@ -59,7 +59,7 @@ export async function createMainWindow(): Promise<BrowserWindow> {
   });
 
   session.defaultSession.setPermissionCheckHandler((_webContents, permission) => {
-    logger.warn(`[security] Denied permission check: ${permission}`);
+    logger.debug(`[security] Denied permission check: ${permission}`);
     return false;
   });
 

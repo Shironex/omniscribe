@@ -95,12 +95,11 @@ function escapeRegex(str: string): string {
  */
 async function rotateIfNeeded(currentPath: string): Promise<void> {
   if (isRotating) return;
+  isRotating = true;
 
   try {
     const stat = await fs.promises.stat(currentPath);
     if (stat.size < LOG_MAX_FILE_SIZE) return;
-
-    isRotating = true;
 
     const dir = path.dirname(currentPath);
     const ext = path.extname(currentPath); // .log
@@ -168,6 +167,8 @@ async function doFlush(): Promise<void> {
     await rotateIfNeeded(logPath);
     await fs.promises.appendFile(logPath, entries.join(''));
   } catch (error) {
+    // Re-queue entries on failure so they are not lost
+    buffer.unshift(...entries);
     handleLoggingError(error);
   }
 }

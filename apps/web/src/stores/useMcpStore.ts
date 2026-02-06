@@ -187,21 +187,23 @@ export const useMcpStore = create<McpStore>()(
         },
 
         updateServerStatus: (serverId: string, status: McpServerStatus, errorMessage?: string) => {
+          const existingState = get().serverStates.get(serverId);
+          if (!existingState) {
+            logger.warn('Status update for unknown server', serverId);
+            return;
+          }
+
           set(
             state => {
               const newServerStates = new Map(state.serverStates);
-              const existingState = newServerStates.get(serverId);
-
-              if (existingState) {
+              const current = newServerStates.get(serverId);
+              if (current) {
                 newServerStates.set(serverId, {
-                  ...existingState,
+                  ...current,
                   status,
                   errorMessage,
                 });
-              } else {
-                logger.warn('Status update for unknown server', serverId);
               }
-
               return { serverStates: newServerStates };
             },
             undefined,

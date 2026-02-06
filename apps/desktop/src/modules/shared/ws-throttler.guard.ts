@@ -18,9 +18,9 @@ export class WsThrottlerGuard extends ThrottlerGuard {
     const { context, limit, ttl, throttler, blockDuration, generateKey } = requestProps;
 
     const client = context.switchToWs().getClient();
-    // Get client IP from the underlying socket connection
+    // Get client IP from the socket.io handshake (preferred) or underlying socket
     const tracker: string =
-      client._socket?.remoteAddress ?? client.handshake?.address ?? '127.0.0.1';
+      client.handshake?.address ?? client.request?.socket?.remoteAddress ?? client.id;
     const throttlerName = throttler.name ?? 'default';
     const key = generateKey(context, tracker, throttlerName);
 

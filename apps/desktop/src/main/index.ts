@@ -118,20 +118,19 @@ app.on('before-quit', event => {
   }
 
   // Prevent quit, do async cleanup, then quit again
-  if (nestApp) {
-    event.preventDefault();
-    isShuttingDown = true;
-    flushLogs()
-      .then(() => shutdownNestApp())
-      .finally(() => {
-        app.quit();
-      });
-  } else {
-    // No NestJS app, but still flush logs
-    event.preventDefault();
-    isShuttingDown = true;
-    flushLogs().finally(() => {
-      app.quit();
-    });
-  }
+  event.preventDefault();
+  isShuttingDown = true;
+
+  (async () => {
+    try {
+      await flushLogs();
+    } catch {
+      // Log flush failure is non-critical
+    }
+    if (nestApp) {
+      await shutdownNestApp();
+    }
+  })().finally(() => {
+    app.quit();
+  });
 });

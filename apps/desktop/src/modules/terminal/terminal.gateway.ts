@@ -91,8 +91,10 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
     // Register drain listener for backpressure relief.
     // engine.io fires 'drain' when the write buffer is flushed.
     client.conn.on('drain', () => {
-      // On drain, all buffered writes for this client have been delivered.
-      // Reset pending counts and resume any paused terminals.
+      // Single-client assumption: Omniscribe is a single-user desktop app with
+      // one renderer process connecting via one socket. Therefore, when this
+      // client's write buffer drains, it is safe to resume all paused terminals
+      // unconditionally -- they all belong to this single client.
       for (const sessionId of this.pausedTerminals) {
         this.pendingWrites.set(sessionId, 0);
         this.resumeTerminal(sessionId);

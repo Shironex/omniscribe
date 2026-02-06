@@ -93,6 +93,7 @@ describe('McpGateway (integration)', () => {
   });
 
   beforeEach(async () => {
+    jest.clearAllMocks();
     client = createSocketClient(getAppPort(app));
     await connectClient(client);
   });

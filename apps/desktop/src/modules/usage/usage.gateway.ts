@@ -14,6 +14,8 @@ import { createLogger } from '@omniscribe/shared';
 import type { UsageFetchPayload, UsageFetchResponse, ClaudeCliStatus } from '@omniscribe/shared';
 import { CORS_CONFIG } from '../shared/cors.config';
 
+// @UseGuards kept for consistency with other gateways and future-proofing,
+// even though both handlers currently use @SkipThrottle().
 @UseGuards(WsThrottlerGuard)
 @WebSocketGateway({
   cors: CORS_CONFIG,

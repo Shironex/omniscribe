@@ -271,6 +271,8 @@ export const useGitStore = create<GitStore>()(
                   'git/checkoutError'
                 );
               } else {
+                // Clear loading state from checkout before starting fresh fetches
+                set({ isLoading: false }, undefined, 'git/checkoutSuccess');
                 // Refresh branches and current branch after checkout
                 get().fetchBranches(projectPath);
                 get().fetchCurrentBranch(projectPath);

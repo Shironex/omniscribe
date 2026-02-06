@@ -205,6 +205,7 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
             buffering...
           </span>
           <button
+            type="button"
             onClick={handleCancelOutput}
             className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-black/20 hover:bg-black/30 transition-colors"
           >

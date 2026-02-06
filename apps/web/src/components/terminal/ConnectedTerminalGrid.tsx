@@ -222,18 +222,21 @@ export function ConnectedTerminalGrid({ className }: ConnectedTerminalGridProps)
   );
 
   // Kill a session handler
-  const handleKill = useCallback(async (sessionId: string) => {
-    logger.info('Killing session', sessionId);
-    try {
-      const sessionIdNum = parseInt(sessionId, 10);
-      if (!isNaN(sessionIdNum)) {
-        killTerminal(sessionIdNum);
+  const handleKill = useCallback(
+    async (sessionId: string) => {
+      logger.info('Killing session', sessionId);
+      try {
+        const session = sessions.find(s => s.id === sessionId);
+        if (session?.terminalSessionId !== undefined) {
+          killTerminal(session.terminalSessionId);
+        }
+        await removeSession(sessionId);
+      } catch (error) {
+        logger.error('Failed to kill session', sessionId, error);
       }
-      await removeSession(sessionId);
-    } catch (error) {
-      logger.error('Failed to kill session', sessionId, error);
-    }
-  }, []);
+    },
+    [sessions]
+  );
 
   // Handle session close from terminal
   const handleSessionClose = useCallback((_sessionId: string, _exitCode: number) => {

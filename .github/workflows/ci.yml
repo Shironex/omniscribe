@@ -107,6 +107,9 @@ jobs:
       - name: Build all packages
         run: pnpm build
 
+      - name: Install Playwright system dependencies
+        run: npx playwright install --with-deps
+
       - name: Run E2E tests
         run: xvfb-run --auto-servernum -- pnpm --filter @omniscribe/desktop test:e2e
 

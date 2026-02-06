@@ -13,8 +13,6 @@ interface ConnectionState {
   status: ConnectionStatus;
   /** Timestamp when the last disconnect occurred */
   disconnectedAt: number | null;
-  /** Timer handle for the failure timeout */
-  failureTimeout: ReturnType<typeof setTimeout> | null;
 }
 
 interface ConnectionActions {
@@ -40,51 +38,49 @@ let disconnectHandler: ((reason: string) => void) | null = null;
 let reconnectFailedHandler: (() => void) | null = null;
 let listenersInitialized = false;
 
+// Module-level timer handle (non-serializable, should not be in Zustand state)
+let failureTimeoutHandle: ReturnType<typeof setTimeout> | null = null;
+
 export const useConnectionStore = create<ConnectionStore>()(
   devtools(
     (set, get) => ({
       // Initial state: reconnecting because socket starts disconnected
       status: 'reconnecting',
       disconnectedAt: null,
-      failureTimeout: null,
 
       setConnected: () => {
-        const { failureTimeout } = get();
-        if (failureTimeout !== null) {
-          clearTimeout(failureTimeout);
+        if (failureTimeoutHandle !== null) {
+          clearTimeout(failureTimeoutHandle);
+          failureTimeoutHandle = null;
         }
         logger.info('Connection established');
-        set(
-          { status: 'connected', disconnectedAt: null, failureTimeout: null },
-          undefined,
-          'connection/setConnected'
-        );
+        set({ status: 'connected', disconnectedAt: null }, undefined, 'connection/setConnected');
       },
 
       setReconnecting: () => {
-        const { failureTimeout } = get();
-        if (failureTimeout !== null) {
-          clearTimeout(failureTimeout);
+        if (failureTimeoutHandle !== null) {
+          clearTimeout(failureTimeoutHandle);
+          failureTimeoutHandle = null;
         }
         logger.info('Connection lost, attempting to reconnect...');
-        const timer = setTimeout(() => {
+        failureTimeoutHandle = setTimeout(() => {
           logger.warn('Reconnection timed out after 30s');
           get().setFailed();
         }, FAILURE_TIMEOUT_MS);
         set(
-          { status: 'reconnecting', disconnectedAt: Date.now(), failureTimeout: timer },
+          { status: 'reconnecting', disconnectedAt: Date.now() },
           undefined,
           'connection/setReconnecting'
         );
       },
 
       setFailed: () => {
-        const { failureTimeout } = get();
-        if (failureTimeout !== null) {
-          clearTimeout(failureTimeout);
+        if (failureTimeoutHandle !== null) {
+          clearTimeout(failureTimeoutHandle);
+          failureTimeoutHandle = null;
         }
         logger.error('Connection failed');
-        set({ status: 'failed', failureTimeout: null }, undefined, 'connection/setFailed');
+        set({ status: 'failed' }, undefined, 'connection/setFailed');
       },
 
       retryConnection: () => {
@@ -123,9 +119,9 @@ export const useConnectionStore = create<ConnectionStore>()(
       },
 
       cleanupListeners: () => {
-        const { failureTimeout } = get();
-        if (failureTimeout !== null) {
-          clearTimeout(failureTimeout);
+        if (failureTimeoutHandle !== null) {
+          clearTimeout(failureTimeoutHandle);
+          failureTimeoutHandle = null;
         }
 
         if (connectHandler) {

@@ -157,7 +157,11 @@ export const useSessionStore = create<SessionStore>()(
               handler: data => {
                 const payload = data as { sessionId: string; sessionName: string; reason: string };
                 logger.warn('zombie:cleanup', payload.sessionId, payload.reason);
-                toast.error(`Session "${payload.sessionName}" terminated unexpectedly`, {
+                const sessionName =
+                  typeof payload.sessionName === 'string'
+                    ? payload.sessionName
+                    : payload.sessionId || 'Unknown session';
+                toast.error(`Session "${sessionName}" terminated unexpectedly`, {
                   description: payload.reason,
                   duration: 10000,
                 });
