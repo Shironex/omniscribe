@@ -77,10 +77,14 @@ app.on('window-all-closed', () => {
   }
 });
 
-app.on('activate', () => {
+app.on('activate', async () => {
   logger.info('App activated');
-  if (BrowserWindow.getAllWindows().length === 0) {
-    bootstrap();
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.show();
+  } else if (BrowserWindow.getAllWindows().length === 0) {
+    // NestJS is already running, just recreate the window
+    mainWindow = await createMainWindow();
+    initializeAutoUpdater(mainWindow, process.env.NODE_ENV === 'development');
   }
 });
 
