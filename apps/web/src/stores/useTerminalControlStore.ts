@@ -2,13 +2,15 @@ import { create } from 'zustand';
 
 /**
  * Terminal control store state
- * Manages terminal focus and session creation requests
+ * Manages terminal focus, session creation requests, and ordering
  */
 interface TerminalControlState {
   /** Currently focused session ID */
   focusedSessionId: string | null;
   /** Counter to trigger new session creation */
   addSlotRequestCounter: number;
+  /** Session order for drag-drop reordering */
+  sessionOrder: string[];
 }
 
 /**
@@ -21,6 +23,10 @@ interface TerminalControlActions {
   requestAddSlot: () => void;
   /** Reset the add slot request counter (called after handling) */
   resetAddSlotRequest: () => number;
+  /** Set the session order */
+  setSessionOrder: (order: string[]) => void;
+  /** Reorder sessions by moving activeId to the position of overId */
+  reorderSessions: (activeId: string, overId: string) => void;
 }
 
 /**
@@ -36,6 +42,7 @@ export const useTerminalControlStore = create<TerminalControlStore>((set, get) =
   // Initial state
   focusedSessionId: null,
   addSlotRequestCounter: 0,
+  sessionOrder: [],
 
   // Actions
   setFocusedSessionId: sessionId => {
@@ -49,6 +56,23 @@ export const useTerminalControlStore = create<TerminalControlStore>((set, get) =
   resetAddSlotRequest: () => {
     const current = get().addSlotRequestCounter;
     return current;
+  },
+
+  setSessionOrder: order => {
+    set({ sessionOrder: order });
+  },
+
+  reorderSessions: (activeId, overId) => {
+    const { sessionOrder } = get();
+    const oldIndex = sessionOrder.indexOf(activeId);
+    const newIndex = sessionOrder.indexOf(overId);
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const newOrder = [...sessionOrder];
+    const temp = newOrder[oldIndex];
+    newOrder[oldIndex] = newOrder[newIndex];
+    newOrder[newIndex] = temp;
+    set({ sessionOrder: newOrder });
   },
 }));
 

@@ -10,6 +10,8 @@ import { useTerminalControlStore } from '@/stores/useTerminalControlStore';
 import { createSession, removeSession } from '@/lib/session';
 import { killTerminal } from '@/lib/terminal';
 import { mapAiModeToBackend, mapAiModeToUI } from '@/lib/aiMode';
+
+import { getNextAvailablePrelaunchShortcut } from '@/lib/prelaunch-shortcuts';
 import type { TerminalSession } from './TerminalHeader';
 import type { PreLaunchSlot } from './PreLaunchBar';
 import type { Branch } from '@/components/shared/BranchSelector';
@@ -32,6 +34,9 @@ export function ConnectedTerminalGrid({ className }: ConnectedTerminalGridProps)
   const setFocusedSessionId = useTerminalControlStore(state => state.setFocusedSessionId);
   const addSlotRequestCounter = useTerminalControlStore(state => state.addSlotRequestCounter);
   const prevAddSlotRequestRef = useRef(addSlotRequestCounter);
+  const sessionOrder = useTerminalControlStore(state => state.sessionOrder);
+  const setSessionOrder = useTerminalControlStore(state => state.setSessionOrder);
+  const reorderSessions = useTerminalControlStore(state => state.reorderSessions);
 
   // Session store
   const sessions = useSessionStore(state => state.sessions);
@@ -66,12 +71,19 @@ export function ConnectedTerminalGrid({ className }: ConnectedTerminalGridProps)
   // Listen for add slot requests from sidebar (via shared store)
   useEffect(() => {
     if (addSlotRequestCounter > prevAddSlotRequestRef.current) {
-      const newSlot: PreLaunchSlot = {
-        id: `slot-${Date.now()}`,
-        aiMode: defaultAiMode,
-        branch: currentBranch,
-      };
-      setPreLaunchSlots(prev => [...prev, newSlot]);
+      setPreLaunchSlots(prev => {
+        const shortcutKey = getNextAvailablePrelaunchShortcut(prev.map(slot => slot.shortcutKey));
+        if (!shortcutKey) return prev;
+
+        const newSlot: PreLaunchSlot = {
+          id: `slot-${Date.now()}`,
+          aiMode: defaultAiMode,
+          branch: currentBranch,
+          shortcutKey,
+        };
+
+        return [...prev, newSlot];
+      });
     }
     prevAddSlotRequestRef.current = addSlotRequestCounter;
   }, [addSlotRequestCounter, currentBranch, defaultAiMode]);
@@ -82,9 +94,9 @@ export function ConnectedTerminalGrid({ className }: ConnectedTerminalGridProps)
     return sessions.filter(s => s.projectPath === activeProjectPath);
   }, [sessions, activeProjectPath]);
 
-  // Convert sessions to TerminalSession format
+  // Convert sessions to TerminalSession format and apply ordering
   const terminalSessions: TerminalSession[] = useMemo(() => {
-    return activeProjectSessions.map((session, index) => ({
+    const mapped = activeProjectSessions.map((session, index) => ({
       id: session.id,
       sessionNumber: index + 1,
       aiMode: mapAiModeToUI(session.aiMode),
@@ -94,7 +106,35 @@ export function ConnectedTerminalGrid({ className }: ConnectedTerminalGridProps)
       terminalSessionId: session.terminalSessionId,
       worktreePath: session.worktreePath,
     }));
-  }, [activeProjectSessions]);
+
+    // Apply custom ordering if available
+    if (sessionOrder.length > 0) {
+      const orderMap = new Map(sessionOrder.map((id, idx) => [id, idx]));
+      return [...mapped].sort((a, b) => {
+        const aIdx = orderMap.get(a.id) ?? Number.MAX_SAFE_INTEGER;
+        const bIdx = orderMap.get(b.id) ?? Number.MAX_SAFE_INTEGER;
+        return aIdx - bIdx;
+      });
+    }
+
+    return mapped;
+  }, [activeProjectSessions, sessionOrder]);
+
+  // Sync session order when sessions change
+  useEffect(() => {
+    const currentIds = terminalSessions.map(s => s.id);
+    const currentOrderSet = new Set(sessionOrder);
+    const currentIdsSet = new Set(currentIds);
+
+    // Add new sessions not in order
+    const newIds = currentIds.filter(id => !currentOrderSet.has(id));
+    // Remove stale sessions from order
+    const validOrder = sessionOrder.filter(id => currentIdsSet.has(id));
+
+    if (newIds.length > 0 || validOrder.length !== sessionOrder.length) {
+      setSessionOrder([...validOrder, ...newIds]);
+    }
+  }, [terminalSessions, sessionOrder, setSessionOrder]);
 
   // Convert git branches to Branch format
   const branches: Branch[] = useMemo(() => {
@@ -107,12 +147,19 @@ export function ConnectedTerminalGrid({ className }: ConnectedTerminalGridProps)
 
   // Add session (pre-launch slot) handler
   const handleAddSlot = useCallback(() => {
-    const newSlot: PreLaunchSlot = {
-      id: `slot-${Date.now()}`,
-      aiMode: defaultAiMode,
-      branch: currentBranch,
-    };
-    setPreLaunchSlots(prev => [...prev, newSlot]);
+    setPreLaunchSlots(prev => {
+      const shortcutKey = getNextAvailablePrelaunchShortcut(prev.map(slot => slot.shortcutKey));
+      if (!shortcutKey) return prev;
+
+      const newSlot: PreLaunchSlot = {
+        id: `slot-${Date.now()}`,
+        aiMode: defaultAiMode,
+        branch: currentBranch,
+        shortcutKey,
+      };
+
+      return [...prev, newSlot];
+    });
   }, [currentBranch, defaultAiMode]);
 
   // Remove pre-launch slot handler
@@ -189,6 +236,14 @@ export function ConnectedTerminalGrid({ className }: ConnectedTerminalGridProps)
     [setFocusedSessionId]
   );
 
+  // Reorder handler
+  const handleReorderSessions = useCallback(
+    (activeId: string, overId: string) => {
+      reorderSessions(activeId, overId);
+    },
+    [reorderSessions]
+  );
+
   return (
     <TerminalGrid
       sessions={terminalSessions}
@@ -202,6 +257,7 @@ export function ConnectedTerminalGrid({ className }: ConnectedTerminalGridProps)
       onLaunch={handleLaunch}
       onKill={handleKill}
       onSessionClose={handleSessionClose}
+      onReorderSessions={handleReorderSessions}
       className={className}
     />
   );

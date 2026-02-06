@@ -1,5 +1,6 @@
 import { socket, connectSocket } from './socket';
-import { createLogger } from '@omniscribe/shared';
+import { createLogger, type TerminalJoinResponse } from '@omniscribe/shared';
+import { PASTE_CHUNK_SIZE, PASTE_CHUNK_DELAY_MS } from './terminal-constants';
 
 const logger = createLogger('TerminalAPI');
 
@@ -110,6 +111,32 @@ export function writeToTerminal(sessionId: number, data: string): void {
 }
 
 /**
+ * Write data to a terminal session in chunks (for large pastes)
+ * @param sessionId The session ID to write to
+ * @param data The data to write
+ */
+export async function writeToTerminalChunked(sessionId: number, data: string): Promise<void> {
+  if (!socket.connected) {
+    logger.warn('writeToTerminalChunked: socket not connected, skipping');
+    return;
+  }
+
+  if (data.length <= PASTE_CHUNK_SIZE) {
+    socket.emit('terminal:input', { sessionId, data });
+    return;
+  }
+
+  for (let i = 0; i < data.length; i += PASTE_CHUNK_SIZE) {
+    const chunk = data.slice(i, i + PASTE_CHUNK_SIZE);
+    socket.emit('terminal:input', { sessionId, data: chunk });
+
+    if (i + PASTE_CHUNK_SIZE < data.length) {
+      await new Promise(resolve => setTimeout(resolve, PASTE_CHUNK_DELAY_MS));
+    }
+  }
+}
+
+/**
  * Resize a terminal session
  * @param sessionId The session ID to resize
  * @param cols Number of columns
@@ -140,20 +167,22 @@ export function killTerminal(sessionId: number): void {
 /**
  * Join an existing terminal session
  * @param sessionId The session ID to join
- * @returns Promise resolving to success status
+ * @returns Promise resolving to join response with optional scrollback data
  */
-export async function joinTerminal(sessionId: number): Promise<boolean> {
+export async function joinTerminal(
+  sessionId: number
+): Promise<{ success: boolean; scrollback?: string }> {
   await connectSocket();
 
   logger.debug('Joining terminal', sessionId);
   return new Promise(resolve => {
-    socket.emit('terminal:join', { sessionId }, (response: { success: boolean }) => {
-      resolve(response.success);
+    socket.emit('terminal:join', { sessionId }, (response: TerminalJoinResponse) => {
+      resolve({ success: response.success, scrollback: response.scrollback });
     });
 
     // Timeout after 5 seconds
     setTimeout(() => {
-      resolve(false);
+      resolve({ success: false });
     }, 5000);
   });
 }

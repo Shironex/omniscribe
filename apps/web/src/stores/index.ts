@@ -7,3 +7,4 @@ export * from './useTerminalControlStore';
 export * from './useSettingsStore';
 export * from './useUsageStore';
 export * from './useUpdateStore';
+export * from './useTerminalSettingsStore';

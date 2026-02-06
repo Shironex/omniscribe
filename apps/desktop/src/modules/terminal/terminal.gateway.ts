@@ -24,6 +24,8 @@ import {
 } from '@omniscribe/shared';
 import { CORS_CONFIG } from '../shared/cors.config';
 
+const MAX_INPUT_SIZE = 1_048_576; // 1MB
+
 interface TerminalOutputEvent {
   sessionId: number;
   data: string;
@@ -113,6 +115,18 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
   ): void {
     const { sessionId, data } = payload;
 
+    // Payload validation
+    if (typeof data !== 'string') {
+      this.logger.warn(`[input] Invalid data type for session ${sessionId}: ${typeof data}`);
+      return;
+    }
+    if (data.length > MAX_INPUT_SIZE) {
+      this.logger.warn(
+        `[input] Data too large for session ${sessionId}: ${data.length} chars (max ${MAX_INPUT_SIZE})`
+      );
+      return;
+    }
+
     // Simplified pattern from automaker: if client is in the terminal room, allow input
     // No ownership checking - if you're connected to the session, you can write to it
     if (this.terminalService.hasSession(sessionId)) {
@@ -146,6 +160,12 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
     @MessageBody() payload: TerminalResizePayload
   ): void {
     const { sessionId, cols, rows } = payload;
+
+    // Payload validation
+    if (!Number.isInteger(cols) || !Number.isInteger(rows) || cols <= 0 || rows <= 0) {
+      this.logger.warn(`[resize] Invalid dimensions for session ${sessionId}: ${cols}x${rows}`);
+      return;
+    }
 
     // Simplified: allow resize if session exists (no ownership check)
     if (this.terminalService.hasSession(sessionId)) {
@@ -192,7 +212,9 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
         sessions.add(sessionId);
       }
 
-      return { success: true };
+      // Include scrollback data for session restore
+      const scrollback = this.terminalService.getScrollback(sessionId);
+      return { success: true, scrollback: scrollback ?? undefined };
     }
 
     this.logger.warn(`Join requested for non-existent terminal session ${sessionId}`);

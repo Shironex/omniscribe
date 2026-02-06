@@ -4,12 +4,24 @@ import * as pty from 'node-pty';
 import * as os from 'os';
 import { TERM_PROGRAM, createLogger } from '@omniscribe/shared';
 
+// Performance constants
+const OUTPUT_THROTTLE_MS = 4;
+const OUTPUT_BATCH_SIZE = 4096; // 4KB chunks
+const MAX_SCROLLBACK_SIZE = 50_000; // 50KB per terminal
+const MAX_OUTPUT_BUFFER_SIZE = 100_000; // 100KB cap
+const CHUNKED_WRITE_THRESHOLD = 1000;
+const CHUNK_SIZE = 100;
+
 interface PtySession {
   pty: pty.IPty;
   outputBuffer: string;
   flushTimer: NodeJS.Timeout | null;
   /** Session ID for external reference (e.g., Omniscribe session ID) */
   externalId?: string;
+  /** Accumulated scrollback for session restore */
+  scrollbackBuffer: string;
+  /** Promise chain for serialized writes */
+  writeChain: Promise<void>;
 }
 
 @Injectable()
@@ -17,8 +29,8 @@ export class TerminalService implements OnModuleDestroy {
   private readonly logger = createLogger('TerminalService');
   private sessions = new Map<number, PtySession>();
   private nextSessionId = 1;
-  private readonly BATCH_INTERVAL_MS = 16; // ~60fps
   private readonly isWindows = os.platform() === 'win32';
+  private isShuttingDown = false;
 
   constructor(private readonly eventEmitter: EventEmitter2) {}
 
@@ -148,6 +160,8 @@ export class TerminalService implements OnModuleDestroy {
       outputBuffer: '',
       flushTimer: null,
       externalId,
+      scrollbackBuffer: '',
+      writeChain: Promise.resolve(),
     };
 
     this.sessions.set(sessionId, session);
@@ -155,18 +169,27 @@ export class TerminalService implements OnModuleDestroy {
 
     // Handle output with batching for performance
     ptyProcess.onData((data: string) => {
-      // Log first few data events to debug
-      if (session.outputBuffer.length < 500) {
-        // this.logger.debug(`[onData] Session ${sessionId}: received ${data.length} bytes`);
-      }
+      // Shutdown guard: prevent processing during shutdown
+      if (this.isShuttingDown) return;
 
       try {
         session.outputBuffer += data;
 
+        // Cap output buffer at MAX_OUTPUT_BUFFER_SIZE
+        if (session.outputBuffer.length > MAX_OUTPUT_BUFFER_SIZE) {
+          session.outputBuffer = session.outputBuffer.slice(-MAX_OUTPUT_BUFFER_SIZE);
+        }
+
+        // Accumulate scrollback buffer
+        session.scrollbackBuffer += data;
+        if (session.scrollbackBuffer.length > MAX_SCROLLBACK_SIZE) {
+          session.scrollbackBuffer = session.scrollbackBuffer.slice(-MAX_SCROLLBACK_SIZE);
+        }
+
         if (!session.flushTimer) {
           session.flushTimer = setTimeout(() => {
             this.flushOutput(sessionId);
-          }, this.BATCH_INTERVAL_MS);
+          }, OUTPUT_THROTTLE_MS);
         }
       } catch (dataError) {
         const errorMessage = dataError instanceof Error ? dataError.message : String(dataError);
@@ -176,6 +199,9 @@ export class TerminalService implements OnModuleDestroy {
 
     // Handle terminal exit
     ptyProcess.onExit(({ exitCode, signal }) => {
+      // Shutdown guard: prevent processing during shutdown
+      if (this.isShuttingDown) return;
+
       this.logger.log(`[onExit] Session ${sessionId} exited (code=${exitCode}, signal=${signal})`);
 
       this.cleanup(sessionId);
@@ -215,14 +241,42 @@ export class TerminalService implements OnModuleDestroy {
   }
 
   /**
-   * Write data to a terminal session
+   * Write data to a terminal session with serialized queue
    * @param sessionId The session to write to
    * @param data The data to write
    */
   write(sessionId: number, data: string): void {
     const session = this.sessions.get(sessionId);
-    if (session) {
+    if (!session) return;
+
+    // Chain writes to prevent interleaving; catch to keep the chain alive on error
+    session.writeChain = session.writeChain
+      .then(() => this.performWrite(session, data))
+      .catch(err => {
+        this.logger.error(`[write] Failed for session ${sessionId}:`, err);
+      });
+  }
+
+  /**
+   * Perform the actual write, chunking large data
+   */
+  private async performWrite(session: PtySession, data: string): Promise<void> {
+    if (this.isShuttingDown) return;
+
+    if (data.length <= CHUNKED_WRITE_THRESHOLD) {
       session.pty.write(data);
+      return;
+    }
+
+    // Chunk large writes to prevent blocking
+    for (let i = 0; i < data.length; i += CHUNK_SIZE) {
+      if (this.isShuttingDown) return;
+      const chunk = data.slice(i, i + CHUNK_SIZE);
+      session.pty.write(chunk);
+      // Yield to event loop between chunks
+      if (i + CHUNK_SIZE < data.length) {
+        await new Promise<void>(resolve => setImmediate(resolve));
+      }
     }
   }
 
@@ -234,9 +288,19 @@ export class TerminalService implements OnModuleDestroy {
    */
   resize(sessionId: number, cols: number, rows: number): void {
     const session = this.sessions.get(sessionId);
-    if (session) {
-      session.pty.resize(cols, rows);
+    if (!session) return;
+
+    // Validate dimensions
+    if (!Number.isFinite(cols) || !Number.isFinite(rows) || cols <= 0 || rows <= 0) {
+      this.logger.warn(`[resize] Invalid dimensions for session ${sessionId}: ${cols}x${rows}`);
+      return;
     }
+
+    // Round to integers
+    const roundedCols = Math.round(cols);
+    const roundedRows = Math.round(rows);
+
+    session.pty.resize(roundedCols, roundedRows);
   }
 
   /**
@@ -306,13 +370,42 @@ export class TerminalService implements OnModuleDestroy {
   }
 
   /**
-   * Flush buffered output for a session
+   * Get scrollback buffer for a session
+   * @param sessionId The session ID
+   * @returns Scrollback data or null if session not found
+   */
+  getScrollback(sessionId: number): string | null {
+    const session = this.sessions.get(sessionId);
+    if (!session) return null;
+    return session.scrollbackBuffer || null;
+  }
+
+  /**
+   * Flush buffered output for a session (chunk-based approach)
    */
   private flushOutput(sessionId: number): void {
     const session = this.sessions.get(sessionId);
     if (!session) return;
 
     if (session.outputBuffer.length > 0) {
+      if (session.outputBuffer.length > OUTPUT_BATCH_SIZE) {
+        // Send first chunk, reschedule for remainder
+        const chunk = session.outputBuffer.slice(0, OUTPUT_BATCH_SIZE);
+        session.outputBuffer = session.outputBuffer.slice(OUTPUT_BATCH_SIZE);
+
+        this.eventEmitter.emit('terminal.output', {
+          sessionId,
+          data: chunk,
+        });
+
+        // Reschedule for remaining data
+        session.flushTimer = setTimeout(() => {
+          this.flushOutput(sessionId);
+        }, OUTPUT_THROTTLE_MS);
+        return;
+      }
+
+      // Small enough to send all at once
       this.eventEmitter.emit('terminal.output', {
         sessionId,
         data: session.outputBuffer,
@@ -332,7 +425,14 @@ export class TerminalService implements OnModuleDestroy {
       if (session.flushTimer) {
         clearTimeout(session.flushTimer);
         // Flush any remaining output before cleanup
-        this.flushOutput(sessionId);
+        if (session.outputBuffer.length > 0) {
+          this.eventEmitter.emit('terminal.output', {
+            sessionId,
+            data: session.outputBuffer,
+          });
+          session.outputBuffer = '';
+        }
+        session.flushTimer = null;
       }
       this.sessions.delete(sessionId);
     }
@@ -342,6 +442,9 @@ export class TerminalService implements OnModuleDestroy {
    * Clean up all sessions on module destroy
    */
   async onModuleDestroy(): Promise<void> {
+    // Set shutdown guard BEFORE killing terminals
+    this.isShuttingDown = true;
+
     const sessionIds = Array.from(this.sessions.keys());
     await Promise.all(sessionIds.map(id => this.kill(id)));
   }

@@ -22,8 +22,16 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { SessionStatus, StatusDot } from '@/components/shared/StatusLegend';
-import { useState, useRef, useEffect, useMemo, type ComponentType } from 'react';
+import {
+  useState,
+  useRef,
+  useEffect,
+  useMemo,
+  type ComponentType,
+  type HTMLAttributes,
+} from 'react';
 import { ClaudeIcon } from '@/components/shared/ClaudeIcon';
+import type { TerminalDragHandleProps } from './SortableTerminalWrapper';
 
 // Icon map for rendering icons from string names
 const iconMap: Record<string, LucideIcon> = {
@@ -85,6 +93,7 @@ interface TerminalHeaderProps {
   onSettingsClick?: () => void;
   onClose: () => void;
   onQuickAction?: (actionId: string) => void;
+  dragHandleProps?: TerminalDragHandleProps;
   className?: string;
 }
 
@@ -106,6 +115,7 @@ export function TerminalHeader({
   onSettingsClick,
   onClose,
   onQuickAction,
+  dragHandleProps,
   className,
 }: TerminalHeaderProps) {
   const modeConfig = aiModeConfig[session.aiMode];
@@ -163,6 +173,10 @@ export function TerminalHeader({
     }));
   }, [quickActions]);
 
+  const dragHandleAttributes = (dragHandleProps?.attributes ??
+    {}) as HTMLAttributes<HTMLDivElement>;
+  const dragHandleListeners = (dragHandleProps?.listeners ?? {}) as HTMLAttributes<HTMLDivElement>;
+
   return (
     <div
       className={twMerge(
@@ -175,7 +189,15 @@ export function TerminalHeader({
       )}
     >
       {/* Left section: Status dot + AI mode + label + git branch + status message */}
-      <div className="flex items-center gap-2 min-w-0 flex-1">
+      <div
+        ref={node => dragHandleProps?.setNodeRef(node)}
+        {...dragHandleAttributes}
+        {...dragHandleListeners}
+        className={clsx(
+          'flex items-center gap-2 min-w-0 flex-1',
+          dragHandleProps && 'cursor-grab active:cursor-grabbing'
+        )}
+      >
         {/* Status dot */}
         <div className="flex items-center shrink-0">
           <StatusDot status={session.status} className="w-2 h-2" />

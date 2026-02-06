@@ -21,8 +21,9 @@ import {
   useSessionLifecycle,
 } from '@/hooks';
 import { useUpdateToast } from '@/hooks/useUpdateToast';
-import { useQuickActionStore, useWorkspaceStore } from '@/stores';
+import { useQuickActionStore, useTerminalControlStore, useWorkspaceStore } from '@/stores';
 import { writeToTerminal } from '@/lib/terminal';
+import { PRELAUNCH_SHORTCUT_KEYS } from '@/lib/prelaunch-shortcuts';
 
 /**
  * Root application component that composes workspace tabs, project controls, terminal grid, and global UI.
@@ -85,8 +86,54 @@ function App() {
     handleSessionClose,
   } = useProjectSessions(activeProjectPath, preLaunchSlots);
 
+  // Session ordering for drag/drop
+  const sessionOrder = useTerminalControlStore(state => state.sessionOrder);
+  const setSessionOrder = useTerminalControlStore(state => state.setSessionOrder);
+
+  const orderedTerminalSessions = useMemo(() => {
+    if (sessionOrder.length === 0) {
+      return terminalSessions;
+    }
+
+    const orderMap = new Map(sessionOrder.map((id, idx) => [id, idx]));
+    return [...terminalSessions].sort((a, b) => {
+      const aIndex = orderMap.get(a.id) ?? Number.MAX_SAFE_INTEGER;
+      const bIndex = orderMap.get(b.id) ?? Number.MAX_SAFE_INTEGER;
+      return aIndex - bIndex;
+    });
+  }, [terminalSessions, sessionOrder]);
+
   // Session lifecycle (stop all, kill session)
   const { handleStopAll, handleKillSession } = useSessionLifecycle(activeProjectSessions);
+
+  // Keep persisted order synced with current sessions
+  useEffect(() => {
+    const currentIds = terminalSessions.map(session => session.id);
+    const currentIdSet = new Set(currentIds);
+    const validOrder = sessionOrder.filter(id => currentIdSet.has(id));
+    const newIds = currentIds.filter(id => !sessionOrder.includes(id));
+
+    if (newIds.length > 0 || validOrder.length !== sessionOrder.length) {
+      setSessionOrder([...validOrder, ...newIds]);
+    }
+  }, [terminalSessions, sessionOrder, setSessionOrder]);
+
+  const handleReorderSessions = useCallback(
+    (activeId: string, overId: string) => {
+      const currentOrder = orderedTerminalSessions.map(session => session.id);
+      const oldIndex = currentOrder.indexOf(activeId);
+      const newIndex = currentOrder.indexOf(overId);
+
+      if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) return;
+
+      const nextOrder = [...currentOrder];
+      const temp = nextOrder[oldIndex];
+      nextOrder[oldIndex] = nextOrder[newIndex];
+      nextOrder[newIndex] = temp;
+      setSessionOrder(nextOrder);
+    },
+    [orderedTerminalSessions, setSessionOrder]
+  );
 
   // Quick actions - use raw actions and filter with useMemo to avoid infinite loop
   const allQuickActions = useQuickActionStore(state => state.actions);
@@ -168,8 +215,8 @@ function App() {
         return;
       }
 
-      // N - Add new session slot (max 6)
-      const canAddMore = terminalSessions.length + preLaunchSlots.length < 6;
+      // N - Add new session slot (max 12)
+      const canAddMore = terminalSessions.length + preLaunchSlots.length < 12;
       if (key === 'n' && canAddMore && activeProjectPath) {
         e.preventDefault();
         handleAddSession();
@@ -183,15 +230,12 @@ function App() {
         return;
       }
 
-      // 1-6 - Launch individual slot by index
-      if (/^[1-6]$/.test(key)) {
-        const index = parseInt(key, 10) - 1;
-        if (index < preLaunchSlots.length) {
+      // Launch individual slot by assigned shortcut key
+      if (PRELAUNCH_SHORTCUT_KEYS.includes(key)) {
+        const slot = preLaunchSlots.find(candidate => candidate.shortcutKey === key);
+        if (slot && !launchingSlotIds?.has(slot.id)) {
           e.preventDefault();
-          const slot = preLaunchSlots[index];
-          if (!launchingSlotIds?.has(slot.id)) {
-            handleLaunchSlot(slot.id);
-          }
+          handleLaunchSlot(slot.id);
         }
       }
     };
@@ -231,7 +275,7 @@ function App() {
         {activeProjectPath ? (
           hasContent ? (
             <TerminalGrid
-              sessions={terminalSessions}
+              sessions={orderedTerminalSessions}
               preLaunchSlots={preLaunchSlots}
               launchingSlotIds={launchingSlotIds}
               branches={branches}
@@ -245,6 +289,7 @@ function App() {
               onKill={handleKillSession}
               onSessionClose={handleSessionClose}
               onQuickAction={handleQuickAction}
+              onReorderSessions={handleReorderSessions}
             />
           ) : (
             <IdleLandingView onAddSession={handleAddSession} />

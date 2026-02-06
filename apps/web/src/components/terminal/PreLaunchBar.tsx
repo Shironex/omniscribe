@@ -5,6 +5,7 @@ import { useState, useRef, useEffect, type ComponentType } from 'react';
 import type { Branch } from '@/components/shared/BranchSelector';
 import { BranchAutocomplete } from '@/components/shared/BranchAutocomplete';
 import { ClaudeIcon } from '@/components/shared/ClaudeIcon';
+import { getPrelaunchShortcutForIndex } from '@/lib/prelaunch-shortcuts';
 
 export type AIMode = 'claude' | 'plain';
 
@@ -12,6 +13,7 @@ export interface PreLaunchSlot {
   id: string;
   aiMode: AIMode;
   branch: string;
+  shortcutKey: string;
 }
 
 interface PreLaunchBarProps {
@@ -66,6 +68,8 @@ export function PreLaunchBar({
 
   const selectedMode = aiModeOptions.find(m => m.value === slot.aiMode) || aiModeOptions[0];
   const SelectedIcon = selectedMode.icon;
+  const shortcutKey =
+    slot.shortcutKey || (slotIndex ? getPrelaunchShortcutForIndex(slotIndex - 1) : null);
 
   return (
     <div
@@ -161,12 +165,12 @@ export function PreLaunchBar({
             ? 'bg-border text-muted-foreground cursor-not-allowed opacity-60'
             : 'bg-[var(--status-success)] hover:brightness-110 text-white'
         )}
-        title={slotIndex && slotIndex <= 6 ? `Press ${slotIndex} to launch` : undefined}
+        title={shortcutKey ? `Press ${shortcutKey} to launch` : undefined}
       >
         <Play size={12} fill="currentColor" />
         <span>{isLaunching ? 'Launching...' : 'Launch'}</span>
-        {slotIndex && slotIndex <= 6 && !isLaunching && (
-          <kbd className="ml-1 px-1 py-0.5 text-[10px] bg-white/20 rounded">{slotIndex}</kbd>
+        {shortcutKey && !isLaunching && (
+          <kbd className="ml-1 px-1 py-0.5 text-[10px] bg-white/20 rounded">{shortcutKey}</kbd>
         )}
       </button>
 

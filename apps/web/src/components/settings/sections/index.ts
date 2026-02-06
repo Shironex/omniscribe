@@ -5,3 +5,4 @@ export { McpSection } from './McpSection';
 export { GeneralSection } from './GeneralSection';
 export { WorktreesSection } from './WorktreesSection';
 export { SessionsSection } from './SessionsSection';
+export { TerminalSection } from './TerminalSection';
