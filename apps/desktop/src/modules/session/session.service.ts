@@ -260,6 +260,28 @@ export class SessionService {
   }
 
   /**
+   * Get all sessions that have an active terminal (running sessions).
+   * Done/Error sessions without terminals are NOT counted.
+   */
+  getRunningSessions(): ExtendedSessionConfig[] {
+    return Array.from(this.sessions.values()).filter(
+      session =>
+        session.terminalSessionId !== undefined &&
+        this.terminalService.hasSession(session.terminalSessionId)
+    );
+  }
+
+  /**
+   * Get idle sessions that could be closed to free slots.
+   * A session is "idle" if it has an active terminal but status is 'idle' or 'needs_input'.
+   */
+  getIdleSessions(): ExtendedSessionConfig[] {
+    return this.getRunningSessions().filter(
+      session => session.status === 'idle' || session.status === 'needs_input'
+    );
+  }
+
+  /**
    * Get sessions for a specific project
    */
   getForProject(projectPath: string): ExtendedSessionConfig[] {

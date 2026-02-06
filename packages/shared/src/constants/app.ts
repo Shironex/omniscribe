@@ -101,3 +101,10 @@ export const LOG_BUFFER_MAX_ENTRIES = 50;
 
 /** Log cleanup interval (1 hour in ms) */
 export const LOG_CLEANUP_INTERVAL_MS = 60 * 60 * 1000;
+
+// =============================================================================
+// Session Limits
+// =============================================================================
+
+/** Maximum concurrent running sessions (matches terminal grid capacity) */
+export const MAX_CONCURRENT_SESSIONS = 12;

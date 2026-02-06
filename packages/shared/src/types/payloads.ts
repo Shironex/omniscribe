@@ -326,6 +326,15 @@ export interface SessionListPayload {
  */
 export interface SessionRemoveResponse extends SuccessResponse {}
 
+/**
+ * Response when session creation is rejected due to concurrency limit.
+ * Includes names of idle sessions the user could close to free slots.
+ */
+export interface SessionLimitResponse {
+  error: string;
+  idleSessions: string[];
+}
+
 // ============================================
 // Tab Payloads
 // ============================================

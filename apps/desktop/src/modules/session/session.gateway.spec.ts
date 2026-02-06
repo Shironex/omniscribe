@@ -7,6 +7,7 @@ import { WorktreeService } from '../git/worktree.service';
 import { GitService } from '../git/git.service';
 import { WorkspaceService } from '../workspace/workspace.service';
 import type { SessionStatus } from '@omniscribe/shared';
+import { MAX_CONCURRENT_SESSIONS } from '@omniscribe/shared';
 
 // ---------------------------------------------------------------------------
 // Mock crypto.randomUUID
@@ -70,6 +71,8 @@ const mockSessionService = {
   remove: jest.fn(),
   assignBranch: jest.fn(),
   launchSession: jest.fn(),
+  getRunningSessions: jest.fn().mockReturnValue([]),
+  getIdleSessions: jest.fn().mockReturnValue([]),
 };
 
 const mockTerminalGateway = {
@@ -373,6 +376,53 @@ describe('SessionGateway', () => {
         'develop',
         '/project/.worktrees/develop-12345678'
       );
+    });
+
+    // Concurrency limit tests
+    it('should reject session creation when at concurrency limit', async () => {
+      const runningSessions = Array.from({ length: MAX_CONCURRENT_SESSIONS }, (_, i) =>
+        createMockSession({ id: `session-${i}`, name: `Session ${i}`, terminalSessionId: i })
+      );
+      mockSessionService.getRunningSessions.mockReturnValue(runningSessions);
+      mockSessionService.getIdleSessions.mockReturnValue([
+        createMockSession({
+          id: 'session-3',
+          name: 'Idle Session',
+          status: 'idle' as SessionStatus,
+        }),
+      ]);
+
+      const result = await gateway.handleCreate(basePayload, client);
+
+      expect(result.error).toContain('Session limit reached');
+      expect(result.error).toContain(`${MAX_CONCURRENT_SESSIONS}/${MAX_CONCURRENT_SESSIONS}`);
+      expect(result.idleSessions).toEqual(['Idle Session']);
+      expect(mockSessionService.create).not.toHaveBeenCalled();
+    });
+
+    it('should allow session creation when under concurrency limit', async () => {
+      const runningSessions = Array.from({ length: MAX_CONCURRENT_SESSIONS - 1 }, (_, i) =>
+        createMockSession({ id: `session-${i}`, terminalSessionId: i })
+      );
+      mockSessionService.getRunningSessions.mockReturnValue(runningSessions);
+
+      const result = await gateway.handleCreate(basePayload, client);
+
+      expect(result.error).toBeUndefined();
+      expect(mockSessionService.create).toHaveBeenCalled();
+    });
+
+    it('should return empty idleSessions array when no idle sessions exist at limit', async () => {
+      const runningSessions = Array.from({ length: MAX_CONCURRENT_SESSIONS }, (_, i) =>
+        createMockSession({ id: `session-${i}`, terminalSessionId: i })
+      );
+      mockSessionService.getRunningSessions.mockReturnValue(runningSessions);
+      mockSessionService.getIdleSessions.mockReturnValue([]);
+
+      const result = await gateway.handleCreate(basePayload, client);
+
+      expect(result.error).toContain('Session limit reached');
+      expect(result.idleSessions).toEqual([]);
     });
   });
 

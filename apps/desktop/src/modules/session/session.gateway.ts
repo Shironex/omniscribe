@@ -23,6 +23,7 @@ import {
   SessionRemoveResponse,
   WorktreeSettings,
   DEFAULT_WORKTREE_SETTINGS,
+  MAX_CONCURRENT_SESSIONS,
   createLogger,
 } from '@omniscribe/shared';
 import { CORS_CONFIG } from '../shared/cors.config';
@@ -50,11 +51,13 @@ interface UpdateSessionPayload {
 }
 
 /**
- * Response for session creation - either the session or an error
+ * Response for session creation - either the session or an error.
+ * When limit is hit, includes names of idle sessions the user could close.
  */
 interface CreateSessionResponse {
   session?: ExtendedSessionConfig;
   error?: string;
+  idleSessions?: string[];
 }
 
 /**
@@ -96,6 +99,20 @@ export class SessionGateway implements OnGatewayInit {
     @MessageBody() payload: CreateSessionPayload,
     @ConnectedSocket() client: Socket
   ): Promise<CreateSessionResponse> {
+    // Check concurrency limit before creating session
+    const runningSessions = this.sessionService.getRunningSessions();
+    if (runningSessions.length >= MAX_CONCURRENT_SESSIONS) {
+      const idleSessions = this.sessionService.getIdleSessions();
+      const idleNames = idleSessions.map(s => s.name);
+      this.logger.warn(
+        `[handleCreate] Session limit reached: ${runningSessions.length}/${MAX_CONCURRENT_SESSIONS} running`
+      );
+      return {
+        error: `Session limit reached (${runningSessions.length}/${MAX_CONCURRENT_SESSIONS}). Close a session to start a new one.`,
+        idleSessions: idleNames,
+      };
+    }
+
     const session = this.sessionService.create(payload.mode, payload.projectPath, {
       name: payload.name,
       workingDirectory: payload.workingDirectory,
