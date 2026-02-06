@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 
 const MIN_WIDTH = 180;
 const MAX_WIDTH = 320;
@@ -13,6 +13,9 @@ export interface UseSidebarResizeReturn {
  * Clamps the width between MIN_WIDTH and MAX_WIDTH based on cursor position.
  */
 export function useSidebarResize(onWidthChange: (width: number) => void): UseSidebarResizeReturn {
+  const onWidthChangeRef = useRef(onWidthChange);
+  onWidthChangeRef.current = onWidthChange;
+
   const [isResizing, setIsResizing] = useState(false);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
@@ -25,7 +28,7 @@ export function useSidebarResize(onWidthChange: (width: number) => void): UseSid
       if (!isResizing) return;
       const newWidth = e.clientX;
       const clampedWidth = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, newWidth));
-      onWidthChange(clampedWidth);
+      onWidthChangeRef.current(clampedWidth);
     };
 
     const handleMouseUp = () => {
@@ -41,7 +44,7 @@ export function useSidebarResize(onWidthChange: (width: number) => void): UseSid
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isResizing, onWidthChange]);
+  }, [isResizing]);
 
   return { isResizing, handleMouseDown };
 }

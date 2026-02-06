@@ -48,7 +48,7 @@ export function TerminalCard({
         session={session}
         quickActions={quickActions}
         onClose={onKill}
-        onQuickAction={onQuickAction ? actionId => onQuickAction(actionId) : undefined}
+        onQuickAction={onQuickAction}
         dragHandleProps={dragHandleProps}
       />
       <div className="flex-1 min-h-0">

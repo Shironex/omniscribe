@@ -45,6 +45,7 @@ export function PreLaunchSection({
 
       {canAddMore && (
         <button
+          type="button"
           onClick={onAddSlot}
           className={clsx(
             'w-full flex items-center justify-center gap-2 py-2 rounded-lg',

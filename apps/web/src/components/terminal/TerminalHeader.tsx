@@ -6,7 +6,8 @@ import { SessionStatusDisplay } from './SessionStatusDisplay';
 import { QuickActionsDropdown } from './QuickActionsDropdown';
 import { MoreMenuDropdown } from './MoreMenuDropdown';
 import type { TerminalDragHandleProps } from './SortableTerminalWrapper';
-
+import type { QuickActionItem } from './TerminalCard';
+import type { SessionStatus } from '@/components/shared/StatusLegend';
 export type AIMode = 'claude' | 'plain';
 
 export interface GitBranchInfo {
@@ -19,7 +20,7 @@ export interface TerminalSession {
   id: string;
   sessionNumber: number;
   aiMode: AIMode;
-  status: import('@/components/shared/StatusLegend').SessionStatus;
+  status: SessionStatus;
   branch?: string;
   statusMessage?: string;
   /** Terminal PTY session ID - required for the terminal to connect */
@@ -28,15 +29,8 @@ export interface TerminalSession {
   worktreePath?: string;
 }
 
-interface QuickAction {
-  id: string;
-  label: string;
-  icon?: string;
-  category?: string;
-}
-
 interface TerminalHeaderProps {
-  quickActions?: QuickAction[];
+  quickActions?: QuickActionItem[];
   session: TerminalSession;
   gitBranch?: GitBranchInfo;
   onSettingsClick?: () => void;
@@ -70,10 +64,13 @@ export function TerminalHeader({
     useCallback(() => setMoreMenuOpen(false), [])
   );
 
-  const handleQuickAction = (actionId: string) => {
-    setQuickActionsOpen(false);
-    onQuickAction?.(actionId);
-  };
+  const handleQuickAction = useCallback(
+    (actionId: string) => {
+      setQuickActionsOpen(false);
+      onQuickAction?.(actionId);
+    },
+    [onQuickAction]
+  );
 
   const dragHandleAttributes = (dragHandleProps?.attributes ??
     {}) as HTMLAttributes<HTMLDivElement>;

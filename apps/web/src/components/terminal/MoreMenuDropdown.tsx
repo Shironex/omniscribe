@@ -17,6 +17,7 @@ export function MoreMenuDropdown({
   return (
     <>
       <button
+        type="button"
         onClick={onToggle}
         className={clsx(
           'p-1 rounded',
@@ -32,6 +33,7 @@ export function MoreMenuDropdown({
         <div className="absolute right-0 top-full mt-1 z-50 min-w-[120px] bg-popover border border-border rounded-md shadow-lg py-1">
           {onSettingsClick && (
             <button
+              type="button"
               onClick={() => {
                 onSettingsClick();
               }}
@@ -42,6 +44,7 @@ export function MoreMenuDropdown({
             </button>
           )}
           <button
+            type="button"
             onClick={onClose}
             className="w-full text-left px-3 py-1.5 text-xs text-red-400 hover:bg-red-400/10 transition-colors flex items-center gap-2"
           >

@@ -16,10 +16,10 @@ import {
   usePreLaunchSlots,
   useProjectGit,
   useSessionLifecycle,
+  useAppKeyboardShortcuts,
+  useQuickActionExecution,
 } from '@/hooks';
 import { useUpdateToast } from '@/hooks/useUpdateToast';
-import { useAppKeyboardShortcuts } from '@/hooks/useAppKeyboardShortcuts';
-import { useQuickActionExecution } from '@/hooks/useQuickActionExecution';
 import { useTerminalControlStore, useWorkspaceStore } from '@/stores';
 
 function App() {

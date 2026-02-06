@@ -1,8 +1,9 @@
 import { Copy, Check, Play } from 'lucide-react';
 import { clsx } from 'clsx';
+import type { ClaudeInstallCommand } from '@omniscribe/shared';
 
 interface InstallCommandDisplayProps {
-  installCommand: { command: string; description: string };
+  installCommand: ClaudeInstallCommand;
   copiedCommand: boolean;
   onCopy: () => Promise<void>;
   onRunInTerminal: () => Promise<void>;

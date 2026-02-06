@@ -123,9 +123,13 @@ export function useClaudeCliStatus(): UseClaudeCliStatusReturn {
 
   const copyCommand = useCallback(async () => {
     if (installCommand?.command) {
-      await navigator.clipboard.writeText(installCommand.command);
-      setCopiedCommand(true);
-      setTimeout(() => setCopiedCommand(false), 2000);
+      try {
+        await navigator.clipboard.writeText(installCommand.command);
+        setCopiedCommand(true);
+        setTimeout(() => setCopiedCommand(false), 2000);
+      } catch (error) {
+        logger.error('Failed to copy command to clipboard:', error);
+      }
     }
   }, [installCommand]);
 

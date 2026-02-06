@@ -13,7 +13,7 @@ export function ProgressBar({ percentage, colorClass }: ProgressBarProps) {
     <div className="h-2 w-full bg-muted rounded-full overflow-hidden border border-border/50">
       <div
         className={clsx('h-full transition-all duration-500 rounded-full', colorClass)}
-        style={{ width: `${Math.min(percentage, 100)}%` }}
+        style={{ width: `${Math.max(0, Math.min(percentage, 100))}%` }}
       />
     </div>
   );

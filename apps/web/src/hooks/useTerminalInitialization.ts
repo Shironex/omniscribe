@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { createLogger } from '@omniscribe/shared';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
@@ -36,9 +36,6 @@ export function useTerminalInitialization(
   connectAndJoin: (sessionId: number) => void,
   attachKeyboardHandler: (terminal: Terminal) => void
 ): void {
-  const sessionIdRef = useRef(sessionId);
-  sessionIdRef.current = sessionId;
-
   const {
     terminalRef,
     xtermRef,

@@ -1,7 +1,5 @@
 import React, { useEffect, useRef } from 'react';
 import { createLogger } from '@omniscribe/shared';
-
-const logger = createLogger('TerminalView');
 import type { Terminal } from '@xterm/xterm';
 import type { FitAddon } from '@xterm/addon-fit';
 import { resizeTerminal } from '@/lib/terminal';
@@ -14,6 +12,8 @@ import { useTerminalKeyboard } from '@/hooks/useTerminalKeyboard';
 import { useTerminalConnection } from '@/hooks/useTerminalConnection';
 import { useTerminalInitialization } from '@/hooks/useTerminalInitialization';
 import '@xterm/xterm/css/xterm.css';
+
+const logger = createLogger('TerminalView');
 
 export interface TerminalViewProps {
   sessionId: number;

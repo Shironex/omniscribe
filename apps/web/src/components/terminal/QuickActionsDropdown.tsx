@@ -17,6 +17,7 @@ import {
   Zap,
   type LucideIcon,
 } from 'lucide-react';
+import type { QuickActionItem } from './TerminalCard';
 
 const iconMap: Record<string, LucideIcon> = {
   GitCommit,
@@ -41,15 +42,8 @@ const categoryConfig: Record<string, { label: string; order: number }> = {
   ai: { label: 'AI', order: 3 },
 };
 
-interface QuickAction {
-  id: string;
-  label: string;
-  icon?: string;
-  category?: string;
-}
-
 interface QuickActionsDropdownProps {
-  quickActions: QuickAction[];
+  quickActions: QuickActionItem[];
   isOpen: boolean;
   onToggle: () => void;
   onAction: (actionId: string) => void;
@@ -62,7 +56,7 @@ export function QuickActionsDropdown({
   onAction,
 }: QuickActionsDropdownProps) {
   const groupedActions = useMemo(() => {
-    const groups: Record<string, QuickAction[]> = {};
+    const groups: Record<string, QuickActionItem[]> = {};
     for (const action of quickActions) {
       const category = action.category || 'other';
       if (!groups[category]) {
@@ -85,6 +79,7 @@ export function QuickActionsDropdown({
   return (
     <>
       <button
+        type="button"
         onClick={onToggle}
         className={clsx(
           'p-1 rounded',
@@ -108,6 +103,7 @@ export function QuickActionsDropdown({
                 const Icon = action.icon ? iconMap[action.icon] : null;
                 return (
                   <button
+                    type="button"
                     key={action.id}
                     onClick={() => onAction(action.id)}
                     className="w-full text-left px-3 py-1.5 text-xs text-foreground hover:bg-accent transition-colors flex items-center gap-2"

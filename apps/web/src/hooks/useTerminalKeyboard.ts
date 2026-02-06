@@ -7,6 +7,21 @@ import { isMacOS } from '@/lib/os-detection';
 
 const logger = createLogger('TerminalKeyboard');
 
+function pasteFromClipboard(sessionIdRef: React.MutableRefObject<number>): void {
+  navigator.clipboard
+    .readText()
+    .then(text => {
+      if (text.length > LARGE_PASTE_WARNING_THRESHOLD) {
+        writeToTerminalChunked(sessionIdRef.current, text);
+      } else {
+        writeToTerminal(sessionIdRef.current, text);
+      }
+    })
+    .catch(() => {
+      logger.debug('Clipboard read failed (permission denied or unavailable)');
+    });
+}
+
 /**
  * Hook that creates a keyboard event handler for the terminal.
  * Handles Cmd/Ctrl+C/V/F, paste chunking, and modifier passthrough.
@@ -42,18 +57,7 @@ export function useTerminalKeyboard(
 
         // Primary+V: paste
         if (isPrimaryModifier && !e.shiftKey && key === 'v' && e.type === 'keydown') {
-          navigator.clipboard
-            .readText()
-            .then(text => {
-              if (text.length > LARGE_PASTE_WARNING_THRESHOLD) {
-                writeToTerminalChunked(sessionIdRef.current, text);
-              } else {
-                writeToTerminal(sessionIdRef.current, text);
-              }
-            })
-            .catch(() => {
-              logger.debug('Clipboard read failed (permission denied or unavailable)');
-            });
+          pasteFromClipboard(sessionIdRef);
           return false;
         }
 
@@ -68,18 +72,7 @@ export function useTerminalKeyboard(
           return false;
         }
         if (e.ctrlKey && e.shiftKey && key === 'v' && e.type === 'keydown') {
-          navigator.clipboard
-            .readText()
-            .then(text => {
-              if (text.length > LARGE_PASTE_WARNING_THRESHOLD) {
-                writeToTerminalChunked(sessionIdRef.current, text);
-              } else {
-                writeToTerminal(sessionIdRef.current, text);
-              }
-            })
-            .catch(() => {
-              logger.debug('Clipboard read failed (permission denied or unavailable)');
-            });
+          pasteFromClipboard(sessionIdRef);
           return false;
         }
 

@@ -58,11 +58,15 @@ export function useTerminalConnection(
         setStatus('connected');
 
         // Replay scrollback buffer for sessions that were already running
-        joinTerminal(sessionId).then(({ success, scrollback }) => {
-          if (success && scrollback && xtermRef.current && !isDisposedRef.current) {
-            xtermRef.current.write(scrollback);
-          }
-        });
+        joinTerminal(sessionId)
+          .then(({ success, scrollback }) => {
+            if (success && scrollback && xtermRef.current && !isDisposedRef.current) {
+              xtermRef.current.write(scrollback);
+            }
+          })
+          .catch(error => {
+            logger.error('Failed to join terminal session:', error);
+          });
       }
     },
     [handleOutput, handleClose, xtermRef, isDisposedRef]

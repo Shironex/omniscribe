@@ -86,15 +86,9 @@ export function UsagePopover() {
 
   const isLoading = status === 'fetching';
 
-  // Get progress bar color for header indicator
-  const getProgressBarColor = (percentage: number) => {
-    if (percentage >= 80) return 'bg-status-error';
-    if (percentage >= 50) return 'bg-status-warning';
-    return 'bg-primary';
-  };
-
   const sessionPercentage = claudeUsage?.sessionPercentage ?? 0;
-  const statusColor = getStatusInfo(sessionPercentage).color;
+  const sessionStatus = getStatusInfo(sessionPercentage);
+  const statusColor = sessionStatus.color;
 
   // Error info
   const errorInfo = error ? ERROR_MESSAGES[error] : null;
@@ -111,10 +105,7 @@ export function UsagePopover() {
           )}
         >
           <div
-            className={clsx(
-              'h-full transition-all duration-500 rounded-full',
-              getProgressBarColor(sessionPercentage)
-            )}
+            className={clsx('h-full transition-all duration-500 rounded-full', sessionStatus.bg)}
             style={{ width: `${Math.min(sessionPercentage, 100)}%` }}
           />
         </div>
