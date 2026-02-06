@@ -21,6 +21,8 @@ interface PreLaunchBarProps {
   slotIndex?: number;
   branches: Branch[];
   isLaunching?: boolean;
+  /** Whether Claude CLI is available (controls Claude mode option) */
+  claudeAvailable?: boolean;
   onUpdate: (slotId: string, updates: Partial<Pick<PreLaunchSlot, 'aiMode' | 'branch'>>) => void;
   onLaunch: (slotId: string) => void;
   onRemove: (slotId: string) => void;
@@ -45,6 +47,7 @@ export function PreLaunchBar({
   slotIndex,
   branches,
   isLaunching = false,
+  claudeAvailable = true,
   onUpdate,
   onLaunch,
   onRemove,
@@ -94,7 +97,7 @@ export function PreLaunchBar({
           )}
         >
           <SelectedIcon size={14} className={selectedMode.color} />
-          <span>{selectedMode.label}</span>
+          <span data-testid="ai-mode-label">{selectedMode.label}</span>
           <ChevronDown
             size={12}
             className={clsx(
@@ -115,23 +118,32 @@ export function PreLaunchBar({
           >
             {aiModeOptions.map(option => {
               const Icon = option.icon;
+              const isDisabled = option.value === 'claude' && !claudeAvailable;
               return (
                 <button
                   key={option.value}
                   onClick={() => {
+                    if (isDisabled) return;
                     onUpdate(slot.id, { aiMode: option.value });
                     setIsAIModeOpen(false);
                   }}
+                  disabled={isDisabled}
+                  title={isDisabled ? 'Claude CLI is not installed' : undefined}
                   className={clsx(
                     'w-full flex items-center gap-2 px-3 py-1.5',
                     'text-xs text-left transition-colors',
-                    option.value === slot.aiMode
-                      ? 'bg-primary/10 text-primary'
-                      : 'text-foreground hover:bg-card'
+                    isDisabled
+                      ? 'opacity-40 cursor-not-allowed'
+                      : option.value === slot.aiMode
+                        ? 'bg-primary/10 text-primary'
+                        : 'text-foreground hover:bg-card'
                   )}
                 >
                   <Icon size={14} className={option.color} />
                   <span>{option.label}</span>
+                  {isDisabled && (
+                    <span className="ml-auto text-[10px] text-muted-foreground">Not installed</span>
+                  )}
                 </button>
               );
             })}

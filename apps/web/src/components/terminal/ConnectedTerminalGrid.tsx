@@ -8,6 +8,7 @@ import { useSessionStore } from '@/stores/useSessionStore';
 import { useWorkspaceStore, selectActiveTab } from '@/stores/useWorkspaceStore';
 import { useGitStore, selectBranches, selectCurrentBranch } from '@/stores/useGitStore';
 import { useTerminalStore } from '@/stores/useTerminalStore';
+import { useSettingsStore } from '@/stores/useSettingsStore';
 import { createSession, removeSession } from '@/lib/session';
 import { killTerminal } from '@/lib/terminal';
 import { mapAiModeToBackend, mapAiModeToUI } from '@/lib/aiMode';
@@ -46,9 +47,17 @@ export function ConnectedTerminalGrid({ className }: ConnectedTerminalGridProps)
   // Workspace store
   const activeTab = useWorkspaceStore(selectActiveTab);
   const activeProjectPath = activeTab?.projectPath ?? null;
-  const defaultAiMode = useWorkspaceStore(
+
+  // Read Claude CLI status from settings store
+  const claudeCliStatus = useSettingsStore(state => state.claudeCliStatus);
+
+  // Read configured default AI mode from workspace preferences
+  const configuredDefaultAiMode = useWorkspaceStore(
     state => state.preferences.session?.defaultMode ?? DEFAULT_SESSION_SETTINGS.defaultMode
   );
+
+  // Fall back to 'plain' when CLI status unknown (null) or not installed
+  const defaultAiMode = claudeCliStatus?.installed ? configuredDefaultAiMode : 'plain';
 
   // Git store
   const gitBranches = useGitStore(selectBranches);
@@ -252,6 +261,7 @@ export function ConnectedTerminalGrid({ className }: ConnectedTerminalGridProps)
       sessions={terminalSessions}
       preLaunchSlots={preLaunchSlots}
       branches={branches}
+      claudeAvailable={claudeCliStatus?.installed ?? false}
       focusedSessionId={focusedSessionId}
       onFocusSession={handleFocusSession}
       onAddSlot={handleAddSlot}

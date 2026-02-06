@@ -21,6 +21,8 @@ interface TerminalGridProps {
   preLaunchSlots: PreLaunchSlot[];
   launchingSlotIds?: Set<string>;
   branches: Branch[];
+  /** Whether Claude CLI is available (controls Claude mode option) */
+  claudeAvailable?: boolean;
   quickActions?: QuickActionItem[];
   focusedSessionId: string | null;
   onFocusSession: (sessionId: string) => void;
@@ -43,6 +45,7 @@ export function TerminalGrid({
   preLaunchSlots,
   launchingSlotIds,
   branches,
+  claudeAvailable,
   quickActions = [],
   focusedSessionId,
   onFocusSession,
@@ -233,6 +236,7 @@ export function TerminalGrid({
         preLaunchSlots={preLaunchSlots}
         launchingSlotIds={launchingSlotIds}
         branches={branches}
+        claudeAvailable={claudeAvailable}
         canAddMore={canAddMore}
         onAddSlot={onAddSlot}
         onRemoveSlot={onRemoveSlot}

@@ -8,6 +8,8 @@ interface PreLaunchSectionProps {
   preLaunchSlots: PreLaunchSlot[];
   launchingSlotIds?: Set<string>;
   branches: Branch[];
+  /** Whether Claude CLI is available (controls Claude mode option) */
+  claudeAvailable?: boolean;
   canAddMore: boolean;
   onAddSlot: () => void;
   onRemoveSlot: (slotId: string) => void;
@@ -22,6 +24,7 @@ export function PreLaunchSection({
   preLaunchSlots,
   launchingSlotIds,
   branches,
+  claudeAvailable,
   canAddMore,
   onAddSlot,
   onRemoveSlot,
@@ -37,6 +40,7 @@ export function PreLaunchSection({
           slotIndex={index + 1}
           branches={branches}
           isLaunching={launchingSlotIds?.has(slot.id)}
+          claudeAvailable={claudeAvailable}
           onUpdate={onUpdateSlot}
           onLaunch={onLaunch}
           onRemove={onRemoveSlot}

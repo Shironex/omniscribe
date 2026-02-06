@@ -4,7 +4,7 @@ import { createLogger, DEFAULT_SESSION_SETTINGS } from '@omniscribe/shared';
 import type { PreLaunchSlot } from '@/components/terminal/TerminalGrid';
 import { createSession } from '@/lib/session';
 import { mapAiModeToBackend } from '@/lib/aiMode';
-import { useTerminalStore, useWorkspaceStore } from '@/stores';
+import { useTerminalStore, useWorkspaceStore, useSettingsStore } from '@/stores';
 import { getNextAvailablePrelaunchShortcut } from '@/lib/prelaunch-shortcuts';
 
 const logger = createLogger('PreLaunchSlots');
@@ -49,10 +49,16 @@ export function usePreLaunchSlots(
   // Track which slots are currently being launched (prevents spam clicking)
   const [launchingSlotIds, setLaunchingSlotIds] = useState<Set<string>>(new Set());
 
-  // Read default AI mode from workspace preferences
-  const defaultAiMode = useWorkspaceStore(
+  // Read Claude CLI status from settings store
+  const claudeCliStatus = useSettingsStore(state => state.claudeCliStatus);
+
+  // Read configured default AI mode from workspace preferences
+  const configuredDefaultAiMode = useWorkspaceStore(
     state => state.preferences.session?.defaultMode ?? DEFAULT_SESSION_SETTINGS.defaultMode
   );
+
+  // Fall back to 'plain' when CLI status unknown (null) or not installed
+  const defaultAiMode = claudeCliStatus?.installed ? configuredDefaultAiMode : 'plain';
 
   // Listen to add slot requests from other components (e.g., sidebar + button)
   const addSlotRequestCounter = useTerminalStore(state => state.addSlotRequestCounter);
