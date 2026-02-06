@@ -15,6 +15,7 @@
     }
   ],
   "asarUnpack": ["**/node_modules/node-pty/**/*"],
+  "artifactName": "${productName}-${version}-${arch}.${ext}",
   "nodeGypRebuild": false,
   "npmRebuild": false,
   "publish": {
