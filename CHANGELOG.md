@@ -2,6 +2,46 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.2.0 (2026-02-06)
+
+### Features
+
+- **Max 12 sessions** — increased from 6 to 12 parallel AI sessions
+- **Drag-and-drop reordering** — rearrange terminals by dragging via `@dnd-kit`
+- **Terminal search** — Ctrl+Shift+F opens search bar with regex and case-sensitive modes
+- **11 terminal color themes** — tokyonight, dark, light, dracula, nord, monokai, gruvbox, catppuccin, onedark, solarized, github-light
+- **Terminal settings UI** — font family/size, cursor style/blink, scrollback lines, theme picker in Settings modal
+- **Resizable panels** — drag dividers between terminals (replaces CSS grid)
+- **WebGL rendering** — GPU-accelerated terminal rendering with automatic canvas fallback
+- **Smart copy/paste** — Ctrl+C copies selection or sends ^C; Ctrl+V pastes from clipboard
+- **File path link detection** — clickable paths (e.g. `src/main.ts:42`) open in VS Code
+- **Spatial pane navigation** — Ctrl+Alt+Arrow keys to move focus between terminals
+- **Error boundary** — crash recovery UI with restart button per terminal
+- **OS-specific font defaults** — Cascadia Code (Windows), SF Mono (macOS), Ubuntu Mono (Linux)
+
+### Performance
+
+- **Chunk-based output batching** (4ms/4KB) replacing naive 16ms flush for smoother streaming
+- **Scrollback buffer** (50KB per session) for reconnect replay when rejoining a terminal
+- **Serialized write queue** with large-write chunking prevents input interleaving
+- **Resize deduplication** with 150ms debounce
+- **Shutdown guard** prevents callbacks during app teardown
+- **Bounded output buffer** (100KB cap) prevents memory leaks from long-running processes
+- **Large paste handling** with chunked writes to prevent UI freezes
+
+### Validation & Safety
+
+- **Payload validation** — type checks, 1MB input size limit, dimension validation on resize
+
+### Refactoring
+
+- Extract **14 hooks**, **9 components**, and **4 utility files** from 8 oversized frontend components (~1,500 lines reduced)
+- TerminalView: 557 → 187 lines (6 extracted hooks: settings, search, resize, keyboard, connection, initialization)
+- TerminalGrid: 492 → 245 lines (layout utils, TerminalCard, PreLaunchSection, DnD hook, panel resize hook)
+- TerminalHeader + App: 352+322 → 135+195 lines (QuickActionsDropdown, MoreMenuDropdown, SessionStatusDisplay, keyboard shortcuts hook)
+- IntegrationsSection + Sidebar: 495+278 → 114+247 lines (ClaudeCliStatusCard, ClaudeAuthCard, InstallCommandDisplay, useSidebarResize)
+- UsagePopover + WelcomeView: 314+220 → 218+194 lines (date-utils, path-utils, ProgressBar, UsageCard)
+
 ## 0.1.4 (2026-02-06)
 
 ### Bug Fixes

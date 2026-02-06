@@ -32,7 +32,7 @@
 
 ## About
 
-Omniscribe is a desktop application for managing multiple AI coding assistant sessions (Claude Code, etc.) simultaneously. Run 1-6 sessions in parallel, each with its own terminal, optional git worktree isolation, and MCP server configuration.
+Omniscribe is a desktop application for managing multiple AI coding assistant sessions (Claude Code, etc.) simultaneously. Run up to 12 sessions in parallel, each with its own GPU-accelerated terminal, optional git worktree isolation, and MCP server configuration.
 
 ## Screenshots
 
@@ -50,23 +50,32 @@ Omniscribe is a desktop application for managing multiple AI coding assistant se
 
 ## Features
 
-| Feature                | Description                                                           |
-| ---------------------- | --------------------------------------------------------------------- |
-| **Multi-Session Grid** | Run 1-6 AI sessions in parallel with live terminal views              |
-| **Real-Time Status**   | Track session states: idle, working, planning, needs_input, finished  |
-| **Git Worktrees**      | Isolate each session in its own git worktree for parallel development |
-| **MCP Integration**    | Configure Model Context Protocol servers per session                  |
-| **Project Tabs**       | Manage multiple projects with persistent recent history               |
-| **Cross-Platform**     | Native support for Windows, macOS, and Linux                          |
+| Feature                | Description                                                              |
+| ---------------------- | ------------------------------------------------------------------------ |
+| **Multi-Session Grid** | Run up to 12 AI sessions in parallel with GPU-accelerated terminal views |
+| **Real-Time Status**   | Track session states: idle, working, planning, needs_input, finished     |
+| **Drag & Drop**        | Rearrange terminals by dragging; resizable panels with drag dividers     |
+| **Terminal Search**    | Ctrl+Shift+F search bar with regex and case-sensitive modes              |
+| **11 Terminal Themes** | tokyonight, dracula, nord, monokai, gruvbox, catppuccin, and more        |
+| **Terminal Settings**  | Font family/size, cursor style, scrollback, theme — all applied live     |
+| **Smart Copy/Paste**   | Ctrl+C copies selection or sends ^C; Ctrl+V pastes from clipboard        |
+| **File Path Links**    | Clickable file paths in terminal output open directly in VS Code         |
+| **Spatial Navigation** | Ctrl+Alt+Arrow keys to move focus between terminal panes                 |
+| **Git Worktrees**      | Isolate each session in its own git worktree for parallel development    |
+| **MCP Integration**    | Configure Model Context Protocol servers per session                     |
+| **Project Tabs**       | Manage multiple projects with persistent recent history                  |
+| **Cross-Platform**     | Native support for Windows, macOS, and Linux                             |
 
 ## Keyboard Shortcuts
 
-| Shortcut       | Action                                |
-| -------------- | ------------------------------------- |
-| `N`            | Add new session slot                  |
-| `L`            | Launch all pending sessions           |
-| `1-6`          | Launch individual session by position |
-| `Ctrl/Cmd + K` | Stop all running sessions             |
+| Shortcut             | Action                           |
+| -------------------- | -------------------------------- |
+| `N`                  | Add new session slot             |
+| `L`                  | Launch all pending sessions      |
+| `1-9`, `0`, `-`, `=` | Launch individual session (1-12) |
+| `Ctrl/Cmd + K`       | Stop all running sessions        |
+| `Ctrl + Shift + F`   | Open terminal search bar         |
+| `Ctrl + Alt + Arrow` | Navigate between terminal panes  |
 
 ## Quick Start
 
@@ -127,15 +136,15 @@ omniscribe/
 
 ## Tech Stack
 
-| Layer    | Technology              |
-| -------- | ----------------------- |
-| Desktop  | Electron 40             |
-| Backend  | NestJS 10               |
-| Frontend | React 18, Zustand 5     |
-| Terminal | xterm.js, node-pty      |
-| Styling  | Tailwind CSS            |
-| Build    | Vite, esbuild           |
-| IPC      | Socket.io, Electron IPC |
+| Layer    | Technology                 |
+| -------- | -------------------------- |
+| Desktop  | Electron 40                |
+| Backend  | NestJS 10                  |
+| Frontend | React 18, Zustand 5        |
+| Terminal | xterm.js (WebGL), node-pty |
+| Styling  | Tailwind CSS               |
+| Build    | Vite, esbuild              |
+| IPC      | Socket.io, Electron IPC    |
 
 ## Contributing
 
