@@ -76,6 +76,7 @@ export function ProjectTabs({
 
         {/* New tab button */}
         <button
+          data-testid="new-tab-button"
           onClick={onNewTab}
           className={clsx(
             'no-drag flex items-center justify-center px-3 h-full',

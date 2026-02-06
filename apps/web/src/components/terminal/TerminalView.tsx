@@ -169,6 +169,7 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
 
   return (
     <div
+      data-testid={`terminal-view-${sessionId}`}
       className={`terminal-view ${className}`}
       style={{
         width: '100%',

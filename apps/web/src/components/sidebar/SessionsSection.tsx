@@ -69,7 +69,7 @@ export function SessionsSection({ className, onSessionClick, onNewSession }: Ses
   );
 
   return (
-    <div className={twMerge(clsx('space-y-2', className))}>
+    <div data-testid="sessions-section" className={twMerge(clsx('space-y-2', className))}>
       {/* Header with count and new button */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">

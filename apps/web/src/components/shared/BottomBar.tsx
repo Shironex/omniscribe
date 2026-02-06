@@ -24,6 +24,7 @@ export function BottomBar({
 
   return (
     <div
+      data-testid="bottom-bar"
       className={twMerge(
         clsx(
           'h-12 bg-muted border-t border-border',
@@ -52,6 +53,7 @@ export function BottomBar({
       <div className="flex items-center gap-2">
         {hasActiveSessions && (
           <button
+            data-testid="stop-all-button"
             onClick={onStopAll}
             className={clsx(
               'flex items-center gap-2 px-3 py-1.5 rounded',
@@ -68,6 +70,7 @@ export function BottomBar({
         )}
 
         <button
+          data-testid="launch-button"
           onClick={onLaunch}
           disabled={!canLaunch || isLaunching}
           className={clsx(

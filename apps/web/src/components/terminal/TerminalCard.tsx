@@ -36,6 +36,7 @@ export function TerminalCard({
 }: TerminalCardProps) {
   return (
     <div
+      data-testid={`session-card-${session.id}`}
       className={clsx(
         'flex flex-col h-full min-h-0 min-w-0 rounded-lg overflow-hidden',
         'border border-border',

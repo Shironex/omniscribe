@@ -34,6 +34,8 @@ pnpm-debug.log*
 # Testing
 coverage/
 .nyc_output/
+playwright-report/
+test-results/
 
 # Electron
 electron-builder.env

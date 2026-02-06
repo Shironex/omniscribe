@@ -45,6 +45,7 @@ export function PreLaunchSection({
 
       {canAddMore && (
         <button
+          data-testid="add-session-button"
           type="button"
           onClick={onAddSlot}
           className={clsx(
