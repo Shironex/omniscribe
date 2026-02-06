@@ -29,7 +29,7 @@
     "target": ["dmg", "zip"]
   },
   "win": {
-    "icon": "resources/icon.png",
+    "icon": "resources/icon.ico",
     "target": ["nsis"],
     "signAndEditExecutable": false
   },
