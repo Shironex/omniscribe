@@ -31,6 +31,7 @@ export function ProjectTabs({
 
   return (
     <div
+      data-testid="project-tabs"
       className={twMerge(
         clsx(
           'h-10 bg-muted border-b border-border',

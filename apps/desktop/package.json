@@ -17,6 +17,7 @@
     "test": "jest",
     "test:cov": "jest --coverage",
     "test:watch": "jest --watch",
+    "test:e2e": "npx playwright test --config=e2e/playwright.config.ts",
     "package": "pnpm build && electron-builder",
     "package:win": "pnpm build && electron-builder --win",
     "package:mac": "pnpm build && electron-builder --mac",
@@ -53,6 +54,8 @@
     "electron-builder": "^26.0.0",
     "esbuild": "^0.27.2",
     "jest": "^30.0.0",
-    "ts-jest": "^29.4.0"
+    "playwright": "^1.58.2",
+    "ts-jest": "^29.4.0",
+    "xvfb-maybe": "^0.2.1"
   }
 }
