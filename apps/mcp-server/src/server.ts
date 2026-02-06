@@ -9,7 +9,7 @@ import { createHttpClient } from './http/index.js';
 import { registerTools } from './tools/index.js';
 import { logger } from './utils/index.js';
 
-const VERSION = '0.1.0';
+declare const __VERSION__: string;
 
 /**
  * Create and configure the MCP server
@@ -23,7 +23,7 @@ export function createServer(): {
 
   const server = new McpServer({
     name: 'omniscribe',
-    version: VERSION,
+    version: __VERSION__,
   });
 
   // Register all tools
@@ -40,7 +40,7 @@ export function createServer(): {
  * Start the MCP server
  */
 export async function startServer(): Promise<void> {
-  logger.info(`Starting Omniscribe MCP Server v${VERSION}`);
+  logger.info(`Starting Omniscribe MCP Server v${__VERSION__}`);
 
   const { server, config } = createServer();
 

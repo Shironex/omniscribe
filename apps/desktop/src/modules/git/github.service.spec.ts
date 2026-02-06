@@ -1,19 +1,19 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { GithubService } from './github.service';
 
-// The promisified exec mock function.
-let mockExecAsync: jest.Mock;
+// The promisified execFile mock function.
+let mockExecFileAsync: jest.Mock;
 
 jest.mock('util', () => {
   const fn = jest.fn();
-  (global as Record<string, unknown>).__mockGhExec = fn;
+  (global as Record<string, unknown>).__mockGhExecFile = fn;
   return {
     promisify: () => fn,
   };
 });
 
 jest.mock('child_process', () => ({
-  exec: jest.fn(),
+  execFile: jest.fn(),
   execSync: jest.fn(),
 }));
 
@@ -30,14 +30,14 @@ describe('GithubService', () => {
   let service: GithubService;
 
   beforeEach(async () => {
-    mockExecAsync = (global as Record<string, unknown>).__mockGhExec as jest.Mock;
+    mockExecFileAsync = (global as Record<string, unknown>).__mockGhExecFile as jest.Mock;
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [GithubService],
     }).compile();
 
     service = module.get<GithubService>(GithubService);
-    mockExecAsync.mockReset();
+    mockExecFileAsync.mockReset();
     mockExecSync.mockReset();
     mockExistsSync.mockReset().mockReturnValue(false);
 
@@ -71,8 +71,8 @@ describe('GithubService', () => {
 
   describe('getStatus', () => {
     it('should return not-installed status when gh CLI is not found', async () => {
-      // findCli: "which gh" / "where gh" fails
-      mockExecAsync.mockRejectedValueOnce(new Error('not found'));
+      // findCli: which/where gh fails
+      mockExecFileAsync.mockRejectedValueOnce(new Error('not found'));
       // existsSync returns false for all common paths
       mockExistsSync.mockReturnValue(false);
 
@@ -83,15 +83,15 @@ describe('GithubService', () => {
     });
 
     it('should return installed status with version and auth when gh CLI is found', async () => {
-      // findCli: "which gh" succeeds
-      mockExecAsync.mockResolvedValueOnce({ stdout: '/usr/local/bin/gh\n', stderr: '' });
+      // findCli: which gh succeeds
+      mockExecFileAsync.mockResolvedValueOnce({ stdout: '/usr/local/bin/gh\n', stderr: '' });
       // getVersion
-      mockExecAsync.mockResolvedValueOnce({
+      mockExecFileAsync.mockResolvedValueOnce({
         stdout: 'gh version 2.40.1 (2024-01-15)\n',
         stderr: '',
       });
       // checkAuth
-      mockExecAsync.mockResolvedValueOnce({
+      mockExecFileAsync.mockResolvedValueOnce({
         stdout:
           'Logged in to github.com account testuser (oauth_token)\nToken scopes: repo, read:org\n',
         stderr: '',
@@ -110,11 +110,11 @@ describe('GithubService', () => {
 
     it('should return cached status within TTL', async () => {
       // First call - findCli
-      mockExecAsync.mockResolvedValueOnce({ stdout: '/usr/local/bin/gh\n', stderr: '' });
+      mockExecFileAsync.mockResolvedValueOnce({ stdout: '/usr/local/bin/gh\n', stderr: '' });
       // getVersion
-      mockExecAsync.mockResolvedValueOnce({ stdout: 'gh version 2.40.1\n', stderr: '' });
+      mockExecFileAsync.mockResolvedValueOnce({ stdout: 'gh version 2.40.1\n', stderr: '' });
       // checkAuth
-      mockExecAsync.mockResolvedValueOnce({
+      mockExecFileAsync.mockResolvedValueOnce({
         stdout: 'Logged in to github.com account user1',
         stderr: '',
       });
@@ -122,18 +122,20 @@ describe('GithubService', () => {
       const status1 = await service.getStatus();
       const status2 = await service.getStatus();
 
-      // Should only call execAsync for the first request (3 times: findCli, getVersion, checkAuth)
-      expect(mockExecAsync).toHaveBeenCalledTimes(3);
+      // Should only call execFileAsync for the first request (3 times: findCli, getVersion, checkAuth)
+      expect(mockExecFileAsync).toHaveBeenCalledTimes(3);
       expect(status1).toBe(status2);
     });
 
     it('should handle unauthenticated gh CLI', async () => {
       // findCli
-      mockExecAsync.mockResolvedValueOnce({ stdout: '/usr/local/bin/gh\n', stderr: '' });
+      mockExecFileAsync.mockResolvedValueOnce({ stdout: '/usr/local/bin/gh\n', stderr: '' });
       // getVersion
-      mockExecAsync.mockResolvedValueOnce({ stdout: 'gh version 2.40.1\n', stderr: '' });
+      mockExecFileAsync.mockResolvedValueOnce({ stdout: 'gh version 2.40.1\n', stderr: '' });
       // checkAuth - not logged in
-      mockExecAsync.mockRejectedValueOnce(new Error('You are not logged into any GitHub hosts'));
+      mockExecFileAsync.mockRejectedValueOnce(
+        new Error('You are not logged into any GitHub hosts')
+      );
 
       const status = await service.getStatus();
 
@@ -143,13 +145,13 @@ describe('GithubService', () => {
 
     it('should handle auth check timeout gracefully', async () => {
       // findCli
-      mockExecAsync.mockResolvedValueOnce({ stdout: '/usr/local/bin/gh\n', stderr: '' });
+      mockExecFileAsync.mockResolvedValueOnce({ stdout: '/usr/local/bin/gh\n', stderr: '' });
       // getVersion
-      mockExecAsync.mockResolvedValueOnce({ stdout: 'gh version 2.40.1\n', stderr: '' });
+      mockExecFileAsync.mockResolvedValueOnce({ stdout: 'gh version 2.40.1\n', stderr: '' });
       // checkAuth - timeout
       const timeoutError = new Error('timed out') as Error & { killed?: boolean; signal?: string };
       timeoutError.killed = true;
-      mockExecAsync.mockRejectedValueOnce(timeoutError);
+      mockExecFileAsync.mockRejectedValueOnce(timeoutError);
 
       const status = await service.getStatus();
 
@@ -163,9 +165,9 @@ describe('GithubService', () => {
   describe('clearCache', () => {
     it('should force a fresh fetch on next getStatus call', async () => {
       // First call
-      mockExecAsync.mockResolvedValueOnce({ stdout: '/usr/local/bin/gh\n', stderr: '' });
-      mockExecAsync.mockResolvedValueOnce({ stdout: 'gh version 2.40.1\n', stderr: '' });
-      mockExecAsync.mockResolvedValueOnce({
+      mockExecFileAsync.mockResolvedValueOnce({ stdout: '/usr/local/bin/gh\n', stderr: '' });
+      mockExecFileAsync.mockResolvedValueOnce({ stdout: 'gh version 2.40.1\n', stderr: '' });
+      mockExecFileAsync.mockResolvedValueOnce({
         stdout: 'Logged in to github.com account user1',
         stderr: '',
       });
@@ -175,16 +177,16 @@ describe('GithubService', () => {
       service.clearCache();
 
       // Second call after cache clear
-      mockExecAsync.mockResolvedValueOnce({ stdout: '/usr/local/bin/gh\n', stderr: '' });
-      mockExecAsync.mockResolvedValueOnce({ stdout: 'gh version 2.41.0\n', stderr: '' });
-      mockExecAsync.mockResolvedValueOnce({
+      mockExecFileAsync.mockResolvedValueOnce({ stdout: '/usr/local/bin/gh\n', stderr: '' });
+      mockExecFileAsync.mockResolvedValueOnce({ stdout: 'gh version 2.41.0\n', stderr: '' });
+      mockExecFileAsync.mockResolvedValueOnce({
         stdout: 'Logged in to github.com account user2',
         stderr: '',
       });
 
       const status = await service.getStatus();
 
-      expect(mockExecAsync).toHaveBeenCalledTimes(6); // 3 + 3
+      expect(mockExecFileAsync).toHaveBeenCalledTimes(6); // 3 + 3
       expect(status.version).toBe('2.41.0');
     });
   });
@@ -193,7 +195,7 @@ describe('GithubService', () => {
 
   describe('hasGitHubRemote', () => {
     it('should return true when repo has a GitHub remote', async () => {
-      mockExecAsync.mockResolvedValueOnce({
+      mockExecFileAsync.mockResolvedValueOnce({
         stdout: JSON.stringify({ url: 'https://github.com/user/repo' }),
         stderr: '',
       });
@@ -204,7 +206,7 @@ describe('GithubService', () => {
     });
 
     it('should return false when gh command fails', async () => {
-      mockExecAsync.mockRejectedValueOnce(new Error('not a github repo'));
+      mockExecFileAsync.mockRejectedValueOnce(new Error('not a github repo'));
 
       const result = await service.hasGitHubRemote('/repo');
 
@@ -212,7 +214,7 @@ describe('GithubService', () => {
     });
 
     it('should return false when url is empty', async () => {
-      mockExecAsync.mockResolvedValueOnce({
+      mockExecFileAsync.mockResolvedValueOnce({
         stdout: JSON.stringify({ url: '' }),
         stderr: '',
       });
@@ -237,7 +239,7 @@ describe('GithubService', () => {
         isFork: false,
         isArchived: false,
       };
-      mockExecAsync.mockResolvedValueOnce({
+      mockExecFileAsync.mockResolvedValueOnce({
         stdout: JSON.stringify(repoData),
         stderr: '',
       });
@@ -257,7 +259,7 @@ describe('GithubService', () => {
     });
 
     it('should return null when gh command fails', async () => {
-      mockExecAsync.mockRejectedValueOnce(new Error('not a repo'));
+      mockExecFileAsync.mockRejectedValueOnce(new Error('not a repo'));
 
       const result = await service.getRepoInfo('/repo');
 
@@ -272,7 +274,7 @@ describe('GithubService', () => {
         defaultBranchRef: null,
         visibility: 'PRIVATE',
       };
-      mockExecAsync.mockResolvedValueOnce({
+      mockExecFileAsync.mockResolvedValueOnce({
         stdout: JSON.stringify(repoData),
         stderr: '',
       });
@@ -291,7 +293,7 @@ describe('GithubService', () => {
         defaultBranchRef: { name: 'main' },
         visibility: 'PUBLIC',
       };
-      mockExecAsync.mockResolvedValueOnce({
+      mockExecFileAsync.mockResolvedValueOnce({
         stdout: JSON.stringify(repoData),
         stderr: '',
       });
@@ -322,7 +324,7 @@ describe('GithubService', () => {
           mergedAt: null,
         },
       ];
-      mockExecAsync.mockResolvedValueOnce({
+      mockExecFileAsync.mockResolvedValueOnce({
         stdout: JSON.stringify(prData),
         stderr: '',
       });
@@ -337,30 +339,32 @@ describe('GithubService', () => {
     });
 
     it('should return empty array for empty stdout', async () => {
-      mockExecAsync.mockResolvedValueOnce({ stdout: '  \n', stderr: '' });
+      mockExecFileAsync.mockResolvedValueOnce({ stdout: '  \n', stderr: '' });
 
       const result = await service.listPullRequests('/repo');
 
       expect(result).toEqual([]);
     });
 
-    it('should pass state and limit options', async () => {
-      mockExecAsync.mockResolvedValueOnce({ stdout: '[]', stderr: '' });
+    it('should pass state and limit options as args', async () => {
+      mockExecFileAsync.mockResolvedValueOnce({ stdout: '[]', stderr: '' });
 
       await service.listPullRequests('/repo', { state: 'closed', limit: 10 });
 
-      const command = mockExecAsync.mock.calls[0][0] as string;
-      expect(command).toContain('--state closed');
-      expect(command).toContain('--limit 10');
+      const args = mockExecFileAsync.mock.calls[0][1] as string[];
+      expect(args).toContain('--state');
+      expect(args).toContain('closed');
+      expect(args).toContain('--limit');
+      expect(args).toContain('10');
     });
 
     it('should not pass state flag for "all"', async () => {
-      mockExecAsync.mockResolvedValueOnce({ stdout: '[]', stderr: '' });
+      mockExecFileAsync.mockResolvedValueOnce({ stdout: '[]', stderr: '' });
 
       await service.listPullRequests('/repo', { state: 'all' });
 
-      const command = mockExecAsync.mock.calls[0][0] as string;
-      expect(command).not.toContain('--state');
+      const args = mockExecFileAsync.mock.calls[0][1] as string[];
+      expect(args).not.toContain('--state');
     });
 
     it('should map MERGED state to "merged"', async () => {
@@ -379,7 +383,7 @@ describe('GithubService', () => {
           mergedAt: '2024-01-03T00:00:00Z',
         },
       ];
-      mockExecAsync.mockResolvedValueOnce({
+      mockExecFileAsync.mockResolvedValueOnce({
         stdout: JSON.stringify(prData),
         stderr: '',
       });
@@ -408,7 +412,7 @@ describe('GithubService', () => {
         createdAt: '2024-01-01T00:00:00Z',
         updatedAt: '2024-01-01T00:00:00Z',
       };
-      mockExecAsync.mockResolvedValueOnce({
+      mockExecFileAsync.mockResolvedValueOnce({
         stdout: JSON.stringify(prResponse),
         stderr: '',
       });
@@ -418,8 +422,9 @@ describe('GithubService', () => {
       expect(result.number).toBe(42);
       expect(result.title).toBe('New Feature');
       expect(result.state).toBe('open');
-      const command = mockExecAsync.mock.calls[0][0] as string;
-      expect(command).toContain('--title New Feature');
+      const args = mockExecFileAsync.mock.calls[0][1] as string[];
+      expect(args).toContain('--title');
+      expect(args).toContain('New Feature');
     });
 
     it('should pass optional body, base, head, and draft flags', async () => {
@@ -435,7 +440,7 @@ describe('GithubService', () => {
         createdAt: '2024-01-01T00:00:00Z',
         updatedAt: '2024-01-01T00:00:00Z',
       };
-      mockExecAsync.mockResolvedValueOnce({
+      mockExecFileAsync.mockResolvedValueOnce({
         stdout: JSON.stringify(prResponse),
         stderr: '',
       });
@@ -448,11 +453,14 @@ describe('GithubService', () => {
         draft: true,
       });
 
-      const command = mockExecAsync.mock.calls[0][0] as string;
-      expect(command).toContain('--body Some body');
-      expect(command).toContain('--base develop');
-      expect(command).toContain('--head feature');
-      expect(command).toContain('--draft');
+      const args = mockExecFileAsync.mock.calls[0][1] as string[];
+      expect(args).toContain('--body');
+      expect(args).toContain('Some body');
+      expect(args).toContain('--base');
+      expect(args).toContain('develop');
+      expect(args).toContain('--head');
+      expect(args).toContain('feature');
+      expect(args).toContain('--draft');
     });
   });
 
@@ -474,7 +482,7 @@ describe('GithubService', () => {
           closedAt: null,
         },
       ];
-      mockExecAsync.mockResolvedValueOnce({
+      mockExecFileAsync.mockResolvedValueOnce({
         stdout: JSON.stringify(issueData),
         stderr: '',
       });
@@ -489,15 +497,15 @@ describe('GithubService', () => {
     });
 
     it('should return empty array for empty stdout', async () => {
-      mockExecAsync.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      mockExecFileAsync.mockResolvedValueOnce({ stdout: '', stderr: '' });
 
       const result = await service.listIssues('/repo');
 
       expect(result).toEqual([]);
     });
 
-    it('should pass state, limit, and labels options', async () => {
-      mockExecAsync.mockResolvedValueOnce({ stdout: '[]', stderr: '' });
+    it('should pass state, limit, and labels options as args', async () => {
+      mockExecFileAsync.mockResolvedValueOnce({ stdout: '[]', stderr: '' });
 
       await service.listIssues('/repo', {
         state: 'closed',
@@ -505,19 +513,22 @@ describe('GithubService', () => {
         labels: ['bug', 'high-priority'],
       });
 
-      const command = mockExecAsync.mock.calls[0][0] as string;
-      expect(command).toContain('--state closed');
-      expect(command).toContain('--limit 20');
-      expect(command).toContain('--label bug,high-priority');
+      const args = mockExecFileAsync.mock.calls[0][1] as string[];
+      expect(args).toContain('--state');
+      expect(args).toContain('closed');
+      expect(args).toContain('--limit');
+      expect(args).toContain('20');
+      expect(args).toContain('--label');
+      expect(args).toContain('bug,high-priority');
     });
 
     it('should not pass state flag for "all"', async () => {
-      mockExecAsync.mockResolvedValueOnce({ stdout: '[]', stderr: '' });
+      mockExecFileAsync.mockResolvedValueOnce({ stdout: '[]', stderr: '' });
 
       await service.listIssues('/repo', { state: 'all' });
 
-      const command = mockExecAsync.mock.calls[0][0] as string;
-      expect(command).not.toContain('--state');
+      const args = mockExecFileAsync.mock.calls[0][1] as string[];
+      expect(args).not.toContain('--state');
     });
   });
 
@@ -539,7 +550,7 @@ describe('GithubService', () => {
         updatedAt: '2024-01-01T00:00:00Z',
         mergedAt: null,
       };
-      mockExecAsync.mockResolvedValueOnce({
+      mockExecFileAsync.mockResolvedValueOnce({
         stdout: JSON.stringify(prData),
         stderr: '',
       });
@@ -549,12 +560,14 @@ describe('GithubService', () => {
       expect(result).not.toBeNull();
       expect(result!.number).toBe(5);
       expect(result!.state).toBe('open');
-      const command = mockExecAsync.mock.calls[0][0] as string;
-      expect(command).toContain('pr view 5');
+      const args = mockExecFileAsync.mock.calls[0][1] as string[];
+      expect(args).toContain('pr');
+      expect(args).toContain('view');
+      expect(args).toContain('5');
     });
 
     it('should return null when PR is not found', async () => {
-      mockExecAsync.mockRejectedValueOnce(new Error('PR not found'));
+      mockExecFileAsync.mockRejectedValueOnce(new Error('PR not found'));
 
       const result = await service.getPullRequest('/repo', 999);
 
@@ -575,7 +588,7 @@ describe('GithubService', () => {
         updatedAt: '2024-01-01T00:00:00Z',
         mergedAt: '2024-01-02T00:00:00Z',
       };
-      mockExecAsync.mockResolvedValueOnce({
+      mockExecFileAsync.mockResolvedValueOnce({
         stdout: JSON.stringify(prData),
         stderr: '',
       });
@@ -603,7 +616,7 @@ describe('GithubService', () => {
         updatedAt: '2024-01-01T00:00:00Z',
         closedAt: null,
       };
-      mockExecAsync.mockResolvedValueOnce({
+      mockExecFileAsync.mockResolvedValueOnce({
         stdout: JSON.stringify(issueData),
         stderr: '',
       });
@@ -614,12 +627,14 @@ describe('GithubService', () => {
       expect(result!.number).toBe(15);
       expect(result!.title).toBe('Feature request');
       expect(result!.labels).toEqual([{ name: 'enhancement', color: '84b6eb' }]);
-      const command = mockExecAsync.mock.calls[0][0] as string;
-      expect(command).toContain('issue view 15');
+      const args = mockExecFileAsync.mock.calls[0][1] as string[];
+      expect(args).toContain('issue');
+      expect(args).toContain('view');
+      expect(args).toContain('15');
     });
 
     it('should return null when issue is not found', async () => {
-      mockExecAsync.mockRejectedValueOnce(new Error('issue not found'));
+      mockExecFileAsync.mockRejectedValueOnce(new Error('issue not found'));
 
       const result = await service.getIssue('/repo', 999);
 
@@ -638,7 +653,7 @@ describe('GithubService', () => {
         updatedAt: '2024-01-02T00:00:00Z',
         closedAt: '2024-01-02T00:00:00Z',
       };
-      mockExecAsync.mockResolvedValueOnce({
+      mockExecFileAsync.mockResolvedValueOnce({
         stdout: JSON.stringify(issueData),
         stderr: '',
       });
@@ -691,34 +706,36 @@ describe('GithubService', () => {
 
     it('should use "where" on Windows for findCli', async () => {
       Object.defineProperty(process, 'platform', { value: 'win32' });
-      mockExecAsync.mockResolvedValueOnce({ stdout: 'C:\\path\\gh.exe\n', stderr: '' });
-      mockExecAsync.mockResolvedValueOnce({ stdout: 'gh version 2.40.1\n', stderr: '' });
-      mockExecAsync.mockResolvedValueOnce({
+      mockExecFileAsync.mockResolvedValueOnce({ stdout: 'C:\\path\\gh.exe\n', stderr: '' });
+      mockExecFileAsync.mockResolvedValueOnce({ stdout: 'gh version 2.40.1\n', stderr: '' });
+      mockExecFileAsync.mockResolvedValueOnce({
         stdout: 'Logged in to github.com account user',
         stderr: '',
       });
 
       const status = await service.getStatus();
 
-      const findCliCommand = mockExecAsync.mock.calls[0][0];
-      expect(findCliCommand).toBe('where gh');
+      const findCliCall = mockExecFileAsync.mock.calls[0];
+      expect(findCliCall[0]).toBe('where');
+      expect(findCliCall[1]).toEqual(['gh']);
       expect(status.installed).toBe(true);
       expect(status.platform).toBe('win32');
     });
 
     it('should use "which" on Linux for findCli', async () => {
       Object.defineProperty(process, 'platform', { value: 'linux' });
-      mockExecAsync.mockResolvedValueOnce({ stdout: '/usr/bin/gh\n', stderr: '' });
-      mockExecAsync.mockResolvedValueOnce({ stdout: 'gh version 2.40.1\n', stderr: '' });
-      mockExecAsync.mockResolvedValueOnce({
+      mockExecFileAsync.mockResolvedValueOnce({ stdout: '/usr/bin/gh\n', stderr: '' });
+      mockExecFileAsync.mockResolvedValueOnce({ stdout: 'gh version 2.40.1\n', stderr: '' });
+      mockExecFileAsync.mockResolvedValueOnce({
         stdout: 'Logged in to github.com account user',
         stderr: '',
       });
 
       const status = await service.getStatus();
 
-      const findCliCommand = mockExecAsync.mock.calls[0][0];
-      expect(findCliCommand).toBe('which gh');
+      const findCliCall = mockExecFileAsync.mock.calls[0];
+      expect(findCliCall[0]).toBe('/usr/bin/which');
+      expect(findCliCall[1]).toEqual(['gh']);
       expect(status.installed).toBe(true);
       expect(status.platform).toBe('linux');
     });
@@ -726,13 +743,13 @@ describe('GithubService', () => {
     it('should check Windows-specific paths when not found in PATH on Windows', async () => {
       Object.defineProperty(process, 'platform', { value: 'win32' });
       // findCli: PATH lookup fails
-      mockExecAsync.mockRejectedValueOnce(new Error('not found'));
+      mockExecFileAsync.mockRejectedValueOnce(new Error('not found'));
       // Check local paths - one exists
       mockExistsSync.mockImplementation((p: string) => p.includes('GitHub CLI'));
       // getVersion
-      mockExecAsync.mockResolvedValueOnce({ stdout: 'gh version 2.40.1\n', stderr: '' });
+      mockExecFileAsync.mockResolvedValueOnce({ stdout: 'gh version 2.40.1\n', stderr: '' });
       // checkAuth
-      mockExecAsync.mockResolvedValueOnce({
+      mockExecFileAsync.mockResolvedValueOnce({
         stdout: 'Logged in to github.com account user',
         stderr: '',
       });
@@ -750,13 +767,13 @@ describe('GithubService', () => {
     it('should check Unix-specific paths when not found in PATH on Linux', async () => {
       Object.defineProperty(process, 'platform', { value: 'linux' });
       // findCli: PATH lookup fails
-      mockExecAsync.mockRejectedValueOnce(new Error('not found'));
+      mockExecFileAsync.mockRejectedValueOnce(new Error('not found'));
       // Check local paths - one exists
       mockExistsSync.mockImplementation((p: string) => p === '/usr/local/bin/gh');
       // getVersion
-      mockExecAsync.mockResolvedValueOnce({ stdout: 'gh version 2.40.1\n', stderr: '' });
+      mockExecFileAsync.mockResolvedValueOnce({ stdout: 'gh version 2.40.1\n', stderr: '' });
       // checkAuth
-      mockExecAsync.mockResolvedValueOnce({
+      mockExecFileAsync.mockResolvedValueOnce({
         stdout: 'Logged in to github.com account user',
         stderr: '',
       });
@@ -773,13 +790,13 @@ describe('GithubService', () => {
     it('should check macOS-specific paths (homebrew) on darwin', async () => {
       Object.defineProperty(process, 'platform', { value: 'darwin' });
       // findCli: PATH lookup fails
-      mockExecAsync.mockRejectedValueOnce(new Error('not found'));
+      mockExecFileAsync.mockRejectedValueOnce(new Error('not found'));
       // Check local paths - homebrew path exists
       mockExistsSync.mockImplementation((p: string) => p === '/opt/homebrew/bin/gh');
       // getVersion
-      mockExecAsync.mockResolvedValueOnce({ stdout: 'gh version 2.40.1\n', stderr: '' });
+      mockExecFileAsync.mockResolvedValueOnce({ stdout: 'gh version 2.40.1\n', stderr: '' });
       // checkAuth
-      mockExecAsync.mockResolvedValueOnce({
+      mockExecFileAsync.mockResolvedValueOnce({
         stdout: 'Logged in to github.com account user',
         stderr: '',
       });
@@ -802,7 +819,7 @@ describe('GithubService', () => {
         stderr?: string;
       };
       timeoutError.killed = true;
-      mockExecAsync.mockRejectedValueOnce(timeoutError);
+      mockExecFileAsync.mockRejectedValueOnce(timeoutError);
 
       // hasGitHubRemote catches errors and returns false
       const result = await service.hasGitHubRemote('/repo');
@@ -818,7 +835,7 @@ describe('GithubService', () => {
       error.killed = false;
       error.stdout = JSON.stringify({ url: 'https://github.com/user/repo' });
       error.stderr = 'some warning';
-      mockExecAsync.mockRejectedValueOnce(error);
+      mockExecFileAsync.mockRejectedValueOnce(error);
 
       const result = await service.hasGitHubRemote('/repo');
 

@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { exec, ExecException, execSync } from 'child_process';
+import { execFile, ExecException, execSync } from 'child_process';
 import { promisify } from 'util';
 import { existsSync } from 'fs';
 import { homedir } from 'os';
@@ -19,7 +19,7 @@ import type {
   RepoInfo,
 } from '@omniscribe/shared';
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 /** Cache TTL for CLI status (1 minute) */
 const CACHE_TTL_MS = 60 * 1000;
@@ -102,7 +102,7 @@ export class GithubService {
     const command = `gh ${args.join(' ')}`;
 
     try {
-      const result = await execAsync(command, {
+      const result = await execFileAsync('gh', args, {
         cwd: repoPath,
         timeout: timeoutMs,
         env: {
@@ -147,8 +147,8 @@ export class GithubService {
 
     // Try to find CLI in PATH first
     try {
-      const command = platform === 'win32' ? 'where gh' : 'which gh';
-      const { stdout } = await execAsync(command);
+      const whichCmd = platform === 'win32' ? 'where' : '/usr/bin/which';
+      const { stdout } = await execFileAsync(whichCmd, ['gh']);
       // Take first line (Windows 'where' may return multiple results)
       const firstPath = stdout.trim().split('\n')[0]?.trim();
       if (firstPath) {
@@ -174,7 +174,7 @@ export class GithubService {
    */
   private async getVersion(cliPath: string): Promise<string | undefined> {
     try {
-      const { stdout } = await execAsync(`"${cliPath}" --version`, {
+      const { stdout } = await execFileAsync(cliPath, ['--version'], {
         timeout: 5000,
       });
       // Parse version from output like "gh version 2.40.1 (2024-01-15)"
@@ -190,7 +190,7 @@ export class GithubService {
    */
   private async checkAuth(cliPath: string): Promise<GhCliAuthStatus> {
     try {
-      const { stdout, stderr } = await execAsync(`"${cliPath}" auth status`, {
+      const { stdout, stderr } = await execFileAsync(cliPath, ['auth', 'status'], {
         timeout: 10000,
         env: {
           ...process.env,
