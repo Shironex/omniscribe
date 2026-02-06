@@ -22,7 +22,6 @@ test.describe('Reconnection Overlay', () => {
       '[data-testid="add-session-button"], [aria-label="Add session"]'
     );
     await addButton.first().click();
-    await page.waitForTimeout(200);
 
     const launchButton = page.locator('[data-testid="launch-button"]');
     await expect(launchButton).toBeEnabled({ timeout: 5_000 });
@@ -90,9 +89,8 @@ test.describe('Reconnection Overlay', () => {
       await expect(overlay).toBeHidden({ timeout: 30_000 });
     }
 
-    // After reconnection, the overlay should be hidden.
-    // Allow time for the brief "Reconnected" flash animation (500ms) to finish.
-    await page.waitForTimeout(1_000);
+    // After reconnection, the overlay should be hidden
+    // (Playwright retries until the reconnected flash animation completes)
     await expect(overlay).toBeHidden({ timeout: 5_000 });
   });
 });

@@ -40,7 +40,10 @@ test.describe('Session Limit (12 cap)', () => {
         '[data-testid="add-session-button"], [aria-label="Add session"]'
       );
       await addButton.first().click();
-      await page.waitForTimeout(100);
+      if (i < 11) {
+        // After click, wait for the button to be ready for next click
+        await expect(addButton.first()).toBeVisible({ timeout: 5_000 });
+      }
     }
 
     // The add-session-button should be hidden (12 slots = at the limit)
@@ -49,7 +52,6 @@ test.describe('Session Limit (12 cap)', () => {
 
     // Try to add a 13th slot via keyboard shortcut "N"
     await page.keyboard.press('n');
-    await page.waitForTimeout(500);
 
     // Count all pre-launch bars. Each pre-launch slot renders a PreLaunchBar
     // which contains the "Plain/Claude" mode selector and branch selector.

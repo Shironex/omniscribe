@@ -45,8 +45,17 @@ export async function openProject(page: Page, projectPath: string): Promise<void
     { timeout: 10_000 }
   );
 
-  // Brief wait for React to re-render with the new tab
-  await page.waitForTimeout(500);
+  // Wait for the new tab to be rendered in the UI
+  await page.waitForFunction(
+    (expectedPath: string) => {
+      const tabLabels = document.querySelectorAll('[data-testid="project-tabs"] span.truncate');
+      return Array.from(tabLabels).some(el =>
+        el.textContent?.includes(expectedPath.split('/').pop() ?? '')
+      );
+    },
+    projectPath,
+    { timeout: 10_000 }
+  );
 }
 
 /**

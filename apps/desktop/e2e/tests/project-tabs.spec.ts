@@ -60,14 +60,21 @@ test.describe('Project Tabs', () => {
 
     // Click the first tab to ensure it's active
     await tabLabels.nth(0).click();
-    await page.waitForTimeout(500);
+    await page.waitForFunction(
+      () => {
+        const stores = (window as any).__testStores;
+        if (!stores?.workspace) return false;
+        const state = stores.workspace.getState();
+        return state.activeTabId === state.tabs[0]?.id;
+      },
+      { timeout: 10_000 }
+    );
 
     // Create a session in tab 1
     const addButton1 = page.locator(
       '[data-testid="add-session-button"], [aria-label="Add session"]'
     );
     await addButton1.first().click();
-    await page.waitForTimeout(200);
 
     const launchButton = page.locator('[data-testid="launch-button"]');
     await expect(launchButton).toBeEnabled({ timeout: 5_000 });
@@ -80,7 +87,10 @@ test.describe('Project Tabs', () => {
 
     // Switch to the second tab
     await tabLabels.nth(1).click();
-    await page.waitForTimeout(1000);
+    await page.waitForFunction(
+      () => document.querySelectorAll('[data-testid^="session-card-"]').length === 0,
+      { timeout: 10_000 }
+    );
 
     // Verify: no session cards in tab 2 (sessions are scoped per project)
     const tab2Sessions = await page.locator('[data-testid^="session-card-"]').count();
@@ -91,7 +101,6 @@ test.describe('Project Tabs', () => {
       '[data-testid="add-session-button"], [aria-label="Add session"]'
     );
     await addButton2.first().click();
-    await page.waitForTimeout(200);
 
     await expect(launchButton).toBeEnabled({ timeout: 5_000 });
     await launchButton.click();
@@ -103,7 +112,10 @@ test.describe('Project Tabs', () => {
 
     // Switch back to tab 1
     await tabLabels.nth(0).click();
-    await page.waitForTimeout(1000);
+    await page.waitForFunction(
+      () => document.querySelectorAll('[data-testid^="session-card-"]').length >= 1,
+      { timeout: 10_000 }
+    );
 
     // Verify: tab 1's session is still visible
     const tab1SessionsAfter = await page.locator('[data-testid^="session-card-"]').count();
