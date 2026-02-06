@@ -6,9 +6,12 @@ import { useSettingsStore } from '@/stores/useSettingsStore';
 import type { UpdateStatus } from '@omniscribe/shared';
 
 /**
- * Shows toast notifications for auto-update events.
- * On macOS, directs users to GitHub Releases since auto-install
- * requires code signing which is not yet available.
+ * Display platform-aware toast notifications for update status changes.
+ *
+ * Shows contextual toasts when the update status transitions:
+ * - 'available': notifies about a new version and provides a download or settings action depending on platform.
+ * - 'ready': prompts to restart to install on non-macOS or links to GitHub Releases on macOS.
+ * - 'error': surfaces macOS signature-related errors with a link to GitHub Releases.
  */
 export function useUpdateToast(): void {
   const status = useUpdateStore(state => state.status);

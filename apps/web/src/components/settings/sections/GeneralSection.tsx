@@ -24,6 +24,16 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+/**
+ * Render the "General" settings section with application information and update controls.
+ *
+ * Shows the app name and version (when available), provides a "Check for Updates" action,
+ * and presents status-driven update UI: available release notes and download actions,
+ * download progress, ready-to-install controls, and error information. Behavior adapts
+ * for macOS (opens GitHub releases) versus non-macOS (in-app download and install).
+ *
+ * @returns The JSX element for the General settings section containing app info and update workflow.
+ */
 export function GeneralSection() {
   const [version, setVersion] = useState<string | null>(null);
   const [hasChecked, setHasChecked] = useState(false);

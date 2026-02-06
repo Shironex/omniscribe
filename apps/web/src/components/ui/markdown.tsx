@@ -11,9 +11,13 @@ interface MarkdownProps {
 }
 
 /**
- * Reusable Markdown component for rendering markdown and HTML content.
- * Supports raw HTML (from GitHub release notes) with sanitization.
- * Theme-aware styling that adapts to all predefined themes.
+ * Render Markdown content (including inline HTML) as styled React elements.
+ *
+ * Renders the provided Markdown string into a themed, typographic container; inline/raw HTML is allowed and will be sanitized before rendering.
+ *
+ * @param children - The Markdown source to render; may include inline/raw HTML which will be sanitized.
+ * @param className - Optional additional CSS classes to merge with the component's default typography and layout styles.
+ * @returns A React element containing the processed and styled Markdown content.
  */
 export function Markdown({ children, className }: MarkdownProps) {
   return (

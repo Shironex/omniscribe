@@ -24,6 +24,14 @@ import { useUpdateToast } from '@/hooks/useUpdateToast';
 import { useQuickActionStore, useWorkspaceStore } from '@/stores';
 import { writeToTerminal } from '@/lib/terminal';
 
+/**
+ * Root application component that composes workspace tabs, project controls, terminal grid, and global UI.
+ *
+ * Renders project navigation, top and bottom bars, the main content area (welcome view, idle landing, or terminal grid),
+ * and global modals and listeners for workspace initialization, preferences, quick actions, sessions, and keyboard shortcuts.
+ *
+ * @returns The root application UI as a JSX element
+ */
 function App() {
   // Initialize app (socket and store listeners)
   useAppInitialization();
