@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { persist, createJSONStorage, StateStorage } from 'zustand/middleware';
+import { devtools, persist, createJSONStorage, StateStorage } from 'zustand/middleware';
 import { QuickAction, createLogger } from '@omniscribe/shared';
 
 const logger = createLogger('QuickActionStore');
@@ -202,76 +202,95 @@ const electronStorage: StateStorage = {
  * Quick action store using Zustand with persistence
  */
 export const useQuickActionStore = create<QuickActionStore>()(
-  persist(
-    (set, get) => ({
-      // Initial state
-      actions: DEFAULT_QUICK_ACTIONS,
+  devtools(
+    persist(
+      (set, get) => ({
+        // Initial state
+        actions: DEFAULT_QUICK_ACTIONS,
 
-      // Actions
-      setActions: (actions: QuickAction[]) => {
-        set({ actions });
-      },
+        // Actions
+        setActions: (actions: QuickAction[]) => {
+          set({ actions }, undefined, 'quick-actions/setActions');
+        },
 
-      addAction: (action: QuickAction) => {
-        set(state => {
-          // Check for duplicate ID
-          if (state.actions.some(a => a.id === action.id)) {
-            logger.warn('Duplicate quick action ID:', action.id);
-            return state;
-          }
-          return { actions: [...state.actions, action] };
-        });
-      },
+        addAction: (action: QuickAction) => {
+          set(
+            state => {
+              // Check for duplicate ID
+              if (state.actions.some(a => a.id === action.id)) {
+                logger.warn('Duplicate quick action ID:', action.id);
+                return state;
+              }
+              return { actions: [...state.actions, action] };
+            },
+            undefined,
+            'quick-actions/addAction'
+          );
+        },
 
-      updateAction: (id: string, updates: Partial<QuickAction>) => {
-        set(state => ({
-          actions: state.actions.map(action =>
-            action.id === id ? { ...action, ...updates } : action
-          ),
-        }));
-      },
+        updateAction: (id: string, updates: Partial<QuickAction>) => {
+          set(
+            state => ({
+              actions: state.actions.map(action =>
+                action.id === id ? { ...action, ...updates } : action
+              ),
+            }),
+            undefined,
+            'quick-actions/updateAction'
+          );
+        },
 
-      removeAction: (id: string) => {
-        set(state => ({
-          actions: state.actions.filter(action => action.id !== id),
-        }));
-      },
+        removeAction: (id: string) => {
+          set(
+            state => ({
+              actions: state.actions.filter(action => action.id !== id),
+            }),
+            undefined,
+            'quick-actions/removeAction'
+          );
+        },
 
-      reorderActions: (fromIndex: number, toIndex: number) => {
-        set(state => {
-          const actions = [...state.actions];
-          const [removed] = actions.splice(fromIndex, 1);
-          if (removed) {
-            actions.splice(toIndex, 0, removed);
-          }
-          return { actions };
-        });
-      },
+        reorderActions: (fromIndex: number, toIndex: number) => {
+          set(
+            state => {
+              const actions = [...state.actions];
+              const [removed] = actions.splice(fromIndex, 1);
+              if (removed) {
+                actions.splice(toIndex, 0, removed);
+              }
+              return { actions };
+            },
+            undefined,
+            'quick-actions/reorderActions'
+          );
+        },
 
-      resetToDefaults: () => {
-        logger.info('Resetting to default actions');
-        set({ actions: DEFAULT_QUICK_ACTIONS });
-      },
+        resetToDefaults: () => {
+          logger.info('Resetting to default actions');
+          set({ actions: DEFAULT_QUICK_ACTIONS }, undefined, 'quick-actions/resetToDefaults');
+        },
 
-      getAction: (id: string) => {
-        return get().actions.find(action => action.id === id);
-      },
+        getAction: (id: string) => {
+          return get().actions.find(action => action.id === id);
+        },
 
-      getActionsByCategory: (category: QuickAction['category']) => {
-        return get().actions.filter(action => action.category === category);
-      },
+        getActionsByCategory: (category: QuickAction['category']) => {
+          return get().actions.filter(action => action.category === category);
+        },
 
-      getEnabledActions: () => {
-        return get().actions.filter(action => action.enabled !== false);
-      },
-    }),
-    {
-      name: 'quick-actions',
-      storage: createJSONStorage(() => electronStorage),
-      partialize: state => ({
-        actions: state.actions,
+        getEnabledActions: () => {
+          return get().actions.filter(action => action.enabled !== false);
+        },
       }),
-    }
+      {
+        name: 'quick-actions',
+        storage: createJSONStorage(() => electronStorage),
+        partialize: state => ({
+          actions: state.actions,
+        }),
+      }
+    ),
+    { name: 'quick-actions' }
   )
 );
 
