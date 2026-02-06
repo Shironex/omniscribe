@@ -6,8 +6,18 @@ All notable changes to this project will be documented in this file.
 
 ### Bug Fixes
 
-- Use native `.ico` icon for Windows builds instead of `.png` to fix missing/broken taskbar and window icon
+- Fix Windows app icon not displaying in taskbar/window — use `.ico` format and remove `signAndEditExecutable` to allow rcedit icon embedding
 - Use platform-conditional icon format in BrowserWindow (`.ico` on Windows, `.png` elsewhere)
+
+### DX (Developer Experience)
+
+- Add `scripts/bump-version.sh` for local version bumping (`patch`, `minor`, `major`, or explicit)
+- Add `version-sync` CI job to auto-commit bumped package versions back to master after release
+- Replace inline version-bump logic in release workflow with shared script
+- Harden bump script: anchored semver regex, env-var passing to node, file-existence guards
+- Harden release workflow: pass tag name via env var, quote `$GITHUB_OUTPUT`, add Node.js setup to version-sync job
+- Clean up GitHub labels: remove 7 unused defaults, add priority/area/platform/type labels
+- Update dependabot config to tag PRs with `chore` label
 
 ## 0.1.3 (2026-02-06)
 
