@@ -30,8 +30,7 @@
   },
   "win": {
     "icon": "resources/icon.ico",
-    "target": ["nsis"],
-    "signAndEditExecutable": false
+    "target": ["nsis"]
   },
   "linux": {
     "icon": "resources/icon.png",
