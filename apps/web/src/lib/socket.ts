@@ -8,9 +8,10 @@ const SOCKET_URL = 'ws://localhost:3001';
 export const socket: Socket = io(SOCKET_URL, {
   autoConnect: false,
   reconnection: true,
-  reconnectionAttempts: 10,
-  reconnectionDelay: 1000,
+  reconnectionAttempts: Infinity,
+  reconnectionDelay: 500,
   reconnectionDelayMax: 5000,
+  randomizationFactor: 0.5,
   timeout: 20000,
   transports: ['websocket', 'polling'],
 });

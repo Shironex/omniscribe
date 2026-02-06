@@ -1,7 +1,7 @@
 import { app, BrowserWindow } from 'electron';
 import { NestFactory } from '@nestjs/core';
 import { type INestApplication } from '@nestjs/common';
-import { IoAdapter } from '@nestjs/platform-socket.io';
+import { CustomIoAdapter } from '../modules/shared/custom-io-adapter';
 import { AppModule } from '../modules/app.module';
 import { createMainWindow } from './window';
 import { cleanupIpcHandlers } from './ipc-handlers';
@@ -25,7 +25,7 @@ async function bootstrapNestApp(): Promise<void> {
     nestApp.flushLogs();
     logger.info('NestJS application created');
 
-    nestApp.useWebSocketAdapter(new IoAdapter(nestApp));
+    nestApp.useWebSocketAdapter(new CustomIoAdapter(nestApp));
 
     nestApp.enableCors({
       origin: corsOriginCallback,

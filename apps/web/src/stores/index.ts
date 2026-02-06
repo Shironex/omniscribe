@@ -8,3 +8,4 @@ export * from './useSettingsStore';
 export * from './useUsageStore';
 export * from './useUpdateStore';
 export * from './useTerminalSettingsStore';
+export * from './useConnectionStore';

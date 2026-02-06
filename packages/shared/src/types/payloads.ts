@@ -7,6 +7,15 @@ import type { QuickAction } from './workspace';
 import type { BranchInfo, CommitInfo } from './git';
 
 // ============================================
+// Connection Types
+// ============================================
+
+/**
+ * Frontend connection status for WebSocket state tracking
+ */
+export type ConnectionStatus = 'connected' | 'reconnecting' | 'failed';
+
+// ============================================
 // Generic Response Types
 // ============================================
 

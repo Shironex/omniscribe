@@ -133,7 +133,13 @@ export function createSocketListeners<T extends SocketStoreState>(
     connectHandler = () => {
       logger.info('Reconnected, clearing error');
       setError(null);
-      onConnect?.(get);
+      // Connection State Recovery: if the server successfully restored
+      // rooms and replayed buffered events, skip the manual re-fetch
+      if (socket.recovered) {
+        logger.info('Connection recovered via CSR -- skipping manual re-fetch');
+      } else {
+        onConnect?.(get);
+      }
     };
     socket.on('connect', connectHandler);
 

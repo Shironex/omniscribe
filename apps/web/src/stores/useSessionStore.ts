@@ -128,6 +128,14 @@ export const useSessionStore = create<SessionStore>((set, get) => {
       socket.emit('session:list', {}, (sessions: ExtendedSessionConfig[]) => {
         if (Array.isArray(sessions)) {
           get().setSessions(sessions);
+          // Rejoin terminal rooms for all sessions with active terminals
+          // so output resumes after reconnection when CSR fails
+          for (const session of sessions) {
+            if (session.terminalSessionId !== undefined) {
+              logger.debug('Rejoining terminal room', session.terminalSessionId);
+              socket.emit('terminal:join', { sessionId: session.terminalSessionId });
+            }
+          }
         }
       });
     },

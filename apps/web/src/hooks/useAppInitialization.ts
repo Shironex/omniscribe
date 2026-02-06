@@ -5,6 +5,7 @@ import { useWorkspaceStore } from '@/stores/useWorkspaceStore';
 import { useGitStore } from '@/stores/useGitStore';
 import { useMcpStore } from '@/stores/useMcpStore';
 import { useUpdateStore } from '@/stores/useUpdateStore';
+import { useConnectionStore } from '@/stores/useConnectionStore';
 import { connectSocket } from '@/lib/socket';
 
 const logger = createLogger('AppInit');
@@ -35,6 +36,10 @@ export function useAppInitialization(): void {
   const cleanupMcpListeners = useMcpStore(state => state.cleanupListeners);
   const fetchInternalMcpStatus = useMcpStore(state => state.fetchInternalMcpStatus);
 
+  // Connection store (global socket connection state)
+  const initConnectionListeners = useConnectionStore(state => state.initListeners);
+  const cleanupConnectionListeners = useConnectionStore(state => state.cleanupListeners);
+
   // Update store (uses IPC, not socket — init separately)
   const initUpdateListeners = useUpdateStore(state => state.initListeners);
 
@@ -47,6 +52,7 @@ export function useAppInitialization(): void {
         logger.info('Initializing app...');
         // Register all socket listeners BEFORE connecting so that onConnect
         // callbacks fire on the initial connection, not just on reconnect
+        initConnectionListeners();
         initSessionListeners();
         initGitListeners();
         initWorkspaceListeners();
@@ -69,6 +75,7 @@ export function useAppInitialization(): void {
     return () => {
       mounted = false;
       logger.debug('Cleaning up listeners');
+      cleanupConnectionListeners();
       cleanupSessionListeners();
       cleanupGitListeners();
       cleanupWorkspaceListeners();
@@ -76,6 +83,8 @@ export function useAppInitialization(): void {
       cleanupUpdateListeners?.();
     };
   }, [
+    initConnectionListeners,
+    cleanupConnectionListeners,
     initSessionListeners,
     cleanupSessionListeners,
     initGitListeners,
