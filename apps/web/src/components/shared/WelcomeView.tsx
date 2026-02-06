@@ -4,41 +4,14 @@ import { FolderOpen, Clock, Sparkles } from 'lucide-react';
 import { useEffect, useMemo } from 'react';
 import type { ProjectTab } from '@omniscribe/shared';
 import { APP_NAME } from '@omniscribe/shared';
+import { getGreeting, formatRelativeTime } from '@/lib/date-utils';
+import { truncatePath } from '@/lib/path-utils';
 
 interface WelcomeViewProps {
   recentProjects: ProjectTab[];
   onOpenProject: () => void;
   onSelectProject: (tabId: string) => void;
   className?: string;
-}
-
-function getGreeting(): string {
-  const hour = new Date().getHours();
-  if (hour < 12) return 'Good morning';
-  if (hour < 18) return 'Good afternoon';
-  return 'Good evening';
-}
-
-function formatRelativeTime(date: Date): string {
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / (1000 * 60));
-  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-  if (diffMins < 1) return 'Just now';
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays === 1) return 'Yesterday';
-  if (diffDays < 7) return `${diffDays}d ago`;
-  return date.toLocaleDateString();
-}
-
-function truncatePath(path: string, maxLength = 50): string {
-  if (path.length <= maxLength) return path;
-  const parts = path.replace(/\\/g, '/').split('/');
-  if (parts.length <= 2) return path;
-  return `.../${parts.slice(-2).join('/')}`;
 }
 
 export function WelcomeView({
