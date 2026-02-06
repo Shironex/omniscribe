@@ -43,5 +43,11 @@
     "allowToChangeInstallationDirectory": true,
     "createDesktopShortcut": true,
     "createStartMenuShortcut": true
+  },
+  "electronFuses": {
+    "runAsNode": false,
+    "enableNodeCliInspectArguments": false,
+    "enableNodeOptionsEnvironmentVariable": false,
+    "onlyLoadAppFromAsar": true
   }
 }

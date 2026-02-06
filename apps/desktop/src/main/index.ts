@@ -52,6 +52,17 @@ async function shutdownNestApp(): Promise<void> {
 }
 
 async function bootstrap(): Promise<void> {
+  // Log security posture at startup
+  const isPackaged = app.isPackaged;
+  logger.info(`[security] App packaged: ${isPackaged}`);
+  if (isPackaged) {
+    logger.info(
+      '[security] Electron fuses configured at build time (RunAsNode=off, NodeCLIInspect=off, NodeOptions=off)'
+    );
+  } else {
+    logger.info('[security] Running in development mode -- fuses not applied (build-time only)');
+  }
+
   await bootstrapNestApp();
   mainWindow = await createMainWindow();
   initializeAutoUpdater(mainWindow, process.env.NODE_ENV === 'development');
