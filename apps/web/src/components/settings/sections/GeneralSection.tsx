@@ -2,11 +2,19 @@ import { useState, useEffect } from 'react';
 import { createLogger } from '@omniscribe/shared';
 
 const logger = createLogger('GeneralSection');
-import { Info, RefreshCw, Download, CheckCircle, AlertCircle, RotateCcw } from 'lucide-react';
+import {
+  Info,
+  RefreshCw,
+  Download,
+  CheckCircle,
+  AlertCircle,
+  RotateCcw,
+  ExternalLink,
+} from 'lucide-react';
 import { clsx } from 'clsx';
-import { APP_NAME } from '@omniscribe/shared';
-import Markdown from 'react-markdown';
+import { APP_NAME, GITHUB_RELEASES_URL } from '@omniscribe/shared';
 import { Button } from '@/components/ui/button';
+import { Markdown } from '@/components/ui/markdown';
 import { Progress } from '@/components/ui/progress';
 import { useUpdateStore } from '@/stores/useUpdateStore';
 
@@ -19,16 +27,10 @@ function formatBytes(bytes: number): string {
 export function GeneralSection() {
   const [version, setVersion] = useState<string | null>(null);
   const [hasChecked, setHasChecked] = useState(false);
-  const {
-    status,
-    updateInfo,
-    progress,
-    error,
-    checkForUpdates,
-    startDownload,
-    installNow,
-    initListeners,
-  } = useUpdateStore();
+  const { status, updateInfo, progress, error, checkForUpdates, startDownload, installNow } =
+    useUpdateStore();
+
+  const isMac = typeof window !== 'undefined' && window.electronAPI?.platform === 'darwin';
 
   useEffect(() => {
     async function fetchVersion() {
@@ -44,11 +46,6 @@ export function GeneralSection() {
     }
     fetchVersion();
   }, []);
-
-  useEffect(() => {
-    const cleanup = initListeners();
-    return cleanup;
-  }, [initListeners]);
 
   const handleCheckForUpdates = () => {
     setHasChecked(true);
@@ -124,18 +121,30 @@ export function GeneralSection() {
               </span>
             </div>
             {updateInfo.releaseNotes && (
-              <div className="rounded-lg border border-border/50 bg-background/50 p-3 max-h-48 overflow-y-auto text-sm text-muted-foreground prose prose-invert prose-sm max-w-none">
+              <div className="rounded-lg border border-border/50 bg-background/50 p-3 max-h-48 overflow-y-auto">
                 <Markdown>{updateInfo.releaseNotes}</Markdown>
               </div>
             )}
-            <Button size="sm" onClick={startDownload}>
-              <Download className="w-3.5 h-3.5" />
-              Download Update
-            </Button>
+            {isMac ? (
+              <div className="space-y-2">
+                <Button size="sm" onClick={() => window.open(GITHUB_RELEASES_URL, '_blank')}>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  Download from GitHub
+                </Button>
+                <p className="text-xs text-muted-foreground">
+                  Auto-install is not available on macOS without code signing.
+                </p>
+              </div>
+            ) : (
+              <Button size="sm" onClick={startDownload}>
+                <Download className="w-3.5 h-3.5" />
+                Download Update
+              </Button>
+            )}
           </div>
         )}
 
-        {/* Status: Downloading */}
+        {/* Status: Downloading (non-macOS only) */}
         {status === 'downloading' && (
           <div className="space-y-3">
             <div className="space-y-1.5">
@@ -159,22 +168,52 @@ export function GeneralSection() {
         {/* Status: Ready to install */}
         {status === 'ready' && (
           <div className="space-y-3">
-            <div className="flex items-center gap-2 text-sm text-emerald-400">
-              <CheckCircle className="w-4 h-4" />
-              <span>Update downloaded. Restart to install.</span>
-            </div>
-            <Button size="sm" onClick={installNow}>
-              <RotateCcw className="w-3.5 h-3.5" />
-              Restart & Install
-            </Button>
+            {isMac ? (
+              <>
+                <div className="flex items-center gap-2 text-sm text-emerald-400">
+                  <CheckCircle className="w-4 h-4" />
+                  <span>Update downloaded.</span>
+                </div>
+                <Button size="sm" onClick={() => window.open(GITHUB_RELEASES_URL, '_blank')}>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  Download from GitHub
+                </Button>
+                <p className="text-xs text-muted-foreground">
+                  Auto-install is not available on macOS without code signing.
+                </p>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center gap-2 text-sm text-emerald-400">
+                  <CheckCircle className="w-4 h-4" />
+                  <span>Update downloaded. Restart to install.</span>
+                </div>
+                <Button size="sm" onClick={installNow}>
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  Restart & Install
+                </Button>
+              </>
+            )}
           </div>
         )}
 
         {/* Status: Error */}
         {status === 'error' && error && (
-          <div className="flex items-start gap-2 text-sm text-destructive">
-            <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
-            <span>{error}</span>
+          <div className="space-y-2">
+            <div className="flex items-start gap-2 text-sm text-destructive">
+              <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+              <span>{error}</span>
+            </div>
+            {isMac && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => window.open(GITHUB_RELEASES_URL, '_blank')}
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                Download from GitHub
+              </Button>
+            )}
           </div>
         )}
       </div>

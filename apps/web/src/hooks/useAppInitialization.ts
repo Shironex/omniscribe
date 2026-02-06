@@ -4,6 +4,7 @@ import { useSessionStore } from '@/stores/useSessionStore';
 import { useWorkspaceStore } from '@/stores/useWorkspaceStore';
 import { useGitStore } from '@/stores/useGitStore';
 import { useMcpStore } from '@/stores/useMcpStore';
+import { useUpdateStore } from '@/stores/useUpdateStore';
 import { connectSocket } from '@/lib/socket';
 
 const logger = createLogger('AppInit');
@@ -30,8 +31,12 @@ export function useAppInitialization(): void {
   const cleanupMcpListeners = useMcpStore(state => state.cleanupListeners);
   const fetchInternalMcpStatus = useMcpStore(state => state.fetchInternalMcpStatus);
 
+  // Update store (uses IPC, not socket — init separately)
+  const initUpdateListeners = useUpdateStore(state => state.initListeners);
+
   // Initialize stores and socket on mount
   useEffect(() => {
+    let cleanupUpdateListeners: (() => void) | undefined;
     const init = async () => {
       try {
         logger.info('Initializing app...');
@@ -44,6 +49,8 @@ export function useAppInitialization(): void {
         logger.info('All listeners initialized');
         // Fetch internal MCP status on app start
         fetchInternalMcpStatus();
+        // Init updater listeners (IPC-based, not socket)
+        cleanupUpdateListeners = initUpdateListeners();
       } catch (error) {
         logger.error('Failed to initialize:', error);
       }
@@ -57,6 +64,7 @@ export function useAppInitialization(): void {
       cleanupGitListeners();
       cleanupWorkspaceListeners();
       cleanupMcpListeners();
+      cleanupUpdateListeners?.();
     };
   }, [
     initSessionListeners,
@@ -68,5 +76,6 @@ export function useAppInitialization(): void {
     initMcpListeners,
     cleanupMcpListeners,
     fetchInternalMcpStatus,
+    initUpdateListeners,
   ]);
 }

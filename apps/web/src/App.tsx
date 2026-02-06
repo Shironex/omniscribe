@@ -20,12 +20,16 @@ import {
   useProjectGit,
   useSessionLifecycle,
 } from '@/hooks';
+import { useUpdateToast } from '@/hooks/useUpdateToast';
 import { useQuickActionStore, useWorkspaceStore } from '@/stores';
 import { writeToTerminal } from '@/lib/terminal';
 
 function App() {
   // Initialize app (socket and store listeners)
   useAppInitialization();
+
+  // Toast notifications for auto-update events
+  useUpdateToast();
 
   // Theme synchronization between project tabs and settings
   useWorkspacePreferences();
