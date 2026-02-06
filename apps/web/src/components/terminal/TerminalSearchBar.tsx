@@ -1,5 +1,6 @@
-import React, { useRef, useEffect, useCallback, useState } from 'react';
+import React, { useRef, useEffect, useCallback, useState, useMemo } from 'react';
 import { X, ChevronUp, ChevronDown, CaseSensitive, Regex } from 'lucide-react';
+import { debounce } from '@/lib/debounce';
 
 interface TerminalSearchBarProps {
   onSearch: (term: string, options: SearchOptions) => void;
@@ -28,9 +29,13 @@ export const TerminalSearchBar: React.FC<TerminalSearchBarProps> = ({
     inputRef.current?.focus();
   }, []);
 
+  const debouncedSearch = useMemo(() => debounce(onSearch, 150), [onSearch]);
+
+  useEffect(() => () => debouncedSearch.cancel(), [debouncedSearch]);
+
   useEffect(() => {
-    onSearch(query, { caseSensitive, regex });
-  }, [query, caseSensitive, regex, onSearch]);
+    debouncedSearch(query, { caseSensitive, regex });
+  }, [query, caseSensitive, regex, debouncedSearch]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -51,6 +56,7 @@ export const TerminalSearchBar: React.FC<TerminalSearchBarProps> = ({
 
   return (
     <div
+      role="search"
       className="absolute top-1 right-1 z-10 flex items-center gap-1 bg-card border border-border rounded-md px-2 py-1 shadow-lg"
       onKeyDown={handleKeyDown}
     >
@@ -64,6 +70,7 @@ export const TerminalSearchBar: React.FC<TerminalSearchBarProps> = ({
       />
 
       <button
+        type="button"
         onClick={() => setCaseSensitive(v => !v)}
         className={`p-0.5 rounded hover:bg-muted transition-colors ${
           caseSensitive ? 'text-primary bg-muted' : 'text-muted-foreground'
@@ -74,6 +81,7 @@ export const TerminalSearchBar: React.FC<TerminalSearchBarProps> = ({
       </button>
 
       <button
+        type="button"
         onClick={() => setRegex(v => !v)}
         className={`p-0.5 rounded hover:bg-muted transition-colors ${
           regex ? 'text-primary bg-muted' : 'text-muted-foreground'
@@ -86,6 +94,7 @@ export const TerminalSearchBar: React.FC<TerminalSearchBarProps> = ({
       <div className="w-px h-4 bg-border mx-0.5" />
 
       <button
+        type="button"
         onClick={onPrevious}
         className="p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
         title="Previous (Shift+Enter)"
@@ -94,6 +103,7 @@ export const TerminalSearchBar: React.FC<TerminalSearchBarProps> = ({
       </button>
 
       <button
+        type="button"
         onClick={onNext}
         className="p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
         title="Next (Enter)"
@@ -102,6 +112,7 @@ export const TerminalSearchBar: React.FC<TerminalSearchBarProps> = ({
       </button>
 
       <button
+        type="button"
         onClick={onClose}
         className="p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
         title="Close (Escape)"

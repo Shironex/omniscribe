@@ -10,7 +10,7 @@ import { useTerminalControlStore } from '@/stores/useTerminalControlStore';
 import { createSession, removeSession } from '@/lib/session';
 import { killTerminal } from '@/lib/terminal';
 import { mapAiModeToBackend, mapAiModeToUI } from '@/lib/aiMode';
-import { useSpatialNavigation } from '@/hooks/useSpatialNavigation';
+
 import { getNextAvailablePrelaunchShortcut } from '@/lib/prelaunch-shortcuts';
 import type { TerminalSession } from './TerminalHeader';
 import type { PreLaunchSlot } from './PreLaunchBar';
@@ -144,23 +144,6 @@ export function ConnectedTerminalGrid({ className }: ConnectedTerminalGridProps)
       isCurrent: currentGitBranch?.name === b.name,
     }));
   }, [gitBranches, currentGitBranch]);
-
-  // Calculate columns for spatial navigation
-  const layoutColumns = useMemo(() => {
-    const count = terminalSessions.length;
-    if (count <= 1) return 1;
-    if (count <= 2) return 2;
-    if (count <= 3) return 3;
-    if (count <= 4) return 2;
-    if (count <= 9) return 3;
-    return 4;
-  }, [terminalSessions.length]);
-
-  // Hook into spatial navigation
-  useSpatialNavigation({
-    sessionIds: terminalSessions.map(s => s.id),
-    columns: layoutColumns,
-  });
 
   // Add session (pre-launch slot) handler
   const handleAddSlot = useCallback(() => {

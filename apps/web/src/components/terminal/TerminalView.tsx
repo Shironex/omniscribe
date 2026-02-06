@@ -9,6 +9,7 @@ import { SearchAddon } from '@xterm/addon-search';
 import { WebglAddon } from '@xterm/addon-webgl';
 import {
   connectTerminal,
+  joinTerminal,
   writeToTerminal,
   writeToTerminalChunked,
   resizeTerminal,
@@ -247,7 +248,9 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
         // Primary+C: copy if selected, otherwise use default handling
         if (isPrimaryModifier && !e.shiftKey && key === 'c' && e.type === 'keydown') {
           if (terminalInstance.hasSelection()) {
-            navigator.clipboard.writeText(terminalInstance.getSelection());
+            navigator.clipboard.writeText(terminalInstance.getSelection()).catch(() => {
+              logger.debug('Clipboard write failed');
+            });
             terminalInstance.clearSelection();
             return false;
           }
@@ -256,32 +259,44 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
 
         // Primary+V: paste
         if (isPrimaryModifier && !e.shiftKey && key === 'v' && e.type === 'keydown') {
-          navigator.clipboard.readText().then(text => {
-            if (text.length > LARGE_PASTE_WARNING_THRESHOLD) {
-              writeToTerminalChunked(sessionIdRef.current, text);
-            } else {
-              writeToTerminal(sessionIdRef.current, text);
-            }
-          });
+          navigator.clipboard
+            .readText()
+            .then(text => {
+              if (text.length > LARGE_PASTE_WARNING_THRESHOLD) {
+                writeToTerminalChunked(sessionIdRef.current, text);
+              } else {
+                writeToTerminal(sessionIdRef.current, text);
+              }
+            })
+            .catch(() => {
+              logger.debug('Clipboard read failed (permission denied or unavailable)');
+            });
           return false;
         }
 
         // Ctrl+Shift+C/V: Linux-style copy/paste
         if (e.ctrlKey && e.shiftKey && key === 'c' && e.type === 'keydown') {
           if (terminalInstance.hasSelection()) {
-            navigator.clipboard.writeText(terminalInstance.getSelection());
+            navigator.clipboard.writeText(terminalInstance.getSelection()).catch(() => {
+              logger.debug('Clipboard write failed');
+            });
             terminalInstance.clearSelection();
           }
           return false;
         }
         if (e.ctrlKey && e.shiftKey && key === 'v' && e.type === 'keydown') {
-          navigator.clipboard.readText().then(text => {
-            if (text.length > LARGE_PASTE_WARNING_THRESHOLD) {
-              writeToTerminalChunked(sessionIdRef.current, text);
-            } else {
-              writeToTerminal(sessionIdRef.current, text);
-            }
-          });
+          navigator.clipboard
+            .readText()
+            .then(text => {
+              if (text.length > LARGE_PASTE_WARNING_THRESHOLD) {
+                writeToTerminalChunked(sessionIdRef.current, text);
+              } else {
+                writeToTerminal(sessionIdRef.current, text);
+              }
+            })
+            .catch(() => {
+              logger.debug('Clipboard read failed (permission denied or unavailable)');
+            });
           return false;
         }
 
@@ -306,6 +321,13 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
             connectionRef.current = connectTerminal(sessionId, handleOutput, handleClose);
             logger.info('Terminal connected for session', sessionId);
             setStatus('connected');
+
+            // Replay scrollback buffer for sessions that were already running
+            joinTerminal(sessionId).then(({ success, scrollback }) => {
+              if (success && scrollback && xtermRef.current && !isDisposedRef.current) {
+                xtermRef.current.write(scrollback);
+              }
+            });
           }
         } else if (retriesLeft > 0) {
           initRetryTimeout = setTimeout(() => {
@@ -317,6 +339,13 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
           if (!isDisposedRef.current && !connectionRef.current) {
             connectionRef.current = connectTerminal(sessionId, handleOutput, handleClose);
             setStatus('connected');
+
+            // Replay scrollback buffer for sessions that were already running
+            joinTerminal(sessionId).then(({ success, scrollback }) => {
+              if (success && scrollback && xtermRef.current && !isDisposedRef.current) {
+                xtermRef.current.write(scrollback);
+              }
+            });
           }
 
           // Continue fitting after mount settles to avoid clipped output in dense grids.

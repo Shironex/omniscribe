@@ -29,23 +29,17 @@ export class FilePathLinkProvider implements ILinkProvider {
       const fullMatch = match[0];
       const startCol = match.index;
 
-      // Skip URLs
-      const beforeMatch = text.slice(Math.max(0, startCol - 8), startCol);
-      if (
-        URL_PREFIXES.some(
-          prefix =>
-            beforeMatch.endsWith(prefix.slice(0, -1)) ||
-            text
-              .slice(Math.max(0, startCol - prefix.length), startCol + fullMatch.length)
-              .includes(prefix)
-        )
-      ) {
+      // Skip URLs — walk left to nearest whitespace to find the surrounding token
+      let tokenStart = startCol;
+      while (tokenStart > 0 && text[tokenStart - 1] !== ' ') tokenStart--;
+      const tokenPrefix = text.slice(tokenStart, startCol + fullMatch.length);
+      if (URL_PREFIXES.some(prefix => tokenPrefix.includes(prefix))) {
         continue;
       }
 
       const range = {
         start: { x: startCol + 1, y } as IBufferCellPosition,
-        end: { x: startCol + fullMatch.length + 1, y } as IBufferCellPosition,
+        end: { x: startCol + fullMatch.length, y } as IBufferCellPosition,
       };
 
       links.push({
