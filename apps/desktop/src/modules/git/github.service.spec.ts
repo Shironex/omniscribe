@@ -21,9 +21,8 @@ jest.mock('fs', () => ({
   existsSync: jest.fn().mockReturnValue(false),
 }));
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 const mockExecSync = require('child_process').execSync as jest.Mock;
-// eslint-disable-next-line @typescript-eslint/no-var-requires
+
 const mockExistsSync = require('fs').existsSync as jest.Mock;
 
 describe('GithubService', () => {

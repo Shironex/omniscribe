@@ -80,7 +80,6 @@ describe('TerminalService', () => {
     });
 
     it('should pass environment variables to the PTY', () => {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
       const pty = require('node-pty');
       service.spawnCommand('bash', [], '/home', { MY_VAR: 'test' });
 
@@ -467,7 +466,7 @@ describe('TerminalService', () => {
       it('should use COMSPEC shell on Windows when spawning', () => {
         const savedComspec = process.env.COMSPEC;
         process.env.COMSPEC = 'C:\\Windows\\System32\\cmd.exe';
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
+
         const pty = require('node-pty');
 
         winService.spawn('/project');
@@ -486,7 +485,7 @@ describe('TerminalService', () => {
       it('should fall back to cmd.exe when COMSPEC is not set', () => {
         const savedComspec = process.env.COMSPEC;
         delete process.env.COMSPEC;
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
+
         const pty = require('node-pty');
 
         winService.spawn('/project');
@@ -498,7 +497,6 @@ describe('TerminalService', () => {
       });
 
       it('should disable ConPTY on Windows', () => {
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
         const pty = require('node-pty');
 
         winService.spawnCommand('cmd.exe', [], '/project');
@@ -509,7 +507,6 @@ describe('TerminalService', () => {
       });
 
       it('should not pass --login args for cmd.exe', () => {
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
         const pty = require('node-pty');
 
         winService.spawn('/project');
@@ -561,7 +558,7 @@ describe('TerminalService', () => {
       it('should use SHELL env var on Linux when spawning', () => {
         const savedShell = process.env.SHELL;
         process.env.SHELL = '/bin/zsh';
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
+
         const pty = require('node-pty');
 
         unixService.spawn('/project');
@@ -580,7 +577,7 @@ describe('TerminalService', () => {
       it('should fall back to /bin/bash when SHELL is not set', () => {
         const savedShell = process.env.SHELL;
         delete process.env.SHELL;
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
+
         const pty = require('node-pty');
 
         unixService.spawn('/project');
@@ -592,7 +589,6 @@ describe('TerminalService', () => {
       });
 
       it('should NOT set useConpty on Linux', () => {
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
         const pty = require('node-pty');
 
         unixService.spawnCommand('bash', ['--login'], '/project');
@@ -603,7 +599,6 @@ describe('TerminalService', () => {
       });
 
       it('should pass --login args for bash', () => {
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
         const pty = require('node-pty');
 
         unixService.spawn('/project');
