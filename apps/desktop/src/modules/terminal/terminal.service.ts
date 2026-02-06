@@ -146,6 +146,8 @@ interface PtySession {
   scrollbackBuffer: string;
   /** Promise chain for serialized writes */
   writeChain: Promise<void>;
+  /** Whether the PTY stream is paused (backpressure) */
+  paused: boolean;
 }
 
 @Injectable()
@@ -278,6 +280,7 @@ export class TerminalService implements OnModuleDestroy {
       externalId,
       scrollbackBuffer: '',
       writeChain: Promise.resolve(),
+      paused: false,
     };
 
     this.sessions.set(sessionId, session);
@@ -497,6 +500,50 @@ export class TerminalService implements OnModuleDestroy {
   }
 
   /**
+   * Pause PTY output stream for backpressure management.
+   * When paused, the PTY buffers output internally (kernel-level flow control).
+   * @param sessionId The session to pause
+   */
+  pause(sessionId: number): void {
+    const session = this.sessions.get(sessionId);
+    if (!session || session.paused) return;
+
+    session.pty.pause();
+    session.paused = true;
+    this.logger.debug(`[pause] Paused PTY for session ${sessionId}`);
+  }
+
+  /**
+   * Resume PTY output stream after backpressure clears.
+   * @param sessionId The session to resume
+   */
+  resume(sessionId: number): void {
+    const session = this.sessions.get(sessionId);
+    if (!session || !session.paused) return;
+
+    session.pty.resume();
+    session.paused = false;
+    this.logger.debug(`[resume] Resumed PTY for session ${sessionId}`);
+  }
+
+  /**
+   * Check if a terminal is currently paused due to backpressure.
+   * @param sessionId The session to check
+   */
+  isPaused(sessionId: number): boolean {
+    return this.sessions.get(sessionId)?.paused ?? false;
+  }
+
+  /**
+   * Get the PID of a terminal process.
+   * @param sessionId The session to query
+   * @returns The PID if session exists, undefined otherwise
+   */
+  getPid(sessionId: number): number | undefined {
+    return this.sessions.get(sessionId)?.pty.pid;
+  }
+
+  /**
    * Flush buffered output for a session (chunk-based approach)
    */
   private flushOutput(sessionId: number): void {
@@ -538,6 +585,15 @@ export class TerminalService implements OnModuleDestroy {
   private cleanup(sessionId: number): void {
     const session = this.sessions.get(sessionId);
     if (session) {
+      // Resume if paused to prevent deadlock during cleanup
+      if (session.paused) {
+        try {
+          session.pty.resume();
+        } catch {
+          // Ignore resume errors during cleanup
+        }
+        session.paused = false;
+      }
       if (session.flushTimer) {
         clearTimeout(session.flushTimer);
         // Flush any remaining output before cleanup

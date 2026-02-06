@@ -485,6 +485,26 @@ export interface QuickActionsResponse extends SuccessResponse {
 }
 
 // ============================================
+// Terminal Events
+// ============================================
+
+/**
+ * Event emitted when a terminal enters or exits backpressure state.
+ * Backpressure occurs when output packets exceed the high water mark.
+ */
+export interface TerminalBackpressureEvent {
+  sessionId: number;
+  paused: boolean;
+}
+
+/**
+ * Payload for cancelling terminal output (sends SIGINT)
+ */
+export interface TerminalCancelPayload {
+  sessionId: number;
+}
+
+// ============================================
 // Broadcast Events
 // ============================================
 
