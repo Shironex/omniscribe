@@ -52,6 +52,17 @@ export async function createMainWindow(): Promise<BrowserWindow> {
   // Set up Content Security Policy before creating the window
   setupContentSecurityPolicy(isDev);
 
+  // Deny all permission requests (camera, mic, geolocation, etc.)
+  session.defaultSession.setPermissionRequestHandler((_webContents, permission, callback) => {
+    logger.warn(`[security] Denied permission request: ${permission}`);
+    callback(false);
+  });
+
+  session.defaultSession.setPermissionCheckHandler((_webContents, permission) => {
+    logger.warn(`[security] Denied permission check: ${permission}`);
+    return false;
+  });
+
   const mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
@@ -68,17 +79,35 @@ export async function createMainWindow(): Promise<BrowserWindow> {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
       contextIsolation: true,
-      sandbox: false,
+      sandbox: true,
     },
   });
 
   // Register all IPC handlers
   registerIpcHandlers(mainWindow);
 
-  // Open external links in browser
+  // Block all new window creation, open external links in browser
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    logger.info(`[security] Blocked new window creation, opening in browser: ${url}`);
     shell.openExternal(url);
     return { action: 'deny' };
+  });
+
+  // Safety net: if a window is somehow created, log it
+  mainWindow.webContents.on('did-create-window', window => {
+    logger.warn('[security] Unexpected window created -- closing immediately');
+    window.close();
+  });
+
+  // Block external URL navigation in renderer, open in system browser instead
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    const allowedOrigins = isDev ? [`http://localhost:${VITE_DEV_PORT}`] : ['file://'];
+    const isAllowed = allowedOrigins.some(origin => url.startsWith(origin));
+    if (!isAllowed) {
+      event.preventDefault();
+      logger.info(`[security] Blocked navigation to external URL, opening in browser: ${url}`);
+      shell.openExternal(url);
+    }
   });
 
   if (isDev) {
