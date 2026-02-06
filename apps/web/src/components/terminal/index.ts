@@ -21,3 +21,5 @@ export { PreLaunchSection } from './PreLaunchSection';
 export { QuickActionsDropdown } from './QuickActionsDropdown';
 export { MoreMenuDropdown } from './MoreMenuDropdown';
 export { SessionStatusDisplay } from './SessionStatusDisplay';
+
+export { ReconnectionOverlay } from './ReconnectionOverlay';

@@ -2,6 +2,7 @@ import { clsx } from 'clsx';
 import { TerminalView } from './TerminalView';
 import { TerminalErrorBoundary } from './TerminalErrorBoundary';
 import { TerminalHeader } from './TerminalHeader';
+import { ReconnectionOverlay } from './ReconnectionOverlay';
 import type { TerminalSession } from './TerminalHeader';
 import type { TerminalDragHandleProps } from './SortableTerminalWrapper';
 
@@ -51,7 +52,7 @@ export function TerminalCard({
         onQuickAction={onQuickAction}
         dragHandleProps={dragHandleProps}
       />
-      <div className="flex-1 min-h-0">
+      <div className="relative flex-1 min-h-0">
         {session.terminalSessionId !== undefined ? (
           <TerminalErrorBoundary sessionId={session.terminalSessionId}>
             <TerminalView
@@ -65,6 +66,7 @@ export function TerminalCard({
             Connecting to terminal...
           </div>
         )}
+        <ReconnectionOverlay />
       </div>
     </div>
   );
