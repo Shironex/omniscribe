@@ -23,3 +23,6 @@ export { ClaudeIcon } from './ClaudeIcon';
 export { UsagePopover } from './UsagePopover';
 
 export { ErrorBoundary } from './ErrorBoundary';
+
+export { ProgressBar } from './ProgressBar';
+export { UsageCard, getStatusInfo } from './UsageCard';

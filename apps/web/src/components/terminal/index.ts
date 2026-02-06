@@ -13,3 +13,11 @@ export { PreLaunchBar } from './PreLaunchBar';
 
 export { QuickActionPills } from './QuickActionPills';
 export type { QuickAction } from './QuickActionPills';
+
+export { TerminalCard } from './TerminalCard';
+export type { QuickActionItem } from './TerminalCard';
+export { PreLaunchSection } from './PreLaunchSection';
+
+export { QuickActionsDropdown } from './QuickActionsDropdown';
+export { MoreMenuDropdown } from './MoreMenuDropdown';
+export { SessionStatusDisplay } from './SessionStatusDisplay';
