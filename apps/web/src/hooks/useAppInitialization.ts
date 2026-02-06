@@ -10,8 +10,11 @@ import { connectSocket } from '@/lib/socket';
 const logger = createLogger('AppInit');
 
 /**
- * Hook for app initialization - socket connection and all store listener setup/cleanup.
- * Contains the init effect and runs side effects only.
+ * Initialize app-level socket connection and register store and updater listeners on mount.
+ *
+ * Establishes the socket connection, initializes listeners for session, workspace, git, and MCP stores,
+ * triggers fetching of internal MCP status, and initializes IPC-based update listeners. Cleans up all
+ * registered listeners when the component using this hook unmounts.
  */
 export function useAppInitialization(): void {
   // Session store
