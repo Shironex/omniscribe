@@ -10,11 +10,18 @@ import { IoAdapter } from '@nestjs/platform-socket.io';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ThrottlerModule } from '@nestjs/throttler';
 
+export interface ProviderOverride {
+  /** Provider token (class reference or injection token) */
+  token: any;
+  /** Mock value to use in place of the real provider */
+  value: any;
+}
+
 export interface CreateTestAppOptions {
   /** NestJS modules to import */
   modules: any[];
-  /** Provider token -> mock value overrides */
-  overrides?: Record<string, any>;
+  /** Provider overrides (class reference -> mock value) */
+  overrides?: ProviderOverride[];
   /** Enable throttler with real limits (default: false -- disabled for most tests) */
   enableThrottler?: boolean;
 }
@@ -42,10 +49,10 @@ export async function createTestApp(options: CreateTestAppOptions): Promise<INes
     ],
   });
 
-  // Apply provider overrides
+  // Apply provider overrides using class references as DI tokens
   if (options.overrides) {
-    for (const [token, mockValue] of Object.entries(options.overrides)) {
-      builder.overrideProvider(token).useValue(mockValue);
+    for (const { token, value } of options.overrides) {
+      builder.overrideProvider(token).useValue(value);
     }
   }
 
