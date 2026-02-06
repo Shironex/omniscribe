@@ -5,7 +5,7 @@ import { IoAdapter } from '@nestjs/platform-socket.io';
 import { AppModule } from '../modules/app.module';
 import { createMainWindow } from './window';
 import { cleanupIpcHandlers } from './ipc-handlers';
-import { logger, getLogPath } from './logger';
+import { logger, getLogPath, flushLogs } from './logger';
 import { initializeAutoUpdater } from './updater';
 import { corsOriginCallback } from '../modules/shared/cors.config';
 import { NestLoggerAdapter } from '../modules/shared/nest-logger';
@@ -103,7 +103,16 @@ app.on('before-quit', event => {
   if (nestApp) {
     event.preventDefault();
     isShuttingDown = true;
-    shutdownNestApp().finally(() => {
+    flushLogs()
+      .then(() => shutdownNestApp())
+      .finally(() => {
+        app.quit();
+      });
+  } else {
+    // No NestJS app, but still flush logs
+    event.preventDefault();
+    isShuttingDown = true;
+    flushLogs().finally(() => {
       app.quit();
     });
   }
