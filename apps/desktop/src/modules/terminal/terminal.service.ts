@@ -249,14 +249,20 @@ export class TerminalService implements OnModuleDestroy {
     const session = this.sessions.get(sessionId);
     if (!session) return;
 
-    // Chain writes to prevent interleaving
-    session.writeChain = session.writeChain.then(() => this.performWrite(session, data));
+    // Chain writes to prevent interleaving; catch to keep the chain alive on error
+    session.writeChain = session.writeChain
+      .then(() => this.performWrite(session, data))
+      .catch(err => {
+        this.logger.error(`[write] Failed for session ${sessionId}:`, err);
+      });
   }
 
   /**
    * Perform the actual write, chunking large data
    */
   private async performWrite(session: PtySession, data: string): Promise<void> {
+    if (this.isShuttingDown) return;
+
     if (data.length <= CHUNKED_WRITE_THRESHOLD) {
       session.pty.write(data);
       return;
@@ -264,6 +270,7 @@ export class TerminalService implements OnModuleDestroy {
 
     // Chunk large writes to prevent blocking
     for (let i = 0; i < data.length; i += CHUNK_SIZE) {
+      if (this.isShuttingDown) return;
       const chunk = data.slice(i, i + CHUNK_SIZE);
       session.pty.write(chunk);
       // Yield to event loop between chunks

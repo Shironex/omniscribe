@@ -241,6 +241,14 @@ export function TerminalGrid({
   const useRowPrimaryLayout = sessionCount === 4;
   const trailingRefitTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // All hooks must be called before any early return (Rules of Hooks)
+  const sessionIds = useMemo(() => {
+    const orderedIndexes = useRowPrimaryLayout ? layout.rows.flat() : columns.flat();
+    return orderedIndexes
+      .map(sessionIndex => sessions[sessionIndex]?.id)
+      .filter((sessionId): sessionId is string => Boolean(sessionId));
+  }, [columns, layout.rows, sessions, useRowPrimaryLayout]);
+
   const dispatchRefitAll = useCallback((delays: number[] = [0, 80, 180]) => {
     for (const delay of delays) {
       setTimeout(() => {
@@ -295,13 +303,6 @@ export function TerminalGrid({
 
   // Max terminals: 12
   const canAddMore = sessionCount + preLaunchSlots.length < 12;
-
-  const sessionIds = useMemo(() => {
-    const orderedIndexes = useRowPrimaryLayout ? layout.rows.flat() : columns.flat();
-    return orderedIndexes
-      .map(sessionIndex => sessions[sessionIndex]?.id)
-      .filter((sessionId): sessionId is string => Boolean(sessionId));
-  }, [columns, layout.rows, sessions, useRowPrimaryLayout]);
 
   return (
     <div className={twMerge(clsx('h-full w-full flex flex-col', className))}>

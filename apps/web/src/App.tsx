@@ -108,7 +108,7 @@ function App() {
 
   // Keep persisted order synced with current sessions
   useEffect(() => {
-    const currentIds = orderedTerminalSessions.map(session => session.id);
+    const currentIds = terminalSessions.map(session => session.id);
     const currentIdSet = new Set(currentIds);
     const validOrder = sessionOrder.filter(id => currentIdSet.has(id));
     const newIds = currentIds.filter(id => !sessionOrder.includes(id));
@@ -116,7 +116,7 @@ function App() {
     if (newIds.length > 0 || validOrder.length !== sessionOrder.length) {
       setSessionOrder([...validOrder, ...newIds]);
     }
-  }, [orderedTerminalSessions, sessionOrder, setSessionOrder]);
+  }, [terminalSessions, sessionOrder, setSessionOrder]);
 
   const handleReorderSessions = useCallback(
     (activeId: string, overId: string) => {
@@ -232,9 +232,9 @@ function App() {
 
       // Launch individual slot by assigned shortcut key
       if (PRELAUNCH_SHORTCUT_KEYS.includes(key)) {
-        e.preventDefault();
         const slot = preLaunchSlots.find(candidate => candidate.shortcutKey === key);
         if (slot && !launchingSlotIds?.has(slot.id)) {
+          e.preventDefault();
           handleLaunchSlot(slot.id);
         }
       }

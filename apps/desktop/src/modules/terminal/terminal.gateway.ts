@@ -122,7 +122,7 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
     }
     if (data.length > MAX_INPUT_SIZE) {
       this.logger.warn(
-        `[input] Data too large for session ${sessionId}: ${data.length} bytes (max ${MAX_INPUT_SIZE})`
+        `[input] Data too large for session ${sessionId}: ${data.length} chars (max ${MAX_INPUT_SIZE})`
       );
       return;
     }
@@ -162,7 +162,7 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
     const { sessionId, cols, rows } = payload;
 
     // Payload validation
-    if (!Number.isFinite(cols) || !Number.isFinite(rows) || cols <= 0 || rows <= 0) {
+    if (!Number.isInteger(cols) || !Number.isInteger(rows) || cols <= 0 || rows <= 0) {
       this.logger.warn(`[resize] Invalid dimensions for session ${sessionId}: ${cols}x${rows}`);
       return;
     }

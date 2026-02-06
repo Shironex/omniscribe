@@ -358,13 +358,15 @@ describe('TerminalService', () => {
       jest.useRealTimers();
     });
 
-    it('should prevent onExit processing during shutdown', () => {
+    it('should prevent onExit processing during shutdown', async () => {
       jest.useFakeTimers();
       service.spawnCommand('bash', [], '/home');
       const ptyInstance = mockPtyInstances[0];
 
       // Trigger shutdown
-      service.onModuleDestroy();
+      const destroyPromise = service.onModuleDestroy();
+      jest.advanceTimersByTime(3100);
+      await destroyPromise;
 
       // Exit arriving after shutdown should be ignored
       ptyInstance.simulateExit(0);

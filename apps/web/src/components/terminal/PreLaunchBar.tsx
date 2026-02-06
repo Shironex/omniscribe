@@ -69,7 +69,7 @@ export function PreLaunchBar({
   const selectedMode = aiModeOptions.find(m => m.value === slot.aiMode) || aiModeOptions[0];
   const SelectedIcon = selectedMode.icon;
   const shortcutKey =
-    slot.shortcutKey ?? (slotIndex ? getPrelaunchShortcutForIndex(slotIndex - 1) : null);
+    slot.shortcutKey || (slotIndex ? getPrelaunchShortcutForIndex(slotIndex - 1) : null);
 
   return (
     <div
