@@ -564,7 +564,7 @@ describe('QuickActionService', () => {
 
     it('should handle non-Error thrown values', async () => {
       terminalService.spawn.mockImplementation(() => {
-        throw 'string error'; // eslint-disable-line no-throw-literal
+        throw 'string error';
       });
 
       const action = makeAction({

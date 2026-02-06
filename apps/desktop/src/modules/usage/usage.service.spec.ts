@@ -975,7 +975,7 @@ describe('UsageService', () => {
   describe('edge cases', () => {
     it('should handle non-Error thrown objects in fetchUsageData', async () => {
       mockPtySpawn.mockImplementation(() => {
-        throw 'string error'; // eslint-disable-line no-throw-literal
+        throw 'string error';
       });
 
       const result = await service.fetchUsageData('/project');

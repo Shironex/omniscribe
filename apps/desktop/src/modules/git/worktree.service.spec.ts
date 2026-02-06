@@ -10,7 +10,6 @@ jest.mock('fs/promises', () => ({
   rm: jest.fn().mockResolvedValue(undefined),
 }));
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 const mockFs = require('fs/promises') as {
   mkdir: jest.Mock;
   access: jest.Mock;

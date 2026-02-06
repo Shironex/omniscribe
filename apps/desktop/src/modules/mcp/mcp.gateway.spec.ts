@@ -256,7 +256,7 @@ describe('McpGateway', () => {
 
     it('should return "Unknown error" when non-Error is thrown', () => {
       sessionRegistry.setEnabledServers.mockImplementation(() => {
-        throw 42; // eslint-disable-line no-throw-literal
+        throw 42;
       });
 
       const result = gateway.handleSetEnabled(payload, mockSocket);
