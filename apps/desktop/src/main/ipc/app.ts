@@ -1,8 +1,9 @@
-import { ipcMain, app } from 'electron';
+import { ipcMain, app, shell } from 'electron';
 import { existsSync } from 'fs';
 import { join } from 'path';
 import { createLogger } from '@omniscribe/shared';
 import { CLI_TOOLS, checkCliAvailable, type CLITool } from '../utils';
+import { getLogsDir } from '../logger';
 import type { ProjectValidationResult } from './types';
 
 const logger = createLogger('IPC:App');
@@ -47,6 +48,12 @@ export function registerAppHandlers(): void {
       };
     }
   );
+
+  ipcMain.handle('app:open-logs-folder', async () => {
+    logger.debug('app:open-logs-folder invoked');
+    const logsPath = getLogsDir();
+    await shell.openPath(logsPath);
+  });
 }
 
 /**
@@ -57,4 +64,5 @@ export function cleanupAppHandlers(): void {
   ipcMain.removeHandler('app:get-version');
   ipcMain.removeHandler('app:check-cli');
   ipcMain.removeHandler('app:is-valid-project');
+  ipcMain.removeHandler('app:open-logs-folder');
 }

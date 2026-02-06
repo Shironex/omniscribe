@@ -42,6 +42,7 @@ interface ElectronAPI {
     getVersion: () => Promise<string>;
     checkCli: (tool: string) => Promise<boolean>;
     isValidProject: (projectPath: string) => Promise<{ valid: boolean; reason?: string }>;
+    openLogsFolder: () => Promise<void>;
   };
   claude?: {
     getStatus: () => Promise<ClaudeCliStatus>;
