@@ -5,12 +5,16 @@ import {
   MessageBody,
   ConnectedSocket,
 } from '@nestjs/websockets';
+import { UseGuards } from '@nestjs/common';
+import { SkipThrottle } from '@nestjs/throttler';
 import { Server, Socket } from 'socket.io';
+import { WsThrottlerGuard } from '../shared/ws-throttler.guard';
 import { UsageService } from './usage.service';
 import { createLogger } from '@omniscribe/shared';
 import type { UsageFetchPayload, UsageFetchResponse, ClaudeCliStatus } from '@omniscribe/shared';
 import { CORS_CONFIG } from '../shared/cors.config';
 
+@UseGuards(WsThrottlerGuard)
 @WebSocketGateway({
   cors: CORS_CONFIG,
 })
@@ -26,6 +30,7 @@ export class UsageGateway {
    * Handle usage:fetch request from client
    * Fetches Claude CLI usage data and returns it
    */
+  @SkipThrottle()
   @SubscribeMessage('usage:fetch')
   async handleFetch(
     @ConnectedSocket() _client: Socket,
@@ -60,6 +65,7 @@ export class UsageGateway {
   /**
    * Handle claude:status request - get Claude CLI status
    */
+  @SkipThrottle()
   @SubscribeMessage('claude:status')
   async handleStatus(
     @ConnectedSocket() _client: Socket,

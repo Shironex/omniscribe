@@ -6,8 +6,11 @@ import {
   ConnectedSocket,
   OnGatewayInit,
 } from '@nestjs/websockets';
+import { UseGuards } from '@nestjs/common';
+import { SkipThrottle } from '@nestjs/throttler';
 import { Server, Socket } from 'socket.io';
 import { OnEvent } from '@nestjs/event-emitter';
+import { WsThrottlerGuard } from '../shared/ws-throttler.guard';
 import {
   QuickAction,
   ProjectTabDTO,
@@ -54,6 +57,7 @@ interface AiPromptEvent {
   projectPath?: string;
 }
 
+@UseGuards(WsThrottlerGuard)
 @WebSocketGateway({
   cors: CORS_CONFIG,
 })
@@ -101,6 +105,7 @@ export class WorkspaceGateway implements OnGatewayInit {
   /**
    * Handle get quick actions request
    */
+  @SkipThrottle()
   @SubscribeMessage('quickaction:list')
   handleGetQuickActions(
     @MessageBody() payload: GetQuickActionsPayload,
@@ -179,6 +184,7 @@ export class WorkspaceGateway implements OnGatewayInit {
   /**
    * Handle get workspace state request - returns saved state on app start
    */
+  @SkipThrottle()
   @SubscribeMessage('workspace:get-state')
   handleGetWorkspaceState(@ConnectedSocket() _client: Socket): WorkspaceState {
     this.logger.debug('Getting workspace state');
@@ -316,6 +322,7 @@ export class WorkspaceGateway implements OnGatewayInit {
   /**
    * Handle get preferences request
    */
+  @SkipThrottle()
   @SubscribeMessage('workspace:get-preferences')
   handleGetPreferences(@ConnectedSocket() _client: Socket): UserPreferences {
     return this.workspaceService.getPreferences();

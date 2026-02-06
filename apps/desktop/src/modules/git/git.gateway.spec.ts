@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { Server, Socket } from 'socket.io';
 import { GitGateway } from './git.gateway';
 import { GitService } from './git.service';
@@ -67,6 +68,7 @@ describe('GitGateway', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
+      imports: [ThrottlerModule.forRoot([])],
       providers: [
         GitGateway,
         { provide: GitService, useValue: mockGitService },

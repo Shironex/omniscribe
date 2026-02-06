@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { Socket } from 'socket.io';
 import { UsageGateway } from './usage.gateway';
 import { UsageService } from './usage.service';
@@ -30,6 +31,7 @@ describe('UsageGateway', () => {
     } as unknown as jest.Mocked<UsageService>;
 
     const module: TestingModule = await Test.createTestingModule({
+      imports: [ThrottlerModule.forRoot([])],
       providers: [UsageGateway, { provide: UsageService, useValue: usageService }],
     }).compile();
 

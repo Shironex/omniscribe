@@ -8,8 +8,11 @@ import {
   OnGatewayConnection,
   OnGatewayDisconnect,
 } from '@nestjs/websockets';
+import { UseGuards } from '@nestjs/common';
+import { SkipThrottle } from '@nestjs/throttler';
 import { Server, Socket } from 'socket.io';
 import { OnEvent } from '@nestjs/event-emitter';
+import { WsThrottlerGuard } from '../shared/ws-throttler.guard';
 import { TerminalService } from './terminal.service';
 import {
   TerminalSpawnPayload,
@@ -37,6 +40,7 @@ interface TerminalClosedEvent {
   signal?: number;
 }
 
+@UseGuards(WsThrottlerGuard)
 @WebSocketGateway({
   cors: CORS_CONFIG,
 })
@@ -108,6 +112,7 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
     return { sessionId };
   }
 
+  @SkipThrottle()
   @SubscribeMessage('terminal:input')
   handleInput(
     @ConnectedSocket() _client: Socket,
@@ -154,6 +159,7 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
     return this.connectedClients.get(clientId);
   }
 
+  @SkipThrottle()
   @SubscribeMessage('terminal:resize')
   handleResize(
     @ConnectedSocket() _client: Socket,
@@ -196,6 +202,7 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
     return { success: false, error: `Terminal session ${sessionId} not found` };
   }
 
+  @SkipThrottle()
   @SubscribeMessage('terminal:join')
   handleJoin(
     @ConnectedSocket() client: Socket,

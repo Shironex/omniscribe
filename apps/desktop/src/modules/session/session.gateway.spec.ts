@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { Server, Socket } from 'socket.io';
 import { SessionGateway } from './session.gateway';
 import { SessionService, ExtendedSessionConfig } from './session.service';
@@ -103,6 +104,7 @@ describe('SessionGateway', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
+      imports: [ThrottlerModule.forRoot([])],
       providers: [
         SessionGateway,
         { provide: SessionService, useValue: mockSessionService },

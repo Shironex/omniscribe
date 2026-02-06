@@ -6,7 +6,9 @@ import {
   ConnectedSocket,
   OnGatewayInit,
 } from '@nestjs/websockets';
-import { Inject, forwardRef } from '@nestjs/common';
+import { Inject, forwardRef, UseGuards } from '@nestjs/common';
+import { SkipThrottle } from '@nestjs/throttler';
+import { WsThrottlerGuard } from '../shared/ws-throttler.guard';
 import { Server, Socket } from 'socket.io';
 import { OnEvent } from '@nestjs/event-emitter';
 import * as crypto from 'crypto';
@@ -68,6 +70,7 @@ interface UpdateSessionResponse {
   error?: string;
 }
 
+@UseGuards(WsThrottlerGuard)
 @WebSocketGateway({
   cors: CORS_CONFIG,
 })
@@ -271,6 +274,7 @@ export class SessionGateway implements OnGatewayInit {
   /**
    * Handle session list request
    */
+  @SkipThrottle()
   @SubscribeMessage('session:list')
   handleList(
     @MessageBody() payload: SessionListPayload,

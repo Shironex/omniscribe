@@ -6,8 +6,11 @@ import {
   ConnectedSocket,
   OnGatewayInit,
 } from '@nestjs/websockets';
+import { UseGuards } from '@nestjs/common';
+import { SkipThrottle } from '@nestjs/throttler';
 import { Server, Socket } from 'socket.io';
 import { OnEvent } from '@nestjs/event-emitter';
+import { WsThrottlerGuard } from '../shared/ws-throttler.guard';
 import {
   McpDiscoverPayload,
   McpSetEnabledPayload,
@@ -45,6 +48,7 @@ import { CORS_CONFIG } from '../shared/cors.config';
  * - McpSessionRegistryService: Session state management
  * - McpTrackingService: Config tracking
  */
+@UseGuards(WsThrottlerGuard)
 @WebSocketGateway({
   cors: CORS_CONFIG,
 })
@@ -166,6 +170,7 @@ export class McpGateway implements OnGatewayInit {
   /**
    * Handle getting enabled servers for a session
    */
+  @SkipThrottle()
   @SubscribeMessage('mcp:get-enabled')
   handleGetEnabled(
     @MessageBody() payload: McpGetEnabledPayload,
@@ -181,6 +186,7 @@ export class McpGateway implements OnGatewayInit {
   /**
    * Handle getting cached servers for a project
    */
+  @SkipThrottle()
   @SubscribeMessage('mcp:get-servers')
   handleGetServers(
     @MessageBody() payload: McpGetServersPayload,
@@ -218,6 +224,7 @@ export class McpGateway implements OnGatewayInit {
   /**
    * Get internal MCP server status
    */
+  @SkipThrottle()
   @SubscribeMessage('mcp:get-internal-status')
   handleGetInternalStatus(): McpInternalStatusResponse {
     return this.writerService.getInternalMcpInfo();
@@ -226,6 +233,7 @@ export class McpGateway implements OnGatewayInit {
   /**
    * Get status server info
    */
+  @SkipThrottle()
   @SubscribeMessage('mcp:get-status-server-info')
   handleGetStatusServerInfo(): McpStatusServerInfoResponse {
     return {

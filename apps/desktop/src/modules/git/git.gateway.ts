@@ -5,7 +5,10 @@ import {
   MessageBody,
   ConnectedSocket,
 } from '@nestjs/websockets';
+import { UseGuards } from '@nestjs/common';
+import { SkipThrottle } from '@nestjs/throttler';
 import { Server, Socket } from 'socket.io';
+import { WsThrottlerGuard } from '../shared/ws-throttler.guard';
 import { GitService } from './git.service';
 import { WorktreeService } from './worktree.service';
 import { GithubService } from './github.service';
@@ -63,6 +66,7 @@ interface GitWorktreesResponse {
   error?: string;
 }
 
+@UseGuards(WsThrottlerGuard)
 @WebSocketGateway({
   cors: CORS_CONFIG,
   namespace: '/',
@@ -79,6 +83,7 @@ export class GitGateway {
     private readonly githubService: GithubService
   ) {}
 
+  @SkipThrottle()
   @SubscribeMessage('git:branches')
   async handleBranches(
     @ConnectedSocket() client: Socket,
@@ -119,6 +124,7 @@ export class GitGateway {
     }
   }
 
+  @SkipThrottle()
   @SubscribeMessage('git:commits')
   async handleCommits(
     @ConnectedSocket() client: Socket,
@@ -235,6 +241,7 @@ export class GitGateway {
     }
   }
 
+  @SkipThrottle()
   @SubscribeMessage('git:current-branch')
   async handleCurrentBranch(
     @ConnectedSocket() client: Socket,
@@ -269,6 +276,7 @@ export class GitGateway {
     }
   }
 
+  @SkipThrottle()
   @SubscribeMessage('git:worktrees')
   async handleWorktrees(
     @ConnectedSocket() _client: Socket,
@@ -335,6 +343,7 @@ export class GitGateway {
   // GitHub CLI Handlers
   // ============================================
 
+  @SkipThrottle()
   @SubscribeMessage('github:status')
   async handleGithubStatus(
     @ConnectedSocket() _client: Socket,
@@ -366,6 +375,7 @@ export class GitGateway {
     }
   }
 
+  @SkipThrottle()
   @SubscribeMessage('github:repo-info')
   async handleGithubRepoInfo(
     @ConnectedSocket() _client: Socket,
@@ -397,6 +407,7 @@ export class GitGateway {
     }
   }
 
+  @SkipThrottle()
   @SubscribeMessage('github:prs')
   async handleGithubPRs(
     @ConnectedSocket() _client: Socket,
@@ -428,6 +439,7 @@ export class GitGateway {
     }
   }
 
+  @SkipThrottle()
   @SubscribeMessage('github:pr')
   async handleGithubPR(
     @ConnectedSocket() _client: Socket,
@@ -497,6 +509,7 @@ export class GitGateway {
     }
   }
 
+  @SkipThrottle()
   @SubscribeMessage('github:issues')
   async handleGithubIssues(
     @ConnectedSocket() _client: Socket,
@@ -532,6 +545,7 @@ export class GitGateway {
     }
   }
 
+  @SkipThrottle()
   @SubscribeMessage('github:issue')
   async handleGithubIssue(
     @ConnectedSocket() _client: Socket,

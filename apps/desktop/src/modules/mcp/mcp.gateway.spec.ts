@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { Server, Socket } from 'socket.io';
 import { McpGateway } from './mcp.gateway';
 import { McpStatusServerService } from './mcp-status-server.service';
@@ -76,6 +77,7 @@ describe('McpGateway', () => {
     } as unknown as jest.Mocked<McpStatusServerService>;
 
     const module: TestingModule = await Test.createTestingModule({
+      imports: [ThrottlerModule.forRoot([])],
       providers: [
         McpGateway,
         { provide: McpDiscoveryService, useValue: discoveryService },
