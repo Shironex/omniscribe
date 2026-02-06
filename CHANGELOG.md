@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.1.3 (2026-02-06)
+
+### Security
+
+- **[P0]** Fix shell injection: replace `exec()` with `execFile()` in git and GitHub CLI services — arguments are now passed as arrays, preventing shell metacharacter injection
+- **[P1]** Bind NestJS backend to `127.0.0.1` instead of `0.0.0.0`, preventing LAN exposure
+
+### Bug Fixes
+
+- **[P2]** Fix socket connection hang when concurrent callers race during initial connect — replaced `setInterval` polling (no timeout) with a pending callers queue and 30-second timeout
+- **[P3]** Fix MCP server version drift: version is now injected from `package.json` at build time instead of being hardcoded
+
+### Docs
+
+- Update SECURITY.md to reflect `execFile` with argument arrays
+
 ## 0.1.2 (2026-02-06)
 
 ### Features
@@ -58,7 +74,7 @@ All notable changes to this project will be documented in this file.
 
 - Content Security Policy (CSP) for renderer process
 - CORS hardening restricted to localhost origins
-- Input validation and shell escaping for CLI commands
+- Safe argument passing for CLI commands (execFile with argument arrays)
 - Electron security: nodeIntegration disabled, contextIsolation enabled
 
 ### Architecture
