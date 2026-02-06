@@ -12,7 +12,7 @@
     "build": "node esbuild.config.mjs",
     "build:dev": "tsc -p tsconfig.build.json",
     "dev": "tsc -p tsconfig.build.json --watch",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc -p tsconfig.build.json --noEmit",
     "test": "jest",
     "test:cov": "jest --coverage",
     "test:watch": "jest --watch",
