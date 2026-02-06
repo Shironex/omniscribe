@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import { useState, useRef, useCallback, useMemo } from 'react';
 import { createLogger } from '@omniscribe/shared';
 
 const logger = createLogger('Sidebar');
@@ -19,6 +19,7 @@ import { QuickActionsSection } from './QuickActionsSection';
 import { useSessionStore, useTerminalControlStore } from '@/stores';
 import { writeToTerminal } from '@/lib/terminal';
 import { QuickAction } from '@omniscribe/shared';
+import { useSidebarResize } from '@/hooks/useSidebarResize';
 
 type SidebarTab = 'config' | 'processes';
 
@@ -28,9 +29,6 @@ interface SidebarProps {
   onWidthChange: (width: number) => void;
   className?: string;
 }
-
-const MIN_WIDTH = 180;
-const MAX_WIDTH = 320;
 
 interface CollapsibleSectionProps {
   icon: React.ComponentType<{ size?: number | string; className?: string }>;
@@ -78,7 +76,7 @@ function CollapsibleSection({
 
 export function Sidebar({ collapsed, width, onWidthChange, className }: SidebarProps) {
   const [activeTab, setActiveTab] = useState<SidebarTab>('config');
-  const [isResizing, setIsResizing] = useState(false);
+  const { isResizing, handleMouseDown } = useSidebarResize(onWidthChange);
   const sidebarRef = useRef<HTMLDivElement>(null);
 
   // Get sessions for the Processes tab - use stable selector
@@ -90,11 +88,6 @@ export function Sidebar({ collapsed, width, onWidthChange, className }: SidebarP
       ).length,
     [sessions]
   );
-
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    setIsResizing(true);
-  }, []);
 
   // Terminal control store for focus and session management
   const setFocusedSessionId = useTerminalControlStore(state => state.setFocusedSessionId);
@@ -151,29 +144,6 @@ export function Sidebar({ collapsed, width, onWidthChange, className }: SidebarP
     },
     [focusedSessionId, sessions]
   );
-
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!isResizing) return;
-      const newWidth = e.clientX;
-      const clampedWidth = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, newWidth));
-      onWidthChange(clampedWidth);
-    };
-
-    const handleMouseUp = () => {
-      setIsResizing(false);
-    };
-
-    if (isResizing) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-    }
-
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [isResizing, onWidthChange]);
 
   return (
     <div
