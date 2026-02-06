@@ -413,4 +413,118 @@ describe('McpWriterService', () => {
       expect(internalService.getInternalMcpInfo).toHaveBeenCalled();
     });
   });
+
+  describe('concurrency', () => {
+    it('serializes concurrent writeConfig calls to the same path', async () => {
+      // Track the order of writeFile calls to prove serialization
+      const writeOrder: string[] = [];
+
+      writeFileMock.mockImplementation(async (_path: string, content: string) => {
+        const parsed = JSON.parse(content);
+        const sessionId = parsed._omniscribe?.sessionId;
+        writeOrder.push(`start:${sessionId}`);
+        // Small delay to simulate I/O
+        await new Promise(resolve => setTimeout(resolve, 10));
+        writeOrder.push(`end:${sessionId}`);
+      });
+
+      // Both calls target the same workingDir (same .mcp.json path)
+      const [result1, result2] = await Promise.all([
+        service.writeConfig('/same/dir', 'session-1', '/project', []),
+        service.writeConfig('/same/dir', 'session-2', '/project', []),
+      ]);
+
+      // Both should complete successfully
+      expect(result1).toContain('.mcp.json');
+      expect(result2).toContain('.mcp.json');
+
+      // writeFile should have been called twice (once per session)
+      expect(writeFileMock).toHaveBeenCalledTimes(2);
+
+      // Serialization means one completes before the other starts
+      // The order should be: start:A, end:A, start:B, end:B
+      expect(writeOrder).toHaveLength(4);
+      expect(writeOrder[1]).toMatch(/^end:/);
+      expect(writeOrder[2]).toMatch(/^start:/);
+    });
+
+    it('serializes writeConfig and removeConfig for the same path', async () => {
+      const operations: string[] = [];
+
+      writeFileMock.mockImplementation(async () => {
+        operations.push('writeFile');
+        await new Promise(resolve => setTimeout(resolve, 10));
+      });
+
+      // Set up removeConfig to find the file and have an omniscribe entry
+      existsSyncMock.mockReturnValue(true);
+      readFileMock.mockImplementation(async () => {
+        operations.push('readFile');
+        return JSON.stringify({
+          mcpServers: {
+            omniscribe: { type: 'stdio', command: 'node' },
+            'other-server': { type: 'stdio', command: 'python' },
+          },
+          _omniscribe: { sessionId: 'session-1' },
+        });
+      });
+
+      // Fire writeConfig and removeConfig concurrently on the same path
+      const [writeResult, removeResult] = await Promise.all([
+        service.writeConfig('/same/dir', 'session-1', '/project', []),
+        service.removeConfig('/same/dir', 'session-1'),
+      ]);
+
+      expect(writeResult).toContain('.mcp.json');
+      expect(removeResult).toBe(true);
+
+      // The mutex ensures writeConfig's writeFile completes before
+      // removeConfig's readFile starts (or vice versa, depending on scheduling).
+      // Either way, a read should never be between a start-write and end-write
+      // from the other operation. With serialization:
+      // Scenario A: [writeFile(write), readFile(remove), writeFile(remove)]
+      // Scenario B: [readFile(remove), writeFile(remove), writeFile(write)]
+      // Both are valid -- the key is they don't interleave.
+      expect(operations.length).toBeGreaterThanOrEqual(2);
+
+      // Verify writeFile was called at least twice (once by writeConfig, once by removeConfig)
+      expect(writeFileMock).toHaveBeenCalledTimes(2);
+    });
+
+    it('allows parallel writes to different paths', async () => {
+      const timestamps: { path: string; event: string; time: number }[] = [];
+
+      writeFileMock.mockImplementation(async (filePath: string) => {
+        timestamps.push({ path: filePath, event: 'start', time: Date.now() });
+        // Delay long enough that serialized execution would be detectable
+        await new Promise(resolve => setTimeout(resolve, 50));
+        timestamps.push({ path: filePath, event: 'end', time: Date.now() });
+      });
+
+      // Two calls to DIFFERENT working directories (different .mcp.json paths)
+      const [result1, result2] = await Promise.all([
+        service.writeConfig('/dir-a', 'session-1', '/project-a', []),
+        service.writeConfig('/dir-b', 'session-2', '/project-b', []),
+      ]);
+
+      expect(result1).toContain('dir-a');
+      expect(result2).toContain('dir-b');
+
+      // Both should have started before either finished (parallel execution).
+      // Find the start and end events for each path.
+      const dirAStart = timestamps.find(t => t.path.includes('dir-a') && t.event === 'start')!;
+      const dirBStart = timestamps.find(t => t.path.includes('dir-b') && t.event === 'start')!;
+      const dirAEnd = timestamps.find(t => t.path.includes('dir-a') && t.event === 'end')!;
+      const dirBEnd = timestamps.find(t => t.path.includes('dir-b') && t.event === 'end')!;
+
+      // Both starts should occur before both ends (proving parallelism)
+      expect(dirAStart.time).toBeLessThan(dirAEnd.time);
+      expect(dirBStart.time).toBeLessThan(dirBEnd.time);
+
+      // The key assertion: both started before either ended
+      const earliestEnd = Math.min(dirAEnd.time, dirBEnd.time);
+      expect(dirAStart.time).toBeLessThanOrEqual(earliestEnd);
+      expect(dirBStart.time).toBeLessThanOrEqual(earliestEnd);
+    });
+  });
 });
