@@ -273,7 +273,12 @@ export function TerminalGrid({
                         <div className="w-8 h-0.5 bg-border rounded-full group-hover:bg-primary transition-colors" />
                       </PanelResizeHandle>
                     )}
-                    <Panel minSize={15}>
+                    <Panel
+                      id={`row-${rowIndex}`}
+                      order={rowIndex}
+                      defaultSize={100 / layout.rows.length}
+                      minSize={15}
+                    >
                       <PanelGroup direction="horizontal" onLayout={handlePanelResize}>
                         {row.map((sessionIndex, colIndex) => {
                           const session = sessions[sessionIndex];
@@ -285,7 +290,12 @@ export function TerminalGrid({
                                   <div className="h-8 w-0.5 bg-border rounded-full group-hover:bg-primary transition-colors" />
                                 </PanelResizeHandle>
                               )}
-                              <Panel minSize={15}>
+                              <Panel
+                                id={`col-${rowIndex}-${colIndex}`}
+                                order={colIndex}
+                                defaultSize={100 / row.length}
+                                minSize={15}
+                              >
                                 <SortableTerminalWrapper id={session.id}>
                                   <TerminalCard
                                     session={session}
