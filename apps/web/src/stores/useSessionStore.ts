@@ -98,86 +98,91 @@ export const useSessionStore = create<SessionStore>()(
   devtools(
     (set, get) => {
       // Create common socket actions
-      const socketActions = createSocketActions<SessionState>(set);
+      const socketActions = createSocketActions<SessionState>(set, 'session');
 
       // Create socket listeners
-      const { initListeners, cleanupListeners } = createSocketListeners<SessionStore>(get, set, {
-        listeners: [
-          {
-            event: 'session:created',
-            handler: (data, get) => {
-              const session = data as ExtendedSessionConfig;
-              logger.debug('session:created', session.id);
-              get().addSession(session);
+      const { initListeners, cleanupListeners } = createSocketListeners<SessionStore>(
+        get,
+        set,
+        'session',
+        {
+          listeners: [
+            {
+              event: 'session:created',
+              handler: (data, get) => {
+                const session = data as ExtendedSessionConfig;
+                logger.debug('session:created', session.id);
+                get().addSession(session);
+              },
             },
-          },
-          {
-            event: 'session:status',
-            handler: (data, get) => {
-              const update = data as SessionStatusUpdate;
-              logger.debug('session:status', update.sessionId, update.status);
-              get().updateStatus(
-                update.sessionId,
-                update.status,
-                update.message,
-                update.needsInputPrompt
-              );
+            {
+              event: 'session:status',
+              handler: (data, get) => {
+                const update = data as SessionStatusUpdate;
+                logger.debug('session:status', update.sessionId, update.status);
+                get().updateStatus(
+                  update.sessionId,
+                  update.status,
+                  update.message,
+                  update.needsInputPrompt
+                );
+              },
             },
-          },
-          {
-            event: 'session:removed',
-            handler: (data, get) => {
-              const payload = data as { sessionId: string };
-              logger.debug('session:removed', payload.sessionId);
-              get().removeSession(payload.sessionId);
+            {
+              event: 'session:removed',
+              handler: (data, get) => {
+                const payload = data as { sessionId: string };
+                logger.debug('session:removed', payload.sessionId);
+                get().removeSession(payload.sessionId);
+              },
             },
-          },
-          {
-            event: 'terminal:backpressure',
-            handler: (data, get) => {
-              const payload = data as { sessionId: number; paused: boolean };
-              logger.debug('terminal:backpressure', payload.sessionId, payload.paused);
-              get().setBackpressure(payload.sessionId, payload.paused);
+            {
+              event: 'terminal:backpressure',
+              handler: (data, get) => {
+                const payload = data as { sessionId: number; paused: boolean };
+                logger.debug('terminal:backpressure', payload.sessionId, payload.paused);
+                get().setBackpressure(payload.sessionId, payload.paused);
+              },
             },
-          },
-          {
-            event: 'session:health',
-            handler: (data, get) => {
-              const payload = data as { sessionId: string; health: HealthLevel; reason?: string };
-              logger.debug('session:health', payload.sessionId, payload.health);
-              get().updateSession(payload.sessionId, { health: payload.health });
+            {
+              event: 'session:health',
+              handler: (data, get) => {
+                const payload = data as { sessionId: string; health: HealthLevel; reason?: string };
+                logger.debug('session:health', payload.sessionId, payload.health);
+                get().updateSession(payload.sessionId, { health: payload.health });
+              },
             },
-          },
-          {
-            event: 'zombie:cleanup',
-            handler: data => {
-              const payload = data as { sessionId: string; sessionName: string; reason: string };
-              logger.warn('zombie:cleanup', payload.sessionId, payload.reason);
-              toast.error(`Session "${payload.sessionName}" terminated unexpectedly`, {
-                description: payload.reason,
-                duration: 10000,
-              });
+            {
+              event: 'zombie:cleanup',
+              handler: data => {
+                const payload = data as { sessionId: string; sessionName: string; reason: string };
+                logger.warn('zombie:cleanup', payload.sessionId, payload.reason);
+                toast.error(`Session "${payload.sessionName}" terminated unexpectedly`, {
+                  description: payload.reason,
+                  duration: 10000,
+                });
+              },
             },
-          },
-        ],
-        onConnect: get => {
-          // Request fresh session list on reconnect
-          logger.info('Refreshing session list on reconnect');
-          socket.emit('session:list', {}, (sessions: ExtendedSessionConfig[]) => {
-            if (Array.isArray(sessions)) {
-              get().setSessions(sessions);
-              // Rejoin terminal rooms for all sessions with active terminals
-              // so output resumes after reconnection when CSR fails
-              for (const session of sessions) {
-                if (session.terminalSessionId !== undefined) {
-                  logger.debug('Rejoining terminal room', session.terminalSessionId);
-                  socket.emit('terminal:join', { sessionId: session.terminalSessionId });
+          ],
+          onConnect: get => {
+            // Request fresh session list on reconnect
+            logger.info('Refreshing session list on reconnect');
+            socket.emit('session:list', {}, (sessions: ExtendedSessionConfig[]) => {
+              if (Array.isArray(sessions)) {
+                get().setSessions(sessions);
+                // Rejoin terminal rooms for all sessions with active terminals
+                // so output resumes after reconnection when CSR fails
+                for (const session of sessions) {
+                  if (session.terminalSessionId !== undefined) {
+                    logger.debug('Rejoining terminal room', session.terminalSessionId);
+                    socket.emit('terminal:join', { sessionId: session.terminalSessionId });
+                  }
                 }
               }
-            }
-          });
-        },
-      });
+            });
+          },
+        }
+      );
 
       return {
         // Initial state (spread common state + custom state)

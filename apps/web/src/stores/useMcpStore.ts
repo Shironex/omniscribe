@@ -94,10 +94,10 @@ export const useMcpStore = create<McpStore>()(
   devtools(
     (set, get) => {
       // Create common socket actions
-      const socketActions = createSocketActions<McpState>(set);
+      const socketActions = createSocketActions<McpState>(set, 'mcp');
 
       // Create socket listeners
-      const { initListeners, cleanupListeners } = createSocketListeners<McpStore>(get, set, {
+      const { initListeners, cleanupListeners } = createSocketListeners<McpStore>(get, set, 'mcp', {
         listeners: [
           {
             event: 'mcp:servers:discovered',

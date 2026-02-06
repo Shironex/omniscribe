@@ -126,11 +126,11 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
   devtools(
     (set, get) => {
       // Create common socket actions
-      const socketActions = createSocketActions<WorkspaceState>(set);
+      const socketActions = createSocketActions<WorkspaceState>(set, 'workspace');
 
       // Create socket listeners
       const { initListeners: baseInitListeners, cleanupListeners } =
-        createSocketListeners<WorkspaceStore>(get, set, {
+        createSocketListeners<WorkspaceStore>(get, set, 'workspace', {
           listeners: [
             {
               event: 'workspace:tabs-updated',

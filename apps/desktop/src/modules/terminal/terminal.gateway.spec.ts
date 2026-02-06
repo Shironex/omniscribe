@@ -15,6 +15,9 @@ function createMockSocket(id = 'client-1'): Socket {
     leave: jest.fn(),
     emit: jest.fn(),
     broadcast: { emit: jest.fn() },
+    conn: {
+      on: jest.fn(),
+    },
   } as unknown as Socket;
 }
 

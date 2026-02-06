@@ -93,10 +93,10 @@ export const useGitStore = create<GitStore>()(
   devtools(
     (set, get) => {
       // Create common socket actions
-      const socketActions = createSocketActions<GitState>(set);
+      const socketActions = createSocketActions<GitState>(set, 'git');
 
       // Create socket listeners
-      const { initListeners, cleanupListeners } = createSocketListeners<GitStore>(get, set, {
+      const { initListeners, cleanupListeners } = createSocketListeners<GitStore>(get, set, 'git', {
         listeners: [
           {
             event: 'git:branches:updated',
