@@ -332,17 +332,20 @@ describe('TerminalService', () => {
   });
 
   describe('shutdown guard', () => {
-    it('should prevent onData processing during shutdown', () => {
+    it('should prevent onData processing during shutdown', async () => {
       jest.useFakeTimers();
       const sessionId = service.spawnCommand('bash', [], '/home');
       const ptyInstance = mockPtyInstances[0];
 
-      // Trigger shutdown
-      service.onModuleDestroy();
+      // Trigger shutdown (async — needs timers to resolve)
+      const destroyPromise = service.onModuleDestroy();
 
       // Data arriving after shutdown should be ignored
       ptyInstance.simulateData('after-shutdown');
-      jest.advanceTimersByTime(100);
+
+      // Advance past the graceful shutdown timeout (3000ms) so kill() resolves
+      jest.advanceTimersByTime(3100);
+      await destroyPromise;
 
       // Should NOT have emitted terminal.output for the data
       const outputCalls = (eventEmitter.emit as jest.Mock).mock.calls.filter(
