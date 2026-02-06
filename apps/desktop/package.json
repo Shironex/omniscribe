@@ -17,6 +17,7 @@
     "test": "jest",
     "test:cov": "jest --coverage",
     "test:watch": "jest --watch",
+    "test:integration": "jest --config jest.integration.config.js --forceExit --detectOpenHandles",
     "test:e2e": "npx playwright test --config=e2e/playwright.config.ts",
     "package": "pnpm build && electron-builder",
     "package:win": "pnpm build && electron-builder --win",
@@ -55,6 +56,7 @@
     "esbuild": "^0.27.2",
     "jest": "^30.0.0",
     "playwright": "^1.58.2",
+    "socket.io-client": "^4.8.3",
     "ts-jest": "^29.4.0",
     "xvfb-maybe": "^0.2.1"
   }
