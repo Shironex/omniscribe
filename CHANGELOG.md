@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.1.1 (2026-02-06)
+
+### Bug Fixes
+
+- Add left padding on macOS to prevent traffic light buttons from overlapping tab text
+- Hide redundant custom window controls on macOS (native traffic lights suffice)
+- Fix app crash (EADDRINUSE) when reopening from macOS dock after closing window
+- Fix duplicate IPC handler registration on macOS window recreate
+
 ## 0.1.0 (2026-02-05)
 
 ### Features
