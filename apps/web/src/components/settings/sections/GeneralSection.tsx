@@ -1,7 +1,4 @@
 import { useState, useEffect } from 'react';
-import { createLogger } from '@omniscribe/shared';
-
-const logger = createLogger('GeneralSection');
 import {
   Info,
   RefreshCw,
@@ -12,11 +9,14 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { clsx } from 'clsx';
-import { APP_NAME, GITHUB_RELEASES_URL } from '@omniscribe/shared';
+import { APP_NAME, GITHUB_RELEASES_URL, createLogger } from '@omniscribe/shared';
 import { Button } from '@/components/ui/button';
 import { Markdown } from '@/components/ui/markdown';
 import { Progress } from '@/components/ui/progress';
 import { useUpdateStore } from '@/stores/useUpdateStore';
+import { IS_MAC } from '@/lib/platform';
+
+const logger = createLogger('GeneralSection');
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -24,23 +24,25 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-/**
- * Render the "General" settings section with application information and update controls.
- *
- * Shows the app name and version (when available), provides a "Check for Updates" action,
- * and presents status-driven update UI: available release notes and download actions,
- * download progress, ready-to-install controls, and error information. Behavior adapts
- * for macOS (opens GitHub releases) versus non-macOS (in-app download and install).
- *
- * @returns The JSX element for the General settings section containing app info and update workflow.
- */
+function MacDownloadFallback({ message }: { message: string }) {
+  return (
+    <div className="space-y-2">
+      <Button size="sm" onClick={() => window.open(GITHUB_RELEASES_URL, '_blank')}>
+        <ExternalLink className="w-3.5 h-3.5" />
+        Download from GitHub
+      </Button>
+      <p className="text-xs text-muted-foreground">{message}</p>
+    </div>
+  );
+}
+
 export function GeneralSection() {
   const [version, setVersion] = useState<string | null>(null);
   const [hasChecked, setHasChecked] = useState(false);
   const { status, updateInfo, progress, error, checkForUpdates, startDownload, installNow } =
     useUpdateStore();
 
-  const isMac = typeof window !== 'undefined' && window.electronAPI?.platform === 'darwin';
+  const openGitHubReleases = () => window.open(GITHUB_RELEASES_URL, '_blank');
 
   useEffect(() => {
     async function fetchVersion() {
@@ -135,16 +137,8 @@ export function GeneralSection() {
                 <Markdown>{updateInfo.releaseNotes}</Markdown>
               </div>
             )}
-            {isMac ? (
-              <div className="space-y-2">
-                <Button size="sm" onClick={() => window.open(GITHUB_RELEASES_URL, '_blank')}>
-                  <ExternalLink className="w-3.5 h-3.5" />
-                  Download from GitHub
-                </Button>
-                <p className="text-xs text-muted-foreground">
-                  Auto-install is not available on macOS without code signing.
-                </p>
-              </div>
+            {IS_MAC ? (
+              <MacDownloadFallback message="Auto-install is not available on macOS without code signing." />
             ) : (
               <Button size="sm" onClick={startDownload}>
                 <Download className="w-3.5 h-3.5" />
@@ -178,19 +172,13 @@ export function GeneralSection() {
         {/* Status: Ready to install */}
         {status === 'ready' && (
           <div className="space-y-3">
-            {isMac ? (
+            {IS_MAC ? (
               <>
                 <div className="flex items-center gap-2 text-sm text-emerald-400">
                   <CheckCircle className="w-4 h-4" />
-                  <span>Update downloaded.</span>
+                  <span>Update verified, but auto-install is unavailable on macOS.</span>
                 </div>
-                <Button size="sm" onClick={() => window.open(GITHUB_RELEASES_URL, '_blank')}>
-                  <ExternalLink className="w-3.5 h-3.5" />
-                  Download from GitHub
-                </Button>
-                <p className="text-xs text-muted-foreground">
-                  Auto-install is not available on macOS without code signing.
-                </p>
+                <MacDownloadFallback message="Please download the latest version manually." />
               </>
             ) : (
               <>
@@ -214,12 +202,8 @@ export function GeneralSection() {
               <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
               <span>{error}</span>
             </div>
-            {isMac && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => window.open(GITHUB_RELEASES_URL, '_blank')}
-              >
+            {IS_MAC && (
+              <Button size="sm" variant="outline" onClick={openGitHubReleases}>
                 <ExternalLink className="w-3.5 h-3.5" />
                 Download from GitHub
               </Button>

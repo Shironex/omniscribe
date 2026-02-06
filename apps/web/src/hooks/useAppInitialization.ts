@@ -39,11 +39,13 @@ export function useAppInitialization(): void {
 
   // Initialize stores and socket on mount
   useEffect(() => {
+    let mounted = true;
     let cleanupUpdateListeners: (() => void) | undefined;
     const init = async () => {
       try {
         logger.info('Initializing app...');
         await connectSocket();
+        if (!mounted) return;
         logger.info('Socket connected');
         initSessionListeners();
         initGitListeners();
@@ -62,6 +64,7 @@ export function useAppInitialization(): void {
     init();
 
     return () => {
+      mounted = false;
       logger.debug('Cleaning up listeners');
       cleanupSessionListeners();
       cleanupGitListeners();
