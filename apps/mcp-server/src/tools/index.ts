@@ -33,7 +33,9 @@ export function registerTools(server: McpServer, deps: ToolDependencies): void {
     deps.logger.debug(`Registered tool: ${tool.metadata.name}`);
   }
 
-  deps.logger.info(`Registered ${TOOL_CONSTRUCTORS.length} tools`);
+  deps.logger.info(
+    `Registered ${TOOL_CONSTRUCTORS.length} ${TOOL_CONSTRUCTORS.length === 1 ? 'tool' : 'tools'}`
+  );
 }
 
 // Re-export types
