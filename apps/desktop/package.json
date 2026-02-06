@@ -29,6 +29,7 @@
     "@nestjs/event-emitter": "^2.1.0",
     "@nestjs/platform-express": "^10.4.0",
     "@nestjs/platform-socket.io": "^10.4.0",
+    "@nestjs/throttler": "^6.5.0",
     "@nestjs/websockets": "^10.4.0",
     "@omniscribe/shared": "workspace:*",
     "async-mutex": "^0.5.0",
