@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { exec, ExecException } from 'child_process';
+import { execFile, ExecException } from 'child_process';
 import { promisify } from 'util';
 import { GIT_TIMEOUT_MS, createLogger } from '@omniscribe/shared';
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 /** Git environment variables to prevent interactive prompts */
 export const GIT_ENV: Record<string, string> = {
@@ -28,11 +28,11 @@ export class GitBaseService {
     args: string[],
     timeoutMs: number = GIT_TIMEOUT_MS
   ): Promise<ExecResult> {
-    const command = `git ${args.join(' ')}`;
-    this.logger.debug(`execGit: ${command} (cwd: ${repoPath})`);
+    const commandStr = `git ${args.join(' ')}`;
+    this.logger.debug(`execGit: ${commandStr} (cwd: ${repoPath})`);
 
     try {
-      const result = await execAsync(command, {
+      const result = await execFileAsync('git', args, {
         cwd: repoPath,
         timeout: timeoutMs,
         env: {
@@ -51,8 +51,8 @@ export class GitBaseService {
 
       // Check for timeout
       if (execError.killed) {
-        this.logger.warn(`Git command timed out after ${timeoutMs}ms: ${command}`);
-        throw new Error(`Git command timed out after ${timeoutMs}ms: ${command}`);
+        this.logger.warn(`Git command timed out after ${timeoutMs}ms: ${commandStr}`);
+        throw new Error(`Git command timed out after ${timeoutMs}ms: ${commandStr}`);
       }
 
       // Return stdout/stderr even on non-zero exit codes (some git commands use this)

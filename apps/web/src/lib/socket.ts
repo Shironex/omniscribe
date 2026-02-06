@@ -17,6 +17,34 @@ export const socket: Socket = io(SOCKET_URL, {
 
 let isConnecting = false;
 
+const CONNECTION_TIMEOUT_MS = 30_000;
+
+interface PendingCaller {
+  resolve: () => void;
+  reject: (error: Error) => void;
+  timer: ReturnType<typeof setTimeout>;
+}
+
+let pendingCallers: PendingCaller[] = [];
+
+function resolvePendingCallers(): void {
+  const callers = pendingCallers;
+  pendingCallers = [];
+  for (const caller of callers) {
+    clearTimeout(caller.timer);
+    caller.resolve();
+  }
+}
+
+function rejectPendingCallers(error: Error): void {
+  const callers = pendingCallers;
+  pendingCallers = [];
+  for (const caller of callers) {
+    clearTimeout(caller.timer);
+    caller.reject(error);
+  }
+}
+
 export function connectSocket(): Promise<void> {
   return new Promise((resolve, reject) => {
     if (socket.connected) {
@@ -25,13 +53,16 @@ export function connectSocket(): Promise<void> {
     }
 
     if (isConnecting) {
-      // Wait for existing connection attempt
-      const checkConnection = setInterval(() => {
-        if (socket.connected) {
-          clearInterval(checkConnection);
-          resolve();
+      // Queue this caller with a timeout
+      const timer = setTimeout(() => {
+        const idx = pendingCallers.findIndex(c => c.timer === timer);
+        if (idx !== -1) {
+          pendingCallers.splice(idx, 1);
         }
-      }, 100);
+        reject(new Error('Socket connection timed out'));
+      }, CONNECTION_TIMEOUT_MS);
+
+      pendingCallers.push({ resolve, reject, timer });
       return;
     }
 
@@ -41,12 +72,14 @@ export function connectSocket(): Promise<void> {
       isConnecting = false;
       cleanup();
       resolve();
+      resolvePendingCallers();
     };
 
     const onConnectError = (error: Error) => {
       isConnecting = false;
       cleanup();
       reject(error);
+      rejectPendingCallers(error);
     };
 
     const cleanup = () => {

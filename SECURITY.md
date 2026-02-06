@@ -38,7 +38,7 @@ Omniscribe implements the following security measures:
 - `nodeIntegration: false` and `contextIsolation: true` in Electron
 - Content Security Policy (CSP) for the renderer process
 - CORS restricted to localhost origins
-- Input validation and shell escaping for CLI commands
+- Safe argument passing for CLI commands (execFile with argument arrays)
 - External links opened in system browser (not in-app)
 
 ## Thank You
