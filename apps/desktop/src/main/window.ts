@@ -60,7 +60,10 @@ export async function createMainWindow(): Promise<BrowserWindow> {
     frame: false,
     titleBarStyle: 'hidden',
     backgroundColor: '#0a0a0f',
-    icon: path.join(__dirname, '../../resources/icon.png'),
+    icon: path.join(
+      __dirname,
+      `../../resources/icon.${process.platform === 'win32' ? 'ico' : 'png'}`
+    ),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
