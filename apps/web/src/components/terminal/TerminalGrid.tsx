@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback, useRef, useEffect } from 'react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { Plus } from 'lucide-react';
@@ -10,11 +10,12 @@ import {
   useSensors,
   type DragEndEvent,
 } from '@dnd-kit/core';
-import { SortableContext, rectSortingStrategy } from '@dnd-kit/sortable';
+import { SortableContext, rectSwappingStrategy } from '@dnd-kit/sortable';
 import { PanelGroup, Panel, PanelResizeHandle } from 'react-resizable-panels';
 import { TerminalView } from './TerminalView';
 import { TerminalErrorBoundary } from './TerminalErrorBoundary';
 import { SortableTerminalWrapper } from './SortableTerminalWrapper';
+import type { TerminalDragHandleProps } from './SortableTerminalWrapper';
 import { TerminalHeader } from './TerminalHeader';
 import type { TerminalSession } from './TerminalHeader';
 import { PreLaunchBar } from './PreLaunchBar';
@@ -49,6 +50,18 @@ interface TerminalGridProps {
   onQuickAction?: (sessionId: string, actionId: string) => void;
   onReorderSessions?: (activeId: string, overId: string) => void;
   className?: string;
+}
+
+function buildColumns(rows: number[][], columnsCount: number): number[][] {
+  const columns: number[][] = Array.from({ length: columnsCount }, () => []);
+  for (const row of rows) {
+    row.forEach((sessionIndex, columnIndex) => {
+      if (columns[columnIndex]) {
+        columns[columnIndex].push(sessionIndex);
+      }
+    });
+  }
+  return columns.filter(column => column.length > 0);
 }
 
 // Calculate layout for a given number of sessions
@@ -153,6 +166,7 @@ function TerminalCard({
   onKill,
   onSessionClose,
   onQuickAction,
+  dragHandleProps,
 }: {
   session: TerminalSession;
   quickActions: QuickActionItem[];
@@ -161,11 +175,12 @@ function TerminalCard({
   onKill: () => void;
   onSessionClose?: (exitCode: number) => void;
   onQuickAction?: (actionId: string) => void;
+  dragHandleProps?: TerminalDragHandleProps;
 }) {
   return (
     <div
       className={clsx(
-        'flex flex-col h-full rounded-lg overflow-hidden',
+        'flex flex-col h-full min-h-0 min-w-0 rounded-lg overflow-hidden',
         'border border-border',
         'bg-card',
         isFocused && 'ring-2 ring-primary',
@@ -178,6 +193,7 @@ function TerminalCard({
         quickActions={quickActions}
         onClose={onKill}
         onQuickAction={onQuickAction ? actionId => onQuickAction(actionId) : undefined}
+        dragHandleProps={dragHandleProps}
       />
       <div className="flex-1 min-h-0">
         {session.terminalSessionId !== undefined ? (
@@ -218,6 +234,20 @@ export function TerminalGrid({
 }: TerminalGridProps) {
   const sessionCount = sessions.length;
   const layout = useMemo(() => getLayout(sessionCount), [sessionCount]);
+  const columns = useMemo(
+    () => buildColumns(layout.rows, layout.columns),
+    [layout.rows, layout.columns]
+  );
+  const useRowPrimaryLayout = sessionCount === 4;
+  const trailingRefitTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const dispatchRefitAll = useCallback((delays: number[] = [0, 80, 180]) => {
+    for (const delay of delays) {
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('terminal-refit-all'));
+      }, delay);
+    }
+  }, []);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -232,16 +262,30 @@ export function TerminalGrid({
       const { active, over } = event;
       if (!over || active.id === over.id) return;
       onReorderSessions?.(String(active.id), String(over.id));
-      // Refit all terminals after drag
-      setTimeout(() => {
-        window.dispatchEvent(new CustomEvent('terminal-refit-all'));
-      }, 50);
+      // Refit all terminals after drag and transition settle.
+      dispatchRefitAll();
     },
-    [onReorderSessions]
+    [dispatchRefitAll, onReorderSessions]
   );
 
   const handlePanelResize = useCallback(() => {
     window.dispatchEvent(new CustomEvent('terminal-refit-all'));
+    if (trailingRefitTimeoutRef.current) {
+      clearTimeout(trailingRefitTimeoutRef.current);
+    }
+    trailingRefitTimeoutRef.current = setTimeout(() => {
+      dispatchRefitAll([0, 120]);
+      trailingRefitTimeoutRef.current = null;
+    }, 70);
+  }, [dispatchRefitAll]);
+
+  useEffect(() => {
+    return () => {
+      if (trailingRefitTimeoutRef.current) {
+        clearTimeout(trailingRefitTimeoutRef.current);
+        trailingRefitTimeoutRef.current = null;
+      }
+    };
   }, []);
 
   // Empty state
@@ -252,7 +296,12 @@ export function TerminalGrid({
   // Max terminals: 12
   const canAddMore = sessionCount + preLaunchSlots.length < 12;
 
-  const sessionIds = sessions.map(s => s.id);
+  const sessionIds = useMemo(() => {
+    const orderedIndexes = useRowPrimaryLayout ? layout.rows.flat() : columns.flat();
+    return orderedIndexes
+      .map(sessionIndex => sessions[sessionIndex]?.id)
+      .filter((sessionId): sessionId is string => Boolean(sessionId));
+  }, [columns, layout.rows, sessions, useRowPrimaryLayout]);
 
   return (
     <div className={twMerge(clsx('h-full w-full flex flex-col', className))}>
@@ -264,66 +313,148 @@ export function TerminalGrid({
             collisionDetection={closestCenter}
             onDragEnd={handleDragEnd}
           >
-            <SortableContext items={sessionIds} strategy={rectSortingStrategy}>
-              <PanelGroup direction="vertical" onLayout={handlePanelResize}>
-                {layout.rows.map((row, rowIndex) => (
-                  <React.Fragment key={`row-${rowIndex}`}>
-                    {rowIndex > 0 && (
-                      <PanelResizeHandle className="h-1.5 flex items-center justify-center group">
-                        <div className="w-8 h-0.5 bg-border rounded-full group-hover:bg-primary transition-colors" />
-                      </PanelResizeHandle>
-                    )}
-                    <Panel
-                      id={`row-${rowIndex}`}
-                      order={rowIndex}
-                      defaultSize={100 / layout.rows.length}
-                      minSize={15}
-                    >
-                      <PanelGroup direction="horizontal" onLayout={handlePanelResize}>
-                        {row.map((sessionIndex, colIndex) => {
-                          const session = sessions[sessionIndex];
-                          if (!session) return null;
-                          return (
-                            <React.Fragment key={session.id}>
-                              {colIndex > 0 && (
-                                <PanelResizeHandle className="w-1.5 flex items-center justify-center group">
-                                  <div className="h-8 w-0.5 bg-border rounded-full group-hover:bg-primary transition-colors" />
-                                </PanelResizeHandle>
-                              )}
-                              <Panel
-                                id={`col-${rowIndex}-${colIndex}`}
-                                order={colIndex}
-                                defaultSize={100 / row.length}
-                                minSize={15}
-                              >
-                                <SortableTerminalWrapper id={session.id}>
-                                  <TerminalCard
-                                    session={session}
-                                    quickActions={quickActions}
-                                    isFocused={focusedSessionId === session.id}
-                                    onFocus={() => onFocusSession(session.id)}
-                                    onKill={() => onKill(session.id)}
-                                    onSessionClose={
-                                      onSessionClose
-                                        ? exitCode => onSessionClose(session.id, exitCode)
-                                        : undefined
-                                    }
-                                    onQuickAction={
-                                      onQuickAction
-                                        ? actionId => onQuickAction(session.id, actionId)
-                                        : undefined
-                                    }
-                                  />
-                                </SortableTerminalWrapper>
-                              </Panel>
-                            </React.Fragment>
-                          );
-                        })}
-                      </PanelGroup>
-                    </Panel>
-                  </React.Fragment>
-                ))}
-              </PanelGroup>
+            <SortableContext items={sessionIds} strategy={rectSwappingStrategy}>
+              {useRowPrimaryLayout ? (
+                <PanelGroup
+                  direction="vertical"
+                  onLayout={handlePanelResize}
+                  className="h-full w-full min-h-0 min-w-0"
+                >
+                  {layout.rows.map((row, rowIndex) => (
+                    <React.Fragment key={`row-${rowIndex}`}>
+                      {rowIndex > 0 && (
+                        <PanelResizeHandle className="h-1.5 flex items-center justify-center group">
+                          <div className="w-8 h-0.5 bg-border rounded-full group-hover:bg-primary transition-colors" />
+                        </PanelResizeHandle>
+                      )}
+                      <Panel
+                        id={`row-${rowIndex}`}
+                        order={rowIndex}
+                        defaultSize={100 / layout.rows.length}
+                        minSize={15}
+                        className="min-h-0 min-w-0 overflow-hidden"
+                      >
+                        <PanelGroup
+                          direction="horizontal"
+                          onLayout={handlePanelResize}
+                          className="h-full w-full min-h-0 min-w-0"
+                        >
+                          {row.map((sessionIndex, colIndex) => {
+                            const session = sessions[sessionIndex];
+                            if (!session) return null;
+                            return (
+                              <React.Fragment key={session.id}>
+                                {colIndex > 0 && (
+                                  <PanelResizeHandle className="w-1.5 flex items-center justify-center group">
+                                    <div className="h-8 w-0.5 bg-border rounded-full group-hover:bg-primary transition-colors" />
+                                  </PanelResizeHandle>
+                                )}
+                                <Panel
+                                  id={`cell-${rowIndex}-${colIndex}`}
+                                  order={colIndex}
+                                  defaultSize={100 / row.length}
+                                  minSize={15}
+                                  className="min-h-0 min-w-0 overflow-hidden"
+                                >
+                                  <SortableTerminalWrapper id={session.id}>
+                                    <TerminalCard
+                                      session={session}
+                                      quickActions={quickActions}
+                                      isFocused={focusedSessionId === session.id}
+                                      onFocus={() => onFocusSession(session.id)}
+                                      onKill={() => onKill(session.id)}
+                                      onSessionClose={
+                                        onSessionClose
+                                          ? exitCode => onSessionClose(session.id, exitCode)
+                                          : undefined
+                                      }
+                                      onQuickAction={
+                                        onQuickAction
+                                          ? actionId => onQuickAction(session.id, actionId)
+                                          : undefined
+                                      }
+                                    />
+                                  </SortableTerminalWrapper>
+                                </Panel>
+                              </React.Fragment>
+                            );
+                          })}
+                        </PanelGroup>
+                      </Panel>
+                    </React.Fragment>
+                  ))}
+                </PanelGroup>
+              ) : (
+                <PanelGroup
+                  direction="horizontal"
+                  onLayout={handlePanelResize}
+                  className="h-full w-full min-h-0 min-w-0"
+                >
+                  {columns.map((column, columnIndex) => (
+                    <React.Fragment key={`column-${columnIndex}`}>
+                      {columnIndex > 0 && (
+                        <PanelResizeHandle className="w-1.5 flex items-center justify-center group">
+                          <div className="h-8 w-0.5 bg-border rounded-full group-hover:bg-primary transition-colors" />
+                        </PanelResizeHandle>
+                      )}
+                      <Panel
+                        id={`column-${columnIndex}`}
+                        order={columnIndex}
+                        defaultSize={100 / columns.length}
+                        minSize={15}
+                        className="min-h-0 min-w-0 overflow-hidden"
+                      >
+                        <PanelGroup
+                          direction="vertical"
+                          onLayout={handlePanelResize}
+                          className="h-full w-full min-h-0 min-w-0"
+                        >
+                          {column.map((sessionIndex, rowIndex) => {
+                            const session = sessions[sessionIndex];
+                            if (!session) return null;
+                            return (
+                              <React.Fragment key={session.id}>
+                                {rowIndex > 0 && (
+                                  <PanelResizeHandle className="h-1.5 flex items-center justify-center group">
+                                    <div className="w-8 h-0.5 bg-border rounded-full group-hover:bg-primary transition-colors" />
+                                  </PanelResizeHandle>
+                                )}
+                                <Panel
+                                  id={`cell-${columnIndex}-${rowIndex}`}
+                                  order={rowIndex}
+                                  defaultSize={100 / column.length}
+                                  minSize={15}
+                                  className="min-h-0 min-w-0 overflow-hidden"
+                                >
+                                  <SortableTerminalWrapper id={session.id}>
+                                    <TerminalCard
+                                      session={session}
+                                      quickActions={quickActions}
+                                      isFocused={focusedSessionId === session.id}
+                                      onFocus={() => onFocusSession(session.id)}
+                                      onKill={() => onKill(session.id)}
+                                      onSessionClose={
+                                        onSessionClose
+                                          ? exitCode => onSessionClose(session.id, exitCode)
+                                          : undefined
+                                      }
+                                      onQuickAction={
+                                        onQuickAction
+                                          ? actionId => onQuickAction(session.id, actionId)
+                                          : undefined
+                                      }
+                                    />
+                                  </SortableTerminalWrapper>
+                                </Panel>
+                              </React.Fragment>
+                            );
+                          })}
+                        </PanelGroup>
+                      </Panel>
+                    </React.Fragment>
+                  ))}
+                </PanelGroup>
+              )}
             </SortableContext>
           </DndContext>
         ) : (

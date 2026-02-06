@@ -9,7 +9,6 @@ const OUTPUT_THROTTLE_MS = 4;
 const OUTPUT_BATCH_SIZE = 4096; // 4KB chunks
 const MAX_SCROLLBACK_SIZE = 50_000; // 50KB per terminal
 const MAX_OUTPUT_BUFFER_SIZE = 100_000; // 100KB cap
-const RESIZE_DEBOUNCE_MS = 150;
 const CHUNKED_WRITE_THRESHOLD = 1000;
 const CHUNK_SIZE = 100;
 
@@ -21,14 +20,8 @@ interface PtySession {
   externalId?: string;
   /** Accumulated scrollback for session restore */
   scrollbackBuffer: string;
-  /** Whether a resize is currently being debounced */
-  resizeInProgress: boolean;
-  /** Timeout handle for resize debounce */
-  resizeDebounceTimeout: NodeJS.Timeout | null;
   /** Promise chain for serialized writes */
   writeChain: Promise<void>;
-  /** Whether this session has received its first resize */
-  hasReceivedFirstResize: boolean;
 }
 
 @Injectable()
@@ -168,10 +161,7 @@ export class TerminalService implements OnModuleDestroy {
       flushTimer: null,
       externalId,
       scrollbackBuffer: '',
-      resizeInProgress: false,
-      resizeDebounceTimeout: null,
       writeChain: Promise.resolve(),
-      hasReceivedFirstResize: false,
     };
 
     this.sessions.set(sessionId, session);
@@ -183,9 +173,6 @@ export class TerminalService implements OnModuleDestroy {
       if (this.isShuttingDown) return;
 
       try {
-        // Suppress output during resize (except first resize)
-        if (session.resizeInProgress) return;
-
         session.outputBuffer += data;
 
         // Cap output buffer at MAX_OUTPUT_BUFFER_SIZE
@@ -287,7 +274,7 @@ export class TerminalService implements OnModuleDestroy {
   }
 
   /**
-   * Resize a terminal session with deduplication
+   * Resize a terminal session
    * @param sessionId The session to resize
    * @param cols Number of columns
    * @param rows Number of rows
@@ -306,30 +293,7 @@ export class TerminalService implements OnModuleDestroy {
     const roundedCols = Math.round(cols);
     const roundedRows = Math.round(rows);
 
-    // Clear any pending resize debounce
-    if (session.resizeDebounceTimeout) {
-      clearTimeout(session.resizeDebounceTimeout);
-      session.resizeDebounceTimeout = null;
-    }
-
-    // First resize should not suppress output (preserves initial prompt)
-    const isFirstResize = !session.hasReceivedFirstResize;
-    session.hasReceivedFirstResize = true;
-
-    // Set resize in progress to suppress output noise (except first resize)
-    if (!isFirstResize) {
-      session.resizeInProgress = true;
-    }
-
     session.pty.resize(roundedCols, roundedRows);
-
-    // Clear resize-in-progress after debounce period
-    if (!isFirstResize) {
-      session.resizeDebounceTimeout = setTimeout(() => {
-        session.resizeInProgress = false;
-        session.resizeDebounceTimeout = null;
-      }, RESIZE_DEBOUNCE_MS);
-    }
   }
 
   /**
@@ -462,10 +426,6 @@ export class TerminalService implements OnModuleDestroy {
           session.outputBuffer = '';
         }
         session.flushTimer = null;
-      }
-      if (session.resizeDebounceTimeout) {
-        clearTimeout(session.resizeDebounceTimeout);
-        session.resizeDebounceTimeout = null;
       }
       this.sessions.delete(sessionId);
     }

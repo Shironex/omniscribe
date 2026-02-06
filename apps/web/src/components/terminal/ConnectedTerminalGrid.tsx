@@ -11,6 +11,7 @@ import { createSession, removeSession } from '@/lib/session';
 import { killTerminal } from '@/lib/terminal';
 import { mapAiModeToBackend, mapAiModeToUI } from '@/lib/aiMode';
 import { useSpatialNavigation } from '@/hooks/useSpatialNavigation';
+import { getNextAvailablePrelaunchShortcut } from '@/lib/prelaunch-shortcuts';
 import type { TerminalSession } from './TerminalHeader';
 import type { PreLaunchSlot } from './PreLaunchBar';
 import type { Branch } from '@/components/shared/BranchSelector';
@@ -70,12 +71,19 @@ export function ConnectedTerminalGrid({ className }: ConnectedTerminalGridProps)
   // Listen for add slot requests from sidebar (via shared store)
   useEffect(() => {
     if (addSlotRequestCounter > prevAddSlotRequestRef.current) {
-      const newSlot: PreLaunchSlot = {
-        id: `slot-${Date.now()}`,
-        aiMode: defaultAiMode,
-        branch: currentBranch,
-      };
-      setPreLaunchSlots(prev => [...prev, newSlot]);
+      setPreLaunchSlots(prev => {
+        const shortcutKey = getNextAvailablePrelaunchShortcut(prev.map(slot => slot.shortcutKey));
+        if (!shortcutKey) return prev;
+
+        const newSlot: PreLaunchSlot = {
+          id: `slot-${Date.now()}`,
+          aiMode: defaultAiMode,
+          branch: currentBranch,
+          shortcutKey,
+        };
+
+        return [...prev, newSlot];
+      });
     }
     prevAddSlotRequestRef.current = addSlotRequestCounter;
   }, [addSlotRequestCounter, currentBranch, defaultAiMode]);
@@ -156,12 +164,19 @@ export function ConnectedTerminalGrid({ className }: ConnectedTerminalGridProps)
 
   // Add session (pre-launch slot) handler
   const handleAddSlot = useCallback(() => {
-    const newSlot: PreLaunchSlot = {
-      id: `slot-${Date.now()}`,
-      aiMode: defaultAiMode,
-      branch: currentBranch,
-    };
-    setPreLaunchSlots(prev => [...prev, newSlot]);
+    setPreLaunchSlots(prev => {
+      const shortcutKey = getNextAvailablePrelaunchShortcut(prev.map(slot => slot.shortcutKey));
+      if (!shortcutKey) return prev;
+
+      const newSlot: PreLaunchSlot = {
+        id: `slot-${Date.now()}`,
+        aiMode: defaultAiMode,
+        branch: currentBranch,
+        shortcutKey,
+      };
+
+      return [...prev, newSlot];
+    });
   }, [currentBranch, defaultAiMode]);
 
   // Remove pre-launch slot handler

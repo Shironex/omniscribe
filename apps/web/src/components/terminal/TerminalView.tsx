@@ -17,6 +17,7 @@ import { useTerminalSettingsStore } from '@/stores/useTerminalSettingsStore';
 import { getTerminalTheme } from '@/lib/terminal-themes';
 import { FilePathLinkProvider } from '@/lib/terminal-link-provider';
 import { LARGE_PASTE_WARNING_THRESHOLD } from '@/lib/terminal-constants';
+import { isMacOS } from '@/lib/os-detection';
 import { TerminalSearchBar, type SearchOptions } from './TerminalSearchBar';
 import '@xterm/xterm/css/xterm.css';
 
@@ -31,21 +32,6 @@ type TerminalStatus = 'connecting' | 'connected' | 'disconnected' | 'error';
 
 const RESIZE_DEBOUNCE_MS = 100;
 
-// Helper to safely check if terminal is ready for operations
-const isTerminalReady = (terminal: Terminal | null): terminal is Terminal => {
-  if (!terminal) return false;
-  try {
-    const element = terminal.element;
-    if (!element) return false;
-    const dims = (terminal as unknown as { _core?: { _renderService?: { dimensions?: unknown } } })
-      ._core?._renderService?.dimensions;
-    return dims !== undefined;
-  } catch {
-    logger.debug('isTerminalReady check failed (terminal may be initializing)');
-    return false;
-  }
-};
-
 // Helper to safely call fitAddon.fit()
 const safeFit = (
   fitAddon: FitAddon | null,
@@ -57,10 +43,11 @@ const safeFit = (
   const { offsetWidth, offsetHeight } = container;
   if (offsetWidth <= 0 || offsetHeight <= 0) return null;
 
-  if (!isTerminalReady(terminal)) return null;
-
   try {
     fitAddon.fit();
+    if (terminal.cols <= 0 || terminal.rows <= 0) {
+      return null;
+    }
     return { cols: terminal.cols, rows: terminal.rows };
   } catch {
     logger.debug('safeFit failed (terminal in transition state)');
@@ -83,6 +70,7 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
   const isDisposedRef = useRef<boolean>(false);
   const isReadyRef = useRef<boolean>(false);
   const resizeDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const searchTermRef = useRef('');
 
   // Store callbacks in refs to prevent re-initialization when they change
   const onCloseRef = useRef(onClose);
@@ -107,7 +95,7 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
 
   const handleOutput = useCallback((data: string) => {
     if (isDisposedRef.current) return;
-    if (xtermRef.current && isTerminalReady(xtermRef.current)) {
+    if (xtermRef.current) {
       try {
         xtermRef.current.write(data);
       } catch {
@@ -144,6 +132,7 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
 
   // Search handlers
   const handleSearch = useCallback((term: string, options: SearchOptions) => {
+    searchTermRef.current = term;
     if (!searchAddonRef.current) return;
     if (!term) {
       searchAddonRef.current.clearDecorations();
@@ -156,15 +145,20 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
   }, []);
 
   const handleSearchNext = useCallback(() => {
-    searchAddonRef.current?.findNext('');
+    const searchTerm = searchTermRef.current;
+    if (!searchTerm) return;
+    searchAddonRef.current?.findNext(searchTerm);
   }, []);
 
   const handleSearchPrevious = useCallback(() => {
-    searchAddonRef.current?.findPrevious('');
+    const searchTerm = searchTermRef.current;
+    if (!searchTerm) return;
+    searchAddonRef.current?.findPrevious(searchTerm);
   }, []);
 
   const handleSearchClose = useCallback(() => {
     searchAddonRef.current?.clearDecorations();
+    searchTermRef.current = '';
     setShowSearch(false);
     xtermRef.current?.focus();
   }, []);
@@ -182,6 +176,7 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
     let searchAddon: SearchAddon | null = null;
     let isInitialized = false;
     let initRetryTimeout: ReturnType<typeof setTimeout> | null = null;
+    const deferredFitTimeouts: ReturnType<typeof setTimeout>[] = [];
 
     const theme = getTerminalTheme(terminalThemeName);
 
@@ -238,25 +233,29 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
 
       // Smart keyboard handler
       const terminalInstance = terminal;
+      const macOS = isMacOS();
       terminal.attachCustomKeyEventHandler((e: KeyboardEvent) => {
-        // Ctrl+Shift+F: toggle search
-        if (e.ctrlKey && e.shiftKey && e.key === 'F' && e.type === 'keydown') {
+        const key = e.key.toLowerCase();
+        const isPrimaryModifier = macOS ? e.metaKey : e.ctrlKey;
+
+        // Primary+F or Primary+Shift+F: toggle search
+        if (isPrimaryModifier && key === 'f' && e.type === 'keydown') {
           setShowSearch(prev => !prev);
           return false;
         }
 
-        // Ctrl+C: copy if selected, send ^C otherwise
-        if (e.ctrlKey && !e.shiftKey && e.key === 'c' && e.type === 'keydown') {
+        // Primary+C: copy if selected, otherwise use default handling
+        if (isPrimaryModifier && !e.shiftKey && key === 'c' && e.type === 'keydown') {
           if (terminalInstance.hasSelection()) {
             navigator.clipboard.writeText(terminalInstance.getSelection());
             terminalInstance.clearSelection();
             return false;
           }
-          return true; // Let ^C pass through to terminal
+          return true;
         }
 
-        // Ctrl+V: paste
-        if (e.ctrlKey && !e.shiftKey && e.key === 'v' && e.type === 'keydown') {
+        // Primary+V: paste
+        if (isPrimaryModifier && !e.shiftKey && key === 'v' && e.type === 'keydown') {
           navigator.clipboard.readText().then(text => {
             if (text.length > LARGE_PASTE_WARNING_THRESHOLD) {
               writeToTerminalChunked(sessionIdRef.current, text);
@@ -268,14 +267,14 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
         }
 
         // Ctrl+Shift+C/V: Linux-style copy/paste
-        if (e.ctrlKey && e.shiftKey && e.key === 'C' && e.type === 'keydown') {
+        if (e.ctrlKey && e.shiftKey && key === 'c' && e.type === 'keydown') {
           if (terminalInstance.hasSelection()) {
             navigator.clipboard.writeText(terminalInstance.getSelection());
             terminalInstance.clearSelection();
           }
           return false;
         }
-        if (e.ctrlKey && e.shiftKey && e.key === 'V' && e.type === 'keydown') {
+        if (e.ctrlKey && e.shiftKey && key === 'v' && e.type === 'keydown') {
           navigator.clipboard.readText().then(text => {
             if (text.length > LARGE_PASTE_WARNING_THRESHOLD) {
               writeToTerminalChunked(sessionIdRef.current, text);
@@ -286,8 +285,8 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
           return false;
         }
 
-        // Let Ctrl+Number pass through for tab switching
-        if (e.ctrlKey && e.key >= '1' && e.key <= '9') {
+        // Let primary modifier + number pass through for tab switching
+        if (isPrimaryModifier && key >= '1' && key <= '9') {
           return false;
         }
 
@@ -319,10 +318,22 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
             connectionRef.current = connectTerminal(sessionId, handleOutput, handleClose);
             setStatus('connected');
           }
+
+          // Continue fitting after mount settles to avoid clipped output in dense grids.
+          for (const delay of [100, 250, 500, 1000]) {
+            const timeout = setTimeout(() => {
+              if (isDisposedRef.current || !terminal || !fitAddon) return;
+              const retryResult = safeFit(fitAddon, terminal, container);
+              if (retryResult) {
+                resizeTerminal(sessionId, retryResult.cols, retryResult.rows);
+              }
+            }, delay);
+            deferredFitTimeouts.push(timeout);
+          }
         }
       };
 
-      requestAnimationFrame(() => performInitialFit(5));
+      requestAnimationFrame(() => performInitialFit(20));
 
       // Handle user input
       terminal.onData(data => {
@@ -369,6 +380,9 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
       if (initRetryTimeout) {
         clearTimeout(initRetryTimeout);
         initRetryTimeout = null;
+      }
+      for (const timeout of deferredFitTimeouts) {
+        clearTimeout(timeout);
       }
 
       if (resizeObserverRef.current) {

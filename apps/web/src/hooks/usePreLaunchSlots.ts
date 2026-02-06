@@ -4,8 +4,10 @@ import type { PreLaunchSlot } from '@/components/terminal/TerminalGrid';
 import { createSession } from '@/lib/session';
 import { mapAiModeToBackend } from '@/lib/aiMode';
 import { useTerminalControlStore, useWorkspaceStore } from '@/stores';
+import { getNextAvailablePrelaunchShortcut } from '@/lib/prelaunch-shortcuts';
 
 const logger = createLogger('PreLaunchSlots');
+const MAX_PRELAUNCH_SLOTS = 12;
 
 interface UsePreLaunchSlotsReturn {
   /** Pre-launch slots state */
@@ -60,12 +62,24 @@ export function usePreLaunchSlots(
 
   // Add session (pre-launch slot) handler
   const handleAddSession = useCallback(() => {
-    const newSlot: PreLaunchSlot = {
-      id: `slot-${Date.now()}`,
-      aiMode: defaultAiMode,
-      branch: currentBranch,
-    };
-    setPreLaunchSlots(prev => [...prev, newSlot]);
+    setPreLaunchSlots(prev => {
+      if (prev.length >= MAX_PRELAUNCH_SLOTS) {
+        return prev;
+      }
+
+      const nextShortcut = getNextAvailablePrelaunchShortcut(prev.map(slot => slot.shortcutKey));
+      if (!nextShortcut) {
+        return prev;
+      }
+
+      const newSlot: PreLaunchSlot = {
+        id: `slot-${Date.now()}`,
+        aiMode: defaultAiMode,
+        branch: currentBranch,
+        shortcutKey: nextShortcut,
+      };
+      return [...prev, newSlot];
+    });
   }, [currentBranch, defaultAiMode]);
 
   // Listen to external add slot requests (from sidebar + button)

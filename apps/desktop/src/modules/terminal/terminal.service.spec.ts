@@ -291,7 +291,7 @@ describe('TerminalService', () => {
       expect(ptyInstance.resize).toHaveBeenCalledWith(81, 24);
     });
 
-    it('should suppress output during resize (except first)', () => {
+    it('should preserve output during resize operations', () => {
       jest.useFakeTimers();
       const sessionId = service.spawnCommand('bash', [], '/home');
       const ptyInstance = mockPtyInstances[0];
@@ -308,18 +308,16 @@ describe('TerminalService', () => {
       // Reset mock
       (eventEmitter.emit as jest.Mock).mockClear();
 
-      // Second resize - should suppress output for 150ms
+      // Second resize - output should still be delivered (no data loss)
       service.resize(sessionId, 120, 40);
       ptyInstance.simulateData('during-resize');
       jest.advanceTimersByTime(10);
-      // Output should be suppressed
-      expect(eventEmitter.emit).not.toHaveBeenCalledWith(
-        'terminal.output',
-        expect.objectContaining({ data: 'during-resize' })
-      );
+      expect(eventEmitter.emit).toHaveBeenCalledWith('terminal.output', {
+        sessionId,
+        data: 'during-resize',
+      });
 
-      // After 150ms debounce, output should resume
-      jest.advanceTimersByTime(200);
+      // Subsequent output should continue normally
       ptyInstance.simulateData('after-resize');
       jest.advanceTimersByTime(10);
       expect(eventEmitter.emit).toHaveBeenCalledWith('terminal.output', {

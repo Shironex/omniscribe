@@ -69,8 +69,9 @@ export const useTerminalControlStore = create<TerminalControlStore>((set, get) =
     if (oldIndex === -1 || newIndex === -1) return;
 
     const newOrder = [...sessionOrder];
-    newOrder.splice(oldIndex, 1);
-    newOrder.splice(newIndex, 0, activeId);
+    const temp = newOrder[oldIndex];
+    newOrder[oldIndex] = newOrder[newIndex];
+    newOrder[newIndex] = temp;
     set({ sessionOrder: newOrder });
   },
 }));
