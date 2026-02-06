@@ -8,6 +8,7 @@ updates:
       time: '09:00'
     open-pull-requests-limit: 10
     labels:
+      - 'chore'
       - 'dependencies'
       - 'automated'
     groups:
@@ -99,6 +100,7 @@ updates:
     open-pull-requests-limit: 5
     labels:
       - 'ci'
+      - 'chore'
       - 'dependencies'
       - 'automated'
     commit-message:
