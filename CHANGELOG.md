@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.1.4 (2026-02-06)
+
+### Bug Fixes
+
+- Use native `.ico` icon for Windows builds instead of `.png` to fix missing/broken taskbar and window icon
+- Use platform-conditional icon format in BrowserWindow (`.ico` on Windows, `.png` elsewhere)
+
 ## 0.1.3 (2026-02-06)
 
 ### Security
