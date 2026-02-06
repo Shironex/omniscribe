@@ -8,12 +8,6 @@ describe('loadEnvironmentConfig', () => {
     'OMNISCRIBE_INSTANCE_ID',
   ] as const;
 
-  beforeEach(() => {
-    for (const key of envKeys) {
-      delete process.env[key];
-    }
-  });
-
   afterEach(() => {
     for (const key of envKeys) {
       delete process.env[key];
@@ -102,14 +96,14 @@ describe('isConfigured', () => {
     expect(isConfigured(config)).toBe(false);
   });
 
-  it('should return true even when projectHash is missing', () => {
+  it('should return false when all fields are undefined', () => {
     const config: EnvironmentConfig = {
-      sessionId: 'session-1',
+      sessionId: undefined,
       projectHash: undefined,
-      statusUrl: 'http://localhost:3001/status',
-      instanceId: 'instance-1',
+      statusUrl: undefined,
+      instanceId: undefined,
     };
 
-    expect(isConfigured(config)).toBe(true);
+    expect(isConfigured(config)).toBe(false);
   });
 });

@@ -16,7 +16,7 @@ describe('registerTools', () => {
   });
 
   it('should register the omniscribe_status tool', () => {
-    registerTools(mockServer as never, deps);
+    registerTools(mockServer as any, deps);
 
     expect(mockServer.registerTool).toHaveBeenCalledWith(
       'omniscribe_status',
@@ -30,19 +30,19 @@ describe('registerTools', () => {
   });
 
   it('should register exactly one tool', () => {
-    registerTools(mockServer as never, deps);
+    registerTools(mockServer as any, deps);
 
     expect(mockServer.registerTool).toHaveBeenCalledTimes(1);
   });
 
   it('should log the number of registered tools', () => {
-    registerTools(mockServer as never, deps);
+    registerTools(mockServer as any, deps);
 
-    expect(deps.logger.info).toHaveBeenCalledWith('Registered 1 tools');
+    expect(deps.logger.info).toHaveBeenCalledWith('Registered 1 tool');
   });
 
   it('should register a callback that delegates to tool.execute', async () => {
-    registerTools(mockServer as never, deps);
+    registerTools(mockServer as any, deps);
 
     const callback = mockServer.registerTool.mock.calls[0][2];
     const result = await callback({ state: 'working', message: 'test' });

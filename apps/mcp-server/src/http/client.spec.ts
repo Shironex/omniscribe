@@ -2,7 +2,11 @@ import { createHttpClient } from './client';
 import { createMockLogger, createMockConfig } from '../../test/helpers';
 
 describe('createHttpClient', () => {
-  const mockLogger = createMockLogger();
+  let mockLogger: ReturnType<typeof createMockLogger>;
+
+  beforeEach(() => {
+    mockLogger = createMockLogger();
+  });
 
   describe('reportStatus - not configured', () => {
     it('should return false when statusUrl is missing', async () => {

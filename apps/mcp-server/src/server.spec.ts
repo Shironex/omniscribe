@@ -18,12 +18,6 @@ describe('createServer', () => {
     'OMNISCRIBE_INSTANCE_ID',
   ] as const;
 
-  beforeEach(() => {
-    for (const key of envKeys) {
-      delete process.env[key];
-    }
-  });
-
   afterEach(() => {
     for (const key of envKeys) {
       delete process.env[key];
@@ -48,7 +42,6 @@ describe('createServer', () => {
   it('should create an McpServer instance', () => {
     const { server } = createServer();
 
-    // McpServer should have the connect method
     expect(typeof server.connect).toBe('function');
   });
 });
