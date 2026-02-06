@@ -10,9 +10,12 @@
   },
   "scripts": {
     "build": "node esbuild.config.mjs",
-    "build:dev": "tsc",
-    "dev": "tsc --watch",
+    "build:dev": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.build.json --watch",
     "typecheck": "tsc --noEmit",
+    "test": "jest",
+    "test:cov": "jest --coverage",
+    "test:watch": "jest --watch",
     "start": "node dist/index.js",
     "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\""
   },
@@ -22,8 +25,11 @@
     "zod": "^4.0.0"
   },
   "devDependencies": {
+    "@types/jest": "^30.0.0",
     "@types/node": "^25.2.1",
     "esbuild": "^0.27.2",
+    "jest": "^30.0.0",
+    "ts-jest": "^29.4.0",
     "typescript": "^5.5.0"
   },
   "engines": {
