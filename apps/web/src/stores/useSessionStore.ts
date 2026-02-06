@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { devtools } from 'zustand/middleware';
 import {
   SessionConfig,
   SessionStatus,
@@ -93,218 +94,249 @@ type SessionStore = SessionState & SessionActions;
 /**
  * Session store using Zustand
  */
-export const useSessionStore = create<SessionStore>((set, get) => {
-  // Create common socket actions
-  const socketActions = createSocketActions<SessionState>(set);
+export const useSessionStore = create<SessionStore>()(
+  devtools(
+    (set, get) => {
+      // Create common socket actions
+      const socketActions = createSocketActions<SessionState>(set);
 
-  // Create socket listeners
-  const { initListeners, cleanupListeners } = createSocketListeners<SessionStore>(get, set, {
-    listeners: [
-      {
-        event: 'session:created',
-        handler: (data, get) => {
-          const session = data as ExtendedSessionConfig;
-          logger.debug('session:created', session.id);
-          get().addSession(session);
-        },
-      },
-      {
-        event: 'session:status',
-        handler: (data, get) => {
-          const update = data as SessionStatusUpdate;
-          logger.debug('session:status', update.sessionId, update.status);
-          get().updateStatus(
-            update.sessionId,
-            update.status,
-            update.message,
-            update.needsInputPrompt
-          );
-        },
-      },
-      {
-        event: 'session:removed',
-        handler: (data, get) => {
-          const payload = data as { sessionId: string };
-          logger.debug('session:removed', payload.sessionId);
-          get().removeSession(payload.sessionId);
-        },
-      },
-      {
-        event: 'terminal:backpressure',
-        handler: (data, get) => {
-          const payload = data as { sessionId: number; paused: boolean };
-          logger.debug('terminal:backpressure', payload.sessionId, payload.paused);
-          get().setBackpressure(payload.sessionId, payload.paused);
-        },
-      },
-      {
-        event: 'session:health',
-        handler: (data, get) => {
-          const payload = data as { sessionId: string; health: HealthLevel; reason?: string };
-          logger.debug('session:health', payload.sessionId, payload.health);
-          get().updateSession(payload.sessionId, { health: payload.health });
-        },
-      },
-      {
-        event: 'zombie:cleanup',
-        handler: data => {
-          const payload = data as { sessionId: string; sessionName: string; reason: string };
-          logger.warn('zombie:cleanup', payload.sessionId, payload.reason);
-          toast.error(`Session "${payload.sessionName}" terminated unexpectedly`, {
-            description: payload.reason,
-            duration: 10000,
+      // Create socket listeners
+      const { initListeners, cleanupListeners } = createSocketListeners<SessionStore>(get, set, {
+        listeners: [
+          {
+            event: 'session:created',
+            handler: (data, get) => {
+              const session = data as ExtendedSessionConfig;
+              logger.debug('session:created', session.id);
+              get().addSession(session);
+            },
+          },
+          {
+            event: 'session:status',
+            handler: (data, get) => {
+              const update = data as SessionStatusUpdate;
+              logger.debug('session:status', update.sessionId, update.status);
+              get().updateStatus(
+                update.sessionId,
+                update.status,
+                update.message,
+                update.needsInputPrompt
+              );
+            },
+          },
+          {
+            event: 'session:removed',
+            handler: (data, get) => {
+              const payload = data as { sessionId: string };
+              logger.debug('session:removed', payload.sessionId);
+              get().removeSession(payload.sessionId);
+            },
+          },
+          {
+            event: 'terminal:backpressure',
+            handler: (data, get) => {
+              const payload = data as { sessionId: number; paused: boolean };
+              logger.debug('terminal:backpressure', payload.sessionId, payload.paused);
+              get().setBackpressure(payload.sessionId, payload.paused);
+            },
+          },
+          {
+            event: 'session:health',
+            handler: (data, get) => {
+              const payload = data as { sessionId: string; health: HealthLevel; reason?: string };
+              logger.debug('session:health', payload.sessionId, payload.health);
+              get().updateSession(payload.sessionId, { health: payload.health });
+            },
+          },
+          {
+            event: 'zombie:cleanup',
+            handler: data => {
+              const payload = data as { sessionId: string; sessionName: string; reason: string };
+              logger.warn('zombie:cleanup', payload.sessionId, payload.reason);
+              toast.error(`Session "${payload.sessionName}" terminated unexpectedly`, {
+                description: payload.reason,
+                duration: 10000,
+              });
+            },
+          },
+        ],
+        onConnect: get => {
+          // Request fresh session list on reconnect
+          logger.info('Refreshing session list on reconnect');
+          socket.emit('session:list', {}, (sessions: ExtendedSessionConfig[]) => {
+            if (Array.isArray(sessions)) {
+              get().setSessions(sessions);
+              // Rejoin terminal rooms for all sessions with active terminals
+              // so output resumes after reconnection when CSR fails
+              for (const session of sessions) {
+                if (session.terminalSessionId !== undefined) {
+                  logger.debug('Rejoining terminal room', session.terminalSessionId);
+                  socket.emit('terminal:join', { sessionId: session.terminalSessionId });
+                }
+              }
+            }
           });
         },
-      },
-    ],
-    onConnect: get => {
-      // Request fresh session list on reconnect
-      logger.info('Refreshing session list on reconnect');
-      socket.emit('session:list', {}, (sessions: ExtendedSessionConfig[]) => {
-        if (Array.isArray(sessions)) {
-          get().setSessions(sessions);
-          // Rejoin terminal rooms for all sessions with active terminals
-          // so output resumes after reconnection when CSR fails
-          for (const session of sessions) {
-            if (session.terminalSessionId !== undefined) {
-              logger.debug('Rejoining terminal room', session.terminalSessionId);
-              socket.emit('terminal:join', { sessionId: session.terminalSessionId });
-            }
+      });
+
+      return {
+        // Initial state (spread common state + custom state)
+        ...initialSocketState,
+        sessions: [],
+        pendingStatusUpdates: new Map(),
+        backpressured: new Set(),
+
+        // Common socket actions
+        ...socketActions,
+
+        // Socket listeners
+        initListeners,
+        cleanupListeners,
+
+        // Custom actions
+        addSession: session => {
+          set(
+            state => {
+              // Check if session already exists
+              const exists = state.sessions.some(s => s.id === session.id);
+              if (exists) {
+                return state;
+              }
+
+              logger.debug('addSession', session.id);
+              const newSessions = [...state.sessions, session];
+
+              // Process any pending status updates for this session
+              setTimeout(() => get().processPendingUpdates(session.id), 0);
+
+              return { sessions: newSessions };
+            },
+            undefined,
+            'session/addSession'
+          );
+        },
+
+        removeSession: sessionId => {
+          logger.debug('removeSession', sessionId);
+          set(
+            state => ({
+              sessions: state.sessions.filter(s => s.id !== sessionId),
+              pendingStatusUpdates: (() => {
+                const newMap = new Map(state.pendingStatusUpdates);
+                newMap.delete(sessionId);
+                return newMap;
+              })(),
+            }),
+            undefined,
+            'session/removeSession'
+          );
+        },
+
+        updateSession: (sessionId, updates) => {
+          set(
+            state => ({
+              sessions: state.sessions.map(session =>
+                session.id === sessionId
+                  ? { ...session, ...updates, lastActiveAt: new Date() }
+                  : session
+              ),
+            }),
+            undefined,
+            'session/updateSession'
+          );
+        },
+
+        updateStatus: (sessionId, status, message, needsInputPrompt) => {
+          logger.debug('updateStatus', sessionId, status);
+          set(
+            state => {
+              const sessionExists = state.sessions.some(s => s.id === sessionId);
+
+              if (!sessionExists) {
+                // Buffer the status update for later
+                logger.debug('Buffering pending update for unknown session', sessionId);
+                const pending = state.pendingStatusUpdates.get(sessionId) ?? [];
+                const newPending = [...pending, { sessionId, status, message, needsInputPrompt }];
+                const newMap = new Map(state.pendingStatusUpdates);
+                newMap.set(sessionId, newPending);
+
+                return { pendingStatusUpdates: newMap };
+              }
+
+              return {
+                sessions: state.sessions.map(session =>
+                  session.id === sessionId
+                    ? {
+                        ...session,
+                        status,
+                        // Only update statusMessage if a new message is provided
+                        statusMessage: message ?? session.statusMessage,
+                        needsInputPrompt,
+                        lastActiveAt: new Date(),
+                      }
+                    : session
+                ),
+              };
+            },
+            undefined,
+            'session/updateStatus'
+          );
+        },
+
+        setSessions: sessions => {
+          set({ sessions }, undefined, 'session/setSessions');
+        },
+
+        processPendingUpdates: sessionId => {
+          const state = get();
+          const pending = state.pendingStatusUpdates.get(sessionId);
+
+          if (!pending || pending.length === 0) {
+            return;
           }
-        }
-      });
+
+          // Apply all pending updates in order
+          for (const update of pending) {
+            state.updateStatus(
+              update.sessionId,
+              update.status,
+              update.message,
+              update.needsInputPrompt
+            );
+          }
+
+          // Clear pending updates for this session
+          set(
+            state => {
+              const newMap = new Map(state.pendingStatusUpdates);
+              newMap.delete(sessionId);
+              return { pendingStatusUpdates: newMap };
+            },
+            undefined,
+            'session/clearPendingUpdates'
+          );
+        },
+
+        setBackpressure: (terminalSessionId, paused) => {
+          set(
+            state => {
+              const next = new Set(state.backpressured);
+              if (paused) {
+                next.add(terminalSessionId);
+              } else {
+                next.delete(terminalSessionId);
+              }
+              return { backpressured: next };
+            },
+            undefined,
+            'session/setBackpressure'
+          );
+        },
+      };
     },
-  });
-
-  return {
-    // Initial state (spread common state + custom state)
-    ...initialSocketState,
-    sessions: [],
-    pendingStatusUpdates: new Map(),
-    backpressured: new Set(),
-
-    // Common socket actions
-    ...socketActions,
-
-    // Socket listeners
-    initListeners,
-    cleanupListeners,
-
-    // Custom actions
-    addSession: session => {
-      set(state => {
-        // Check if session already exists
-        const exists = state.sessions.some(s => s.id === session.id);
-        if (exists) {
-          return state;
-        }
-
-        logger.debug('addSession', session.id);
-        const newSessions = [...state.sessions, session];
-
-        // Process any pending status updates for this session
-        setTimeout(() => get().processPendingUpdates(session.id), 0);
-
-        return { sessions: newSessions };
-      });
-    },
-
-    removeSession: sessionId => {
-      logger.debug('removeSession', sessionId);
-      set(state => ({
-        sessions: state.sessions.filter(s => s.id !== sessionId),
-        pendingStatusUpdates: (() => {
-          const newMap = new Map(state.pendingStatusUpdates);
-          newMap.delete(sessionId);
-          return newMap;
-        })(),
-      }));
-    },
-
-    updateSession: (sessionId, updates) => {
-      set(state => ({
-        sessions: state.sessions.map(session =>
-          session.id === sessionId ? { ...session, ...updates, lastActiveAt: new Date() } : session
-        ),
-      }));
-    },
-
-    updateStatus: (sessionId, status, message, needsInputPrompt) => {
-      logger.debug('updateStatus', sessionId, status);
-      set(state => {
-        const sessionExists = state.sessions.some(s => s.id === sessionId);
-
-        if (!sessionExists) {
-          // Buffer the status update for later
-          logger.debug('Buffering pending update for unknown session', sessionId);
-          const pending = state.pendingStatusUpdates.get(sessionId) ?? [];
-          const newPending = [...pending, { sessionId, status, message, needsInputPrompt }];
-          const newMap = new Map(state.pendingStatusUpdates);
-          newMap.set(sessionId, newPending);
-
-          return { pendingStatusUpdates: newMap };
-        }
-
-        return {
-          sessions: state.sessions.map(session =>
-            session.id === sessionId
-              ? {
-                  ...session,
-                  status,
-                  // Only update statusMessage if a new message is provided
-                  statusMessage: message ?? session.statusMessage,
-                  needsInputPrompt,
-                  lastActiveAt: new Date(),
-                }
-              : session
-          ),
-        };
-      });
-    },
-
-    setSessions: sessions => {
-      set({ sessions });
-    },
-
-    processPendingUpdates: sessionId => {
-      const state = get();
-      const pending = state.pendingStatusUpdates.get(sessionId);
-
-      if (!pending || pending.length === 0) {
-        return;
-      }
-
-      // Apply all pending updates in order
-      for (const update of pending) {
-        state.updateStatus(
-          update.sessionId,
-          update.status,
-          update.message,
-          update.needsInputPrompt
-        );
-      }
-
-      // Clear pending updates for this session
-      set(state => {
-        const newMap = new Map(state.pendingStatusUpdates);
-        newMap.delete(sessionId);
-        return { pendingStatusUpdates: newMap };
-      });
-    },
-
-    setBackpressure: (terminalSessionId, paused) => {
-      set(state => {
-        const next = new Set(state.backpressured);
-        if (paused) {
-          next.add(terminalSessionId);
-        } else {
-          next.delete(terminalSessionId);
-        }
-        return { backpressured: next };
-      });
-    },
-  };
-});
+    { name: 'session' }
+  )
+);
 
 // Selectors
 

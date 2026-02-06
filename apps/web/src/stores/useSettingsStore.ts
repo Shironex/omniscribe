@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { devtools } from 'zustand/middleware';
 import type {
   Theme,
   SettingsSectionId,
@@ -107,105 +108,134 @@ const DEFAULT_THEME: Theme = 'dark';
 /**
  * Settings store using Zustand
  */
-export const useSettingsStore = create<SettingsStore>((set, get) => {
-  // Apply default theme on store initialization
-  if (typeof document !== 'undefined') {
-    applyThemeToDOM(DEFAULT_THEME);
-  }
-
-  return {
-    // Initial state
-    isOpen: false,
-    activeSection: 'appearance',
-    theme: DEFAULT_THEME,
-    claudeCliStatus: null,
-    isClaudeCliLoading: false,
-    claudeVersionCheck: null,
-    isVersionCheckLoading: false,
-    availableVersions: [],
-    isVersionsLoading: false,
-    githubCliStatus: null,
-    isGithubCliLoading: false,
-    previewTheme: null,
-
-    // Actions
-    openSettings: (section?: SettingsSectionId) => {
-      set({
-        isOpen: true,
-        activeSection: section ?? get().activeSection,
-      });
-    },
-
-    closeSettings: () => {
-      const state = get();
-      // Clear preview theme when closing
-      if (state.previewTheme) {
-        applyThemeToDOM(state.theme);
+export const useSettingsStore = create<SettingsStore>()(
+  devtools(
+    (set, get) => {
+      // Apply default theme on store initialization
+      if (typeof document !== 'undefined') {
+        applyThemeToDOM(DEFAULT_THEME);
       }
-      set({
+
+      return {
+        // Initial state
         isOpen: false,
+        activeSection: 'appearance',
+        theme: DEFAULT_THEME,
+        claudeCliStatus: null,
+        isClaudeCliLoading: false,
+        claudeVersionCheck: null,
+        isVersionCheckLoading: false,
+        availableVersions: [],
+        isVersionsLoading: false,
+        githubCliStatus: null,
+        isGithubCliLoading: false,
         previewTheme: null,
-      });
-    },
 
-    navigateToSection: (section: SettingsSectionId) => {
-      set({ activeSection: section });
-    },
+        // Actions
+        openSettings: (section?: SettingsSectionId) => {
+          set(
+            {
+              isOpen: true,
+              activeSection: section ?? get().activeSection,
+            },
+            undefined,
+            'settings/openSettings'
+          );
+        },
 
-    setTheme: (theme: Theme) => {
-      set({ theme, previewTheme: null });
-      applyThemeToDOM(theme);
-    },
+        closeSettings: () => {
+          const state = get();
+          // Clear preview theme when closing
+          if (state.previewTheme) {
+            applyThemeToDOM(state.theme);
+          }
+          set(
+            {
+              isOpen: false,
+              previewTheme: null,
+            },
+            undefined,
+            'settings/closeSettings'
+          );
+        },
 
-    setPreviewTheme: (theme: Theme | null) => {
-      const state = get();
-      set({ previewTheme: theme });
+        navigateToSection: (section: SettingsSectionId) => {
+          set({ activeSection: section }, undefined, 'settings/navigateToSection');
+        },
 
-      if (theme) {
-        applyThemeToDOM(theme);
-      } else {
-        // Restore actual theme when preview ends
-        applyThemeToDOM(state.theme);
-      }
-    },
+        setTheme: (theme: Theme) => {
+          set({ theme, previewTheme: null }, undefined, 'settings/setTheme');
+          applyThemeToDOM(theme);
+        },
 
-    applyTheme: (theme: Theme) => {
-      applyThemeToDOM(theme);
-    },
+        setPreviewTheme: (theme: Theme | null) => {
+          const state = get();
+          set({ previewTheme: theme }, undefined, 'settings/setPreviewTheme');
 
-    setClaudeCliStatus: (status: ClaudeCliStatus | null) => {
-      set({ claudeCliStatus: status, isClaudeCliLoading: false });
-    },
+          if (theme) {
+            applyThemeToDOM(theme);
+          } else {
+            // Restore actual theme when preview ends
+            applyThemeToDOM(state.theme);
+          }
+        },
 
-    setClaudeCliLoading: (loading: boolean) => {
-      set({ isClaudeCliLoading: loading });
-    },
+        applyTheme: (theme: Theme) => {
+          applyThemeToDOM(theme);
+        },
 
-    setClaudeVersionCheck: (result: ClaudeVersionCheckResult | null) => {
-      set({ claudeVersionCheck: result, isVersionCheckLoading: false });
-    },
+        setClaudeCliStatus: (status: ClaudeCliStatus | null) => {
+          set(
+            { claudeCliStatus: status, isClaudeCliLoading: false },
+            undefined,
+            'settings/setClaudeCliStatus'
+          );
+        },
 
-    setVersionCheckLoading: (loading: boolean) => {
-      set({ isVersionCheckLoading: loading });
-    },
+        setClaudeCliLoading: (loading: boolean) => {
+          set({ isClaudeCliLoading: loading }, undefined, 'settings/setClaudeCliLoading');
+        },
 
-    setAvailableVersions: (versions: string[]) => {
-      set({ availableVersions: versions, isVersionsLoading: false });
-    },
+        setClaudeVersionCheck: (result: ClaudeVersionCheckResult | null) => {
+          set(
+            { claudeVersionCheck: result, isVersionCheckLoading: false },
+            undefined,
+            'settings/setClaudeVersionCheck'
+          );
+        },
 
-    setVersionsLoading: (loading: boolean) => {
-      set({ isVersionsLoading: loading });
-    },
+        setVersionCheckLoading: (loading: boolean) => {
+          set({ isVersionCheckLoading: loading }, undefined, 'settings/setVersionCheckLoading');
+        },
 
-    setGithubCliStatus: (status: GhCliStatus | null) => {
-      set({ githubCliStatus: status, isGithubCliLoading: false });
-    },
+        setAvailableVersions: (versions: string[]) => {
+          set(
+            { availableVersions: versions, isVersionsLoading: false },
+            undefined,
+            'settings/setAvailableVersions'
+          );
+        },
 
-    setGithubCliLoading: (loading: boolean) => {
-      set({ isGithubCliLoading: loading });
+        setVersionsLoading: (loading: boolean) => {
+          set({ isVersionsLoading: loading }, undefined, 'settings/setVersionsLoading');
+        },
+
+        setGithubCliStatus: (status: GhCliStatus | null) => {
+          set(
+            { githubCliStatus: status, isGithubCliLoading: false },
+            undefined,
+            'settings/setGithubCliStatus'
+          );
+        },
+
+        setGithubCliLoading: (loading: boolean) => {
+          set({ isGithubCliLoading: loading }, undefined, 'settings/setGithubCliLoading');
+        },
+      };
     },
-  };
-});
+    { name: 'settings' }
+  )
+);
 
 // Selectors
 
