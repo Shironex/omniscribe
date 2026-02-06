@@ -1,17 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
-import {
-  RefreshCw,
-  AlertTriangle,
-  CheckCircle,
-  XCircle,
-  Clock,
-  ExternalLink,
-  Loader2,
-} from 'lucide-react';
+import { RefreshCw, AlertTriangle, ExternalLink, Loader2 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { ClaudeIcon } from '@/components/shared/ClaudeIcon';
+import { UsageCard, getStatusInfo } from '@/components/shared/UsageCard';
 import { useUsageStore } from '@/stores/useUsageStore';
 import { useWorkspaceStore } from '@/stores/useWorkspaceStore';
 import type { UsageError } from '@omniscribe/shared';
@@ -45,95 +38,6 @@ const ERROR_MESSAGES: Record<UsageError, { title: string; description: string }>
     description: 'An unexpected error occurred. Try again.',
   },
 };
-
-/** Get status color/icon based on percentage used */
-function getStatusInfo(percentage: number) {
-  if (percentage >= 75) return { color: 'text-status-error', icon: XCircle, bg: 'bg-status-error' };
-  if (percentage >= 50)
-    return { color: 'text-status-warning', icon: AlertTriangle, bg: 'bg-status-warning' };
-  return { color: 'text-primary', icon: CheckCircle, bg: 'bg-primary' };
-}
-
-/** Progress bar component */
-function ProgressBar({ percentage, colorClass }: { percentage: number; colorClass: string }) {
-  return (
-    <div className="h-2 w-full bg-muted rounded-full overflow-hidden border border-border/50">
-      <div
-        className={clsx('h-full transition-all duration-500 rounded-full', colorClass)}
-        style={{ width: `${Math.min(percentage, 100)}%` }}
-      />
-    </div>
-  );
-}
-
-/** Usage card component */
-function UsageCard({
-  title,
-  subtitle,
-  percentage,
-  resetText,
-  isPrimary = false,
-  stale = false,
-}: {
-  title: string;
-  subtitle: string;
-  percentage: number;
-  resetText?: string;
-  isPrimary?: boolean;
-  stale?: boolean;
-}) {
-  const isValidPercentage =
-    typeof percentage === 'number' && !isNaN(percentage) && isFinite(percentage);
-  const safePercentage = isValidPercentage ? percentage : 0;
-
-  const status = getStatusInfo(safePercentage);
-  const StatusIcon = status.icon;
-
-  return (
-    <div
-      className={clsx(
-        'rounded-xl border bg-card/50 p-4 transition-opacity',
-        isPrimary ? 'border-border shadow-sm' : 'border-border/60',
-        (stale || !isValidPercentage) && 'opacity-50'
-      )}
-    >
-      <div className="flex items-start justify-between mb-3">
-        <div>
-          <h4 className={clsx('font-semibold', isPrimary ? 'text-sm' : 'text-xs')}>{title}</h4>
-          <p className="text-[10px] text-muted-foreground">{subtitle}</p>
-        </div>
-        {isValidPercentage ? (
-          <div className="flex items-center gap-1.5">
-            <StatusIcon className={clsx('w-3.5 h-3.5', status.color)} />
-            <span
-              className={clsx(
-                'font-mono font-bold',
-                status.color,
-                isPrimary ? 'text-base' : 'text-sm'
-              )}
-            >
-              {Math.round(safePercentage)}%
-            </span>
-          </div>
-        ) : (
-          <span className="text-xs text-muted-foreground">N/A</span>
-        )}
-      </div>
-      <ProgressBar
-        percentage={safePercentage}
-        colorClass={isValidPercentage ? status.bg : 'bg-muted-foreground/30'}
-      />
-      {resetText && (
-        <div className="mt-2 flex justify-end">
-          <p className="text-xs text-muted-foreground flex items-center gap-1">
-            <Clock className="w-3 h-3" />
-            {resetText}
-          </p>
-        </div>
-      )}
-    </div>
-  );
-}
 
 export function UsagePopover() {
   const [open, setOpen] = useState(false);
