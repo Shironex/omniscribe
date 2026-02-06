@@ -69,7 +69,7 @@ jobs:
         if: matrix.os == 'macos-latest'
         shell: bash
         working-directory: apps/desktop
-        run: electron-builder --mac --publish never
+        run: pnpm exec electron-builder --mac --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
 
@@ -77,13 +77,13 @@ jobs:
         if: matrix.os == 'windows-latest'
         shell: bash
         working-directory: apps/desktop
-        run: electron-builder --win --publish never
+        run: pnpm exec electron-builder --win --publish never
 
       - name: Build Electron app (Linux)
         if: matrix.os == 'ubuntu-latest'
         shell: bash
         working-directory: apps/desktop
-        run: electron-builder --linux --publish never
+        run: pnpm exec electron-builder --linux --publish never
 
       - name: Upload macOS artifacts
         if: matrix.os == 'macos-latest'
