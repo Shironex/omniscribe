@@ -10,9 +10,9 @@
   "private": true,
   "main": "dist/main/index.js",
   "scripts": {
-    "dev": "tsc && cross-env NODE_ENV=development electron .",
-    "build:dev": "tsc",
-    "build": "tsc && node scripts/copy-renderer.mjs",
+    "dev": "tsc -p tsconfig.build.json && cross-env NODE_ENV=development electron .",
+    "build:dev": "tsc -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json && node scripts/copy-renderer.mjs",
     "typecheck": "tsc --noEmit",
     "test": "jest",
     "test:cov": "jest --coverage",
