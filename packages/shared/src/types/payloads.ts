@@ -505,6 +505,30 @@ export interface TerminalCancelPayload {
 }
 
 // ============================================
+// Health Events
+// ============================================
+
+/**
+ * Event emitted when a session's health level changes.
+ * Health is determined by PID liveness, output recency, and session status.
+ */
+export interface SessionHealthEvent {
+  sessionId: string;
+  health: import('./session').HealthLevel;
+  reason?: string;
+}
+
+/**
+ * Event emitted when a zombie session is cleaned up.
+ * Zombie = terminal process dead but session still tracked.
+ */
+export interface ZombieCleanupEvent {
+  sessionId: string;
+  sessionName: string;
+  reason: string;
+}
+
+// ============================================
 // Broadcast Events
 // ============================================
 

@@ -310,4 +310,20 @@ export class SessionGateway implements OnGatewayInit {
   onSessionRemoved(payload: { sessionId: string }): void {
     this.server.emit('session:removed', payload);
   }
+
+  /**
+   * Broadcast session health event (from HealthService)
+   */
+  @OnEvent('session.health')
+  onSessionHealth(payload: { sessionId: string; health: string; reason?: string }): void {
+    this.server.emit('session:health', payload);
+  }
+
+  /**
+   * Broadcast zombie cleanup event (from HealthService)
+   */
+  @OnEvent('zombie.cleanup')
+  onZombieCleanup(payload: { sessionId: string; sessionName: string; reason: string }): void {
+    this.server.emit('zombie:cleanup', payload);
+  }
 }

@@ -33,6 +33,8 @@ export interface ExtendedSessionConfig extends SessionConfig {
   needsInputPrompt?: boolean;
   /** Terminal session ID if launched */
   terminalSessionId?: number;
+  /** Timestamp of last terminal output (for health checks) */
+  lastOutputAt?: Date;
 }
 
 /**
@@ -72,6 +74,11 @@ export class SessionService {
   ) {
     // Listen for terminal close events to update session status
     this.eventEmitter.on('terminal.closed', this.handleTerminalClosed.bind(this));
+
+    // Listen for terminal output to track last output time (for health checks)
+    this.eventEmitter.on('terminal.output', (event: { sessionId: number; data: string }) => {
+      this.updateLastOutput(event.sessionId);
+    });
   }
 
   /**
@@ -166,6 +173,21 @@ export class SessionService {
     this.eventEmitter.emit('session.status', statusUpdate);
 
     return session;
+  }
+
+  /**
+   * Update the last output timestamp for a session (identified by terminal session ID).
+   * Used by health checks to determine output recency.
+   * @param terminalSessionId The terminal PTY session ID
+   */
+  updateLastOutput(terminalSessionId: number): void {
+    // Find the session that owns this terminal
+    for (const session of this.sessions.values()) {
+      if (session.terminalSessionId === terminalSessionId) {
+        session.lastOutputAt = new Date();
+        return;
+      }
+    }
   }
 
   /**

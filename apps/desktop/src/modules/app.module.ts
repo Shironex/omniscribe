@@ -7,6 +7,7 @@ import { SessionModule } from './session/session.module';
 import { GitModule } from './git/git.module';
 import { McpModule } from './mcp/mcp.module';
 import { UsageModule } from './usage';
+import { HealthModule } from './health';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { UsageModule } from './usage';
     GitModule,
     McpModule,
     UsageModule,
+    HealthModule,
   ],
   controllers: [],
   providers: [],
