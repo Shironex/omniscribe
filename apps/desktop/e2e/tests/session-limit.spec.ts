@@ -19,7 +19,8 @@ test.describe('Session Limit (12 cap)', () => {
     await closeApp(fixture);
   });
 
-  test.afterEach(async (_, testInfo) => {
+  // eslint-disable-next-line no-empty-pattern
+  test.afterEach(async ({}, testInfo) => {
     await screenshotOnFailure(fixture, testInfo);
   });
 

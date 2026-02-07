@@ -41,7 +41,8 @@ test.describe('Reconnection Overlay', () => {
     await closeApp(fixture);
   });
 
-  test.afterEach(async (_, testInfo) => {
+  // eslint-disable-next-line no-empty-pattern
+  test.afterEach(async ({}, testInfo) => {
     await screenshotOnFailure(fixture, testInfo);
   });
 
