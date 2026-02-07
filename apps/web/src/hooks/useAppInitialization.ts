@@ -4,6 +4,7 @@ import { useSessionStore } from '@/stores/useSessionStore';
 import { useWorkspaceStore } from '@/stores/useWorkspaceStore';
 import { useGitStore } from '@/stores/useGitStore';
 import { useMcpStore } from '@/stores/useMcpStore';
+import { useTaskStore } from '@/stores/useTaskStore';
 import { useUpdateStore } from '@/stores/useUpdateStore';
 import { useConnectionStore } from '@/stores/useConnectionStore';
 import { useSettingsStore } from '@/stores/useSettingsStore';
@@ -53,6 +54,10 @@ export function useAppInitialization(): void {
   const cleanupMcpListeners = useMcpStore(state => state.cleanupListeners);
   const fetchInternalMcpStatus = useMcpStore(state => state.fetchInternalMcpStatus);
 
+  // Task store
+  const initTaskListeners = useTaskStore(state => state.initListeners);
+  const cleanupTaskListeners = useTaskStore(state => state.cleanupListeners);
+
   // Connection store (global socket connection state)
   const initConnectionListeners = useConnectionStore(state => state.initListeners);
   const cleanupConnectionListeners = useConnectionStore(state => state.cleanupListeners);
@@ -74,6 +79,7 @@ export function useAppInitialization(): void {
         initGitListeners();
         initWorkspaceListeners();
         initMcpListeners();
+        initTaskListeners();
         logger.info('All listeners registered');
         await connectSocket();
         if (!mounted) return;
@@ -99,6 +105,7 @@ export function useAppInitialization(): void {
       cleanupGitListeners();
       cleanupWorkspaceListeners();
       cleanupMcpListeners();
+      cleanupTaskListeners();
       cleanupUpdateListeners?.();
     };
   }, [
@@ -112,6 +119,8 @@ export function useAppInitialization(): void {
     cleanupWorkspaceListeners,
     initMcpListeners,
     cleanupMcpListeners,
+    initTaskListeners,
+    cleanupTaskListeners,
     fetchInternalMcpStatus,
     initUpdateListeners,
   ]);

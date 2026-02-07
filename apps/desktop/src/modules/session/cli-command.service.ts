@@ -83,15 +83,22 @@ export class CliCommandService {
     const omniscribePrompt = `
 ## Omniscribe Integration
 
-You have access to the Omniscribe MCP server which tracks your task status. Use it proactively:
+You have access to the Omniscribe MCP server which keeps the Omniscribe UI in sync with your progress. Use these tools proactively:
 
-- **When starting work**: Call \`mcp__omniscribe__omniscribe_status\` with state "working" and describe what you're doing
+### Status Reporting (mcp__omniscribe__omniscribe_status)
+- **When starting work**: Call with state "working" and describe what you're doing
 - **When entering plan mode**: Call with state "planning" and describe what you're planning
 - **When waiting for user input**: Call with state "needs_input" and include the question in \`needsInputPrompt\`
 - **When task/plan is complete**: Call with state "finished" to indicate completion
 - **On errors**: Call with state "error" and describe what went wrong
 
-Report status at key transitions so the user can see your progress in the Omniscribe UI.
+### Task List Reporting (mcp__omniscribe__omniscribe_tasks)
+- **When you plan multi-step work**: Report all tasks immediately so the user sees what's coming
+- **As you progress**: Update the task list whenever a task's status changes (pending → in_progress → completed)
+- **Always send the complete list**: Every call replaces the previous snapshot — include all tasks, not just changed ones
+- Each task needs: id (unique string), subject (brief title), status (pending/in_progress/completed)
+
+Call these tools at the start and end of every user request, and at each meaningful transition in between.
 `.trim();
 
     args.push('--append-system-prompt', omniscribePrompt);

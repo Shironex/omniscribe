@@ -671,4 +671,61 @@ describe('McpGateway', () => {
       expect(mockServer.emit).toHaveBeenCalledTimes(1);
     });
   });
+
+  // ================================================================
+  // onSessionTasks (event handler)
+  // ================================================================
+  describe('onSessionTasks', () => {
+    it('should broadcast session tasks event to all clients', () => {
+      gateway.onSessionTasks({
+        sessionId: 'session-1',
+        tasks: [
+          { id: 'task-1', subject: 'Implement feature', status: 'in_progress' },
+          { id: 'task-2', subject: 'Write tests', status: 'pending' },
+        ],
+      });
+
+      expect(mockServer.emit).toHaveBeenCalledWith('session:tasks', {
+        sessionId: 'session-1',
+        tasks: [
+          { id: 'task-1', subject: 'Implement feature', status: 'in_progress' },
+          { id: 'task-2', subject: 'Write tests', status: 'pending' },
+        ],
+      });
+    });
+
+    it('should include sessionId and tasks in the emitted payload', () => {
+      gateway.onSessionTasks({
+        sessionId: 'session-42',
+        tasks: [{ id: 'task-a', subject: 'Deploy', status: 'completed' }],
+      });
+
+      const emitCall = (mockServer.emit as jest.Mock).mock.calls[0];
+      expect(emitCall[0]).toBe('session:tasks');
+      expect(emitCall[1]).toHaveProperty('sessionId', 'session-42');
+      expect(emitCall[1]).toHaveProperty('tasks');
+      expect(emitCall[1].tasks).toHaveLength(1);
+    });
+
+    it('should handle empty tasks array', () => {
+      gateway.onSessionTasks({
+        sessionId: 'session-1',
+        tasks: [],
+      });
+
+      expect(mockServer.emit).toHaveBeenCalledWith('session:tasks', {
+        sessionId: 'session-1',
+        tasks: [],
+      });
+    });
+
+    it('should call server.emit exactly once per tasks event', () => {
+      gateway.onSessionTasks({
+        sessionId: 'session-1',
+        tasks: [{ id: 'task-1', subject: 'Something', status: 'pending' }],
+      });
+
+      expect(mockServer.emit).toHaveBeenCalledTimes(1);
+    });
+  });
 });

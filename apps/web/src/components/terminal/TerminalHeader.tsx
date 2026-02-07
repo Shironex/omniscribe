@@ -6,6 +6,7 @@ import { useClickOutside } from '@/hooks/useClickOutside';
 import { SessionStatusDisplay } from './SessionStatusDisplay';
 import { QuickActionsDropdown } from './QuickActionsDropdown';
 import { MoreMenuDropdown } from './MoreMenuDropdown';
+import { TaskListPopover } from './TaskListPopover';
 import type { TerminalDragHandleProps } from './SortableTerminalWrapper';
 import type { QuickActionItem } from './TerminalCard';
 import type { SessionStatus } from '@/components/shared/StatusLegend';
@@ -123,6 +124,8 @@ export function TerminalHeader({
             />
           </div>
         )}
+
+        {session.aiMode === 'claude' && <TaskListPopover sessionId={session.id} />}
 
         <div className="relative" ref={moreMenuRef}>
           <MoreMenuDropdown
