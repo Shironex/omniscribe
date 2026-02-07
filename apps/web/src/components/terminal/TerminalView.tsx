@@ -1,9 +1,12 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { createLogger } from '@omniscribe/shared';
 import type { Terminal } from '@xterm/xterm';
 import type { FitAddon } from '@xterm/addon-fit';
+import { Loader2, XCircle } from 'lucide-react';
 import { resizeTerminal } from '@/lib/terminal';
 import { getTerminalTheme } from '@/lib/terminal-themes';
+import { socket } from '@/lib/socket';
+import { useSessionStore } from '@/stores/useSessionStore';
 import { TerminalSearchBar } from './TerminalSearchBar';
 import { useTerminalSettings } from '@/hooks/useTerminalSettings';
 import { useTerminalSearch } from '@/hooks/useTerminalSearch';
@@ -70,6 +73,13 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
     isDisposedRef,
     onCloseRef
   );
+
+  // Backpressure state
+  const isBackpressured = useSessionStore(state => state.backpressured.has(sessionId));
+
+  const handleCancelOutput = useCallback(() => {
+    socket.emit('terminal:cancel', { sessionId });
+  }, [sessionId]);
 
   useTerminalInitialization(
     sessionId,
@@ -159,6 +169,7 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
 
   return (
     <div
+      data-testid={`terminal-view-${sessionId}`}
       className={`terminal-view ${className}`}
       style={{
         width: '100%',
@@ -187,6 +198,22 @@ export const TerminalView: React.FC<TerminalViewProps> = ({
           backgroundColor: theme.background ?? '#1a1b26',
         }}
       />
+      {isBackpressured && (
+        <div className="absolute bottom-0 left-0 right-0 bg-yellow-500/90 text-black text-xs px-2 py-1 flex items-center justify-between z-10">
+          <span className="flex items-center gap-1.5">
+            <Loader2 size={12} className="animate-spin" />
+            buffering...
+          </span>
+          <button
+            type="button"
+            onClick={handleCancelOutput}
+            className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-black/20 hover:bg-black/30 transition-colors"
+          >
+            <XCircle size={12} />
+            Cancel output
+          </button>
+        </div>
+      )}
     </div>
   );
 };

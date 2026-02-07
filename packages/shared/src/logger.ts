@@ -118,25 +118,43 @@ function formatNodeLog(level: string, context: string, levelColor: string): stri
 }
 
 /**
- * Format a message for file logging (no ANSI colors)
+ * Structured log entry for JSON file logging
+ */
+export interface LogEntry {
+  timestamp: string; // ISO 8601
+  level: 'error' | 'warn' | 'info' | 'debug';
+  context: string; // Logger context name (e.g., "SessionService")
+  message: string; // Primary message (first arg stringified)
+  data?: unknown; // Additional args if any
+}
+
+/**
+ * Format a message for file logging as structured JSONL (one JSON object per line)
  */
 function formatFileLog(level: string, context: string, args: unknown[]): string {
-  const timestamp = formatTimestamp();
-  const formattedArgs =
-    args.length > 0
-      ? ' ' +
-        args
-          .map(a => {
-            if (typeof a === 'string') return a;
-            try {
-              return JSON.stringify(a);
-            } catch {
-              return String(a);
-            }
-          })
-          .join(' ')
-      : '';
-  return `[${timestamp}] [${level}] [${context}]${formattedArgs}\n`;
+  try {
+    const firstArg = args.length > 0 ? args[0] : '';
+    const message = typeof firstArg === 'string' ? firstArg : JSON.stringify(firstArg);
+    const entry: LogEntry = {
+      timestamp: formatTimestamp(),
+      level: level.toLowerCase() as LogEntry['level'],
+      context,
+      message,
+    };
+    if (args.length > 1) {
+      entry.data = args.length === 2 ? args[1] : args.slice(1);
+    }
+    return JSON.stringify(entry) + '\n';
+  } catch {
+    return (
+      JSON.stringify({
+        timestamp: formatTimestamp(),
+        level: level.toLowerCase(),
+        context,
+        message: String(args),
+      }) + '\n'
+    );
+  }
 }
 
 /**

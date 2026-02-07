@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { Server, Socket } from 'socket.io';
 import { WorkspaceGateway } from './workspace.gateway';
 import { QuickActionService, QuickActionResult } from './quick-action.service';
@@ -94,6 +95,7 @@ describe('WorkspaceGateway', () => {
     } as unknown as jest.Mocked<WorkspaceService>;
 
     const module: TestingModule = await Test.createTestingModule({
+      imports: [ThrottlerModule.forRoot([])],
       providers: [
         WorkspaceGateway,
         { provide: QuickActionService, useValue: quickActionService },

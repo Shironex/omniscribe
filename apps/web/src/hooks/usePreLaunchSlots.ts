@@ -1,9 +1,10 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { toast } from 'sonner';
 import { createLogger, DEFAULT_SESSION_SETTINGS } from '@omniscribe/shared';
 import type { PreLaunchSlot } from '@/components/terminal/TerminalGrid';
 import { createSession } from '@/lib/session';
 import { mapAiModeToBackend } from '@/lib/aiMode';
-import { useTerminalControlStore, useWorkspaceStore } from '@/stores';
+import { useTerminalStore, useWorkspaceStore, useSettingsStore } from '@/stores';
 import { getNextAvailablePrelaunchShortcut } from '@/lib/prelaunch-shortcuts';
 
 const logger = createLogger('PreLaunchSlots');
@@ -48,13 +49,19 @@ export function usePreLaunchSlots(
   // Track which slots are currently being launched (prevents spam clicking)
   const [launchingSlotIds, setLaunchingSlotIds] = useState<Set<string>>(new Set());
 
-  // Read default AI mode from workspace preferences
-  const defaultAiMode = useWorkspaceStore(
+  // Read Claude CLI status from settings store
+  const claudeCliStatus = useSettingsStore(state => state.claudeCliStatus);
+
+  // Read configured default AI mode from workspace preferences
+  const configuredDefaultAiMode = useWorkspaceStore(
     state => state.preferences.session?.defaultMode ?? DEFAULT_SESSION_SETTINGS.defaultMode
   );
 
+  // Fall back to 'plain' when CLI status unknown (null) or not installed
+  const defaultAiMode = claudeCliStatus?.installed ? configuredDefaultAiMode : 'plain';
+
   // Listen to add slot requests from other components (e.g., sidebar + button)
-  const addSlotRequestCounter = useTerminalControlStore(state => state.addSlotRequestCounter);
+  const addSlotRequestCounter = useTerminalStore(state => state.addSlotRequestCounter);
   const prevCounterRef = useRef(addSlotRequestCounter);
 
   // Can launch if we have a project selected and have pre-launch slots
@@ -140,7 +147,9 @@ export function usePreLaunchSlots(
         // Remove the pre-launch slot
         setPreLaunchSlots(prev => prev.filter(s => s.id !== slotId));
       } catch (error) {
+        const message = error instanceof Error ? error.message : 'Failed to launch session';
         logger.error('Failed to launch session:', error);
+        toast.error(message);
       } finally {
         // Clear launching state (whether success or failure)
         setLaunchingSlotIds(prev => {

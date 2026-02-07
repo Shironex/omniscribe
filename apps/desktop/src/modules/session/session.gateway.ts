@@ -6,7 +6,9 @@ import {
   ConnectedSocket,
   OnGatewayInit,
 } from '@nestjs/websockets';
-import { Inject, forwardRef } from '@nestjs/common';
+import { Inject, forwardRef, UseGuards } from '@nestjs/common';
+import { SkipThrottle } from '@nestjs/throttler';
+import { WsThrottlerGuard } from '../shared/ws-throttler.guard';
 import { Server, Socket } from 'socket.io';
 import { OnEvent } from '@nestjs/event-emitter';
 import * as crypto from 'crypto';
@@ -23,6 +25,7 @@ import {
   SessionRemoveResponse,
   WorktreeSettings,
   DEFAULT_WORKTREE_SETTINGS,
+  MAX_CONCURRENT_SESSIONS,
   createLogger,
 } from '@omniscribe/shared';
 import { CORS_CONFIG } from '../shared/cors.config';
@@ -50,11 +53,13 @@ interface UpdateSessionPayload {
 }
 
 /**
- * Response for session creation - either the session or an error
+ * Response for session creation - either the session or an error.
+ * When limit is hit, includes names of idle sessions the user could close.
  */
 interface CreateSessionResponse {
   session?: ExtendedSessionConfig;
   error?: string;
+  idleSessions?: string[];
 }
 
 /**
@@ -65,6 +70,7 @@ interface UpdateSessionResponse {
   error?: string;
 }
 
+@UseGuards(WsThrottlerGuard)
 @WebSocketGateway({
   cors: CORS_CONFIG,
 })
@@ -96,6 +102,20 @@ export class SessionGateway implements OnGatewayInit {
     @MessageBody() payload: CreateSessionPayload,
     @ConnectedSocket() client: Socket
   ): Promise<CreateSessionResponse> {
+    // Check concurrency limit before creating session
+    const runningSessions = this.sessionService.getRunningSessions();
+    if (runningSessions.length >= MAX_CONCURRENT_SESSIONS) {
+      const idleSessions = this.sessionService.getIdleSessions();
+      const idleNames = idleSessions.map(s => s.name);
+      this.logger.warn(
+        `[handleCreate] Session limit reached: ${runningSessions.length}/${MAX_CONCURRENT_SESSIONS} running`
+      );
+      return {
+        error: `Session limit reached (${runningSessions.length}/${MAX_CONCURRENT_SESSIONS}). Close a session to start a new one.`,
+        idleSessions: idleNames,
+      };
+    }
+
     const session = this.sessionService.create(payload.mode, payload.projectPath, {
       name: payload.name,
       workingDirectory: payload.workingDirectory,
@@ -254,6 +274,7 @@ export class SessionGateway implements OnGatewayInit {
   /**
    * Handle session list request
    */
+  @SkipThrottle()
   @SubscribeMessage('session:list')
   handleList(
     @MessageBody() payload: SessionListPayload,
@@ -288,5 +309,21 @@ export class SessionGateway implements OnGatewayInit {
   @OnEvent('session.removed')
   onSessionRemoved(payload: { sessionId: string }): void {
     this.server.emit('session:removed', payload);
+  }
+
+  /**
+   * Broadcast session health event (from HealthService)
+   */
+  @OnEvent('session.health')
+  onSessionHealth(payload: { sessionId: string; health: string; reason?: string }): void {
+    this.server.emit('session:health', payload);
+  }
+
+  /**
+   * Broadcast zombie cleanup event (from HealthService)
+   */
+  @OnEvent('zombie.cleanup')
+  onZombieCleanup(payload: { sessionId: string; sessionName: string; reason: string }): void {
+    this.server.emit('zombie:cleanup', payload);
   }
 }

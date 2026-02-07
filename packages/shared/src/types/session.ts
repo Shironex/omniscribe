@@ -6,6 +6,14 @@
 export type AiMode = 'claude' | 'plain';
 
 /**
+ * Health level for session health monitoring.
+ * - healthy: Terminal responsive, PID alive, output recent
+ * - degraded: Terminal exists but may be stuck (no output while working, or backpressured)
+ * - failed: Terminal process dead (zombie) or session in persistent error state
+ */
+export type HealthLevel = 'healthy' | 'degraded' | 'failed';
+
+/**
  * Session status
  * Includes both legacy statuses and MCP status values
  */

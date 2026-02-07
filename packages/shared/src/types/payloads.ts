@@ -7,6 +7,15 @@ import type { QuickAction } from './workspace';
 import type { BranchInfo, CommitInfo } from './git';
 
 // ============================================
+// Connection Types
+// ============================================
+
+/**
+ * Frontend connection status for WebSocket state tracking
+ */
+export type ConnectionStatus = 'connected' | 'reconnecting' | 'failed';
+
+// ============================================
 // Generic Response Types
 // ============================================
 
@@ -326,6 +335,15 @@ export interface SessionListPayload {
  */
 export interface SessionRemoveResponse extends SuccessResponse {}
 
+/**
+ * Response when session creation is rejected due to concurrency limit.
+ * Includes names of idle sessions the user could close to free slots.
+ */
+export interface SessionLimitResponse {
+  error: string;
+  idleSessions: string[];
+}
+
 // ============================================
 // Tab Payloads
 // ============================================
@@ -464,6 +482,50 @@ export interface UpdateQuickActionsPayload {
  */
 export interface QuickActionsResponse extends SuccessResponse {
   actions: QuickAction[];
+}
+
+// ============================================
+// Terminal Events
+// ============================================
+
+/**
+ * Event emitted when a terminal enters or exits backpressure state.
+ * Backpressure occurs when output packets exceed the high water mark.
+ */
+export interface TerminalBackpressureEvent {
+  sessionId: number;
+  paused: boolean;
+}
+
+/**
+ * Payload for cancelling terminal output (sends SIGINT)
+ */
+export interface TerminalCancelPayload {
+  sessionId: number;
+}
+
+// ============================================
+// Health Events
+// ============================================
+
+/**
+ * Event emitted when a session's health level changes.
+ * Health is determined by PID liveness, output recency, and session status.
+ */
+export interface SessionHealthEvent {
+  sessionId: string;
+  health: import('./session').HealthLevel;
+  reason?: string;
+}
+
+/**
+ * Event emitted when a zombie session is cleaned up.
+ * Zombie = terminal process dead but session still tracked.
+ */
+export interface ZombieCleanupEvent {
+  sessionId: string;
+  sessionName: string;
+  reason: string;
 }
 
 // ============================================

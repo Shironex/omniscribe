@@ -12,6 +12,130 @@ const MAX_OUTPUT_BUFFER_SIZE = 100_000; // 100KB cap
 const CHUNKED_WRITE_THRESHOLD = 1000;
 const CHUNK_SIZE = 100;
 
+// Environment variable allowlist for spawned terminal processes.
+// Only these variables are forwarded from the host process.env to child terminals.
+const ENV_ALLOWLIST: string[] = [
+  // Shell basics
+  'HOME',
+  'USER',
+  'LOGNAME',
+  'SHELL',
+  'LANG',
+  'LC_ALL',
+  'LC_CTYPE',
+  'LC_MESSAGES',
+  'LC_COLLATE',
+  'LC_MONETARY',
+  'LC_NUMERIC',
+  'LC_TIME',
+  // Path resolution
+  'PATH',
+  // Windows platform
+  'COMSPEC',
+  'SYSTEMROOT',
+  'SYSTEMDRIVE',
+  'WINDIR',
+  'APPDATA',
+  'LOCALAPPDATA',
+  'PROGRAMFILES',
+  'PROGRAMFILES(X86)',
+  'COMMONPROGRAMFILES',
+  'USERPROFILE',
+  // Temp directories
+  'TMPDIR',
+  'TMP',
+  'TEMP',
+  // macOS-specific
+  'COMMAND_MODE',
+  '__CF_USER_TEXT_ENCODING',
+  // Display (Linux/X11/Wayland)
+  'DISPLAY',
+  'WAYLAND_DISPLAY',
+  'XDG_RUNTIME_DIR',
+  'XDG_SESSION_TYPE',
+  'XDG_DATA_DIRS',
+  'XDG_CONFIG_DIRS',
+  'DBUS_SESSION_BUS_ADDRESS',
+  // SSH
+  'SSH_AUTH_SOCK',
+  'SSH_AGENT_PID',
+  // Development tools (version managers, package managers)
+  'NVM_DIR',
+  'NVM_BIN',
+  'NVM_INC',
+  'VOLTA_HOME',
+  'FNM_DIR',
+  'FNM_MULTISHELL_PATH',
+  'PNPM_HOME',
+  'BUN_INSTALL',
+  'GOPATH',
+  'GOROOT',
+  'CARGO_HOME',
+  'RUSTUP_HOME',
+  'PYENV_ROOT',
+  'RBENV_ROOT',
+  'ASDF_DIR',
+  'ASDF_DATA_DIR',
+  'HOMEBREW_PREFIX',
+  'HOMEBREW_CELLAR',
+  'HOMEBREW_REPOSITORY',
+  // Editor
+  'EDITOR',
+  'VISUAL',
+  'TERM',
+  'COLORTERM',
+  // Git
+  'GIT_EXEC_PATH',
+  'GIT_TEMPLATE_DIR',
+  // Proxy
+  'HTTP_PROXY',
+  'HTTPS_PROXY',
+  'NO_PROXY',
+  'ALL_PROXY',
+  'http_proxy',
+  'https_proxy',
+  'no_proxy',
+  'all_proxy',
+];
+
+// Patterns that must NEVER be passed to spawned processes, even if somehow in the allowlist.
+const ENV_BLOCKLIST_PATTERNS: RegExp[] = [
+  /^ELECTRON_/i,
+  /^NODE_OPTIONS$/i,
+  /^NODE_EXTRA_CA_CERTS$/i,
+  /SECRET/i,
+  /PASSWORD/i,
+  /TOKEN/i,
+  /CREDENTIAL/i,
+  /API_KEY/i,
+  /PRIVATE_KEY/i,
+];
+
+/**
+ * Build a sanitized environment for spawned terminal processes.
+ * Only allowlisted variables from process.env are included, and all variables
+ * (including caller-provided extras) are filtered through the blocklist.
+ */
+function buildSafeEnv(extra?: Record<string, string>): Record<string, string> {
+  const safeEnv: Record<string, string> = {};
+  for (const key of ENV_ALLOWLIST) {
+    const value = process.env[key];
+    if (value !== undefined && !ENV_BLOCKLIST_PATTERNS.some(p => p.test(key))) {
+      safeEnv[key] = value;
+    }
+  }
+  if (extra) {
+    // Extra env vars from callers (e.g., session-specific vars) are passed through
+    // but still filtered by blocklist
+    for (const [key, value] of Object.entries(extra)) {
+      if (!ENV_BLOCKLIST_PATTERNS.some(p => p.test(key))) {
+        safeEnv[key] = value;
+      }
+    }
+  }
+  return safeEnv;
+}
+
 interface PtySession {
   pty: pty.IPty;
   outputBuffer: string;
@@ -22,6 +146,8 @@ interface PtySession {
   scrollbackBuffer: string;
   /** Promise chain for serialized writes */
   writeChain: Promise<void>;
+  /** Whether the PTY stream is paused (backpressure) */
+  paused: boolean;
 }
 
 @Injectable()
@@ -102,22 +228,14 @@ export class TerminalService implements OnModuleDestroy {
     this.logger.debug(`[spawnCommand] Platform: ${os.platform()}`);
     this.logger.debug(`[spawnCommand] ExternalId: ${externalId}`);
 
-    // Build environment - match automaker's approach
-    const cleanEnv: Record<string, string> = {};
-    for (const [key, value] of Object.entries(process.env)) {
-      if (value !== undefined) {
-        cleanEnv[key] = value;
-      }
-    }
-
+    // Build environment - allowlist approach for security
     const finalEnv: Record<string, string> = {
-      ...cleanEnv,
+      ...buildSafeEnv(env),
       TERM: 'xterm-256color',
       COLORTERM: 'truecolor',
       TERM_PROGRAM,
       LANG: process.env.LANG || 'en_US.UTF-8',
       LC_ALL: process.env.LC_ALL || process.env.LANG || 'en_US.UTF-8',
-      ...env,
     };
 
     // Build pty options with Windows-specific settings
@@ -162,6 +280,7 @@ export class TerminalService implements OnModuleDestroy {
       externalId,
       scrollbackBuffer: '',
       writeChain: Promise.resolve(),
+      paused: false,
     };
 
     this.sessions.set(sessionId, session);
@@ -381,6 +500,50 @@ export class TerminalService implements OnModuleDestroy {
   }
 
   /**
+   * Pause PTY output stream for backpressure management.
+   * When paused, the PTY buffers output internally (kernel-level flow control).
+   * @param sessionId The session to pause
+   */
+  pause(sessionId: number): void {
+    const session = this.sessions.get(sessionId);
+    if (!session || session.paused) return;
+
+    session.pty.pause();
+    session.paused = true;
+    this.logger.debug(`[pause] Paused PTY for session ${sessionId}`);
+  }
+
+  /**
+   * Resume PTY output stream after backpressure clears.
+   * @param sessionId The session to resume
+   */
+  resume(sessionId: number): void {
+    const session = this.sessions.get(sessionId);
+    if (!session || !session.paused) return;
+
+    session.pty.resume();
+    session.paused = false;
+    this.logger.debug(`[resume] Resumed PTY for session ${sessionId}`);
+  }
+
+  /**
+   * Check if a terminal is currently paused due to backpressure.
+   * @param sessionId The session to check
+   */
+  isPaused(sessionId: number): boolean {
+    return this.sessions.get(sessionId)?.paused ?? false;
+  }
+
+  /**
+   * Get the PID of a terminal process.
+   * @param sessionId The session to query
+   * @returns The PID if session exists, undefined otherwise
+   */
+  getPid(sessionId: number): number | undefined {
+    return this.sessions.get(sessionId)?.pty.pid;
+  }
+
+  /**
    * Flush buffered output for a session (chunk-based approach)
    */
   private flushOutput(sessionId: number): void {
@@ -422,6 +585,15 @@ export class TerminalService implements OnModuleDestroy {
   private cleanup(sessionId: number): void {
     const session = this.sessions.get(sessionId);
     if (session) {
+      // Resume if paused to prevent deadlock during cleanup
+      if (session.paused) {
+        try {
+          session.pty.resume();
+        } catch {
+          // Ignore resume errors during cleanup
+        }
+        session.paused = false;
+      }
       if (session.flushTimer) {
         clearTimeout(session.flushTimer);
         // Flush any remaining output before cleanup

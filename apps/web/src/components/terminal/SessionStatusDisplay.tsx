@@ -32,7 +32,7 @@ export function SessionStatusDisplay({ session, gitBranch }: SessionStatusDispla
   return (
     <>
       {/* Status dot */}
-      <div className="flex items-center shrink-0">
+      <div data-testid={`session-status-${session.id}`} className="flex items-center shrink-0">
         <StatusDot status={session.status} className="w-2 h-2" />
       </div>
 

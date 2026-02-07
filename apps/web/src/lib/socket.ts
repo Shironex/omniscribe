@@ -8,9 +8,10 @@ const SOCKET_URL = 'ws://localhost:3001';
 export const socket: Socket = io(SOCKET_URL, {
   autoConnect: false,
   reconnection: true,
-  reconnectionAttempts: 10,
-  reconnectionDelay: 1000,
+  reconnectionAttempts: Infinity,
+  reconnectionDelay: 500,
   reconnectionDelayMax: 5000,
+  randomizationFactor: 0.5,
   timeout: 20000,
   transports: ['websocket', 'polling'],
 });
@@ -126,6 +127,14 @@ socket.on('reconnect_failed', () => {
 });
 
 export default socket;
+
+// Expose socket instance on window for E2E testing.
+// Allows Playwright to trigger disconnect/reconnect scenarios and open projects.
+// This is a desktop Electron app -- window globals are already accessible
+// via devtools, so exposing the socket adds no meaningful attack surface.
+if (typeof window !== 'undefined') {
+  (window as unknown as Record<string, unknown>).__testSocket = socket;
+}
 
 // Re-export socket helpers for convenient access
 export {

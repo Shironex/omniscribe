@@ -31,6 +31,7 @@ export function ProjectTabs({
 
   return (
     <div
+      data-testid="project-tabs"
       className={twMerge(
         clsx(
           'h-10 bg-muted border-b border-border',
@@ -75,6 +76,7 @@ export function ProjectTabs({
 
         {/* New tab button */}
         <button
+          data-testid="new-tab-button"
           onClick={onNewTab}
           className={clsx(
             'no-drag flex items-center justify-center px-3 h-full',

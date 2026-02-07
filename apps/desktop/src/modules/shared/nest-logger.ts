@@ -1,5 +1,6 @@
 import { LoggerService } from '@nestjs/common';
 import { createLogger, Logger } from '@omniscribe/shared';
+import { fileTransport } from '../../main/logger';
 
 /**
  * NestJS LoggerService adapter that delegates to the shared logger.
@@ -17,7 +18,7 @@ export class NestLoggerAdapter implements LoggerService {
     const key = context ?? 'Nest';
     let logger = this.loggers.get(key);
     if (!logger) {
-      logger = createLogger(key);
+      logger = createLogger(key, { fileTransport });
       this.loggers.set(key, logger);
     }
     return logger;

@@ -7,6 +7,8 @@ import {
   AlertCircle,
   RotateCcw,
   ExternalLink,
+  FileText,
+  FolderOpen,
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { APP_NAME, GITHUB_RELEASES_URL, createLogger } from '@omniscribe/shared';
@@ -94,6 +96,35 @@ export function GeneralSection() {
           <div className="text-xl font-bold text-gradient">{APP_NAME}</div>
           {version && <div className="text-sm font-mono text-primary">v{version}</div>}
           <div className="text-sm text-muted-foreground">AI-powered development workspace</div>
+        </div>
+      </div>
+
+      {/* Diagnostics Card */}
+      <div className="rounded-xl border border-border/50 bg-card/50 p-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <FileText className="w-4 h-4 text-muted-foreground" />
+            <div>
+              <h3 className="text-sm font-medium text-foreground">Diagnostics</h3>
+              <p className="text-xs text-muted-foreground">
+                View application logs for troubleshooting
+              </p>
+            </div>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              try {
+                window.electronAPI?.app?.openLogsFolder();
+              } catch (err) {
+                logger.error('Failed to open logs folder:', err);
+              }
+            }}
+          >
+            <FolderOpen className="w-3.5 h-3.5" />
+            Open Log Folder
+          </Button>
         </div>
       </div>
 

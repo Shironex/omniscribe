@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { toast } from 'sonner';
 import { createLogger, DEFAULT_SESSION_SETTINGS } from '@omniscribe/shared';
 
 const logger = createLogger('TerminalGrid');
@@ -6,7 +7,8 @@ import { TerminalGrid } from './TerminalGrid';
 import { useSessionStore } from '@/stores/useSessionStore';
 import { useWorkspaceStore, selectActiveTab } from '@/stores/useWorkspaceStore';
 import { useGitStore, selectBranches, selectCurrentBranch } from '@/stores/useGitStore';
-import { useTerminalControlStore } from '@/stores/useTerminalControlStore';
+import { useTerminalStore } from '@/stores/useTerminalStore';
+import { useSettingsStore } from '@/stores/useSettingsStore';
 import { createSession, removeSession } from '@/lib/session';
 import { killTerminal } from '@/lib/terminal';
 import { mapAiModeToBackend, mapAiModeToUI } from '@/lib/aiMode';
@@ -30,13 +32,13 @@ export function ConnectedTerminalGrid({ className }: ConnectedTerminalGridProps)
   const [preLaunchSlots, setPreLaunchSlots] = useState<PreLaunchSlot[]>([]);
 
   // Shared terminal control store for focus state
-  const focusedSessionId = useTerminalControlStore(state => state.focusedSessionId);
-  const setFocusedSessionId = useTerminalControlStore(state => state.setFocusedSessionId);
-  const addSlotRequestCounter = useTerminalControlStore(state => state.addSlotRequestCounter);
+  const focusedSessionId = useTerminalStore(state => state.focusedSessionId);
+  const setFocusedSessionId = useTerminalStore(state => state.setFocusedSessionId);
+  const addSlotRequestCounter = useTerminalStore(state => state.addSlotRequestCounter);
   const prevAddSlotRequestRef = useRef(addSlotRequestCounter);
-  const sessionOrder = useTerminalControlStore(state => state.sessionOrder);
-  const setSessionOrder = useTerminalControlStore(state => state.setSessionOrder);
-  const reorderSessions = useTerminalControlStore(state => state.reorderSessions);
+  const sessionOrder = useTerminalStore(state => state.sessionOrder);
+  const setSessionOrder = useTerminalStore(state => state.setSessionOrder);
+  const reorderSessions = useTerminalStore(state => state.reorderSessions);
 
   // Session store
   const sessions = useSessionStore(state => state.sessions);
@@ -45,9 +47,17 @@ export function ConnectedTerminalGrid({ className }: ConnectedTerminalGridProps)
   // Workspace store
   const activeTab = useWorkspaceStore(selectActiveTab);
   const activeProjectPath = activeTab?.projectPath ?? null;
-  const defaultAiMode = useWorkspaceStore(
+
+  // Read Claude CLI status from settings store
+  const claudeCliStatus = useSettingsStore(state => state.claudeCliStatus);
+
+  // Read configured default AI mode from workspace preferences
+  const configuredDefaultAiMode = useWorkspaceStore(
     state => state.preferences.session?.defaultMode ?? DEFAULT_SESSION_SETTINGS.defaultMode
   );
+
+  // Fall back to 'plain' when CLI status unknown (null) or not installed
+  const defaultAiMode = claudeCliStatus?.installed ? configuredDefaultAiMode : 'plain';
 
   // Git store
   const gitBranches = useGitStore(selectBranches);
@@ -203,25 +213,30 @@ export function ConnectedTerminalGrid({ className }: ConnectedTerminalGridProps)
         // Remove the pre-launch slot
         setPreLaunchSlots(prev => prev.filter(s => s.id !== slotId));
       } catch (error) {
+        const message = error instanceof Error ? error.message : 'Failed to launch session';
         logger.error('Failed to launch session:', error);
+        toast.error(message);
       }
     },
     [activeProjectPath, preLaunchSlots, updateSession]
   );
 
   // Kill a session handler
-  const handleKill = useCallback(async (sessionId: string) => {
-    logger.info('Killing session', sessionId);
-    try {
-      const sessionIdNum = parseInt(sessionId, 10);
-      if (!isNaN(sessionIdNum)) {
-        killTerminal(sessionIdNum);
+  const handleKill = useCallback(
+    async (sessionId: string) => {
+      logger.info('Killing session', sessionId);
+      try {
+        const session = sessions.find(s => s.id === sessionId);
+        if (session?.terminalSessionId !== undefined) {
+          killTerminal(session.terminalSessionId);
+        }
+        await removeSession(sessionId);
+      } catch (error) {
+        logger.error('Failed to kill session', sessionId, error);
       }
-      await removeSession(sessionId);
-    } catch (error) {
-      logger.error('Failed to kill session', sessionId, error);
-    }
-  }, []);
+    },
+    [sessions]
+  );
 
   // Handle session close from terminal
   const handleSessionClose = useCallback((_sessionId: string, _exitCode: number) => {
@@ -249,6 +264,7 @@ export function ConnectedTerminalGrid({ className }: ConnectedTerminalGridProps)
       sessions={terminalSessions}
       preLaunchSlots={preLaunchSlots}
       branches={branches}
+      claudeAvailable={claudeCliStatus?.installed ?? false}
       focusedSessionId={focusedSessionId}
       onFocusSession={handleFocusSession}
       onAddSlot={handleAddSlot}

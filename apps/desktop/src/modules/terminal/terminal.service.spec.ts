@@ -434,6 +434,104 @@ describe('TerminalService', () => {
   });
 
   // ================================================================
+  // Environment sanitization
+  // ================================================================
+  describe('environment sanitization', () => {
+    // Save and restore env vars modified during tests
+    const savedEnvVars: Record<string, string | undefined> = {};
+
+    function setTestEnv(key: string, value: string): void {
+      if (!(key in savedEnvVars)) {
+        savedEnvVars[key] = process.env[key];
+      }
+      process.env[key] = value;
+    }
+
+    afterEach(() => {
+      for (const [key, value] of Object.entries(savedEnvVars)) {
+        if (value === undefined) {
+          delete process.env[key];
+        } else {
+          process.env[key] = value;
+        }
+      }
+      // Clear saved vars for next test
+      for (const key of Object.keys(savedEnvVars)) {
+        delete savedEnvVars[key];
+      }
+    });
+
+    it('should not pass ELECTRON_* variables to spawned process', () => {
+      setTestEnv('ELECTRON_RUN_AS_NODE', '1');
+      setTestEnv('ELECTRON_NO_ASAR', '1');
+
+      const pty = require('node-pty');
+      service.spawnCommand('bash', [], '/home');
+
+      const spawnCall = pty.spawn.mock.calls[pty.spawn.mock.calls.length - 1];
+      const env = spawnCall[2].env;
+      expect(env).not.toHaveProperty('ELECTRON_RUN_AS_NODE');
+      expect(env).not.toHaveProperty('ELECTRON_NO_ASAR');
+    });
+
+    it('should not pass NODE_OPTIONS to spawned process', () => {
+      setTestEnv('NODE_OPTIONS', '--inspect');
+
+      const pty = require('node-pty');
+      service.spawnCommand('bash', [], '/home');
+
+      const spawnCall = pty.spawn.mock.calls[pty.spawn.mock.calls.length - 1];
+      const env = spawnCall[2].env;
+      expect(env).not.toHaveProperty('NODE_OPTIONS');
+    });
+
+    it('should not pass secret-pattern variables to spawned process', () => {
+      setTestEnv('MY_SECRET_KEY', 'foo');
+      setTestEnv('GITHUB_TOKEN', 'bar');
+      setTestEnv('DB_PASSWORD', 'baz');
+      setTestEnv('AWS_API_KEY', 'qux');
+
+      const pty = require('node-pty');
+      service.spawnCommand('bash', [], '/home');
+
+      const spawnCall = pty.spawn.mock.calls[pty.spawn.mock.calls.length - 1];
+      const env = spawnCall[2].env;
+      expect(env).not.toHaveProperty('MY_SECRET_KEY');
+      expect(env).not.toHaveProperty('GITHUB_TOKEN');
+      expect(env).not.toHaveProperty('DB_PASSWORD');
+      expect(env).not.toHaveProperty('AWS_API_KEY');
+    });
+
+    it('should pass allowlisted variables to spawned process', () => {
+      setTestEnv('HOME', '/home/test');
+      setTestEnv('PATH', '/usr/bin:/bin');
+      setTestEnv('SHELL', '/bin/bash');
+
+      const pty = require('node-pty');
+      service.spawnCommand('bash', [], '/home');
+
+      const spawnCall = pty.spawn.mock.calls[pty.spawn.mock.calls.length - 1];
+      const env = spawnCall[2].env;
+      expect(env.HOME).toBe('/home/test');
+      expect(env.PATH).toBe('/usr/bin:/bin');
+      expect(env.SHELL).toBe('/bin/bash');
+    });
+
+    it('should pass caller-provided env vars through (unless blocked)', () => {
+      const pty = require('node-pty');
+      service.spawnCommand('bash', [], '/home', {
+        CUSTOM_VAR: 'value',
+        MY_SECRET: 'blocked',
+      });
+
+      const spawnCall = pty.spawn.mock.calls[pty.spawn.mock.calls.length - 1];
+      const env = spawnCall[2].env;
+      expect(env.CUSTOM_VAR).toBe('value');
+      expect(env).not.toHaveProperty('MY_SECRET');
+    });
+  });
+
+  // ================================================================
   // Cross-platform behavior
   // ================================================================
   describe('cross-platform behavior', () => {

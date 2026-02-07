@@ -33,6 +33,8 @@ export interface ExtendedSessionConfig extends SessionConfig {
   needsInputPrompt?: boolean;
   /** Terminal session ID if launched */
   terminalSessionId?: number;
+  /** Timestamp of last terminal output (for health checks) */
+  lastOutputAt?: Date;
 }
 
 /**
@@ -72,6 +74,11 @@ export class SessionService {
   ) {
     // Listen for terminal close events to update session status
     this.eventEmitter.on('terminal.closed', this.handleTerminalClosed.bind(this));
+
+    // Listen for terminal output to track last output time (for health checks)
+    this.eventEmitter.on('terminal.output', (event: { sessionId: number; data: string }) => {
+      this.updateLastOutput(event.sessionId);
+    });
   }
 
   /**
@@ -169,6 +176,21 @@ export class SessionService {
   }
 
   /**
+   * Update the last output timestamp for a session (identified by terminal session ID).
+   * Used by health checks to determine output recency.
+   * @param terminalSessionId The terminal PTY session ID
+   */
+  updateLastOutput(terminalSessionId: number): void {
+    // Find the session that owns this terminal
+    for (const session of this.sessions.values()) {
+      if (session.terminalSessionId === terminalSessionId) {
+        session.lastOutputAt = new Date();
+        return;
+      }
+    }
+  }
+
+  /**
    * Assign a git branch to the session
    */
   assignBranch(
@@ -257,6 +279,28 @@ export class SessionService {
    */
   getAll(): ExtendedSessionConfig[] {
     return Array.from(this.sessions.values());
+  }
+
+  /**
+   * Get all sessions that have an active terminal (running sessions).
+   * Done/Error sessions without terminals are NOT counted.
+   */
+  getRunningSessions(): ExtendedSessionConfig[] {
+    return Array.from(this.sessions.values()).filter(
+      session =>
+        session.terminalSessionId !== undefined &&
+        this.terminalService.hasSession(session.terminalSessionId)
+    );
+  }
+
+  /**
+   * Get idle sessions that could be closed to free slots.
+   * A session is "idle" if it has an active terminal but status is 'idle' or 'needs_input'.
+   */
+  getIdleSessions(): ExtendedSessionConfig[] {
+    return this.getRunningSessions().filter(
+      session => session.status === 'idle' || session.status === 'needs_input'
+    );
   }
 
   /**

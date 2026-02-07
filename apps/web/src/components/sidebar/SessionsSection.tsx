@@ -2,10 +2,34 @@ import { useMemo } from 'react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { Terminal, Plus, AlertCircle } from 'lucide-react';
-import { useSessionStore } from '@/stores';
+import {
+  useSessionStore,
+  selectRunningSessionCount,
+  selectIsAtSessionLimit,
+  ExtendedSessionConfig,
+} from '@/stores';
 import { useWorkspaceStore, selectActiveTab } from '@/stores';
-import { StatusDot } from '@/components/shared/StatusLegend';
-import { mapSessionStatus } from '@omniscribe/shared';
+import { StatusDot, SessionStatus as UISessionStatus } from '@/components/shared/StatusLegend';
+import { mapSessionStatus, MAX_CONCURRENT_SESSIONS } from '@omniscribe/shared';
+
+/**
+ * Get the display status for a session, incorporating health level overrides.
+ * Health overrides take priority: failed -> error (red), degraded -> needsInput (yellow).
+ */
+function getSessionDisplayStatus(session: ExtendedSessionConfig): UISessionStatus {
+  if (session.health === 'failed') return 'error';
+  if (session.health === 'degraded') return 'needsInput';
+  return mapSessionStatus(session.status);
+}
+
+/**
+ * Get a tooltip describing the session's health state.
+ */
+function getHealthTooltip(session: ExtendedSessionConfig): string {
+  if (session.health === 'failed') return 'Failed: terminal process lost';
+  if (session.health === 'degraded') return 'Degraded: no output for 5+ minutes';
+  return 'Healthy';
+}
 
 interface SessionsSectionProps {
   className?: string;
@@ -20,6 +44,8 @@ export function SessionsSection({ className, onSessionClick, onNewSession }: Ses
   const allSessions = useSessionStore(state => state.sessions);
   const isLoading = useSessionStore(state => state.isLoading);
   const error = useSessionStore(state => state.error);
+  const runningCount = useSessionStore(selectRunningSessionCount);
+  const isAtLimit = useSessionStore(selectIsAtSessionLimit);
 
   // Memoize filtered sessions to avoid creating new arrays on every render
   const sessions = useMemo(() => {
@@ -43,7 +69,7 @@ export function SessionsSection({ className, onSessionClick, onNewSession }: Ses
   );
 
   return (
-    <div className={twMerge(clsx('space-y-2', className))}>
+    <div data-testid="sessions-section" className={twMerge(clsx('space-y-2', className))}>
       {/* Header with count and new button */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -55,12 +81,18 @@ export function SessionsSection({ className, onSessionClick, onNewSession }: Ses
         {onNewSession && (
           <button
             onClick={onNewSession}
+            disabled={isAtLimit}
             className={clsx(
               'p-1 rounded transition-colors',
-              'hover:bg-muted',
-              'text-muted-foreground hover:text-foreground-secondary'
+              isAtLimit
+                ? 'opacity-50 cursor-not-allowed text-muted-foreground'
+                : 'hover:bg-muted text-muted-foreground hover:text-foreground-secondary'
             )}
-            title="New Session"
+            title={
+              isAtLimit
+                ? `Session limit reached (${runningCount}/${MAX_CONCURRENT_SESSIONS}). Close a session to start a new one.`
+                : 'New Session'
+            }
           >
             <Plus size={14} />
           </button>
@@ -98,7 +130,10 @@ export function SessionsSection({ className, onSessionClick, onNewSession }: Ses
                 'focus:outline-none focus:ring-1 focus:ring-primary'
               )}
             >
-              <StatusDot status={mapSessionStatus(session.status)} />
+              <StatusDot
+                status={getSessionDisplayStatus(session)}
+                title={getHealthTooltip(session)}
+              />
               <Terminal size={12} className="text-muted-foreground flex-shrink-0" />
               <div className="min-w-0 flex-1">
                 <div className="text-xs text-foreground-secondary truncate">{session.name}</div>

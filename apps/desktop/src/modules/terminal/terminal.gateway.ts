@@ -8,8 +8,11 @@ import {
   OnGatewayConnection,
   OnGatewayDisconnect,
 } from '@nestjs/websockets';
+import { UseGuards } from '@nestjs/common';
+import { SkipThrottle } from '@nestjs/throttler';
 import { Server, Socket } from 'socket.io';
 import { OnEvent } from '@nestjs/event-emitter';
+import { WsThrottlerGuard } from '../shared/ws-throttler.guard';
 import { TerminalService } from './terminal.service';
 import {
   TerminalSpawnPayload,
@@ -26,6 +29,10 @@ import { CORS_CONFIG } from '../shared/cors.config';
 
 const MAX_INPUT_SIZE = 1_048_576; // 1MB
 
+// Backpressure constants
+const HIGH_WATER_MARK = 16; // Pause PTY after this many undelivered packets
+const PAUSE_SAFETY_TIMEOUT_MS = 10_000; // Force-resume after 10s to prevent deadlock
+
 interface TerminalOutputEvent {
   sessionId: number;
   data: string;
@@ -37,6 +44,7 @@ interface TerminalClosedEvent {
   signal?: number;
 }
 
+@UseGuards(WsThrottlerGuard)
 @WebSocketGateway({
   cors: CORS_CONFIG,
 })
@@ -51,6 +59,11 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
   private static clientSessions = new Map<string, Set<number>>();
   private static connectedClients = new Map<string, Socket>();
 
+  // Backpressure tracking (per-terminal, independent of each other)
+  private static pendingWritesMap = new Map<number, number>();
+  private static pausedTerminalsSet = new Set<number>();
+  private static pauseTimeoutsMap = new Map<number, NodeJS.Timeout>();
+
   constructor(private readonly terminalService: TerminalService) {}
 
   // Getters for the static Maps (for convenience)
@@ -60,6 +73,18 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
 
   private get connectedClients(): Map<string, Socket> {
     return TerminalGateway.connectedClients;
+  }
+
+  private get pendingWrites(): Map<number, number> {
+    return TerminalGateway.pendingWritesMap;
+  }
+
+  private get pausedTerminals(): Set<number> {
+    return TerminalGateway.pausedTerminalsSet;
+  }
+
+  private get pauseTimeouts(): Map<number, NodeJS.Timeout> {
+    return TerminalGateway.pauseTimeoutsMap;
   }
 
   afterInit(): void {
@@ -74,6 +99,19 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
       this.clientSessions.set(client.id, new Set());
     }
     this.connectedClients.set(client.id, client);
+
+    // Register drain listener for backpressure relief.
+    // engine.io fires 'drain' when the write buffer is flushed.
+    client.conn.on('drain', () => {
+      // Single-client assumption: Omniscribe is a single-user desktop app with
+      // one renderer process connecting via one socket. Therefore, when this
+      // client's write buffer drains, it is safe to resume all paused terminals
+      // unconditionally -- they all belong to this single client.
+      for (const sessionId of this.pausedTerminals) {
+        this.pendingWrites.set(sessionId, 0);
+        this.resumeTerminal(sessionId);
+      }
+    });
   }
 
   handleDisconnect(client: Socket): void {
@@ -84,6 +122,13 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
     // 2. Users may navigate away and return
     // 3. Important processes may be running in the terminal
     // Terminals are killed explicitly via terminal:kill or session:remove
+
+    // Resume any paused terminals to prevent deadlock when client disconnects
+    // while backpressure is active
+    for (const sessionId of this.pausedTerminals) {
+      this.resumeTerminal(sessionId);
+    }
+
     this.clientSessions.delete(client.id);
     this.connectedClients.delete(client.id);
   }
@@ -108,6 +153,7 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
     return { sessionId };
   }
 
+  @SkipThrottle()
   @SubscribeMessage('terminal:input')
   handleInput(
     @ConnectedSocket() _client: Socket,
@@ -154,6 +200,7 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
     return this.connectedClients.get(clientId);
   }
 
+  @SkipThrottle()
   @SubscribeMessage('terminal:resize')
   handleResize(
     @ConnectedSocket() _client: Socket,
@@ -196,6 +243,7 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
     return { success: false, error: `Terminal session ${sessionId} not found` };
   }
 
+  @SkipThrottle()
   @SubscribeMessage('terminal:join')
   handleJoin(
     @ConnectedSocket() client: Socket,
@@ -232,17 +280,25 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
     // Prefer using the server if available
     if (this.server) {
       this.server.to(room).emit('terminal:output', payload);
-      return;
-    }
-
-    // Fallback: emit directly to clients that own this session
-    for (const [clientId, sessions] of this.clientSessions.entries()) {
-      if (sessions.has(event.sessionId)) {
-        const client = this.connectedClients.get(clientId);
-        if (client) {
-          client.emit('terminal:output', payload);
+    } else {
+      // Fallback: emit directly to clients that own this session
+      for (const [clientId, sessions] of this.clientSessions.entries()) {
+        if (sessions.has(event.sessionId)) {
+          const client = this.connectedClients.get(clientId);
+          if (client) {
+            client.emit('terminal:output', payload);
+          }
         }
       }
+    }
+
+    // Track pending writes for backpressure management
+    const pending = (this.pendingWrites.get(event.sessionId) ?? 0) + 1;
+    this.pendingWrites.set(event.sessionId, pending);
+
+    // Check if backpressure threshold exceeded
+    if (pending >= HIGH_WATER_MARK && !this.pausedTerminals.has(event.sessionId)) {
+      this.pauseTerminal(event.sessionId);
     }
   }
 
@@ -254,6 +310,9 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
       exitCode: event.exitCode,
       signal: event.signal,
     };
+
+    // Clean up backpressure state for closed terminal
+    this.cleanupBackpressure(event.sessionId);
 
     // Prefer using the server if available
     if (this.server) {
@@ -269,6 +328,99 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
           client.emit('terminal:closed', payload);
         }
       }
+    }
+  }
+
+  /**
+   * Handle cancel output request (sends SIGINT to terminal process)
+   */
+  @SubscribeMessage('terminal:cancel')
+  handleCancel(
+    @ConnectedSocket() _client: Socket,
+    @MessageBody() payload: { sessionId: number }
+  ): { success: boolean } {
+    const { sessionId } = payload;
+
+    if (!this.terminalService.hasSession(sessionId)) {
+      return { success: false };
+    }
+
+    // Send Ctrl+C (SIGINT) to the process
+    this.terminalService.write(sessionId, '\x03');
+
+    // Clear backpressure state if paused
+    if (this.pausedTerminals.has(sessionId)) {
+      this.resumeTerminal(sessionId);
+    }
+
+    return { success: true };
+  }
+
+  // ============================================
+  // Backpressure Management
+  // ============================================
+
+  /**
+   * Pause a terminal due to backpressure (too many outstanding writes)
+   */
+  private pauseTerminal(sessionId: number): void {
+    this.terminalService.pause(sessionId);
+    this.pausedTerminals.add(sessionId);
+    this.logger.warn(`Backpressure activated for session ${sessionId}`);
+
+    // Emit backpressure event to the room
+    const room = `terminal:${sessionId}`;
+    if (this.server) {
+      this.server.to(room).emit('terminal:backpressure', { sessionId, paused: true });
+    }
+
+    // Safety timeout: force-resume after 10s to prevent deadlock
+    const timeout = setTimeout(() => {
+      if (this.pausedTerminals.has(sessionId)) {
+        this.logger.warn(
+          `Safety timeout: force-resuming session ${sessionId} after ${PAUSE_SAFETY_TIMEOUT_MS}ms`
+        );
+        this.resumeTerminal(sessionId);
+      }
+    }, PAUSE_SAFETY_TIMEOUT_MS);
+    this.pauseTimeouts.set(sessionId, timeout);
+  }
+
+  /**
+   * Resume a terminal after backpressure clears
+   */
+  private resumeTerminal(sessionId: number): void {
+    if (!this.pausedTerminals.has(sessionId)) return;
+
+    this.terminalService.resume(sessionId);
+    this.pausedTerminals.delete(sessionId);
+    this.pendingWrites.set(sessionId, 0);
+    this.logger.debug(`Backpressure cleared for session ${sessionId}`);
+
+    // Clear safety timeout
+    const timeout = this.pauseTimeouts.get(sessionId);
+    if (timeout) {
+      clearTimeout(timeout);
+      this.pauseTimeouts.delete(sessionId);
+    }
+
+    // Emit backpressure cleared event to the room
+    const room = `terminal:${sessionId}`;
+    if (this.server) {
+      this.server.to(room).emit('terminal:backpressure', { sessionId, paused: false });
+    }
+  }
+
+  /**
+   * Clean up all backpressure state for a terminal
+   */
+  private cleanupBackpressure(sessionId: number): void {
+    this.pausedTerminals.delete(sessionId);
+    this.pendingWrites.delete(sessionId);
+    const timeout = this.pauseTimeouts.get(sessionId);
+    if (timeout) {
+      clearTimeout(timeout);
+      this.pauseTimeouts.delete(sessionId);
     }
   }
 }

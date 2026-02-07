@@ -1,4 +1,4 @@
-import type { StoreApi } from 'zustand';
+import type { NamedSet } from 'zustand/middleware';
 import { socket } from '@/lib/socket';
 import { createLogger } from '@omniscribe/shared';
 
@@ -44,14 +44,15 @@ export const initialSocketState: SocketStoreState = {
  * Create common socket store actions
  */
 export function createSocketActions<T extends SocketStoreState>(
-  set: StoreApi<T>['setState']
+  set: NamedSet<T>,
+  storeName: string
 ): SocketStoreActions {
   return {
     setLoading: (isLoading: boolean) => {
-      set({ isLoading } as Partial<T>);
+      set({ isLoading } as Partial<T>, undefined, `${storeName}/setLoading`);
     },
     setError: (error: string | null) => {
-      set({ error } as Partial<T>);
+      set({ error } as Partial<T>, undefined, `${storeName}/setError`);
     },
   };
 }
@@ -88,7 +89,8 @@ export interface CreateListenersOptions<T extends SocketStoreState> {
  */
 export function createSocketListeners<T extends SocketStoreState>(
   get: () => T,
-  set: StoreApi<T>['setState'],
+  set: NamedSet<T>,
+  storeName: string,
   options: CreateListenersOptions<T>
 ): { initListeners: () => void; cleanupListeners: () => void } {
   const { listeners, onConnect, includeConnectionErrorHandler = true } = options;
@@ -133,11 +135,17 @@ export function createSocketListeners<T extends SocketStoreState>(
     connectHandler = () => {
       logger.info('Reconnected, clearing error');
       setError(null);
-      onConnect?.(get);
+      // Connection State Recovery: if the server successfully restored
+      // rooms and replayed buffered events, skip the manual re-fetch
+      if (socket.recovered) {
+        logger.info('Connection recovered via CSR -- skipping manual re-fetch');
+      } else {
+        onConnect?.(get);
+      }
     };
     socket.on('connect', connectHandler);
 
-    set({ listenersInitialized: true } as Partial<T>);
+    set({ listenersInitialized: true } as Partial<T>, undefined, `${storeName}/initListeners`);
   };
 
   const cleanupListeners = () => {
@@ -158,7 +166,7 @@ export function createSocketListeners<T extends SocketStoreState>(
       connectErrorHandler = null;
     }
 
-    set({ listenersInitialized: false } as Partial<T>);
+    set({ listenersInitialized: false } as Partial<T>, undefined, `${storeName}/cleanupListeners`);
   };
 
   return { initListeners, cleanupListeners };

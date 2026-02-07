@@ -1,15 +1,22 @@
 import { app, BrowserWindow } from 'electron';
 import { NestFactory } from '@nestjs/core';
 import { type INestApplication } from '@nestjs/common';
-import { IoAdapter } from '@nestjs/platform-socket.io';
+import { CustomIoAdapter } from '../modules/shared/custom-io-adapter';
 import { AppModule } from '../modules/app.module';
 import { createMainWindow } from './window';
 import { cleanupIpcHandlers } from './ipc-handlers';
-import { logger, getLogPath } from './logger';
+import { logger, getLogPath, flushLogs } from './logger';
 import { initializeAutoUpdater } from './updater';
 import { corsOriginCallback } from '../modules/shared/cors.config';
 import { NestLoggerAdapter } from '../modules/shared/nest-logger';
 import { LOCALHOST } from '@omniscribe/shared';
+
+// Allow E2E tests to isolate userData by setting ELECTRON_USER_DATA_DIR.
+// Must run before app.ready so electron-store and other userData consumers
+// see the overridden path.
+if (process.env.ELECTRON_USER_DATA_DIR) {
+  app.setPath('userData', process.env.ELECTRON_USER_DATA_DIR);
+}
 
 export let mainWindow: BrowserWindow | null = null;
 let nestApp: INestApplication | null = null;
@@ -25,7 +32,7 @@ async function bootstrapNestApp(): Promise<void> {
     nestApp.flushLogs();
     logger.info('NestJS application created');
 
-    nestApp.useWebSocketAdapter(new IoAdapter(nestApp));
+    nestApp.useWebSocketAdapter(new CustomIoAdapter(nestApp));
 
     nestApp.enableCors({
       origin: corsOriginCallback,
@@ -52,6 +59,17 @@ async function shutdownNestApp(): Promise<void> {
 }
 
 async function bootstrap(): Promise<void> {
+  // Log security posture at startup
+  const isPackaged = app.isPackaged;
+  logger.info(`[security] App packaged: ${isPackaged}`);
+  if (isPackaged) {
+    logger.info(
+      '[security] Electron fuses configured at build time (RunAsNode=off, NodeCLIInspect=off, NodeOptions=off)'
+    );
+  } else {
+    logger.info('[security] Running in development mode -- fuses not applied (build-time only)');
+  }
+
   await bootstrapNestApp();
   mainWindow = await createMainWindow();
   initializeAutoUpdater(mainWindow, process.env.NODE_ENV === 'development');
@@ -100,11 +118,19 @@ app.on('before-quit', event => {
   }
 
   // Prevent quit, do async cleanup, then quit again
-  if (nestApp) {
-    event.preventDefault();
-    isShuttingDown = true;
-    shutdownNestApp().finally(() => {
-      app.quit();
-    });
-  }
+  event.preventDefault();
+  isShuttingDown = true;
+
+  (async () => {
+    try {
+      await flushLogs();
+    } catch {
+      // Log flush failure is non-critical
+    }
+    if (nestApp) {
+      await shutdownNestApp();
+    }
+  })().finally(() => {
+    app.quit();
+  });
 });

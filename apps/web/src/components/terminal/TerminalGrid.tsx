@@ -21,6 +21,8 @@ interface TerminalGridProps {
   preLaunchSlots: PreLaunchSlot[];
   launchingSlotIds?: Set<string>;
   branches: Branch[];
+  /** Whether Claude CLI is available (controls Claude mode option) */
+  claudeAvailable?: boolean;
   quickActions?: QuickActionItem[];
   focusedSessionId: string | null;
   onFocusSession: (sessionId: string) => void;
@@ -43,6 +45,7 @@ export function TerminalGrid({
   preLaunchSlots,
   launchingSlotIds,
   branches,
+  claudeAvailable,
   quickActions = [],
   focusedSessionId,
   onFocusSession,
@@ -100,7 +103,10 @@ export function TerminalGrid({
   );
 
   return (
-    <div className={twMerge(clsx('h-full w-full flex flex-col', className))}>
+    <div
+      data-testid="terminal-grid"
+      className={twMerge(clsx('h-full w-full flex flex-col', className))}
+    >
       {/* Main grid area for active sessions */}
       <div className="flex-1 min-h-0 p-2">
         {sessionCount > 0 ? (
@@ -230,6 +236,7 @@ export function TerminalGrid({
         preLaunchSlots={preLaunchSlots}
         launchingSlotIds={launchingSlotIds}
         branches={branches}
+        claudeAvailable={claudeAvailable}
         canAddMore={canAddMore}
         onAddSlot={onAddSlot}
         onRemoveSlot={onRemoveSlot}

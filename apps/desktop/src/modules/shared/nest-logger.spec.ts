@@ -1,6 +1,11 @@
 import { createLogger } from '@omniscribe/shared';
 import { NestLoggerAdapter } from './nest-logger';
 
+// Mock the main logger module to provide fileTransport
+jest.mock('../../main/logger', () => ({
+  fileTransport: jest.fn(),
+}));
+
 // Mock createLogger from @omniscribe/shared
 jest.mock('@omniscribe/shared', () => {
   const actual = jest.requireActual('@omniscribe/shared');
@@ -44,14 +49,18 @@ describe('NestLoggerAdapter', () => {
 
       adapter.log('hello world', 'MyContext');
 
-      expect(mockedCreateLogger).toHaveBeenCalledWith('MyContext');
+      expect(mockedCreateLogger).toHaveBeenCalledWith('MyContext', {
+        fileTransport: expect.any(Function),
+      });
       expect(contextLogger.info).toHaveBeenCalledWith('hello world');
     });
 
     it('should use default "Nest" context when no context string is provided', () => {
       adapter.log('no context message');
 
-      expect(mockedCreateLogger).toHaveBeenCalledWith('Nest');
+      expect(mockedCreateLogger).toHaveBeenCalledWith('Nest', {
+        fileTransport: expect.any(Function),
+      });
       expect(defaultLogger.info).toHaveBeenCalledWith('no context message');
     });
 
@@ -61,7 +70,9 @@ describe('NestLoggerAdapter', () => {
 
       adapter.log('msg', { extra: true }, 'SomeContext');
 
-      expect(mockedCreateLogger).toHaveBeenCalledWith('SomeContext');
+      expect(mockedCreateLogger).toHaveBeenCalledWith('SomeContext', {
+        fileTransport: expect.any(Function),
+      });
       expect(contextLogger.info).toHaveBeenCalledWith('msg', { extra: true });
     });
   });
@@ -73,7 +84,9 @@ describe('NestLoggerAdapter', () => {
 
       adapter.error('bad thing happened', 'ErrorContext');
 
-      expect(mockedCreateLogger).toHaveBeenCalledWith('ErrorContext');
+      expect(mockedCreateLogger).toHaveBeenCalledWith('ErrorContext', {
+        fileTransport: expect.any(Function),
+      });
       expect(contextLogger.error).toHaveBeenCalledWith('bad thing happened');
     });
 
@@ -94,7 +107,9 @@ describe('NestLoggerAdapter', () => {
 
       adapter.warn('warning message', 'WarnContext');
 
-      expect(mockedCreateLogger).toHaveBeenCalledWith('WarnContext');
+      expect(mockedCreateLogger).toHaveBeenCalledWith('WarnContext', {
+        fileTransport: expect.any(Function),
+      });
       expect(contextLogger.warn).toHaveBeenCalledWith('warning message');
     });
   });
@@ -106,7 +121,9 @@ describe('NestLoggerAdapter', () => {
 
       adapter.debug('debug info', 'DebugContext');
 
-      expect(mockedCreateLogger).toHaveBeenCalledWith('DebugContext');
+      expect(mockedCreateLogger).toHaveBeenCalledWith('DebugContext', {
+        fileTransport: expect.any(Function),
+      });
       expect(contextLogger.debug).toHaveBeenCalledWith('debug info');
     });
   });
@@ -118,7 +135,9 @@ describe('NestLoggerAdapter', () => {
 
       adapter.verbose('verbose detail', 'VerboseContext');
 
-      expect(mockedCreateLogger).toHaveBeenCalledWith('VerboseContext');
+      expect(mockedCreateLogger).toHaveBeenCalledWith('VerboseContext', {
+        fileTransport: expect.any(Function),
+      });
       expect(contextLogger.debug).toHaveBeenCalledWith('verbose detail');
     });
   });
@@ -130,7 +149,9 @@ describe('NestLoggerAdapter', () => {
 
       adapter.fatal('fatal crash', 'FatalContext');
 
-      expect(mockedCreateLogger).toHaveBeenCalledWith('FatalContext');
+      expect(mockedCreateLogger).toHaveBeenCalledWith('FatalContext', {
+        fileTransport: expect.any(Function),
+      });
       expect(contextLogger.error).toHaveBeenCalledWith('fatal crash');
     });
   });
@@ -142,7 +163,9 @@ describe('NestLoggerAdapter', () => {
 
       adapter.log('message', 42, { key: 'val' }, 'ExtractedContext');
 
-      expect(mockedCreateLogger).toHaveBeenCalledWith('ExtractedContext');
+      expect(mockedCreateLogger).toHaveBeenCalledWith('ExtractedContext', {
+        fileTransport: expect.any(Function),
+      });
       expect(ctxLogger.info).toHaveBeenCalledWith('message', 42, { key: 'val' });
     });
 
@@ -150,14 +173,18 @@ describe('NestLoggerAdapter', () => {
       adapter.log('message', 123);
 
       // No string as last param, so context defaults to 'Nest'
-      expect(mockedCreateLogger).toHaveBeenCalledWith('Nest');
+      expect(mockedCreateLogger).toHaveBeenCalledWith('Nest', {
+        fileTransport: expect.any(Function),
+      });
       expect(defaultLogger.info).toHaveBeenCalledWith('message', 123);
     });
 
     it('should handle no optional params', () => {
       adapter.error('standalone error');
 
-      expect(mockedCreateLogger).toHaveBeenCalledWith('Nest');
+      expect(mockedCreateLogger).toHaveBeenCalledWith('Nest', {
+        fileTransport: expect.any(Function),
+      });
       expect(defaultLogger.error).toHaveBeenCalledWith('standalone error');
     });
   });
@@ -193,8 +220,12 @@ describe('NestLoggerAdapter', () => {
       adapter.log('msg a', 'ContextA');
       adapter.log('msg b', 'ContextB');
 
-      expect(mockedCreateLogger).toHaveBeenCalledWith('ContextA');
-      expect(mockedCreateLogger).toHaveBeenCalledWith('ContextB');
+      expect(mockedCreateLogger).toHaveBeenCalledWith('ContextA', {
+        fileTransport: expect.any(Function),
+      });
+      expect(mockedCreateLogger).toHaveBeenCalledWith('ContextB', {
+        fileTransport: expect.any(Function),
+      });
       expect(loggerA.info).toHaveBeenCalledWith('msg a');
       expect(loggerB.info).toHaveBeenCalledWith('msg b');
     });

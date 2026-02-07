@@ -5,6 +5,7 @@ import { useWorkspaceStore } from '@/stores/useWorkspaceStore';
 import { useGitStore } from '@/stores/useGitStore';
 import { useMcpStore } from '@/stores/useMcpStore';
 import { useUpdateStore } from '@/stores/useUpdateStore';
+import { useConnectionStore } from '@/stores/useConnectionStore';
 import { connectSocket } from '@/lib/socket';
 
 const logger = createLogger('AppInit');
@@ -12,9 +13,10 @@ const logger = createLogger('AppInit');
 /**
  * Initialize app-level socket connection and register store and updater listeners on mount.
  *
- * Establishes the socket connection, initializes listeners for session, workspace, git, and MCP stores,
- * triggers fetching of internal MCP status, and initializes IPC-based update listeners. Cleans up all
- * registered listeners when the component using this hook unmounts.
+ * Registers socket listeners for session, workspace, git, and MCP stores BEFORE establishing the
+ * socket connection, ensuring that onConnect callbacks fire on the initial connection (not just on
+ * reconnect). After connecting, triggers fetching of internal MCP status and initializes IPC-based
+ * update listeners. Cleans up all registered listeners when the component using this hook unmounts.
  */
 export function useAppInitialization(): void {
   // Session store
@@ -34,6 +36,10 @@ export function useAppInitialization(): void {
   const cleanupMcpListeners = useMcpStore(state => state.cleanupListeners);
   const fetchInternalMcpStatus = useMcpStore(state => state.fetchInternalMcpStatus);
 
+  // Connection store (global socket connection state)
+  const initConnectionListeners = useConnectionStore(state => state.initListeners);
+  const cleanupConnectionListeners = useConnectionStore(state => state.cleanupListeners);
+
   // Update store (uses IPC, not socket — init separately)
   const initUpdateListeners = useUpdateStore(state => state.initListeners);
 
@@ -44,15 +50,18 @@ export function useAppInitialization(): void {
     const init = async () => {
       try {
         logger.info('Initializing app...');
-        await connectSocket();
-        if (!mounted) return;
-        logger.info('Socket connected');
+        // Register all socket listeners BEFORE connecting so that onConnect
+        // callbacks fire on the initial connection, not just on reconnect
+        initConnectionListeners();
         initSessionListeners();
         initGitListeners();
         initWorkspaceListeners();
         initMcpListeners();
-        logger.info('All listeners initialized');
-        // Fetch internal MCP status on app start
+        logger.info('All listeners registered');
+        await connectSocket();
+        if (!mounted) return;
+        logger.info('Socket connected');
+        // Fetch internal MCP status on app start (requires active connection)
         fetchInternalMcpStatus();
         // Init updater listeners (IPC-based, not socket)
         cleanupUpdateListeners = initUpdateListeners();
@@ -66,6 +75,7 @@ export function useAppInitialization(): void {
     return () => {
       mounted = false;
       logger.debug('Cleaning up listeners');
+      cleanupConnectionListeners();
       cleanupSessionListeners();
       cleanupGitListeners();
       cleanupWorkspaceListeners();
@@ -73,6 +83,8 @@ export function useAppInitialization(): void {
       cleanupUpdateListeners?.();
     };
   }, [
+    initConnectionListeners,
+    cleanupConnectionListeners,
     initSessionListeners,
     cleanupSessionListeners,
     initGitListeners,

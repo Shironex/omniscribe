@@ -222,6 +222,77 @@ describe('SessionService', () => {
     });
   });
 
+  describe('getRunningSessions', () => {
+    it('should return sessions with active terminals', async () => {
+      const session1 = service.create('claude', '/project');
+      const session2 = service.create('claude', '/project');
+      service.create('claude', '/project'); // session3 - not launched
+
+      await service.launchSession(session1.id, '/project', '/worktree', 'claude');
+      await service.launchSession(session2.id, '/project', '/worktree', 'claude');
+
+      const running = service.getRunningSessions();
+
+      expect(running).toHaveLength(2);
+      expect(running.map(s => s.id)).toContain(session1.id);
+      expect(running.map(s => s.id)).toContain(session2.id);
+    });
+
+    it('should not count sessions without active terminals', () => {
+      service.create('claude', '/project'); // not launched
+
+      const running = service.getRunningSessions();
+
+      expect(running).toHaveLength(0);
+    });
+
+    it('should not count sessions whose terminal no longer exists', async () => {
+      const session = service.create('claude', '/project');
+      await service.launchSession(session.id, '/project', '/worktree', 'claude');
+
+      // Terminal no longer exists
+      terminalService.hasSession.mockReturnValue(false);
+
+      const running = service.getRunningSessions();
+
+      expect(running).toHaveLength(0);
+    });
+  });
+
+  describe('getIdleSessions', () => {
+    it('should return running sessions with idle or needs_input status', async () => {
+      const session1 = service.create('claude', '/project');
+      const session2 = service.create('claude', '/project');
+      const session3 = service.create('claude', '/project');
+
+      await service.launchSession(session1.id, '/project', '/worktree', 'claude');
+      await service.launchSession(session2.id, '/project', '/worktree', 'claude');
+      await service.launchSession(session3.id, '/project', '/worktree', 'claude');
+
+      // session1 is idle (default after launch)
+      // session2 is working
+      service.updateStatus(session2.id, 'working', 'Processing...');
+      // session3 needs input
+      service.updateStatus(session3.id, 'needs_input', 'Waiting for input', true);
+
+      const idle = service.getIdleSessions();
+
+      expect(idle).toHaveLength(2);
+      expect(idle.map(s => s.id)).toContain(session1.id);
+      expect(idle.map(s => s.id)).toContain(session3.id);
+    });
+
+    it('should return empty array when no idle sessions', async () => {
+      const session = service.create('claude', '/project');
+      await service.launchSession(session.id, '/project', '/worktree', 'claude');
+      service.updateStatus(session.id, 'working', 'Processing...');
+
+      const idle = service.getIdleSessions();
+
+      expect(idle).toHaveLength(0);
+    });
+  });
+
   describe('launchSession', () => {
     it('should discover MCP servers and spawn a terminal', async () => {
       const session = service.create('claude', '/project');
