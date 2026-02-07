@@ -10,6 +10,7 @@ All notable changes to this project will be documented in this file.
 - **Default AI mode not persisting across restart** — Backend electron-store defaults were missing `session: DEFAULT_SESSION_SETTINGS`, causing the preference to be lost on restart. Also fixed a race condition in `usePreLaunchSlots` where `claudeCliStatus === null` (still loading) incorrectly forced plain mode.
 - **No UI feedback on rate limiting** — Added `ws:throttled` event emission from `WsThrottlerGuard` to the client, with toast notification via the connection store.
 - **Deep-merge preferences on upgrade** — Existing user preferences are now preserved when new defaults are added, instead of being overwritten.
+- **Early Claude CLI detection** — Detect CLI installation status at startup so pre-launch slots default to the correct AI mode immediately.
 
 ## 0.3.0 (2026-02-07) — _Upgrade to 0.3.1_
 
