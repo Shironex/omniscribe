@@ -40,8 +40,12 @@ export async function launchApp(): Promise<AppFixture> {
 
   const entryPoint = path.join(__dirname, '../../dist/main/index.js');
 
+  // Disable Chromium sandbox in CI -- GitHub Actions runners lack the kernel
+  // features (unprivileged user namespaces) required by the Chromium sandbox.
+  const isCI = !!process.env.CI;
+
   const electronApp = await electron.launch({
-    args: [entryPoint],
+    args: [entryPoint, ...(isCI ? ['--no-sandbox'] : [])],
     env: {
       ...process.env,
       NODE_ENV: 'test',
