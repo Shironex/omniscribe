@@ -5,6 +5,7 @@
 import type { ProjectTabDTO, UserPreferences } from './project-tab';
 import type { QuickAction } from './workspace';
 import type { BranchInfo, CommitInfo } from './git';
+import type { TaskItem } from './mcp';
 
 // ============================================
 // Connection Types
@@ -526,6 +527,18 @@ export interface ZombieCleanupEvent {
   sessionId: string;
   sessionName: string;
   reason: string;
+}
+
+// ============================================
+// Task Events
+// ============================================
+
+/**
+ * Event emitted when a session's task list is updated via MCP tool
+ */
+export interface SessionTasksUpdate {
+  sessionId: string;
+  tasks: TaskItem[];
 }
 
 // ============================================
