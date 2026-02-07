@@ -19,10 +19,10 @@ import {
   useSessionLifecycle,
   useAppKeyboardShortcuts,
   useQuickActionExecution,
+  useDefaultAiMode,
 } from '@/hooks';
 import { useUpdateToast } from '@/hooks/useUpdateToast';
-import { useTerminalStore, useWorkspaceStore, useSettingsStore } from '@/stores';
-import { DEFAULT_SESSION_SETTINGS } from '@omniscribe/shared';
+import { useTerminalStore, useWorkspaceStore } from '@/stores';
 
 function App() {
   useAppInitialization();
@@ -127,15 +127,8 @@ function App() {
   const [isLaunchModalOpen, setIsLaunchModalOpen] = useState(false);
   const handleOpenLaunchModal = useCallback(() => setIsLaunchModalOpen(true), []);
 
-  // Claude CLI status for modal
-  const claudeCliStatus = useSettingsStore(state => state.claudeCliStatus);
-  const claudeAvailable = claudeCliStatus?.installed ?? false;
-
   // Default AI mode for modal
-  const configuredDefaultAiMode = useWorkspaceStore(
-    state => state.preferences.session?.defaultMode ?? DEFAULT_SESSION_SETTINGS.defaultMode
-  );
-  const defaultAiMode = claudeAvailable ? configuredDefaultAiMode : 'plain';
+  const { defaultAiMode, claudeAvailable } = useDefaultAiMode();
 
   useAppKeyboardShortcuts({
     canLaunch,

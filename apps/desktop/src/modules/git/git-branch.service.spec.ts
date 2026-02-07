@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { GitBranchService } from './git-branch.service';
 import { GitBaseService } from './git-base.service';
+import type { BranchInfo } from '@omniscribe/shared';
 
 describe('GitBranchService', () => {
   let service: GitBranchService;
@@ -271,7 +272,7 @@ describe('GitBranchService', () => {
 
   describe('enrichBranchesWithTrackingInfo', () => {
     it('should enrich local branches with commit and tracking info', async () => {
-      const branches = [
+      const branches: BranchInfo[] = [
         { name: 'main', isCurrent: true, isRemote: false },
         { name: 'origin/main', isCurrent: false, isRemote: true, remote: 'origin' },
       ];
@@ -301,7 +302,7 @@ describe('GitBranchService', () => {
     });
 
     it('should handle branches with no tracking info', async () => {
-      const branches = [{ name: 'feature', isCurrent: false, isRemote: false }];
+      const branches: BranchInfo[] = [{ name: 'feature', isCurrent: false, isRemote: false }];
 
       gitBase.execGit.mockResolvedValueOnce({
         stdout: 'feature|abc1234|wip||\n',
@@ -317,7 +318,7 @@ describe('GitBranchService', () => {
     });
 
     it('should not throw when for-each-ref fails', async () => {
-      const branches = [{ name: 'main', isCurrent: true, isRemote: false }];
+      const branches: BranchInfo[] = [{ name: 'main', isCurrent: true, isRemote: false }];
 
       gitBase.execGit.mockRejectedValue(new Error('git failed'));
 

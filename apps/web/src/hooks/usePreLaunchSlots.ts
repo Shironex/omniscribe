@@ -1,10 +1,11 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
-import { createLogger, DEFAULT_SESSION_SETTINGS } from '@omniscribe/shared';
+import { createLogger } from '@omniscribe/shared';
 import type { PreLaunchSlot } from '@/components/terminal/TerminalGrid';
 import { createSession } from '@/lib/session';
 import { mapAiModeToBackend } from '@/lib/aiMode';
-import { useTerminalStore, useWorkspaceStore, useSettingsStore } from '@/stores';
+import { useTerminalStore, useSessionStore, selectRunningSessionCount } from '@/stores';
+import { useDefaultAiMode } from './useDefaultAiMode';
 import {
   getNextAvailablePrelaunchShortcut,
   PRELAUNCH_SHORTCUT_KEYS,
@@ -54,16 +55,8 @@ export function usePreLaunchSlots(
   // Track which slots are currently being launched (prevents spam clicking)
   const [launchingSlotIds, setLaunchingSlotIds] = useState<Set<string>>(new Set());
 
-  // Read Claude CLI status from settings store
-  const claudeCliStatus = useSettingsStore(state => state.claudeCliStatus);
-
-  // Read configured default AI mode from workspace preferences
-  const configuredDefaultAiMode = useWorkspaceStore(
-    state => state.preferences.session?.defaultMode ?? DEFAULT_SESSION_SETTINGS.defaultMode
-  );
-
-  // Fall back to 'plain' when CLI status unknown (null) or not installed
-  const defaultAiMode = claudeCliStatus?.installed ? configuredDefaultAiMode : 'plain';
+  // Derived default AI mode (shared with App.tsx)
+  const { defaultAiMode } = useDefaultAiMode();
 
   // Listen to add slot requests from other components (e.g., sidebar + button)
   const addSlotRequestCounter = useTerminalStore(state => state.addSlotRequestCounter);
@@ -85,7 +78,7 @@ export function usePreLaunchSlots(
       }
 
       const newSlot: PreLaunchSlot = {
-        id: `slot-${Date.now()}`,
+        id: `slot-${crypto.randomUUID()}`,
         aiMode: defaultAiMode,
         branch: currentBranch,
         shortcutKey: nextShortcut,
@@ -97,13 +90,14 @@ export function usePreLaunchSlots(
   // Batch-create N slots with shared defaults (replaces existing pre-launch slots)
   const handleBatchAddSessions = useCallback(
     (count: number, aiMode: PreLaunchSlot['aiMode'], branch: string) => {
-      const capped = Math.min(count, MAX_PRELAUNCH_SLOTS);
+      const activeSessionCount = selectRunningSessionCount(useSessionStore.getState());
+      const capped = Math.min(count, MAX_PRELAUNCH_SLOTS - activeSessionCount);
       const slots: PreLaunchSlot[] = [];
       for (let i = 0; i < capped; i++) {
         const shortcutKey = PRELAUNCH_SHORTCUT_KEYS[i];
         if (!shortcutKey) break;
         slots.push({
-          id: `slot-${Date.now()}-${i}`,
+          id: `slot-${crypto.randomUUID()}`,
           aiMode,
           branch,
           shortcutKey,

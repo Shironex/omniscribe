@@ -16,6 +16,8 @@ import { buildColumns, getLayout } from '@/lib/terminal-layout';
 import { useTerminalGridDnd } from '@/hooks/useTerminalGridDnd';
 import { useTerminalPanelResize } from '@/hooks/useTerminalPanelResize';
 
+const NOOP = () => {};
+
 interface TerminalGridProps {
   sessions: TerminalSession[];
   preLaunchSlots: PreLaunchSlot[];
@@ -247,7 +249,7 @@ export function TerminalGrid({
         claudeAvailable={claudeAvailable}
         canAddMore={canAddMore}
         onAddSlot={onAddSlot}
-        onOpenLaunchModal={onOpenLaunchModal ?? (() => {})}
+        onOpenLaunchModal={onOpenLaunchModal ?? NOOP}
         onRemoveSlot={onRemoveSlot}
         onUpdateSlot={onUpdateSlot}
         onLaunch={onLaunch}

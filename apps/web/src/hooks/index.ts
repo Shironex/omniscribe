@@ -21,4 +21,5 @@ export { useAppKeyboardShortcuts } from './useAppKeyboardShortcuts';
 export { useQuickActionExecution } from './useQuickActionExecution';
 
 export { useClaudeCliStatus } from './useClaudeCliStatus';
+export { useDefaultAiMode } from './useDefaultAiMode';
 export { useSidebarResize } from './useSidebarResize';

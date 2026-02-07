@@ -37,12 +37,10 @@ test.describe('Session Limit (12 cap)', () => {
     // Add 12 pre-launch slots via keyboard shortcut
     for (let i = 0; i < 12; i++) {
       await page.keyboard.press('n');
-      if (i < 11) {
-        // After press, wait for the slot to appear before pressing again
-        await expect(page.locator('[data-testid="setup-sessions-button"]')).toBeVisible({
-          timeout: 5_000,
-        });
-      }
+      // Wait for the (i+1)-th slot to appear before pressing again
+      await expect(page.locator('[data-testid="ai-mode-label"]')).toHaveCount(i + 1, {
+        timeout: 5_000,
+      });
     }
 
     // Verify the first slot defaults to plain mode (Claude CLI not available in test env)

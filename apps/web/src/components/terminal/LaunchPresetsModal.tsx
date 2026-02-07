@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { clsx } from 'clsx';
 import { Terminal, ChevronDown, X } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { BranchAutocomplete } from '@/components/shared/BranchAutocomplete';
 import { ClaudeIcon } from '@/components/shared/ClaudeIcon';
+import { useClickOutside } from '@/hooks/useClickOutside';
 import { GridPresetCard } from './GridPresetCard';
 import type { AIMode } from './PreLaunchBar';
 import type { Branch } from '@/components/shared/BranchSelector';
@@ -36,23 +37,31 @@ export function LaunchPresetsModal({
   const [branch, setBranch] = useState(currentBranch);
   const [isAIModeOpen, setIsAIModeOpen] = useState(false);
 
+  const prevOpenRef = useRef(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
   const maxNewSlots = 12 - existingSessionCount;
 
-  // Reset state when opening
+  // Reset state only on the open transition (false → true)
   useEffect(() => {
-    if (open) {
+    if (open && !prevOpenRef.current) {
       setSelectedCount(null);
       setAiMode(defaultAiMode);
       setBranch(currentBranch);
       setIsAIModeOpen(false);
     }
+    prevOpenRef.current = open;
   }, [open, defaultAiMode, currentBranch]);
 
-  // Handle escape key
+  // Handle escape key and body scroll lock
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && open) {
-        onOpenChange(false);
+        if (isAIModeOpen) {
+          setIsAIModeOpen(false);
+        } else {
+          onOpenChange(false);
+        }
       }
     };
 
@@ -65,7 +74,12 @@ export function LaunchPresetsModal({
       document.removeEventListener('keydown', handleKeyDown);
       document.body.style.overflow = '';
     };
-  }, [open, onOpenChange]);
+  }, [open, onOpenChange, isAIModeOpen]);
+
+  // Close AI mode dropdown on click outside
+  useClickOutside(dropdownRef, () => {
+    if (isAIModeOpen) setIsAIModeOpen(false);
+  });
 
   const handleCreate = () => {
     if (selectedCount === null) return;
@@ -80,7 +94,13 @@ export function LaunchPresetsModal({
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        role="button"
+        tabIndex={-1}
+        aria-label="Close modal"
         onClick={() => onOpenChange(false)}
+        onKeyDown={e => {
+          if (e.key === 'Enter' || e.key === ' ') onOpenChange(false);
+        }}
       />
 
       {/* Modal */}
@@ -105,6 +125,7 @@ export function LaunchPresetsModal({
             <p className="text-sm text-muted-foreground">Choose a layout and configure defaults</p>
           </div>
           <button
+            type="button"
             onClick={() => onOpenChange(false)}
             className="p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
             aria-label="Close"
@@ -139,7 +160,7 @@ export function LaunchPresetsModal({
 
             <div className="flex items-center gap-3">
               {/* AI Mode selector */}
-              <div className="relative">
+              <div ref={dropdownRef} className="relative">
                 <button
                   type="button"
                   onClick={() => setIsAIModeOpen(!isAIModeOpen)}
