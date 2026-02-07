@@ -33,6 +33,8 @@ export interface ExtendedSessionConfig extends SessionConfig {
   terminalSessionId?: number;
   /** Health level from periodic health checks */
   health?: HealthLevel;
+  /** Whether session was launched with skip-permissions mode */
+  skipPermissions?: boolean;
 }
 
 /**

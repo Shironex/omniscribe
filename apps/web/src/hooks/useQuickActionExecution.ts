@@ -56,7 +56,7 @@ export function useQuickActionExecution(
       }
 
       if (command) {
-        const suffix = executionMode === 'execute' ? '\n' : '';
+        const suffix = executionMode === 'execute' ? '\r' : '';
         writeToTerminal(session.terminalSessionId, command + suffix);
       }
     },
