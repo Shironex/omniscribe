@@ -28,6 +28,8 @@ export interface TerminalSession {
   terminalSessionId?: number;
   /** Git worktree path if session is using a worktree */
   worktreePath?: string;
+  /** Whether session was launched with skip-permissions mode */
+  skipPermissions?: boolean;
 }
 
 interface TerminalHeaderProps {
@@ -106,11 +108,13 @@ export function TerminalHeader({
 
       {/* Right section */}
       <div className="flex items-center gap-0.5 shrink-0">
-        {onQuickAction && quickActions.length > 0 && (
+        {quickActions.length > 0 && (
           <div className="relative" ref={quickActionsRef}>
             <QuickActionsDropdown
               quickActions={quickActions}
               isOpen={quickActionsOpen}
+              disabled={session.aiMode === 'plain'}
+              disabledTooltip="Quick actions are available in AI sessions only"
               onToggle={() => {
                 setQuickActionsOpen(!quickActionsOpen);
                 setMoreMenuOpen(false);
