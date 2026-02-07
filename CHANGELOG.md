@@ -2,6 +2,60 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.3.0 (2026-02-07)
+
+### Security & Hardening
+
+- **Electron sandbox & fuses** — enable sandbox on all renderers, configure Electron fuses to disable Node.js in renderer, block remote code execution
+- **Permission handlers** — deny all permission requests (camera, mic, geolocation, etc.) and block external navigation
+- **Environment variable sanitization** — allowlist + blocklist patterns prevent secrets from leaking to spawned terminal processes
+- **WebSocket rate limiting** — two-tier throttling (10/sec burst, 50/10sec sustained) on all 6 gateways via `@nestjs/throttler`
+- **Session concurrency guard** — server-side enforcement of 12-session cap with disabled UI button and toast feedback
+
+### Resilience & Recovery
+
+- **Connection State Recovery** — 30-second recovery window with automatic session state rehydration on reconnect
+- **Reconnection overlay** — visual feedback during disconnects: spinner while reconnecting, retry button on failure, brief "Reconnected" flash on success
+- **Terminal backpressure** — PTY pause/resume based on socket drain state (16KB high-water mark) with cancel button for buffered output
+- **Health check service** — 2-minute sweeps detect zombie PTY processes; three-tier health model (healthy/degraded/failed) with status dots and tooltips
+- **MCP config write serialization** — per-file mutex via `async-mutex` eliminates `.mcp.json` corruption from concurrent writes
+- **Socket listener timing fix** — `initListeners()` before `connectSocket()` ensures initial state fetch is never missed
+
+### Observability
+
+- **Structured JSON file logging** — rotating log files (10MB max, 7-day retention) with automatic cleanup
+- **Open Log Folder** — button in Settings > Diagnostics for quick access to log directory
+- **Startup security audit log** — logs sandbox status, fuse configuration, and permission handler registration on launch
+
+### State Management
+
+- **Unified terminal store** — merged `useTerminalControlStore` + `useTerminalSettingsStore` into single `useTerminalStore`
+- **Devtools middleware on all stores** — 103 named actions across 10 Zustand stores with `storeName/actionName` convention for Redux DevTools
+
+### Testing
+
+- **E2E test suite** — 10 Playwright tests with Electron launch fixture: smoke, session create/launch, 12-session cap, project tabs, reconnection overlay
+- **WebSocket integration tests** — 38 tests across all 6 gateways with real socket.io connections
+- **CI pipeline** — 7-stage pipeline: format → lint → typecheck → unit test → integration → build → E2E
+- **969 total tests** — 884 unit + 37 MCP + 38 integration + 10 E2E, all passing
+
+### UX Improvements
+
+- **CLI-aware session mode** — defaults to Plain when Claude CLI is unavailable; disables Claude option with tooltip explaining why
+- **Session health indicators** — colored status dots on session cards with contextual tooltips
+- **Backpressure indicator** — visual feedback when terminal output is buffered, with cancel action
+
+### Dependencies
+
+- Upgrade ESLint to v9, Vite to v7, Zod to v4
+- Bump 15+ safe/medium-risk dependencies to latest
+
+### DX (Developer Experience)
+
+- Condition-based E2E waits replacing all `waitForTimeout()` calls
+- Named devtools actions for socket store utilities
+- `data-testid` attributes on key UI components for test targeting
+
 ## 0.2.0 (2026-02-06)
 
 ### Features
