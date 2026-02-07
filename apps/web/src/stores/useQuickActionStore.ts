@@ -23,6 +23,22 @@ const DEFAULT_QUICK_ACTIONS: QuickAction[] = [
     },
   },
   {
+    id: 'git-commit-push',
+    title: 'Commit & Push',
+    description:
+      'Analyze changes, generate a conventional commit message, commit, and push to remote',
+    category: 'git',
+    icon: 'GitCommitVertical',
+    enabled: true,
+    handler: 'terminal:execute',
+    params: {
+      command:
+        'Analyze the current changes, generate a conventional commit message (feat/fix/refactor/etc.), ' +
+        'stage all changes, commit with the generated message, and push to the remote repository. ' +
+        'Handle any errors autonomously (e.g., resolve push conflicts, retry after fixing issues).',
+    },
+  },
+  {
     id: 'git-push',
     title: 'Git Push',
     description: 'Push committed changes to remote',
@@ -288,6 +304,29 @@ export const useQuickActionStore = create<QuickActionStore>()(
         partialize: state => ({
           actions: state.actions,
         }),
+        onRehydrateStorage: () => {
+          return state => {
+            if (state) {
+              // Migrate: add Commit & Push if missing from persisted actions
+              const hasCommitPush = state.actions.some(a => a.id === 'git-commit-push');
+              if (!hasCommitPush) {
+                const commitPushAction = DEFAULT_QUICK_ACTIONS.find(
+                  a => a.id === 'git-commit-push'
+                );
+                if (commitPushAction) {
+                  // Insert after git-commit if it exists, otherwise append
+                  const commitIndex = state.actions.findIndex(a => a.id === 'git-commit');
+                  if (commitIndex >= 0) {
+                    state.actions.splice(commitIndex + 1, 0, commitPushAction);
+                  } else {
+                    state.actions.push(commitPushAction);
+                  }
+                  logger.info('Migrated: added Commit & Push quick action');
+                }
+              }
+            }
+          };
+        },
       }
     ),
     { name: 'quick-actions' }
