@@ -41,10 +41,34 @@ export function createServer(): {
   const config = loadEnvironmentConfig();
   const httpClient = createHttpClient(config, logger);
 
-  const server = new McpServer({
-    name: 'omniscribe',
-    version: VERSION,
-  });
+  const server = new McpServer(
+    {
+      name: 'omniscribe',
+      version: VERSION,
+    },
+    {
+      instructions: [
+        'Omniscribe is the desktop app hosting your terminal session.',
+        '',
+        'You MUST use these tools proactively throughout your work:',
+        '',
+        '1. **omniscribe_status** — Call whenever your state changes:',
+        '   - "working" when you start processing a request',
+        '   - "needs_input" when you need user clarification (include a prompt)',
+        '   - "finished" when you complete a task',
+        '   - "error" if something goes wrong',
+        '',
+        '2. **omniscribe_tasks** — Call whenever your task list changes:',
+        '   - When you create a plan with multiple steps, report all tasks immediately',
+        '   - Update the full task list as you start, complete, or modify tasks',
+        '   - Always send the complete current snapshot (it replaces the previous list)',
+        '   - Each task needs: id (unique string), subject (brief title), status (pending/in_progress/completed)',
+        '',
+        'These tools keep the Omniscribe UI in sync with your progress.',
+        'Call them frequently — at minimum at the start and end of every user request.',
+      ].join('\n'),
+    }
+  );
 
   // Register all tools
   registerTools(server, {
