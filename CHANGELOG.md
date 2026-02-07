@@ -2,7 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
-## 0.3.0 (2026-02-07)
+## 0.3.1 (2026-02-07)
+
+### Bug Fixes
+
+- **Rate limiting too aggressive** — WebSocket throttle limits (10/s, 50/10s) caused `Too Many Requests` errors during normal desktop usage. Increased to 100/s and 500/10s, and added `@SkipThrottle()` to core session/workspace handlers since this is a single-user desktop app.
+- **Default AI mode not persisting across restart** — Backend electron-store defaults were missing `session: DEFAULT_SESSION_SETTINGS`, causing the preference to be lost on restart. Also fixed a race condition in `usePreLaunchSlots` where `claudeCliStatus === null` (still loading) incorrectly forced plain mode.
+- **No UI feedback on rate limiting** — Added `ws:throttled` event emission from `WsThrottlerGuard` to the client, with toast notification via the connection store.
+- **Deep-merge preferences on upgrade** — Existing user preferences are now preserved when new defaults are added, instead of being overwritten.
+
+## 0.3.0 (2026-02-07) — _Upgrade to 0.3.1_
 
 ### Security & Hardening
 
