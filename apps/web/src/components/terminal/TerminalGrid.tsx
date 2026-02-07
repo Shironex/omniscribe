@@ -1,12 +1,13 @@
 import React, { useMemo } from 'react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { DndContext, closestCenter } from '@dnd-kit/core';
+import { DndContext, DragOverlay, closestCenter } from '@dnd-kit/core';
 import { SortableContext, rectSwappingStrategy } from '@dnd-kit/sortable';
 import { PanelGroup, Panel, PanelResizeHandle } from 'react-resizable-panels';
 import { SortableTerminalWrapper } from './SortableTerminalWrapper';
 import { TerminalCard } from './TerminalCard';
 import type { QuickActionItem } from './TerminalCard';
+import { TerminalHeader } from './TerminalHeader';
 import type { TerminalSession } from './TerminalHeader';
 import { PreLaunchSection } from './PreLaunchSection';
 import type { PreLaunchSlot } from './PreLaunchBar';
@@ -79,7 +80,9 @@ export function TerminalGrid({
       .filter((sessionId): sessionId is string => Boolean(sessionId));
   }, [columns, layout.rows, sessions, useRowPrimaryLayout]);
 
-  const { sensors, handleDragEnd, dispatchRefitAll } = useTerminalGridDnd(onReorderSessions);
+  const { sensors, activeId, handleDragStart, handleDragEnd, handleDragCancel, dispatchRefitAll } =
+    useTerminalGridDnd(onReorderSessions);
+  const activeSession = activeId ? sessions.find(s => s.id === activeId) : null;
   const { handlePanelResize } = useTerminalPanelResize(dispatchRefitAll);
 
   // Empty state
@@ -97,7 +100,7 @@ export function TerminalGrid({
   const canAddMore = sessionCount + preLaunchSlots.length < 12;
 
   const renderTerminalCard = (session: TerminalSession) => (
-    <SortableTerminalWrapper id={session.id}>
+    <SortableTerminalWrapper id={session.id} sessionCount={sessionCount}>
       <TerminalCard
         session={session}
         quickActions={quickActions}
@@ -123,7 +126,9 @@ export function TerminalGrid({
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
+            onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
+            onDragCancel={handleDragCancel}
           >
             <SortableContext items={sessionIds} strategy={rectSwappingStrategy}>
               {useRowPrimaryLayout ? (
@@ -232,6 +237,13 @@ export function TerminalGrid({
                 </PanelGroup>
               )}
             </SortableContext>
+            <DragOverlay dropAnimation={{ duration: 200, easing: 'ease' }}>
+              {activeSession ? (
+                <div className="opacity-80 shadow-lg rounded-lg border border-primary/30 bg-muted">
+                  <TerminalHeader session={activeSession} onClose={NOOP} />
+                </div>
+              ) : null}
+            </DragOverlay>
           </DndContext>
         ) : (
           /* Empty state when no sessions but have pre-launch slots */
