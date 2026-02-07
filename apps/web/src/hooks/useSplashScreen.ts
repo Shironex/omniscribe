@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { useConnectionStore } from '@/stores/useConnectionStore';
 import { useWorkspaceStore } from '@/stores/useWorkspaceStore';
 import { getPersistedTheme, isPersistedThemeDark } from '@/lib/theme-persistence';
+import { useAppVersion } from './useAppVersion';
 
 /** Minimum time the splash screen stays visible (ms) */
 const MIN_DISPLAY_MS = 1500;
@@ -47,7 +48,7 @@ export function useSplashScreen(): SplashScreenState {
   const [showSpinner, setShowSpinner] = useState(false);
   const [isDismissing, setIsDismissing] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
-  const [version, setVersion] = useState('');
+  const version = useAppVersion();
   const [isDarkTheme] = useState(() => isPersistedThemeDark(getPersistedTheme()));
 
   const hasDismissedRef = useRef(false);
@@ -93,24 +94,6 @@ export function useSplashScreen(): SplashScreenState {
       );
     }
   }, [maxTimeReached, isAppReady]);
-
-  // Fetch app version from Electron API
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        if (window.electronAPI?.app?.getVersion) {
-          const v = await window.electronAPI.app.getVersion();
-          if (!cancelled && v) setVersion(v);
-        }
-      } catch {
-        // electronAPI not available (dev mode) — ignore
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   // Status text based on current readiness signals
   const statusText = deriveStatusText(connectionStatus, isWorkspaceRestored);

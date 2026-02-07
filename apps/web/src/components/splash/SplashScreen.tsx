@@ -32,17 +32,19 @@ export function SplashScreen() {
       {/* Logo */}
       <img src="/logo.png" alt="Omniscribe" className="h-24 w-24" draggable={false} />
 
-      {/* Milestone label */}
-      <span
-        className={cn(
-          'mt-3 rounded-full px-2.5 py-0.5 text-[10px] font-medium tracking-wide uppercase select-none',
-          isDarkTheme
-            ? 'bg-indigo-500/10 text-indigo-400 ring-1 ring-indigo-500/20'
-            : 'bg-indigo-500/10 text-indigo-600 ring-1 ring-indigo-500/20'
-        )}
-      >
-        v0.4.0 milestone
-      </span>
+      {/* Version label */}
+      {version && (
+        <span
+          className={cn(
+            'mt-3 rounded-full px-2.5 py-0.5 text-[10px] font-medium tracking-wide select-none',
+            isDarkTheme
+              ? 'bg-indigo-500/10 text-indigo-400 ring-1 ring-indigo-500/20'
+              : 'bg-indigo-500/10 text-indigo-600 ring-1 ring-indigo-500/20'
+          )}
+        >
+          v{version}
+        </span>
+      )}
 
       {/* Spinner + status text container */}
       <div
@@ -62,18 +64,6 @@ export function SplashScreen() {
           {statusText}
         </p>
       </div>
-
-      {/* Version (bottom-right) */}
-      {version && (
-        <div
-          className={cn(
-            'absolute bottom-4 right-4 text-xs select-none',
-            isDarkTheme ? 'text-zinc-600' : 'text-zinc-400'
-          )}
-        >
-          v{version}
-        </div>
-      )}
     </div>
   );
 }
