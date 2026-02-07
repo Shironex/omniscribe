@@ -21,12 +21,12 @@ import { HealthModule } from './health';
       {
         name: 'short',
         ttl: 1000, // 1 second window
-        limit: 10, // max 10 requests per second
+        limit: 100, // max 100 requests per second (desktop app — single user)
       },
       {
         name: 'medium',
         ttl: 10000, // 10 second window
-        limit: 50, // max 50 requests per 10 seconds
+        limit: 500, // max 500 requests per 10 seconds
       },
     ]),
     TerminalModule,

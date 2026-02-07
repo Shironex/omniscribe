@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import type { ThrottlerRequest } from '@nestjs/throttler';
-import { createLogger } from '@omniscribe/shared';
+import { createLogger, type WsThrottledPayload } from '@omniscribe/shared';
 
 const logger = createLogger('WsThrottlerGuard');
 
@@ -33,6 +33,18 @@ export class WsThrottlerGuard extends ThrottlerGuard {
         `Rate limit exceeded for ${tracker} on event "${eventName}" ` +
           `(${totalHits}/${limit} hits, blocked for ${timeToBlockExpire}ms)`
       );
+
+      // Emit throttle error to the client so the frontend can show feedback
+      try {
+        const payload: WsThrottledPayload = {
+          event: eventName,
+          retryAfter: timeToBlockExpire,
+        };
+        client.emit('ws:throttled', payload);
+      } catch {
+        // Best-effort — don't let notification failure affect the guard
+      }
+
       await this.throwThrottlingException(context, {
         limit,
         ttl,

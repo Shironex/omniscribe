@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
-import { createLogger, type ConnectionStatus } from '@omniscribe/shared';
+import { toast } from 'sonner';
+import { createLogger, type ConnectionStatus, type WsThrottledPayload } from '@omniscribe/shared';
 import { socket } from '@/lib/socket';
 
 const logger = createLogger('ConnectionStore');
@@ -36,6 +37,7 @@ type ConnectionStore = ConnectionState & ConnectionActions;
 let connectHandler: (() => void) | null = null;
 let disconnectHandler: ((reason: string) => void) | null = null;
 let reconnectFailedHandler: (() => void) | null = null;
+let throttledHandler: ((payload: WsThrottledPayload) => void) | null = null;
 let listenersInitialized = false;
 
 // Module-level timer handle (non-serializable, should not be in Zustand state)
@@ -110,9 +112,17 @@ export const useConnectionStore = create<ConnectionStore>()(
           get().setFailed();
         };
 
+        throttledHandler = (payload: WsThrottledPayload) => {
+          logger.warn(`Rate limited on "${payload.event}" — retry in ${payload.retryAfter}ms`);
+          toast.warning('Too many requests — please wait a moment', {
+            duration: 4000,
+          });
+        };
+
         socket.on('connect', connectHandler);
         socket.on('disconnect', disconnectHandler);
         socket.on('reconnect_failed', reconnectFailedHandler);
+        socket.on('ws:throttled', throttledHandler);
 
         listenersInitialized = true;
         logger.debug('Connection listeners registered');
@@ -135,6 +145,10 @@ export const useConnectionStore = create<ConnectionStore>()(
         if (reconnectFailedHandler) {
           socket.off('reconnect_failed', reconnectFailedHandler);
           reconnectFailedHandler = null;
+        }
+        if (throttledHandler) {
+          socket.off('ws:throttled', throttledHandler);
+          throttledHandler = null;
         }
 
         listenersInitialized = false;

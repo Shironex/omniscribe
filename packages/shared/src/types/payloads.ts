@@ -555,6 +555,21 @@ export interface QuickActionsUpdatedEvent {
 }
 
 // ============================================
+// Throttle Events
+// ============================================
+
+/**
+ * Event emitted by WsThrottlerGuard when a request is rate-limited.
+ * Sent to the client so the frontend can display feedback.
+ */
+export interface WsThrottledPayload {
+  /** The socket event name that was throttled */
+  event: string;
+  /** Milliseconds until the block expires */
+  retryAfter: number;
+}
+
+// ============================================
 // GitHub Payloads
 // ============================================
 

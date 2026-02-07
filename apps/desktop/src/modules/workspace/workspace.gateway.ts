@@ -194,6 +194,7 @@ export class WorkspaceGateway implements OnGatewayInit {
   /**
    * Handle save workspace state request
    */
+  @SkipThrottle()
   @SubscribeMessage('workspace:save-state')
   handleSaveWorkspaceState(
     @MessageBody() payload: SaveStatePayload,
@@ -207,6 +208,7 @@ export class WorkspaceGateway implements OnGatewayInit {
   /**
    * Handle add tab request
    */
+  @SkipThrottle()
   @SubscribeMessage('workspace:add-tab')
   handleAddTab(
     @MessageBody() payload: AddTabPayload,
@@ -260,6 +262,7 @@ export class WorkspaceGateway implements OnGatewayInit {
   /**
    * Handle remove tab request
    */
+  @SkipThrottle()
   @SubscribeMessage('workspace:remove-tab')
   handleRemoveTab(
     @MessageBody() payload: RemoveTabPayload,
@@ -281,6 +284,7 @@ export class WorkspaceGateway implements OnGatewayInit {
   /**
    * Handle select tab request
    */
+  @SkipThrottle()
   @SubscribeMessage('workspace:select-tab')
   handleSelectTab(
     @MessageBody() payload: SelectTabPayload,
@@ -302,6 +306,7 @@ export class WorkspaceGateway implements OnGatewayInit {
   /**
    * Handle update preferences request
    */
+  @SkipThrottle()
   @SubscribeMessage('workspace:update-preference')
   handleUpdatePreference(
     @MessageBody() payload: UpdatePreferencePayload,

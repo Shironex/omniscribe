@@ -6,6 +6,7 @@ import {
   UserPreferences,
   WorkspaceStateResponse,
   DEFAULT_WORKTREE_SETTINGS,
+  DEFAULT_SESSION_SETTINGS,
   createLogger,
 } from '@omniscribe/shared';
 
@@ -69,6 +70,12 @@ const DEFAULT_QUICK_ACTIONS: QuickAction[] = [
   },
 ];
 
+const DEFAULT_PREFERENCES: UserPreferences = {
+  theme: 'dark',
+  worktree: DEFAULT_WORKTREE_SETTINGS,
+  session: DEFAULT_SESSION_SETTINGS,
+};
+
 /**
  * Workspace service for managing persistent workspace state
  */
@@ -84,10 +91,7 @@ export class WorkspaceService implements OnModuleInit {
         tabs: [],
         activeTabId: null,
         quickActions: DEFAULT_QUICK_ACTIONS,
-        preferences: {
-          theme: 'dark',
-          worktree: DEFAULT_WORKTREE_SETTINGS,
-        },
+        preferences: DEFAULT_PREFERENCES,
       },
     });
   }
@@ -115,10 +119,10 @@ export class WorkspaceService implements OnModuleInit {
     return {
       tabs: this.store.get('tabs', []),
       activeTabId: this.store.get('activeTabId', null),
-      preferences: this.store.get('preferences', {
-        theme: 'dark',
-        worktree: DEFAULT_WORKTREE_SETTINGS,
-      }),
+      preferences: {
+        ...DEFAULT_PREFERENCES,
+        ...this.store.get('preferences', DEFAULT_PREFERENCES),
+      },
       quickActions: this.store.get('quickActions', DEFAULT_QUICK_ACTIONS),
     };
   }
@@ -300,10 +304,7 @@ export class WorkspaceService implements OnModuleInit {
    * Get all preferences
    */
   getPreferences(): UserPreferences {
-    return this.store.get('preferences', {
-      theme: 'dark',
-      worktree: DEFAULT_WORKTREE_SETTINGS,
-    });
+    return { ...DEFAULT_PREFERENCES, ...this.store.get('preferences', DEFAULT_PREFERENCES) };
   }
 
   /**
