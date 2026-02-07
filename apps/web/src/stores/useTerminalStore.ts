@@ -148,13 +148,26 @@ export const useTerminalStore = create<TerminalStore>()(
           if (oldIndex === -1 || newIndex === -1) return;
 
           const newOrder = [...sessionOrder];
-          const temp = newOrder[oldIndex];
-          newOrder[oldIndex] = newOrder[newIndex];
-          newOrder[newIndex] = temp;
+          const [removed] = newOrder.splice(oldIndex, 1);
+          newOrder.splice(newIndex, 0, removed);
           set({ sessionOrder: newOrder }, undefined, 'terminal/reorderSessions');
         },
       }),
-      { name: 'omniscribe-terminal', version: 1 }
+      {
+        name: 'omniscribe-terminal',
+        version: 1,
+        partialize: state => ({
+          fontSize: state.fontSize,
+          fontFamily: state.fontFamily,
+          fontWeight: state.fontWeight,
+          lineHeight: state.lineHeight,
+          letterSpacing: state.letterSpacing,
+          cursorStyle: state.cursorStyle,
+          cursorBlink: state.cursorBlink,
+          scrollback: state.scrollback,
+          terminalThemeName: state.terminalThemeName,
+        }),
+      }
     ),
     { name: 'terminal' }
   )

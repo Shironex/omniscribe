@@ -23,7 +23,7 @@ createRoot(rootElement).render(
 
 // Expose stores on window for E2E testing.
 // Allows Playwright to open projects, check connection state, etc.
-if (typeof window !== 'undefined') {
+if (import.meta.env.DEV || import.meta.env.MODE === 'test') {
   (window as unknown as Record<string, unknown>).__testStores = {
     workspace: useWorkspaceStore,
     connection: useConnectionStore,

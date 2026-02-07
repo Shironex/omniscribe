@@ -108,8 +108,9 @@ jobs:
         run: pnpm build
 
       - name: Install Electron system dependencies
-        run: npx playwright install --with-deps chromium
-        working-directory: apps/desktop
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-0 libgbm1 libnss3 libxss1 libasound2t64 libatk-bridge2.0-0 libdrm2
 
       - name: Run E2E tests
         run: xvfb-run --auto-servernum -- pnpm --filter @omniscribe/desktop test:e2e

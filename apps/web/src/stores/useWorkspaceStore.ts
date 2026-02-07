@@ -250,6 +250,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
 
         selectTab: (tabId: string) => {
           logger.debug('selectTab', tabId);
+          const previousTabId = get().activeTabId;
           // Optimistic update: set activeTabId immediately to prevent race conditions
           // This ensures activeTab computed value is accurate before socket response
           set({ activeTabId: tabId }, undefined, 'workspace/selectTabOptimistic');
@@ -265,9 +266,9 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
                 'workspace/selectTab'
               );
             } else {
-              // Rollback on failure - restore previous state
-              // The tabs array still has the correct state
+              // Rollback on failure - restore previous active tab
               logger.warn('selectTab rollback for', tabId);
+              set({ activeTabId: previousTabId }, undefined, 'workspace/selectTabRollback');
             }
           });
         },

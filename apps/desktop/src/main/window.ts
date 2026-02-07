@@ -46,6 +46,17 @@ function setupContentSecurityPolicy(isDev: boolean): void {
   });
 }
 
+const ALLOWED_EXTERNAL_PROTOCOLS = ['http:', 'https:'];
+
+function isExternalUrlAllowed(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return ALLOWED_EXTERNAL_PROTOCOLS.includes(parsed.protocol);
+  } catch {
+    return false;
+  }
+}
+
 export async function createMainWindow(): Promise<BrowserWindow> {
   const isDev = process.env.NODE_ENV === 'development';
 
@@ -88,8 +99,12 @@ export async function createMainWindow(): Promise<BrowserWindow> {
 
   // Block all new window creation, open external links in browser
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    logger.info(`[security] Blocked new window creation, opening in browser: ${url}`);
-    shell.openExternal(url);
+    if (isExternalUrlAllowed(url)) {
+      logger.info(`[security] Blocked new window creation, opening in browser: ${url}`);
+      shell.openExternal(url);
+    } else {
+      logger.warn(`[security] Blocked opening URL with disallowed protocol: ${url}`);
+    }
     return { action: 'deny' };
   });
 
@@ -105,8 +120,12 @@ export async function createMainWindow(): Promise<BrowserWindow> {
     const isAllowed = allowedOrigins.some(origin => url.startsWith(origin));
     if (!isAllowed) {
       event.preventDefault();
-      logger.info(`[security] Blocked navigation to external URL, opening in browser: ${url}`);
-      shell.openExternal(url);
+      if (isExternalUrlAllowed(url)) {
+        logger.info(`[security] Blocked navigation to external URL, opening in browser: ${url}`);
+        shell.openExternal(url);
+      } else {
+        logger.warn(`[security] Blocked navigation to URL with disallowed protocol: ${url}`);
+      }
     }
   });
 
