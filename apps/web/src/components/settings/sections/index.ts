@@ -5,4 +5,5 @@ export { McpSection } from './McpSection';
 export { GeneralSection } from './GeneralSection';
 export { WorktreesSection } from './WorktreesSection';
 export { SessionsSection } from './SessionsSection';
+export { QuickActionsSection } from './QuickActionsSection';
 export { TerminalSection } from './TerminalSection';
