@@ -8,12 +8,12 @@ import { loadEnvironmentConfig, isConfigured } from './config/index.js';
 import { createHttpClient } from './http/index.js';
 import { registerTools } from './tools/index.js';
 import { logger } from './utils/index.js';
+import { readFileSync } from 'fs';
+import { resolve } from 'path';
 
 // __VERSION__ is injected by esbuild in production builds.
 // In dev (tsc), it's not defined, so we fall back to package.json.
 declare const __VERSION__: string | undefined;
-import { readFileSync } from 'fs';
-import { resolve } from 'path';
 
 function getVersion(): string {
   if (typeof __VERSION__ !== 'undefined') return __VERSION__;
@@ -23,7 +23,8 @@ function getVersion(): string {
     const distDir = resolve(process.argv[1], '..');
     const pkg = JSON.parse(readFileSync(resolve(distDir, '..', 'package.json'), 'utf-8'));
     return pkg.version ?? '0.0.0-dev';
-  } catch {
+  } catch (error) {
+    logger.warn('Failed to read version from package.json:', error);
     return '0.0.0-dev';
   }
 }
