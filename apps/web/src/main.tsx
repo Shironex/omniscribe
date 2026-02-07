@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
 import { ErrorBoundary } from '@/components';
+import { SplashScreen } from '@/components/splash';
 import { Toaster } from '@/components/ui/sonner';
 import { useWorkspaceStore, useConnectionStore } from '@/stores';
 import './styles/globals.css';
@@ -15,6 +16,7 @@ if (!rootElement) {
 createRoot(rootElement).render(
   <StrictMode>
     <ErrorBoundary>
+      <SplashScreen />
       <App />
       <Toaster />
     </ErrorBoundary>
