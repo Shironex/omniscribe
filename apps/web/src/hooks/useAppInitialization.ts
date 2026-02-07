@@ -6,9 +6,26 @@ import { useGitStore } from '@/stores/useGitStore';
 import { useMcpStore } from '@/stores/useMcpStore';
 import { useUpdateStore } from '@/stores/useUpdateStore';
 import { useConnectionStore } from '@/stores/useConnectionStore';
+import { useSettingsStore } from '@/stores/useSettingsStore';
 import { connectSocket } from '@/lib/socket';
 
 const logger = createLogger('AppInit');
+
+/**
+ * Detect Claude CLI installation status via IPC and store the result.
+ * Called early at startup so pre-launch slots default to the correct AI mode.
+ */
+async function detectClaudeCliStatus(): Promise<void> {
+  try {
+    if (window.electronAPI?.claude?.getStatus) {
+      const status = await window.electronAPI.claude.getStatus();
+      useSettingsStore.getState().setClaudeCliStatus(status);
+      logger.info('Claude CLI detected:', status.installed ? 'installed' : 'not installed');
+    }
+  } catch (error) {
+    logger.warn('Failed to detect Claude CLI status:', error);
+  }
+}
 
 /**
  * Initialize app-level socket connection and register store and updater listeners on mount.
@@ -63,6 +80,8 @@ export function useAppInitialization(): void {
         logger.info('Socket connected');
         // Fetch internal MCP status on app start (requires active connection)
         fetchInternalMcpStatus();
+        // Detect Claude CLI status early so pre-launch slots use the correct default AI mode
+        detectClaudeCliStatus();
         // Init updater listeners (IPC-based, not socket)
         cleanupUpdateListeners = initUpdateListeners();
       } catch (error) {
