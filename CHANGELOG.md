@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.3.2 (2026-02-07)
+
+### Bug Fixes
+
+- **MCP server crash in dev mode** — `__VERSION__` was only injected by esbuild during production builds, causing `ReferenceError` in dev. Added `getVersion()` fallback that reads `package.json` at runtime.
+- **MCP server duplicate shebang** — production bundle had two shebangs (source + esbuild banner) causing `SyntaxError: Invalid or unexpected token`. Removed shebang from source since esbuild handles it.
+
 ## 0.3.1 (2026-02-07)
 
 ### Bug Fixes
