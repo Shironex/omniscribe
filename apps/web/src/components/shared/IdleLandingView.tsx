@@ -1,10 +1,11 @@
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { BrainCircuit, Plus } from 'lucide-react';
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 
 interface IdleLandingViewProps {
   onAddSession: () => void;
+  onOpenLaunchModal?: () => void;
   className?: string;
 }
 
@@ -15,34 +16,17 @@ function getGreeting(): string {
   return 'Good evening';
 }
 
-export function IdleLandingView({ onAddSession, className }: IdleLandingViewProps) {
+export function IdleLandingView({
+  onAddSession,
+  onOpenLaunchModal,
+  className,
+}: IdleLandingViewProps) {
   const greeting = useMemo(() => getGreeting(), []);
 
-  // Handle "N" keyboard shortcut
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore if user is typing in an input/textarea or if modifier keys are pressed
-      const target = e.target as HTMLElement;
-      if (
-        target.tagName === 'INPUT' ||
-        target.tagName === 'TEXTAREA' ||
-        target.isContentEditable ||
-        e.metaKey ||
-        e.ctrlKey ||
-        e.altKey
-      ) {
-        return;
-      }
+  // Keyboard shortcuts (N, Shift+N) are handled globally by useAppKeyboardShortcuts
 
-      if (e.key.toLowerCase() === 'n') {
-        e.preventDefault();
-        onAddSession();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onAddSession]);
+  // Primary CTA: open modal if available, otherwise add single session
+  const handlePrimaryCTA = onOpenLaunchModal ?? onAddSession;
 
   return (
     <div
@@ -93,9 +77,9 @@ export function IdleLandingView({ onAddSession, className }: IdleLandingViewProp
           Add sessions to start orchestrating your AI coding assistants
         </p>
 
-        {/* Add session button */}
+        {/* Add session button - opens modal as primary action */}
         <button
-          onClick={onAddSession}
+          onClick={handlePrimaryCTA}
           className={clsx(
             'w-16 h-16 rounded-full',
             'bg-gradient-to-br from-primary to-brand-600',
@@ -106,7 +90,7 @@ export function IdleLandingView({ onAddSession, className }: IdleLandingViewProp
             'transition-all duration-200',
             'group'
           )}
-          aria-label="Add session"
+          aria-label="Set up sessions"
         >
           <Plus
             size={32}
@@ -119,9 +103,13 @@ export function IdleLandingView({ onAddSession, className }: IdleLandingViewProp
         <p className="mt-6 text-xs text-muted-foreground">
           Press{' '}
           <kbd className="px-1.5 py-0.5 rounded bg-muted border border-border font-mono text-foreground-secondary">
+            Shift+N
+          </kbd>{' '}
+          to set up sessions or{' '}
+          <kbd className="px-1.5 py-0.5 rounded bg-muted border border-border font-mono text-foreground-secondary">
             N
           </kbd>{' '}
-          to add a session
+          to add one
         </p>
       </div>
     </div>

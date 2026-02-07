@@ -70,11 +70,8 @@ test.describe('Project Tabs', () => {
       { timeout: 10_000 }
     );
 
-    // Create a session in tab 1
-    const addButton1 = page.locator(
-      '[data-testid="add-session-button"], [aria-label="Add session"]'
-    );
-    await addButton1.first().click();
+    // Create a session in tab 1 (press N to add a pre-launch slot)
+    await page.keyboard.press('n');
 
     // Verify the slot defaults to plain mode (Claude CLI not available in test env)
     await expect(page.locator('[data-testid="ai-mode-label"]').first()).toHaveText('Plain', {
@@ -101,11 +98,8 @@ test.describe('Project Tabs', () => {
     const tab2Sessions = await page.locator('[data-testid^="session-card-"]').count();
     expect(tab2Sessions).toBe(0);
 
-    // Create a session in tab 2
-    const addButton2 = page.locator(
-      '[data-testid="add-session-button"], [aria-label="Add session"]'
-    );
-    await addButton2.first().click();
+    // Create a session in tab 2 (press N to add a pre-launch slot)
+    await page.keyboard.press('n');
 
     await expect(launchButton).toBeEnabled({ timeout: 5_000 });
     await launchButton.click();

@@ -28,7 +28,7 @@ describe('GitHubCliGuard', () => {
   });
 
   it('should allow access when SKIP_GH_CLI_CHECK metadata is true', async () => {
-    reflector.getAllAndOverride.mockImplementation((key: string) => {
+    reflector.getAllAndOverride.mockImplementation((key: unknown) => {
       if (key === SKIP_GH_CLI_CHECK) return true;
       return false;
     });
@@ -51,7 +51,7 @@ describe('GitHubCliGuard', () => {
   });
 
   it('should allow access when CLI is installed and authenticated', async () => {
-    reflector.getAllAndOverride.mockImplementation((key: string) => {
+    reflector.getAllAndOverride.mockImplementation((key: unknown) => {
       if (key === SKIP_GH_CLI_CHECK) return false;
       if (key === REQUIRES_GH_CLI) return true;
       return false;
@@ -72,7 +72,7 @@ describe('GitHubCliGuard', () => {
   });
 
   it('should throw NotImplementedException with GH_CLI_NOT_INSTALLED when CLI is not installed', async () => {
-    reflector.getAllAndOverride.mockImplementation((key: string) => {
+    reflector.getAllAndOverride.mockImplementation((key: unknown) => {
       if (key === SKIP_GH_CLI_CHECK) return false;
       if (key === REQUIRES_GH_CLI) return true;
       return false;
@@ -104,7 +104,7 @@ describe('GitHubCliGuard', () => {
   });
 
   it('should throw NotImplementedException with GH_CLI_NOT_AUTHENTICATED when CLI is not authenticated', async () => {
-    reflector.getAllAndOverride.mockImplementation((key: string) => {
+    reflector.getAllAndOverride.mockImplementation((key: unknown) => {
       if (key === SKIP_GH_CLI_CHECK) return false;
       if (key === REQUIRES_GH_CLI) return true;
       return false;

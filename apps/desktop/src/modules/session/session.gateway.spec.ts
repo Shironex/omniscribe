@@ -51,7 +51,7 @@ function createMockSession(overrides?: Partial<ExtendedSessionConfig>): Extended
     id: 'session-1-1700000000000',
     name: 'Session 1',
     workingDirectory: '/project',
-    aiMode: 'claude-code',
+    aiMode: 'claude',
     createdAt: new Date('2024-01-01'),
     lastActiveAt: new Date('2024-01-01'),
     projectPath: '/project',
@@ -137,7 +137,7 @@ describe('SessionGateway', () => {
 
   describe('handleCreate', () => {
     const basePayload = {
-      mode: 'claude-code' as const,
+      mode: 'claude' as const,
       projectPath: '/project',
     };
 
@@ -158,7 +158,7 @@ describe('SessionGateway', () => {
     it('should create session with mode=never (no worktree)', async () => {
       const result = await gateway.handleCreate(basePayload, client);
 
-      expect(mockSessionService.create).toHaveBeenCalledWith('claude-code', '/project', {
+      expect(mockSessionService.create).toHaveBeenCalledWith('claude', '/project', {
         name: undefined,
         workingDirectory: undefined,
         model: undefined,
@@ -170,7 +170,7 @@ describe('SessionGateway', () => {
         'session-1-1700000000000',
         '/project',
         '/project', // workingDir = session.workingDirectory when no worktree
-        'claude-code'
+        'claude'
       );
       expect(client.join).toHaveBeenCalledWith('terminal:1');
       expect(mockTerminalGateway.registerClientSession).toHaveBeenCalledWith('client-1', 1);
@@ -190,7 +190,7 @@ describe('SessionGateway', () => {
 
       await gateway.handleCreate(payload, client);
 
-      expect(mockSessionService.create).toHaveBeenCalledWith('claude-code', '/project', {
+      expect(mockSessionService.create).toHaveBeenCalledWith('claude', '/project', {
         name: 'My Session',
         workingDirectory: '/other/path',
         model: 'opus',
@@ -223,7 +223,7 @@ describe('SessionGateway', () => {
         'session-1-1700000000000',
         '/project',
         '/project/.worktrees/main-12345678',
-        'claude-code'
+        'claude'
       );
       expect(result.error).toBeUndefined();
     });
@@ -312,7 +312,7 @@ describe('SessionGateway', () => {
         'session-1-1700000000000',
         '/project',
         '/project',
-        'claude-code'
+        'claude'
       );
       expect(result.error).toBeUndefined();
     });
@@ -442,7 +442,7 @@ describe('SessionGateway', () => {
           sessionId: 'session-1-1700000000000',
           updates: {
             name: 'Renamed',
-            aiMode: 'aider',
+            aiMode: 'plain',
             model: 'sonnet',
             systemPrompt: 'Be verbose',
             maxTokens: 4096,
@@ -454,7 +454,7 @@ describe('SessionGateway', () => {
       );
 
       expect(session.name).toBe('Renamed');
-      expect(session.aiMode).toBe('aider');
+      expect(session.aiMode).toBe('plain');
       expect(session.model).toBe('sonnet');
       expect(session.systemPrompt).toBe('Be verbose');
       expect(session.maxTokens).toBe(4096);
@@ -486,7 +486,7 @@ describe('SessionGateway', () => {
 
       expect(session.name).toBe('Updated');
       // Other fields should remain unchanged
-      expect(session.aiMode).toBe('claude-code');
+      expect(session.aiMode).toBe('claude');
     });
 
     it('should return error for non-existent session', () => {
