@@ -119,23 +119,23 @@ export class SessionGateway implements OnGatewayInit {
       };
     }
 
+    // Get settings from workspace preferences
+    const preferences = this.workspaceService.getPreferences();
+    const worktreeSettings: WorktreeSettings = preferences.worktree ?? DEFAULT_WORKTREE_SETTINGS;
+    const sessionSettings: SessionSettings = preferences.session ?? DEFAULT_SESSION_SETTINGS;
+
+    // Determine skip-permissions flag (only for AI sessions)
+    const skipPermissions =
+      payload.mode !== 'plain' && sessionSettings.skipPermissions ? true : undefined;
+
     const session = this.sessionService.create(payload.mode, payload.projectPath, {
       name: payload.name,
       workingDirectory: payload.workingDirectory,
       model: payload.model,
       systemPrompt: payload.systemPrompt,
       mcpServers: payload.mcpServers,
+      skipPermissions,
     });
-
-    // Get settings from workspace preferences
-    const preferences = this.workspaceService.getPreferences();
-    const worktreeSettings: WorktreeSettings = preferences.worktree ?? DEFAULT_WORKTREE_SETTINGS;
-    const sessionSettings: SessionSettings = preferences.session ?? DEFAULT_SESSION_SETTINGS;
-
-    // Set skip-permissions flag from preferences (only for AI sessions)
-    if (payload.mode !== 'plain' && sessionSettings.skipPermissions) {
-      session.skipPermissions = true;
-    }
 
     // Determine the working directory based on worktree mode
     let worktreePath: string | null = null;

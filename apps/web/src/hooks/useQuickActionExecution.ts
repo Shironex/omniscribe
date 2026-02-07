@@ -56,8 +56,15 @@ export function useQuickActionExecution(
       }
 
       if (command) {
-        const suffix = executionMode === 'execute' ? '\r' : '';
-        writeToTerminal(session.terminalSessionId, command + suffix);
+        writeToTerminal(session.terminalSessionId, command);
+        if (executionMode === 'execute') {
+          // Send Enter as a separate write after a short delay so the CLI
+          // processes the command text first and treats \r as a submit action
+          // rather than a newline within pasted content.
+          setTimeout(() => {
+            writeToTerminal(session.terminalSessionId!, '\r');
+          }, 50);
+        }
       }
     },
     [quickActions, terminalSessions, executionMode]

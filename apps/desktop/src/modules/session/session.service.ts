@@ -115,7 +115,7 @@ export class SessionService {
   create(
     mode: AiMode,
     projectPath: string,
-    options?: Partial<CreateSessionOptions>
+    options?: Partial<CreateSessionOptions> & { skipPermissions?: boolean }
   ): ExtendedSessionConfig {
     const id = `session-${++this.sessionCounter}-${Date.now()}`;
     const now = new Date();
@@ -132,6 +132,7 @@ export class SessionService {
       lastActiveAt: now,
       projectPath,
       status: 'idle',
+      skipPermissions: options?.skipPermissions,
     };
 
     this.sessions.set(id, session);
