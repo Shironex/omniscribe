@@ -17,11 +17,8 @@ test.describe('Reconnection Overlay', () => {
 
     const page = fixture.page;
 
-    // Add and launch a session
-    const addButton = page.locator(
-      '[data-testid="add-session-button"], [aria-label="Add session"]'
-    );
-    await addButton.first().click();
+    // Add a pre-launch slot (press N keyboard shortcut)
+    await page.keyboard.press('n');
 
     // Verify the slot defaults to plain mode (Claude CLI not available in test env)
     await expect(page.locator('[data-testid="ai-mode-label"]').first()).toHaveText('Plain', {

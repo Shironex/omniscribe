@@ -1,7 +1,7 @@
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { BrainCircuit, Plus } from 'lucide-react';
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 
 interface IdleLandingViewProps {
   onAddSession: () => void;
@@ -23,31 +23,7 @@ export function IdleLandingView({
 }: IdleLandingViewProps) {
   const greeting = useMemo(() => getGreeting(), []);
 
-  // Handle "N" keyboard shortcut (add single session)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore if user is typing in an input/textarea or if modifier keys are pressed
-      const target = e.target as HTMLElement;
-      if (
-        target.tagName === 'INPUT' ||
-        target.tagName === 'TEXTAREA' ||
-        target.isContentEditable ||
-        e.metaKey ||
-        e.ctrlKey ||
-        e.altKey
-      ) {
-        return;
-      }
-
-      if (e.key.toLowerCase() === 'n' && !e.shiftKey) {
-        e.preventDefault();
-        onAddSession();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onAddSession]);
+  // Keyboard shortcuts (N, Shift+N) are handled globally by useAppKeyboardShortcuts
 
   // Primary CTA: open modal if available, otherwise add single session
   const handlePrimaryCTA = onOpenLaunchModal ?? onAddSession;
