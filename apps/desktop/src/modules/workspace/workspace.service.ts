@@ -119,7 +119,10 @@ export class WorkspaceService implements OnModuleInit {
     return {
       tabs: this.store.get('tabs', []),
       activeTabId: this.store.get('activeTabId', null),
-      preferences: this.store.get('preferences', DEFAULT_PREFERENCES),
+      preferences: {
+        ...DEFAULT_PREFERENCES,
+        ...this.store.get('preferences', DEFAULT_PREFERENCES),
+      },
       quickActions: this.store.get('quickActions', DEFAULT_QUICK_ACTIONS),
     };
   }
@@ -301,7 +304,7 @@ export class WorkspaceService implements OnModuleInit {
    * Get all preferences
    */
   getPreferences(): UserPreferences {
-    return this.store.get('preferences', DEFAULT_PREFERENCES);
+    return { ...DEFAULT_PREFERENCES, ...this.store.get('preferences', DEFAULT_PREFERENCES) };
   }
 
   /**
