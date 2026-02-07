@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { toast } from 'sonner';
-import { createLogger, type ConnectionStatus } from '@omniscribe/shared';
+import { createLogger, type ConnectionStatus, type WsThrottledPayload } from '@omniscribe/shared';
 import { socket } from '@/lib/socket';
 
 const logger = createLogger('ConnectionStore');
@@ -37,7 +37,7 @@ type ConnectionStore = ConnectionState & ConnectionActions;
 let connectHandler: (() => void) | null = null;
 let disconnectHandler: ((reason: string) => void) | null = null;
 let reconnectFailedHandler: (() => void) | null = null;
-let throttledHandler: ((payload: { event: string; retryAfter: number }) => void) | null = null;
+let throttledHandler: ((payload: WsThrottledPayload) => void) | null = null;
 let listenersInitialized = false;
 
 // Module-level timer handle (non-serializable, should not be in Zustand state)
@@ -112,7 +112,7 @@ export const useConnectionStore = create<ConnectionStore>()(
           get().setFailed();
         };
 
-        throttledHandler = (payload: { event: string; retryAfter: number }) => {
+        throttledHandler = (payload: WsThrottledPayload) => {
           logger.warn(`Rate limited on "${payload.event}" — retry in ${payload.retryAfter}ms`);
           toast.warning('Request was rate limited', {
             description: `Event "${payload.event}" was throttled. Retrying shortly.`,
