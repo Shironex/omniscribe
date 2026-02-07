@@ -1,6 +1,7 @@
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { useState, useRef, useCallback, type HTMLAttributes } from 'react';
+import { GripVertical } from 'lucide-react';
 import { useClickOutside } from '@/hooks/useClickOutside';
 import { SessionStatusDisplay } from './SessionStatusDisplay';
 import { QuickActionsDropdown } from './QuickActionsDropdown';
@@ -88,15 +89,18 @@ export function TerminalHeader({
       )}
     >
       {/* Left section */}
-      <div
-        ref={node => dragHandleProps?.setNodeRef(node)}
-        {...dragHandleAttributes}
-        {...dragHandleListeners}
-        className={clsx(
-          'flex items-center gap-2 min-w-0 flex-1',
-          dragHandleProps && 'cursor-grab active:cursor-grabbing'
+      <div className="flex items-center gap-1.5 min-w-0 flex-1">
+        {dragHandleProps && (
+          <div
+            ref={node => dragHandleProps.setNodeRef(node)}
+            {...dragHandleAttributes}
+            {...dragHandleListeners}
+            className="flex items-center cursor-grab active:cursor-grabbing px-0.5 shrink-0 touch-none"
+            aria-label="Drag to reorder"
+          >
+            <GripVertical size={14} className="text-muted-foreground/40" />
+          </div>
         )}
-      >
         <SessionStatusDisplay session={session} gitBranch={gitBranch} />
       </div>
 

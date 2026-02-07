@@ -97,7 +97,7 @@ export function TerminalGrid({
   const canAddMore = sessionCount + preLaunchSlots.length < 12;
 
   const renderTerminalCard = (session: TerminalSession) => (
-    <SortableTerminalWrapper id={session.id}>
+    <SortableTerminalWrapper id={session.id} sessionCount={sessionCount}>
       <TerminalCard
         session={session}
         quickActions={quickActions}

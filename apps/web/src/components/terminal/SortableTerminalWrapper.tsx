@@ -11,10 +11,15 @@ export interface TerminalDragHandleProps {
 
 interface SortableTerminalWrapperProps {
   id: string;
+  sessionCount: number;
   children: React.ReactNode;
 }
 
-export function SortableTerminalWrapper({ id, children }: SortableTerminalWrapperProps) {
+export function SortableTerminalWrapper({
+  id,
+  sessionCount,
+  children,
+}: SortableTerminalWrapperProps) {
   const {
     attributes,
     listeners,
@@ -30,7 +35,8 @@ export function SortableTerminalWrapper({ id, children }: SortableTerminalWrappe
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : 1,
+    opacity: isDragging ? 0.3 : 1,
+    border: isDragging ? '2px dashed var(--border)' : undefined,
     position: 'relative' as const,
     width: '100%',
     height: '100%',
@@ -39,20 +45,27 @@ export function SortableTerminalWrapper({ id, children }: SortableTerminalWrappe
     zIndex: isDragging ? 10 : undefined,
   };
 
-  const dragHandleProps: TerminalDragHandleProps = {
-    setNodeRef: setActivatorNodeRef,
-    attributes: attributes as HTMLAttributes<HTMLElement>,
-    listeners: listeners as HTMLAttributes<HTMLElement>,
-  };
+  const dragHandleProps: TerminalDragHandleProps | undefined =
+    sessionCount > 1
+      ? {
+          setNodeRef: setActivatorNodeRef,
+          attributes: attributes as HTMLAttributes<HTMLElement>,
+          listeners: listeners as HTMLAttributes<HTMLElement>,
+        }
+      : undefined;
 
   return (
     <div ref={setNodeRef} style={style}>
       {React.Children.map(children, child => {
         if (!React.isValidElement(child)) return child;
         return React.cloneElement(
-          child as React.ReactElement<{ dragHandleProps?: TerminalDragHandleProps }>,
+          child as React.ReactElement<{
+            dragHandleProps?: TerminalDragHandleProps;
+            isDragging?: boolean;
+          }>,
           {
             dragHandleProps,
+            isDragging,
           }
         );
       })}

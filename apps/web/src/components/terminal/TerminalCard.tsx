@@ -22,6 +22,7 @@ interface TerminalCardProps {
   onSessionClose?: (exitCode: number) => void;
   onQuickAction?: (actionId: string) => void;
   dragHandleProps?: TerminalDragHandleProps;
+  isDragging?: boolean;
 }
 
 export function TerminalCard({
@@ -33,6 +34,8 @@ export function TerminalCard({
   onSessionClose,
   onQuickAction,
   dragHandleProps,
+
+  isDragging: _isDragging,
 }: TerminalCardProps) {
   return (
     <div
