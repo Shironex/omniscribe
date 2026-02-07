@@ -130,7 +130,7 @@ export default socket;
 
 // Expose socket instance on window for E2E testing.
 // Allows Playwright to trigger disconnect/reconnect scenarios and open projects.
-if (import.meta.env.DEV || import.meta.env.MODE === 'test') {
+if (process.env.NODE_ENV !== 'production') {
   (window as unknown as Record<string, unknown>).__testSocket = socket;
 }
 
