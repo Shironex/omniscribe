@@ -252,6 +252,16 @@ describe('McpStatusServerService - Request Handling', () => {
     });
   });
 
+  it('should return 404 for non-POST requests to /tasks', async () => {
+    await initService();
+
+    const { res } = simulateRequest('GET', '/tasks', '');
+
+    expect(res.writeHead as jest.Mock).toHaveBeenCalledWith(404, {
+      'Content-Type': 'application/json',
+    });
+  });
+
   it('should return 404 for POST to wrong path', async () => {
     await initService();
 
@@ -266,6 +276,16 @@ describe('McpStatusServerService - Request Handling', () => {
     await initService();
 
     const { res } = simulateRequest('POST', '/status', 'not json');
+
+    expect(res.writeHead as jest.Mock).toHaveBeenCalledWith(400, {
+      'Content-Type': 'application/json',
+    });
+  });
+
+  it('should return 400 for invalid JSON body on /tasks', async () => {
+    await initService();
+
+    const { res } = simulateRequest('POST', '/tasks', 'not json');
 
     expect(res.writeHead as jest.Mock).toHaveBeenCalledWith(400, {
       'Content-Type': 'application/json',
@@ -395,5 +415,160 @@ describe('McpStatusServerService - Request Handling', () => {
     expect(mainServer.close).toHaveBeenCalled();
     expect(svc.isRunning()).toBe(false);
     expect(svc.getPort()).toBeNull();
+  });
+
+  // ================================================================
+  // POST /tasks
+  // ================================================================
+  describe('POST /tasks', () => {
+    it('should accept valid task payload and emit session.tasks event', async () => {
+      sessionRegistry.getProjectPath.mockReturnValue('/project');
+
+      await initService();
+
+      const payload = JSON.stringify({
+        sessionId: 'session-1',
+        instanceId: 'test-uuid-1234',
+        tasks: [
+          { id: 'task-1', subject: 'Implement feature', status: 'in_progress' },
+          { id: 'task-2', subject: 'Write tests', status: 'pending' },
+        ],
+        timestamp: new Date().toISOString(),
+      });
+
+      const { res } = simulateRequest('POST', '/tasks', payload);
+
+      expect(res.writeHead as jest.Mock).toHaveBeenCalledWith(200, {
+        'Content-Type': 'application/json',
+      });
+      const responseBody = JSON.parse((res.end as jest.Mock).mock.calls[0][0]);
+      expect(responseBody.accepted).toBe(true);
+
+      expect(eventEmitter.emit).toHaveBeenCalledWith('session.tasks', {
+        sessionId: 'session-1',
+        tasks: [
+          { id: 'task-1', subject: 'Implement feature', status: 'in_progress' },
+          { id: 'task-2', subject: 'Write tests', status: 'pending' },
+        ],
+      });
+    });
+
+    it('should reject task update with wrong instance ID', async () => {
+      await initService();
+
+      const payload = JSON.stringify({
+        sessionId: 'session-1',
+        instanceId: 'wrong-instance',
+        tasks: [{ id: 'task-1', subject: 'Do something', status: 'pending' }],
+        timestamp: new Date().toISOString(),
+      });
+
+      const { res } = simulateRequest('POST', '/tasks', payload);
+
+      expect(res.writeHead as jest.Mock).toHaveBeenCalledWith(200, {
+        'Content-Type': 'application/json',
+      });
+      const responseBody = JSON.parse((res.end as jest.Mock).mock.calls[0][0]);
+      expect(responseBody.accepted).toBe(false);
+      expect(responseBody.reason).toBe('instance_mismatch');
+      expect(eventEmitter.emit).not.toHaveBeenCalled();
+    });
+
+    it('should reject task update for unknown session', async () => {
+      sessionRegistry.getProjectPath.mockReturnValue(undefined);
+
+      await initService();
+
+      const payload = JSON.stringify({
+        sessionId: 'unknown-session',
+        instanceId: 'test-uuid-1234',
+        tasks: [{ id: 'task-1', subject: 'Do something', status: 'pending' }],
+        timestamp: new Date().toISOString(),
+      });
+
+      const { res } = simulateRequest('POST', '/tasks', payload);
+
+      expect(res.writeHead as jest.Mock).toHaveBeenCalledWith(200, {
+        'Content-Type': 'application/json',
+      });
+      const responseBody = JSON.parse((res.end as jest.Mock).mock.calls[0][0]);
+      expect(responseBody.accepted).toBe(false);
+      expect(responseBody.reason).toBe('unknown_session');
+      expect(eventEmitter.emit).not.toHaveBeenCalled();
+    });
+
+    it('should handle empty tasks array', async () => {
+      sessionRegistry.getProjectPath.mockReturnValue('/project');
+
+      await initService();
+
+      const payload = JSON.stringify({
+        sessionId: 'session-1',
+        instanceId: 'test-uuid-1234',
+        tasks: [],
+        timestamp: new Date().toISOString(),
+      });
+
+      const { res } = simulateRequest('POST', '/tasks', payload);
+
+      const responseBody = JSON.parse((res.end as jest.Mock).mock.calls[0][0]);
+      expect(responseBody.accepted).toBe(true);
+
+      expect(eventEmitter.emit).toHaveBeenCalledWith('session.tasks', {
+        sessionId: 'session-1',
+        tasks: [],
+      });
+    });
+
+    it('should handle payload with multiple tasks', async () => {
+      sessionRegistry.getProjectPath.mockReturnValue('/project');
+
+      await initService();
+
+      const tasks = [
+        { id: 'task-1', subject: 'Task one', status: 'completed' },
+        { id: 'task-2', subject: 'Task two', status: 'in_progress' },
+        { id: 'task-3', subject: 'Task three', status: 'pending' },
+      ];
+
+      const payload = JSON.stringify({
+        sessionId: 'session-1',
+        instanceId: 'test-uuid-1234',
+        tasks,
+        timestamp: new Date().toISOString(),
+      });
+
+      const { res } = simulateRequest('POST', '/tasks', payload);
+
+      const responseBody = JSON.parse((res.end as jest.Mock).mock.calls[0][0]);
+      expect(responseBody.accepted).toBe(true);
+
+      expect(eventEmitter.emit).toHaveBeenCalledWith('session.tasks', {
+        sessionId: 'session-1',
+        tasks,
+      });
+    });
+
+    it('should handle payload with undefined tasks (defaults to empty array)', async () => {
+      sessionRegistry.getProjectPath.mockReturnValue('/project');
+
+      await initService();
+
+      const payload = JSON.stringify({
+        sessionId: 'session-1',
+        instanceId: 'test-uuid-1234',
+        timestamp: new Date().toISOString(),
+      });
+
+      const { res } = simulateRequest('POST', '/tasks', payload);
+
+      const responseBody = JSON.parse((res.end as jest.Mock).mock.calls[0][0]);
+      expect(responseBody.accepted).toBe(true);
+
+      expect(eventEmitter.emit).toHaveBeenCalledWith('session.tasks', {
+        sessionId: 'session-1',
+        tasks: [],
+      });
+    });
   });
 });

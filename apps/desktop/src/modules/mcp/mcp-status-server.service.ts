@@ -7,6 +7,8 @@ import {
   MCP_STATUS_PORT_END,
   LOCALHOST,
   StatusPayload,
+  TasksPayload,
+  TaskItem,
   SessionStatusState,
   createLogger,
 } from '@omniscribe/shared';
@@ -20,6 +22,14 @@ export interface SessionStatusEvent {
   status: SessionStatusState;
   message?: string;
   needsInputPrompt?: string;
+}
+
+/**
+ * Session tasks event emitted for UI updates
+ */
+export interface SessionTasksEvent {
+  sessionId: string;
+  tasks: TaskItem[];
 }
 
 /**
@@ -158,8 +168,8 @@ export class McpStatusServerService implements OnModuleInit, OnModuleDestroy {
    * Handle incoming HTTP requests
    */
   private handleRequest(req: http.IncomingMessage, res: http.ServerResponse): void {
-    // Only accept POST /status
-    if (req.method !== 'POST' || req.url !== '/status') {
+    // Only accept POST method
+    if (req.method !== 'POST') {
       res.writeHead(404, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: 'Not found' }));
       return;
@@ -177,8 +187,20 @@ export class McpStatusServerService implements OnModuleInit, OnModuleDestroy {
 
     req.on('end', () => {
       try {
-        const payload = JSON.parse(body) as StatusPayload;
-        this.handleStatusUpdate(payload, res);
+        const payload = JSON.parse(body);
+
+        // Route based on URL path
+        switch (req.url) {
+          case '/status':
+            this.handleStatusUpdate(payload as StatusPayload, res);
+            break;
+          case '/tasks':
+            this.handleTasksUpdate(payload as TasksPayload, res);
+            break;
+          default:
+            res.writeHead(404, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Not found' }));
+        }
       } catch (error) {
         this.logger.error('Invalid JSON payload:', error);
         res.writeHead(400, { 'Content-Type': 'application/json' });
@@ -234,6 +256,43 @@ export class McpStatusServerService implements OnModuleInit, OnModuleDestroy {
     this.logger.debug(`EMITTING: session=${payload.sessionId} status=${payload.state}`);
 
     this.eventEmitter.emit('session.status', event);
+
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ accepted: true }));
+  }
+
+  /**
+   * Handle a tasks update from the MCP server
+   */
+  private handleTasksUpdate(payload: TasksPayload, res: http.ServerResponse): void {
+    this.logger.debug(
+      `Received tasks: sessionId=${payload.sessionId}, instanceId=${payload.instanceId}, count=${payload.tasks?.length ?? 0}`
+    );
+
+    // Validate instance ID to prevent cross-instance pollution
+    if (payload.instanceId !== this.instanceId) {
+      this.logger.debug(`REJECTED - wrong instance`);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ accepted: false, reason: 'instance_mismatch' }));
+      return;
+    }
+
+    // Check if this session is registered
+    const projectPath = this.sessionRegistry.getProjectPath(payload.sessionId);
+    if (!projectPath) {
+      this.logger.debug(`REJECTED - unknown session ${payload.sessionId}`);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ accepted: false, reason: 'unknown_session' }));
+      return;
+    }
+
+    // Emit tasks event for UI
+    const event: SessionTasksEvent = {
+      sessionId: payload.sessionId,
+      tasks: payload.tasks ?? [],
+    };
+
+    this.eventEmitter.emit('session.tasks', event);
 
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ accepted: true }));
