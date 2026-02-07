@@ -1,4 +1,4 @@
-import { useMemo, useState, memo } from 'react';
+import { useCallback, useMemo, useState, memo } from 'react';
 import { clsx } from 'clsx';
 import {
   Loader2,
@@ -9,14 +9,12 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
-import {
-  useTaskStore,
-  selectTasksForSession,
-  selectTaskCountForSession,
-  selectHasInProgressTasks,
-} from '@/stores/useTaskStore';
+import { useTaskStore } from '@/stores/useTaskStore';
 import { TaskBadge } from './TaskBadge';
 import type { TaskItem, TaskStatus } from '@omniscribe/shared';
+
+/** Stable empty array to avoid creating new references when no tasks exist */
+const EMPTY_TASKS: TaskItem[] = [];
 
 interface TaskListPopoverProps {
   sessionId: string;
@@ -101,9 +99,14 @@ const TaskRow = memo(function TaskRow({ task }: { task: TaskItem }) {
 });
 
 export function TaskListPopover({ sessionId }: TaskListPopoverProps) {
-  const tasks = useTaskStore(selectTasksForSession(sessionId));
-  const taskCount = useTaskStore(selectTaskCountForSession(sessionId));
-  const hasInProgress = useTaskStore(selectHasInProgressTasks(sessionId));
+  // Single stable selector — useCallback ensures the same function reference
+  // across renders (for the same sessionId), preventing Zustand re-subscribe loops.
+  // EMPTY_TASKS is a module-level constant to avoid new array references.
+  const tasks = useTaskStore(
+    useCallback(state => state.tasksBySession.get(sessionId) ?? EMPTY_TASKS, [sessionId])
+  );
+  const taskCount = tasks.length;
+  const hasInProgress = useMemo(() => tasks.some(t => t.status === 'in_progress'), [tasks]);
 
   const { inProgress, pending, completed } = useMemo(() => {
     const inProgress: TaskItem[] = [];
