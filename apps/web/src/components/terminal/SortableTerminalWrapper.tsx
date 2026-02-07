@@ -61,11 +61,9 @@ export function SortableTerminalWrapper({
         return React.cloneElement(
           child as React.ReactElement<{
             dragHandleProps?: TerminalDragHandleProps;
-            isDragging?: boolean;
           }>,
           {
             dragHandleProps,
-            isDragging,
           }
         );
       })}
