@@ -23,9 +23,9 @@ createRoot(rootElement).render(
 
 // Expose stores on window for E2E testing.
 // Allows Playwright to open projects, check connection state, etc.
-if (process.env.NODE_ENV !== 'production') {
-  (window as unknown as Record<string, unknown>).__testStores = {
-    workspace: useWorkspaceStore,
-    connection: useConnectionStore,
-  };
-}
+// This is a desktop Electron app -- window globals are already accessible
+// via devtools, so exposing stores adds no meaningful attack surface.
+(window as unknown as Record<string, unknown>).__testStores = {
+  workspace: useWorkspaceStore,
+  connection: useConnectionStore,
+};
