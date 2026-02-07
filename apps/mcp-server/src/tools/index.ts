@@ -6,12 +6,13 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { ToolConstructor, ToolDependencies } from './types.js';
 import { OmniscribeStatusTool } from './status/index.js';
+import { OmniscribeTasksTool } from './tasks/index.js';
 
 /**
  * All available tool constructors
  * Add new tools here to register them with the server
  */
-const TOOL_CONSTRUCTORS: ToolConstructor[] = [OmniscribeStatusTool];
+const TOOL_CONSTRUCTORS: ToolConstructor[] = [OmniscribeStatusTool, OmniscribeTasksTool];
 
 /**
  * Register all tools with the MCP server

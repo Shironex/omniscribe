@@ -29,16 +29,30 @@ describe('registerTools', () => {
     );
   });
 
-  it('should register exactly one tool', () => {
+  it('should register the omniscribe_tasks tool', () => {
     registerTools(mockServer as any, deps);
 
-    expect(mockServer.registerTool).toHaveBeenCalledTimes(1);
+    expect(mockServer.registerTool).toHaveBeenCalledWith(
+      'omniscribe_tasks',
+      expect.objectContaining({
+        title: 'Report Task List to Omniscribe',
+        description: expect.any(String),
+        inputSchema: expect.any(Object),
+      }),
+      expect.any(Function)
+    );
+  });
+
+  it('should register all tools', () => {
+    registerTools(mockServer as any, deps);
+
+    expect(mockServer.registerTool).toHaveBeenCalledTimes(2);
   });
 
   it('should log the number of registered tools', () => {
     registerTools(mockServer as any, deps);
 
-    expect(deps.logger.info).toHaveBeenCalledWith('Registered 1 tool');
+    expect(deps.logger.info).toHaveBeenCalledWith('Registered 2 tools');
   });
 
   it('should register a callback that delegates to tool.execute', async () => {
