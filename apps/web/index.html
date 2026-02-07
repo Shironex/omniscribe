@@ -13,18 +13,18 @@
     </style>
     <script>
       // Apply persisted theme class and background BEFORE React mounts to prevent flicker.
-      // Uses var/indexOf for maximum compatibility (runs before any bundler transforms).
-      (function() {
+      // The dark themes array below is injected at build time by themeInjectionPlugin
+      // (vite.config.ts) from packages/shared/src/types/settings.ts (single source of truth).
+      (function () {
         try {
           var theme = localStorage.getItem('omniscribe-theme') || 'dark';
           document.documentElement.classList.add(theme);
-          // Dark theme names — must stay in sync with theme-persistence.ts
-          var darkThemes = ['dark','ayu-dark','ayu-mirage','catppuccin','dracula',
-            'ember','forest','gray','gruvbox','matcha','midnight','monokai','nord','ocean',
-            'onedark','red','retro','solarized','sunset','synthwave','tokyonight'];
+          var darkThemes = __DARK_THEMES__;
           var isDark = darkThemes.indexOf(theme) !== -1;
           document.documentElement.style.backgroundColor = isDark ? '#0a0a0f' : '#fafafa';
-        } catch(e) {}
+        } catch (e) {
+          console.error('Failed to apply initial theme from localStorage:', e);
+        }
       })();
     </script>
   </head>
