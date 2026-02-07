@@ -108,7 +108,8 @@ jobs:
         run: pnpm build
 
       - name: Install Electron system dependencies
-        run: pnpm --filter @omniscribe/desktop exec playwright install-deps chromium
+        run: npx playwright install --with-deps chromium
+        working-directory: apps/desktop
 
       - name: Run E2E tests
         run: xvfb-run --auto-servernum -- pnpm --filter @omniscribe/desktop test:e2e
