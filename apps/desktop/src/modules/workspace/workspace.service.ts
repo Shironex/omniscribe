@@ -6,6 +6,7 @@ import {
   UserPreferences,
   WorkspaceStateResponse,
   DEFAULT_WORKTREE_SETTINGS,
+  DEFAULT_SESSION_SETTINGS,
   createLogger,
 } from '@omniscribe/shared';
 
@@ -87,6 +88,7 @@ export class WorkspaceService implements OnModuleInit {
         preferences: {
           theme: 'dark',
           worktree: DEFAULT_WORKTREE_SETTINGS,
+          session: DEFAULT_SESSION_SETTINGS,
         },
       },
     });
@@ -118,6 +120,7 @@ export class WorkspaceService implements OnModuleInit {
       preferences: this.store.get('preferences', {
         theme: 'dark',
         worktree: DEFAULT_WORKTREE_SETTINGS,
+        session: DEFAULT_SESSION_SETTINGS,
       }),
       quickActions: this.store.get('quickActions', DEFAULT_QUICK_ACTIONS),
     };
@@ -303,6 +306,7 @@ export class WorkspaceService implements OnModuleInit {
     return this.store.get('preferences', {
       theme: 'dark',
       worktree: DEFAULT_WORKTREE_SETTINGS,
+      session: DEFAULT_SESSION_SETTINGS,
     });
   }
 

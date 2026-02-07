@@ -97,6 +97,7 @@ export class SessionGateway implements OnGatewayInit {
   /**
    * Handle session creation request
    */
+  @SkipThrottle()
   @SubscribeMessage('session:create')
   async handleCreate(
     @MessageBody() payload: CreateSessionPayload,
@@ -206,6 +207,7 @@ export class SessionGateway implements OnGatewayInit {
   /**
    * Handle session update request
    */
+  @SkipThrottle()
   @SubscribeMessage('session:update')
   handleUpdate(
     @MessageBody() payload: UpdateSessionPayload,
@@ -257,6 +259,7 @@ export class SessionGateway implements OnGatewayInit {
   /**
    * Handle session removal request
    */
+  @SkipThrottle()
   @SubscribeMessage('session:remove')
   async handleRemove(
     @MessageBody() payload: SessionRemovePayload,

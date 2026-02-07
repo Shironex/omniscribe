@@ -33,6 +33,17 @@ export class WsThrottlerGuard extends ThrottlerGuard {
         `Rate limit exceeded for ${tracker} on event "${eventName}" ` +
           `(${totalHits}/${limit} hits, blocked for ${timeToBlockExpire}ms)`
       );
+
+      // Emit throttle error to the client so the frontend can show feedback
+      try {
+        client.emit('ws:throttled', {
+          event: eventName,
+          retryAfter: timeToBlockExpire,
+        });
+      } catch {
+        // Best-effort — don't let notification failure affect the guard
+      }
+
       await this.throwThrottlingException(context, {
         limit,
         ttl,

@@ -57,8 +57,11 @@ export function usePreLaunchSlots(
     state => state.preferences.session?.defaultMode ?? DEFAULT_SESSION_SETTINGS.defaultMode
   );
 
-  // Fall back to 'plain' when CLI status unknown (null) or not installed
-  const defaultAiMode = claudeCliStatus?.installed ? configuredDefaultAiMode : 'plain';
+  // Only override to 'plain' when we definitively know Claude CLI is not installed.
+  // When status is still loading (null), trust the user's configured preference so
+  // slots created during startup don't silently default to 'plain'.
+  const defaultAiMode =
+    claudeCliStatus !== null && !claudeCliStatus.installed ? 'plain' : configuredDefaultAiMode;
 
   // Listen to add slot requests from other components (e.g., sidebar + button)
   const addSlotRequestCounter = useTerminalStore(state => state.addSlotRequestCounter);
