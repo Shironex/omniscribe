@@ -31,6 +31,8 @@ export interface ExtendedSessionConfig extends SessionConfig {
   statusMessage?: string;
   /** Whether the session needs user input */
   needsInputPrompt?: boolean;
+  /** Whether session was launched with skip-permissions mode */
+  skipPermissions?: boolean;
   /** Terminal session ID if launched */
   terminalSessionId?: number;
   /** Timestamp of last terminal output (for health checks) */
@@ -113,7 +115,7 @@ export class SessionService {
   create(
     mode: AiMode,
     projectPath: string,
-    options?: Partial<CreateSessionOptions>
+    options?: Partial<CreateSessionOptions> & { skipPermissions?: boolean }
   ): ExtendedSessionConfig {
     const id = `session-${++this.sessionCounter}-${Date.now()}`;
     const now = new Date();
@@ -130,6 +132,7 @@ export class SessionService {
       lastActiveAt: now,
       projectPath,
       status: 'idle',
+      skipPermissions: options?.skipPermissions,
     };
 
     this.sessions.set(id, session);

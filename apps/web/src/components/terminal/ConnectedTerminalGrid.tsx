@@ -115,6 +115,7 @@ export function ConnectedTerminalGrid({ className }: ConnectedTerminalGridProps)
       statusMessage: session.statusMessage,
       terminalSessionId: session.terminalSessionId,
       worktreePath: session.worktreePath,
+      skipPermissions: session.skipPermissions,
     }));
 
     // Apply custom ordering if available

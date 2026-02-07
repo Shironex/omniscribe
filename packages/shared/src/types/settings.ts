@@ -164,7 +164,8 @@ export type SettingsSectionId =
   | 'general'
   | 'worktrees'
   | 'sessions'
-  | 'terminal';
+  | 'terminal'
+  | 'quickActions';
 
 /**
  * Worktree creation mode
@@ -203,11 +204,22 @@ export const DEFAULT_WORKTREE_SETTINGS: WorktreeSettings = {
 };
 
 /**
+ * Quick action execution mode
+ * - 'paste-only': Paste command text into terminal without executing (safe default)
+ * - 'execute': Paste and auto-execute command in terminal
+ */
+export type QuickActionMode = 'paste-only' | 'execute';
+
+/**
  * Session-related settings
  */
 export interface SessionSettings {
   /** Default AI mode for new pre-launch slots */
   defaultMode: AiMode;
+  /** Whether to launch Claude sessions with --dangerously-skip-permissions */
+  skipPermissions?: boolean;
+  /** Quick action execution mode */
+  quickActionMode?: QuickActionMode;
 }
 
 /**
@@ -215,6 +227,8 @@ export interface SessionSettings {
  */
 export const DEFAULT_SESSION_SETTINGS: SessionSettings = {
   defaultMode: 'claude',
+  skipPermissions: false,
+  quickActionMode: 'paste-only',
 };
 
 /**

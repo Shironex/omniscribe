@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { clsx } from 'clsx';
 import {
   GitCommit,
+  GitCommitVertical,
   GitMerge,
   GitBranch,
   ArrowUp,
@@ -21,6 +22,7 @@ import type { QuickActionItem } from './TerminalCard';
 
 const iconMap: Record<string, LucideIcon> = {
   GitCommit,
+  GitCommitVertical,
   GitMerge,
   GitBranch,
   ArrowUp,
@@ -45,6 +47,8 @@ const categoryConfig: Record<string, { label: string; order: number }> = {
 interface QuickActionsDropdownProps {
   quickActions: QuickActionItem[];
   isOpen: boolean;
+  disabled?: boolean;
+  disabledTooltip?: string;
   onToggle: () => void;
   onAction: (actionId: string) => void;
 }
@@ -52,6 +56,8 @@ interface QuickActionsDropdownProps {
 export function QuickActionsDropdown({
   quickActions,
   isOpen,
+  disabled = false,
+  disabledTooltip,
   onToggle,
   onAction,
 }: QuickActionsDropdownProps) {
@@ -80,18 +86,24 @@ export function QuickActionsDropdown({
     <>
       <button
         type="button"
-        onClick={onToggle}
+        onClick={disabled ? undefined : onToggle}
+        disabled={disabled}
+        title={disabled ? disabledTooltip : 'Quick actions'}
         className={clsx(
           'p-1 rounded',
-          'text-muted-foreground hover:text-yellow-400',
-          'hover:bg-yellow-400/10 transition-colors',
-          isOpen && 'bg-yellow-400/10 text-yellow-400'
+          disabled
+            ? 'text-muted-foreground/40 cursor-not-allowed'
+            : [
+                'text-muted-foreground hover:text-yellow-400',
+                'hover:bg-yellow-400/10 transition-colors',
+                isOpen && 'bg-yellow-400/10 text-yellow-400',
+              ]
         )}
         aria-label="Quick actions"
       >
         <Zap size={12} />
       </button>
-      {isOpen && quickActions.length > 0 && (
+      {!disabled && isOpen && quickActions.length > 0 && (
         <div className="absolute right-0 top-full mt-1 z-50 min-w-[180px] bg-popover border border-border rounded-md shadow-lg py-1">
           {groupedActions.map((group, groupIndex) => (
             <div key={group.category}>

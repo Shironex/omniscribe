@@ -168,10 +168,20 @@ describe('WorkspaceService', () => {
     it('should return default quick actions', () => {
       const actions = service.getQuickActions();
 
-      expect(actions.length).toBe(4);
-      expect(actions.map(a => a.id)).toEqual(
-        expect.arrayContaining(['run-app', 'commit-push', 'fix-errors', 'lint-format'])
-      );
+      expect(actions.length).toBe(11);
+      expect(actions.map(a => a.id)).toEqual([
+        'git-commit',
+        'git-commit-push',
+        'git-push',
+        'git-pull',
+        'git-status',
+        'resolve-conflicts',
+        'address-pr-comments',
+        'run-app',
+        'lint-format',
+        'fix-errors',
+        'plan-implementation',
+      ]);
     });
 
     it('should set custom quick actions', () => {
@@ -200,7 +210,7 @@ describe('WorkspaceService', () => {
       service.resetQuickActionsToDefaults();
 
       const actions = service.getQuickActions();
-      expect(actions.length).toBe(4);
+      expect(actions.length).toBe(11);
     });
   });
 
