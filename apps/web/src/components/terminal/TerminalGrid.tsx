@@ -36,6 +36,7 @@ interface TerminalGridProps {
   onKill: (sessionId: string) => void;
   onSessionClose?: (sessionId: string, exitCode: number) => void;
   onQuickAction?: (sessionId: string, actionId: string) => void;
+  onOpenLaunchModal?: () => void;
   onReorderSessions?: (activeId: string, overId: string) => void;
   className?: string;
 }
@@ -56,6 +57,7 @@ export function TerminalGrid({
   onKill,
   onSessionClose,
   onQuickAction,
+  onOpenLaunchModal,
   onReorderSessions,
   className,
 }: TerminalGridProps) {
@@ -80,7 +82,13 @@ export function TerminalGrid({
 
   // Empty state
   if (sessionCount === 0 && preLaunchSlots.length === 0) {
-    return <IdleLandingView onAddSession={onAddSlot} className={className} />;
+    return (
+      <IdleLandingView
+        onAddSession={onAddSlot}
+        onOpenLaunchModal={onOpenLaunchModal}
+        className={className}
+      />
+    );
   }
 
   // Max terminals: 12
@@ -239,6 +247,7 @@ export function TerminalGrid({
         claudeAvailable={claudeAvailable}
         canAddMore={canAddMore}
         onAddSlot={onAddSlot}
+        onOpenLaunchModal={onOpenLaunchModal ?? (() => {})}
         onRemoveSlot={onRemoveSlot}
         onUpdateSlot={onUpdateSlot}
         onLaunch={onLaunch}

@@ -5,7 +5,10 @@ import type { PreLaunchSlot } from '@/components/terminal/TerminalGrid';
 import { createSession } from '@/lib/session';
 import { mapAiModeToBackend } from '@/lib/aiMode';
 import { useTerminalStore, useWorkspaceStore, useSettingsStore } from '@/stores';
-import { getNextAvailablePrelaunchShortcut } from '@/lib/prelaunch-shortcuts';
+import {
+  getNextAvailablePrelaunchShortcut,
+  PRELAUNCH_SHORTCUT_KEYS,
+} from '@/lib/prelaunch-shortcuts';
 
 const logger = createLogger('PreLaunchSlots');
 const MAX_PRELAUNCH_SLOTS = 12;
@@ -28,6 +31,8 @@ interface UsePreLaunchSlotsReturn {
     slotId: string,
     updates: Partial<Pick<PreLaunchSlot, 'aiMode' | 'branch'>>
   ) => void;
+  /** Handler to batch-create slots with shared defaults */
+  handleBatchAddSessions: (count: number, aiMode: PreLaunchSlot['aiMode'], branch: string) => void;
   /** Handler to launch a single slot */
   handleLaunchSlot: (slotId: string) => Promise<void>;
   /** Handler to launch all slots */
@@ -88,6 +93,26 @@ export function usePreLaunchSlots(
       return [...prev, newSlot];
     });
   }, [currentBranch, defaultAiMode]);
+
+  // Batch-create N slots with shared defaults (replaces existing pre-launch slots)
+  const handleBatchAddSessions = useCallback(
+    (count: number, aiMode: PreLaunchSlot['aiMode'], branch: string) => {
+      const capped = Math.min(count, MAX_PRELAUNCH_SLOTS);
+      const slots: PreLaunchSlot[] = [];
+      for (let i = 0; i < capped; i++) {
+        const shortcutKey = PRELAUNCH_SHORTCUT_KEYS[i];
+        if (!shortcutKey) break;
+        slots.push({
+          id: `slot-${Date.now()}-${i}`,
+          aiMode,
+          branch,
+          shortcutKey,
+        });
+      }
+      setPreLaunchSlots(slots);
+    },
+    []
+  );
 
   // Listen to external add slot requests (from sidebar + button)
   useEffect(() => {
@@ -179,6 +204,7 @@ export function usePreLaunchSlots(
     isLaunching,
     launchingSlotIds,
     handleAddSession,
+    handleBatchAddSessions,
     handleRemoveSlot,
     handleUpdateSlot,
     handleLaunchSlot,
