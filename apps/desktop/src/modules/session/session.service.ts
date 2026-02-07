@@ -31,6 +31,8 @@ export interface ExtendedSessionConfig extends SessionConfig {
   statusMessage?: string;
   /** Whether the session needs user input */
   needsInputPrompt?: boolean;
+  /** Whether session was launched with skip-permissions mode */
+  skipPermissions?: boolean;
   /** Terminal session ID if launched */
   terminalSessionId?: number;
   /** Timestamp of last terminal output (for health checks) */

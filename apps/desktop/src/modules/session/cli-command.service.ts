@@ -12,6 +12,7 @@ import { AiCliConfig } from './types';
 export interface CliSessionContext {
   model?: string;
   systemPrompt?: string;
+  skipPermissions?: boolean;
 }
 
 /**
@@ -61,6 +62,11 @@ export class CliCommandService {
    */
   private getClaudeCliConfig(session: CliSessionContext): AiCliConfig {
     const args: string[] = [];
+
+    // Add skip-permissions flag if enabled (must be before other flags)
+    if (session.skipPermissions) {
+      args.push('--dangerously-skip-permissions');
+    }
 
     // Add model flag if specified
     if (session.model) {
