@@ -119,6 +119,7 @@ export function SessionsSection() {
               </div>
             </div>
             <button
+              type="button"
               onClick={handleSkipPermissionsToggle}
               className={clsx(
                 'relative w-11 h-6 rounded-full transition-colors duration-200',

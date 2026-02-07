@@ -304,28 +304,28 @@ export const useQuickActionStore = create<QuickActionStore>()(
         partialize: state => ({
           actions: state.actions,
         }),
-        onRehydrateStorage: () => {
-          return state => {
-            if (state) {
-              // Migrate: add Commit & Push if missing from persisted actions
-              const hasCommitPush = state.actions.some(a => a.id === 'git-commit-push');
-              if (!hasCommitPush) {
-                const commitPushAction = DEFAULT_QUICK_ACTIONS.find(
-                  a => a.id === 'git-commit-push'
-                );
-                if (commitPushAction) {
-                  // Insert after git-commit if it exists, otherwise append
-                  const commitIndex = state.actions.findIndex(a => a.id === 'git-commit');
-                  if (commitIndex >= 0) {
-                    state.actions.splice(commitIndex + 1, 0, commitPushAction);
-                  } else {
-                    state.actions.push(commitPushAction);
-                  }
-                  logger.info('Migrated: added Commit & Push quick action');
-                }
-              }
-            }
-          };
+        version: 2,
+        migrate: persistedState => {
+          const state = persistedState as QuickActionState;
+          if (!state?.actions) {
+            return state;
+          }
+          if (state.actions.some(a => a.id === 'git-commit-push')) {
+            return state;
+          }
+          const commitPushAction = DEFAULT_QUICK_ACTIONS.find(a => a.id === 'git-commit-push');
+          if (!commitPushAction) {
+            return state;
+          }
+          const commitIndex = state.actions.findIndex(a => a.id === 'git-commit');
+          const nextActions = [...state.actions];
+          if (commitIndex >= 0) {
+            nextActions.splice(commitIndex + 1, 0, commitPushAction);
+          } else {
+            nextActions.push(commitPushAction);
+          }
+          logger.info('Migrated: added Commit & Push quick action');
+          return { ...state, actions: nextActions };
         },
       }
     ),

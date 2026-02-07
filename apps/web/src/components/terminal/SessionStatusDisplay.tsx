@@ -80,8 +80,10 @@ export function SessionStatusDisplay({ session, gitBranch }: SessionStatusDispla
         <div
           className="flex items-center gap-1 text-xs text-amber-400 shrink-0 px-1.5 py-0.5 rounded bg-amber-500/10"
           title="Running with skip-permissions mode"
+          aria-label="Running with skip-permissions mode"
         >
-          <ShieldOff size={11} />
+          <ShieldOff size={11} aria-hidden="true" />
+          <span className="sr-only">Skip-permissions enabled</span>
         </div>
       )}
 

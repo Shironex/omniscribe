@@ -1,4 +1,4 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import Store from 'electron-store';
 import {
   QuickAction,
@@ -7,7 +7,6 @@ import {
   WorkspaceStateResponse,
   DEFAULT_WORKTREE_SETTINGS,
   DEFAULT_SESSION_SETTINGS,
-  createLogger,
 } from '@omniscribe/shared';
 
 // Re-export WorkspaceStateResponse as WorkspaceState for backward compatibility
@@ -158,8 +157,12 @@ const DEFAULT_QUICK_ACTIONS: QuickAction[] = [
     enabled: true,
     handler: 'terminal:execute',
     params: {
-      command:
-        "Create a brief implementation plan for this task:\n1. Goal: What we're accomplishing\n2. Approach: How we'll do it\n3. Files to modify and what changes\n4. Tasks (numbered list)\n5. Potential risks or gotchas",
+      command: `Create a brief implementation plan for this task:
+1. Goal: What we're accomplishing
+2. Approach: How we'll do it
+3. Files to modify and what changes
+4. Tasks (numbered list)
+5. Potential risks or gotchas`,
     },
   },
 ];
@@ -175,7 +178,7 @@ const DEFAULT_PREFERENCES: UserPreferences = {
  */
 @Injectable()
 export class WorkspaceService implements OnModuleInit {
-  private readonly logger = createLogger('WorkspaceService');
+  private readonly logger = new Logger(WorkspaceService.name);
   private store: Store<StoreSchema>;
 
   constructor() {
@@ -194,7 +197,7 @@ export class WorkspaceService implements OnModuleInit {
    * Initialize default values on module init
    */
   onModuleInit(): void {
-    this.logger.info('Initializing workspace service');
+    this.logger.log('Initializing workspace service');
     // Ensure quick actions exist
     const quickActions = this.store.get('quickActions');
     if (!quickActions || quickActions.length === 0) {
@@ -471,7 +474,7 @@ export class WorkspaceService implements OnModuleInit {
    * Clear all data from the store
    */
   clear(): void {
-    this.logger.info('Clearing all workspace data');
+    this.logger.log('Clearing all workspace data');
     this.store.clear();
   }
 
