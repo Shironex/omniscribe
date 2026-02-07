@@ -1,0 +1,176 @@
+/* Midnight Theme - Dark purple inspired by Omniscribe splash screen gradient */
+
+:root.midnight {
+  /* Deep dark purple backgrounds - #0a0a0f to #1a1a2e */
+  --background: oklch(0.08 0.02 280); /* #0a0a0f */
+  --background-50: oklch(0.08 0.02 280 / 0.5);
+  --background-80: oklch(0.08 0.02 280 / 0.8);
+
+  /* Text colors with cool undertones */
+  --foreground: oklch(0.92 0.02 280); /* Slightly cool white */
+  --foreground-secondary: oklch(0.65 0.04 280);
+  --foreground-muted: oklch(0.48 0.05 280);
+
+  /* Card and popover backgrounds */
+  --card: oklch(0.16 0.04 280); /* #1a1a2e */
+  --card-foreground: oklch(0.92 0.02 280);
+  --popover: oklch(0.12 0.03 280);
+  --popover-foreground: oklch(0.92 0.02 280);
+
+  /* Brand colors - indigo/violet accent */
+  --primary: oklch(0.6 0.22 280); /* Indigo-violet */
+  --primary-foreground: oklch(0.95 0 0);
+
+  --brand-400: oklch(0.65 0.2 280);
+  --brand-500: oklch(0.6 0.22 280);
+  --brand-600: oklch(0.55 0.24 285);
+
+  /* Secondary/muted surfaces */
+  --secondary: oklch(0.2 0.05 280); /* #1e1e35 */
+  --secondary-foreground: oklch(0.92 0.02 280);
+
+  --muted: oklch(0.2 0.05 280);
+  --muted-foreground: oklch(0.48 0.05 280);
+
+  --accent: oklch(0.24 0.06 280);
+  --accent-foreground: oklch(0.92 0.02 280);
+
+  --destructive: oklch(0.6 0.22 15);
+
+  /* Borders with subtle purple undertone */
+  --border: oklch(0.28 0.06 280);
+  --border-glass: oklch(0.6 0.22 280 / 0.25);
+
+  --input: oklch(0.12 0.03 280);
+  --ring: oklch(0.6 0.22 280);
+
+  /* Chart colors */
+  --chart-1: oklch(0.6 0.22 280); /* Indigo */
+  --chart-2: oklch(0.7 0.2 300); /* Purple-pink */
+  --chart-3: oklch(0.7 0.18 230); /* Blue */
+  --chart-4: oklch(0.75 0.18 180); /* Teal */
+  --chart-5: oklch(0.8 0.15 60); /* Amber */
+
+  /* Sidebar */
+  --sidebar: oklch(0.06 0.02 280);
+  --sidebar-foreground: oklch(0.92 0.02 280);
+  --sidebar-primary: oklch(0.6 0.22 280);
+  --sidebar-primary-foreground: oklch(0.95 0 0);
+  --sidebar-accent: oklch(0.2 0.05 280);
+  --sidebar-accent-foreground: oklch(0.92 0.02 280);
+  --sidebar-border: oklch(0.28 0.06 280);
+  --sidebar-ring: oklch(0.6 0.22 280);
+
+  /* Action button colors - Midnight indigo/violet theme */
+  --action-view: oklch(0.6 0.22 280); /* Indigo */
+  --action-view-hover: oklch(0.55 0.24 280);
+  --action-followup: oklch(0.65 0.2 300); /* Purple-pink */
+  --action-followup-hover: oklch(0.6 0.22 300);
+  --action-commit: oklch(0.65 0.18 160); /* Green */
+  --action-commit-hover: oklch(0.6 0.2 160);
+  --action-verify: oklch(0.65 0.18 160); /* Green */
+  --action-verify-hover: oklch(0.6 0.2 160);
+
+  /* Running indicator - Indigo */
+  --running-indicator: oklch(0.6 0.22 280);
+  --running-indicator-text: oklch(0.65 0.2 280);
+
+  /* Status colors */
+  --status-success: oklch(0.65 0.2 140);
+  --status-success-bg: oklch(0.65 0.2 140 / 0.2);
+  --status-warning: oklch(0.75 0.15 70);
+  --status-warning-bg: oklch(0.75 0.15 70 / 0.2);
+  --status-error: oklch(0.65 0.22 25);
+  --status-error-bg: oklch(0.65 0.22 25 / 0.2);
+  --status-info: oklch(0.65 0.2 230);
+  --status-info-bg: oklch(0.65 0.2 230 / 0.2);
+  --status-backlog: oklch(0.6 0 0);
+  --status-in-progress: oklch(0.75 0.15 70);
+  --status-waiting: oklch(0.7 0.18 50);
+
+  /* Shadow tokens */
+  --shadow-xs: 0 1px 2px rgba(5, 5, 15, 0.4);
+  --shadow-sm: 0 1px 3px rgba(5, 5, 15, 0.5), 0 1px 2px rgba(5, 5, 15, 0.4);
+  --shadow-md: 0 4px 6px -1px rgba(5, 5, 15, 0.5), 0 2px 4px -1px rgba(5, 5, 15, 0.4);
+  --shadow-lg: 0 10px 15px -3px rgba(5, 5, 15, 0.5), 0 4px 6px -2px rgba(5, 5, 15, 0.3);
+  --shadow-xl: 0 20px 25px -5px rgba(5, 5, 15, 0.6), 0 10px 10px -5px rgba(5, 5, 15, 0.4);
+}
+
+/* Theme-specific overrides */
+
+.midnight .content-bg {
+  background: linear-gradient(
+    135deg,
+    oklch(0.08 0.02 280),
+    oklch(0.12 0.04 280),
+    oklch(0.08 0.02 280)
+  );
+}
+
+.midnight .animated-outline-gradient {
+  background: conic-gradient(from 90deg at 50% 50%, #6366f1 0%, #8b5cf6 50%, #6366f1 100%);
+}
+
+.midnight .animated-outline-inner {
+  background: oklch(0.12 0.03 280) !important;
+  color: #818cf8 !important;
+}
+
+.midnight [data-slot='button'][class*='animated-outline']:hover .animated-outline-inner {
+  background: oklch(0.18 0.05 280) !important;
+  color: #a5b4fc !important;
+}
+
+.midnight .slider-track {
+  background: oklch(0.2 0.05 280);
+}
+
+.midnight .slider-range {
+  background: linear-gradient(to right, #6366f1, #8b5cf6);
+}
+
+.midnight .slider-thumb {
+  background: oklch(0.16 0.04 280);
+  border-color: #6366f1;
+}
+
+.midnight .xml-highlight {
+  color: oklch(0.92 0.02 280);
+}
+
+.midnight .xml-tag-bracket {
+  color: oklch(0.65 0.2 300); /* Purple-pink */
+}
+
+.midnight .xml-tag-name {
+  color: oklch(0.7 0.2 300); /* Purple-pink for tag names */
+}
+
+.midnight .xml-attribute-name {
+  color: oklch(0.7 0.18 280); /* Indigo for attributes */
+}
+
+.midnight .xml-attribute-equals {
+  color: oklch(0.55 0.04 280); /* Dim purple-gray */
+}
+
+.midnight .xml-attribute-value {
+  color: oklch(0.75 0.18 180); /* Teal for strings */
+}
+
+.midnight .xml-comment {
+  color: oklch(0.45 0.05 280); /* Dim purple */
+  font-style: italic;
+}
+
+.midnight .xml-cdata {
+  color: oklch(0.7 0.18 230); /* Blue for CDATA */
+}
+
+.midnight .xml-doctype {
+  color: oklch(0.65 0.2 280); /* Indigo for DOCTYPE */
+}
+
+.midnight .xml-text {
+  color: oklch(0.88 0.02 280); /* Slightly warm off-white */
+}
