@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { createLogger } from '@omniscribe/shared';
-import type { TaskItem, SessionTasksUpdate } from '@omniscribe/shared';
+import type { TaskItem, SessionTasksUpdate, SessionRemovePayload } from '@omniscribe/shared';
 import {
   SocketStoreState,
   SocketStoreActions,
@@ -67,7 +67,7 @@ export const useTaskStore = create<TaskStore>()(
             {
               event: 'session:removed',
               handler: (data, get) => {
-                const { sessionId } = data as { sessionId: string };
+                const { sessionId } = data as SessionRemovePayload;
                 logger.debug('session:removed — clearing tasks', sessionId);
                 get().clearTasks(sessionId);
               },
@@ -120,11 +120,14 @@ export const useTaskStore = create<TaskStore>()(
 
 // Selectors
 
+/** Stable empty array to avoid new references when a session has no tasks */
+const EMPTY_TASKS: TaskItem[] = [];
+
 /**
  * Select tasks for a specific session
  */
 export const selectTasksForSession = (sessionId: string) => (state: TaskStore) =>
-  state.tasksBySession.get(sessionId) ?? [];
+  state.tasksBySession.get(sessionId) ?? EMPTY_TASKS;
 
 /**
  * Select total task count for a session

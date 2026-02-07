@@ -57,6 +57,7 @@ function TaskGroup({ label, items }: TaskGroupProps) {
       <button
         type="button"
         onClick={() => setExpanded(!expanded)}
+        aria-expanded={expanded}
         className="flex items-center gap-1 w-full px-2 py-1 text-2xs font-medium text-muted-foreground uppercase tracking-wide hover:bg-accent/50 transition-colors"
       >
         {expanded ? <ChevronDown size={10} /> : <ChevronRight size={10} />}

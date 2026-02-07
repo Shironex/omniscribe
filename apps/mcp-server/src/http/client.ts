@@ -73,7 +73,7 @@ export function createHttpClient(config: EnvironmentConfig, logger: Logger): Omn
       return false;
     }
 
-    const tasksUrl = statusUrl.replace('/status', '/tasks');
+    const tasksUrl = new URL(statusUrl).origin + '/tasks';
 
     const payload: TasksPayload = {
       sessionId,

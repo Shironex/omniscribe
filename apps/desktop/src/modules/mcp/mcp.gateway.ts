@@ -26,13 +26,10 @@ import {
   McpRemoveConfigResponse,
   McpInternalStatusResponse,
   McpStatusServerInfoResponse,
+  SessionTasksUpdate,
   createLogger,
 } from '@omniscribe/shared';
-import {
-  McpStatusServerService,
-  SessionStatusEvent,
-  SessionTasksEvent,
-} from './mcp-status-server.service';
+import { McpStatusServerService, SessionStatusEvent } from './mcp-status-server.service';
 import {
   McpDiscoveryService,
   McpWriterService,
@@ -265,7 +262,7 @@ export class McpGateway implements OnGatewayInit {
    * Broadcast session tasks events from the HTTP status server
    */
   @OnEvent('session.tasks')
-  onSessionTasks(event: SessionTasksEvent): void {
+  onSessionTasks(event: SessionTasksUpdate): void {
     this.server.emit('session:tasks', {
       sessionId: event.sessionId,
       tasks: event.tasks,

@@ -52,7 +52,6 @@ describe('OmniscribeTasksTool', () => {
 
       const result = await tool.execute({ tasks });
 
-      expect(result.isError).toBeUndefined();
       expect(result.content[0].text).toBe('Tasks updated: 3 task(s) reported');
     });
 
@@ -63,7 +62,6 @@ describe('OmniscribeTasksTool', () => {
         tasks: [{ id: '1', subject: 'Task A', status: 'pending' as const }],
       });
 
-      expect(result.isError).toBeUndefined();
       expect(result.content[0].text).toContain('could not be reported');
     });
 

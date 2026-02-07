@@ -8,8 +8,8 @@ import {
   LOCALHOST,
   StatusPayload,
   TasksPayload,
-  TaskItem,
   SessionStatusState,
+  SessionTasksUpdate,
   createLogger,
 } from '@omniscribe/shared';
 import { McpSessionRegistryService } from './services/mcp-session-registry.service';
@@ -22,14 +22,6 @@ export interface SessionStatusEvent {
   status: SessionStatusState;
   message?: string;
   needsInputPrompt?: string;
-}
-
-/**
- * Session tasks event emitted for UI updates
- */
-export interface SessionTasksEvent {
-  sessionId: string;
-  tasks: TaskItem[];
 }
 
 /**
@@ -287,7 +279,7 @@ export class McpStatusServerService implements OnModuleInit, OnModuleDestroy {
     }
 
     // Emit tasks event for UI
-    const event: SessionTasksEvent = {
+    const event: SessionTasksUpdate = {
       sessionId: payload.sessionId,
       tasks: payload.tasks ?? [],
     };
