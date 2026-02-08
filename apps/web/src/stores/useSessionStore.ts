@@ -6,6 +6,7 @@ import {
   HealthLevel,
   MAX_CONCURRENT_SESSIONS,
   createLogger,
+  ClaudeSessionIdCapturedEvent,
 } from '@omniscribe/shared';
 import { toast } from 'sonner';
 import { socket } from '@/lib/socket';
@@ -35,6 +36,10 @@ export interface ExtendedSessionConfig extends SessionConfig {
   health?: HealthLevel;
   /** Whether session was launched with skip-permissions mode */
   skipPermissions?: boolean;
+  /** Claude Code session ID (from sessions-index.json) */
+  claudeSessionId?: string;
+  /** Whether this session was resumed from a previous Claude Code session */
+  isResumed?: boolean;
 }
 
 /**
@@ -152,6 +157,20 @@ export const useSessionStore = create<SessionStore>()(
                 const payload = data as { sessionId: string; health: HealthLevel; reason?: string };
                 logger.debug('session:health', payload.sessionId, payload.health);
                 get().updateSession(payload.sessionId, { health: payload.health });
+              },
+            },
+            {
+              event: 'session:claude-id-captured',
+              handler: (data, get) => {
+                const payload = data as ClaudeSessionIdCapturedEvent;
+                logger.debug(
+                  'session:claude-id-captured',
+                  payload.sessionId,
+                  payload.claudeSessionId
+                );
+                get().updateSession(payload.sessionId, {
+                  claudeSessionId: payload.claudeSessionId,
+                });
               },
             },
             {

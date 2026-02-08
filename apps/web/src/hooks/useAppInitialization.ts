@@ -1,14 +1,16 @@
 import { useEffect } from 'react';
-import { createLogger } from '@omniscribe/shared';
+import { createLogger, type RestoreSnapshotResponse } from '@omniscribe/shared';
 import { useSessionStore } from '@/stores/useSessionStore';
 import { useWorkspaceStore } from '@/stores/useWorkspaceStore';
 import { useGitStore } from '@/stores/useGitStore';
 import { useMcpStore } from '@/stores/useMcpStore';
 import { useTaskStore } from '@/stores/useTaskStore';
+import { useSessionHistoryStore } from '@/stores/useSessionHistoryStore';
 import { useUpdateStore } from '@/stores/useUpdateStore';
 import { useConnectionStore } from '@/stores/useConnectionStore';
 import { useSettingsStore } from '@/stores/useSettingsStore';
-import { connectSocket } from '@/lib/socket';
+import { connectSocket, socket } from '@/lib/socket';
+import { resumeSession } from '@/lib/session';
 
 const logger = createLogger('AppInit');
 
@@ -25,6 +27,45 @@ async function detectClaudeCliStatus(): Promise<void> {
     }
   } catch (error) {
     logger.warn('Failed to detect Claude CLI status:', error);
+  }
+}
+
+/**
+ * Check if auto-resume is enabled and resume any sessions that were active when Omniscribe last closed.
+ * Called once on startup after the socket connection is established.
+ */
+async function autoResumeOnRestart(): Promise<void> {
+  try {
+    const response = await new Promise<RestoreSnapshotResponse>((resolve, reject) => {
+      const timeout = setTimeout(() => reject(new Error('Timeout')), 5000);
+      socket.emit('session:get-restore-snapshot', {}, (res: RestoreSnapshotResponse) => {
+        clearTimeout(timeout);
+        resolve(res);
+      });
+    });
+
+    if (!response.autoResumeEnabled || response.sessions.length === 0) {
+      return;
+    }
+
+    logger.info(`Auto-resuming ${response.sessions.length} sessions from previous run`);
+
+    for (const snapshot of response.sessions) {
+      try {
+        await resumeSession(
+          snapshot.claudeSessionId,
+          snapshot.projectPath,
+          snapshot.branch,
+          snapshot.name
+        );
+        logger.info(`Auto-resumed session: ${snapshot.name}`);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        logger.warn(`Failed to auto-resume session ${snapshot.name}: ${msg}`);
+      }
+    }
+  } catch (error) {
+    logger.warn('Failed to check auto-resume snapshot:', error);
   }
 }
 
@@ -58,6 +99,10 @@ export function useAppInitialization(): void {
   const initTaskListeners = useTaskStore(state => state.initListeners);
   const cleanupTaskListeners = useTaskStore(state => state.cleanupListeners);
 
+  // Session history store
+  const initSessionHistoryListeners = useSessionHistoryStore(state => state.initListeners);
+  const cleanupSessionHistoryListeners = useSessionHistoryStore(state => state.cleanupListeners);
+
   // Connection store (global socket connection state)
   const initConnectionListeners = useConnectionStore(state => state.initListeners);
   const cleanupConnectionListeners = useConnectionStore(state => state.cleanupListeners);
@@ -80,6 +125,7 @@ export function useAppInitialization(): void {
         initWorkspaceListeners();
         initMcpListeners();
         initTaskListeners();
+        initSessionHistoryListeners();
         logger.info('All listeners registered');
         await connectSocket();
         if (!mounted) return;
@@ -88,6 +134,8 @@ export function useAppInitialization(): void {
         fetchInternalMcpStatus();
         // Detect Claude CLI status early so pre-launch slots use the correct default AI mode
         detectClaudeCliStatus();
+        // Auto-resume sessions from previous run if enabled
+        autoResumeOnRestart();
         // Init updater listeners (IPC-based, not socket)
         cleanupUpdateListeners = initUpdateListeners();
       } catch (error) {
@@ -106,6 +154,7 @@ export function useAppInitialization(): void {
       cleanupWorkspaceListeners();
       cleanupMcpListeners();
       cleanupTaskListeners();
+      cleanupSessionHistoryListeners();
       cleanupUpdateListeners?.();
     };
   }, [
@@ -121,6 +170,8 @@ export function useAppInitialization(): void {
     cleanupMcpListeners,
     initTaskListeners,
     cleanupTaskListeners,
+    initSessionHistoryListeners,
+    cleanupSessionHistoryListeners,
     fetchInternalMcpStatus,
     initUpdateListeners,
   ]);

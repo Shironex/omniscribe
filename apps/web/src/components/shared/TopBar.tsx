@@ -1,6 +1,17 @@
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { GitBranch, X, Plus, Minus, Square, XIcon, Settings, Play, LayoutGrid } from 'lucide-react';
+import {
+  GitBranch,
+  X,
+  Plus,
+  Minus,
+  Square,
+  XIcon,
+  Settings,
+  Play,
+  LayoutGrid,
+  History,
+} from 'lucide-react';
 import { StatusLegend, StatusCounts } from './StatusLegend';
 import { StatusDot, SessionStatus } from './StatusLegend';
 import { UsagePopover } from '@/components/shared/UsagePopover';
@@ -38,6 +49,8 @@ interface TopBarProps {
   canLaunch: boolean;
   isLaunching?: boolean;
   hasActiveSessions: boolean;
+  onToggleHistory?: () => void;
+  isHistoryOpen?: boolean;
   className?: string;
 }
 
@@ -59,6 +72,8 @@ export function TopBar({
   canLaunch,
   isLaunching = false,
   hasActiveSessions,
+  onToggleHistory,
+  isHistoryOpen,
   className,
 }: TopBarProps) {
   const isElectron = typeof window !== 'undefined' && !!window.electronAPI;
@@ -168,6 +183,24 @@ export function TopBar({
 
         {/* Divider */}
         <div className="w-px h-5 bg-border mx-1" />
+
+        {/* Session History toggle */}
+        {hasActiveProject && onToggleHistory && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onToggleHistory}
+                className={clsx('no-drag w-7 h-7', isHistoryOpen && 'bg-primary/10 text-primary')}
+                aria-label="Session history"
+              >
+                <History size={15} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">Session history</TooltipContent>
+          </Tooltip>
+        )}
 
         {/* Settings */}
         <Tooltip>

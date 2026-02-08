@@ -6,6 +6,7 @@ import {
   WelcomeView,
   SettingsModal,
   LaunchPresetsModal,
+  SessionHistoryPanel,
 } from '@/components';
 import {
   useAppInitialization,
@@ -21,6 +22,8 @@ import {
 } from '@/hooks';
 import { useUpdateToast } from '@/hooks/useUpdateToast';
 import { useTerminalStore, useWorkspaceStore } from '@/stores';
+import { resumeSession } from '@/lib/session';
+import { toast } from 'sonner';
 
 function App() {
   useAppInitialization();
@@ -125,8 +128,37 @@ function App() {
   const [isLaunchModalOpen, setIsLaunchModalOpen] = useState(false);
   const handleOpenLaunchModal = useCallback(() => setIsLaunchModalOpen(true), []);
 
+  // Session history panel state
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const handleToggleHistory = useCallback(() => setIsHistoryOpen(prev => !prev), []);
+
   // Default AI mode for modal
   const { defaultAiMode, claudeAvailable } = useDefaultAiMode();
+
+  // Resume session handler
+  const handleResume = useCallback(
+    async (sessionId: string) => {
+      const session = sessionsHookResult.sessions.find(s => s.id === sessionId);
+      if (!session?.claudeSessionId || !activeProjectPath) return;
+      try {
+        const resumed = await resumeSession(
+          session.claudeSessionId,
+          activeProjectPath,
+          session.branch
+        );
+        if (resumed.terminalSessionId !== undefined) {
+          sessionsHookResult.updateSession(resumed.id, {
+            terminalSessionId: resumed.terminalSessionId,
+          });
+        }
+        toast.success('Session resumed');
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : 'Failed to resume';
+        toast.error(msg);
+      }
+    },
+    [sessionsHookResult, activeProjectPath]
+  );
 
   useAppKeyboardShortcuts({
     canLaunch,
@@ -166,42 +198,55 @@ function App() {
         canLaunch={canLaunch}
         isLaunching={isLaunching}
         hasActiveSessions={hasActiveSessions}
+        onToggleHistory={handleToggleHistory}
+        isHistoryOpen={isHistoryOpen}
       />
 
       <main className="flex-1 flex overflow-hidden bg-background">
-        {activeProjectPath ? (
-          hasContent ? (
-            <TerminalGrid
-              sessions={orderedTerminalSessions}
-              preLaunchSlots={preLaunchSlots}
-              launchingSlotIds={launchingSlotIds}
-              branches={branches}
-              quickActions={quickActionsForTerminal}
-              focusedSessionId={focusedSessionId}
-              onFocusSession={handleFocusSession}
-              onAddSlot={handleAddSession}
-              onOpenLaunchModal={handleOpenLaunchModal}
-              onRemoveSlot={handleRemoveSlot}
-              onUpdateSlot={handleUpdateSlot}
-              onLaunch={handleLaunchSlot}
-              onKill={handleKillSession}
-              onSessionClose={handleSessionClose}
-              onQuickAction={handleQuickAction}
-              onReorderSessions={handleReorderSessions}
-            />
+        {/* Main content area */}
+        <div className="flex-1 min-w-0">
+          {activeProjectPath ? (
+            hasContent ? (
+              <TerminalGrid
+                sessions={orderedTerminalSessions}
+                preLaunchSlots={preLaunchSlots}
+                launchingSlotIds={launchingSlotIds}
+                branches={branches}
+                quickActions={quickActionsForTerminal}
+                focusedSessionId={focusedSessionId}
+                onFocusSession={handleFocusSession}
+                onAddSlot={handleAddSession}
+                onOpenLaunchModal={handleOpenLaunchModal}
+                onRemoveSlot={handleRemoveSlot}
+                onUpdateSlot={handleUpdateSlot}
+                onLaunch={handleLaunchSlot}
+                onKill={handleKillSession}
+                onSessionClose={handleSessionClose}
+                onQuickAction={handleQuickAction}
+                onResume={handleResume}
+                onReorderSessions={handleReorderSessions}
+              />
+            ) : (
+              <IdleLandingView
+                onAddSession={handleAddSession}
+                onOpenLaunchModal={handleOpenLaunchModal}
+              />
+            )
           ) : (
-            <IdleLandingView
-              onAddSession={handleAddSession}
-              onOpenLaunchModal={handleOpenLaunchModal}
+            <WelcomeView
+              recentProjects={recentProjects}
+              onOpenProject={handleSelectDirectory}
+              onSelectProject={handleSelectTab}
             />
-          )
-        ) : (
-          <WelcomeView
-            recentProjects={recentProjects}
-            onOpenProject={handleSelectDirectory}
-            onSelectProject={handleSelectTab}
-          />
-        )}
+          )}
+        </div>
+
+        {/* Session History Panel */}
+        <SessionHistoryPanel
+          isOpen={isHistoryOpen}
+          onClose={() => setIsHistoryOpen(false)}
+          projectPath={activeProjectPath}
+        />
       </main>
 
       <SettingsModal />

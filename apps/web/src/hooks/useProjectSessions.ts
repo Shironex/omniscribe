@@ -62,6 +62,8 @@ export function useProjectSessions(
       terminalSessionId: session.terminalSessionId,
       worktreePath: session.worktreePath,
       skipPermissions: session.skipPermissions,
+      claudeSessionId: session.claudeSessionId,
+      isResumed: session.isResumed,
     }));
   }, [activeProjectSessions]);
 

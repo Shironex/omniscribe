@@ -21,6 +21,7 @@ interface TerminalCardProps {
   onKill: () => void;
   onSessionClose?: (exitCode: number) => void;
   onQuickAction?: (actionId: string) => void;
+  onResume?: (sessionId: string) => void;
   dragHandleProps?: TerminalDragHandleProps;
 }
 
@@ -32,6 +33,7 @@ export function TerminalCard({
   onKill,
   onSessionClose,
   onQuickAction,
+  onResume,
   dragHandleProps,
 }: TerminalCardProps) {
   return (
@@ -51,6 +53,7 @@ export function TerminalCard({
         quickActions={quickActions}
         onClose={onKill}
         onQuickAction={onQuickAction}
+        onResume={onResume ? () => onResume(session.id) : undefined}
         dragHandleProps={dragHandleProps}
       />
       <div className="relative flex-1 min-h-0">

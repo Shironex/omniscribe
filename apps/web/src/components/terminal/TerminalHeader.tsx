@@ -1,7 +1,7 @@
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { useState, useRef, useCallback, type HTMLAttributes } from 'react';
-import { GripVertical } from 'lucide-react';
+import { GripVertical, RotateCcw } from 'lucide-react';
 import { useClickOutside } from '@/hooks/useClickOutside';
 import { SessionStatusDisplay } from './SessionStatusDisplay';
 import { QuickActionsDropdown } from './QuickActionsDropdown';
@@ -31,6 +31,10 @@ export interface TerminalSession {
   worktreePath?: string;
   /** Whether session was launched with skip-permissions mode */
   skipPermissions?: boolean;
+  /** Claude Code session ID for resume capability */
+  claudeSessionId?: string;
+  /** Whether this session was resumed from a previous Claude Code session */
+  isResumed?: boolean;
 }
 
 interface TerminalHeaderProps {
@@ -40,6 +44,7 @@ interface TerminalHeaderProps {
   onSettingsClick?: () => void;
   onClose: () => void;
   onQuickAction?: (actionId: string) => void;
+  onResume?: () => void;
   dragHandleProps?: TerminalDragHandleProps;
   className?: string;
 }
@@ -51,6 +56,7 @@ export function TerminalHeader({
   onSettingsClick,
   onClose,
   onQuickAction,
+  onResume,
   dragHandleProps,
   className,
 }: TerminalHeaderProps) {
@@ -109,6 +115,18 @@ export function TerminalHeader({
 
       {/* Right section */}
       <div className="flex items-center gap-0.5 shrink-0">
+        {session.status === 'error' && session.claudeSessionId && onResume && (
+          <button
+            type="button"
+            onClick={onResume}
+            className="flex items-center gap-1 px-1.5 py-0.5 rounded text-xs text-emerald-400 hover:bg-emerald-500/10 transition-colors"
+            title="Resume this session"
+          >
+            <RotateCcw size={12} />
+            <span>Resume</span>
+          </button>
+        )}
+
         {quickActions.length > 0 && (
           <div className="relative" ref={quickActionsRef}>
             <QuickActionsDropdown
