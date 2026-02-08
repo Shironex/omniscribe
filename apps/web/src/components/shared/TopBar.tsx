@@ -5,6 +5,7 @@ import { StatusLegend, StatusCounts } from './StatusLegend';
 import { StatusDot, SessionStatus } from './StatusLegend';
 import { UsagePopover } from '@/components/shared/UsagePopover';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import { Button } from '@/components/ui/button';
 import { useSettingsStore } from '@/stores';
 
 const MAX_SESSIONS = 12;
@@ -106,21 +107,18 @@ export function TopBar({
             <span className="text-sm truncate max-w-32">{tab.label}</span>
             <Tooltip>
               <TooltipTrigger asChild>
-                <button
-                  type="button"
+                <Button
+                  variant="ghost"
+                  size="icon"
                   onClick={e => {
                     e.stopPropagation();
                     onCloseTab(tab.id);
                   }}
-                  className={clsx(
-                    'p-0.5 rounded opacity-0 group-hover:opacity-100',
-                    'hover:bg-border transition-all',
-                    'text-muted-foreground hover:text-foreground'
-                  )}
+                  className="p-0.5 h-auto w-auto opacity-0 group-hover:opacity-100"
                   aria-label={`Close ${tab.label}`}
                 >
                   <X size={14} />
-                </button>
+                </Button>
               </TooltipTrigger>
               <TooltipContent side="bottom">Close tab</TooltipContent>
             </Tooltip>
@@ -129,19 +127,16 @@ export function TopBar({
 
         <Tooltip>
           <TooltipTrigger asChild>
-            <button
-              type="button"
+            <Button
+              variant="ghost"
+              size="icon"
               data-testid="new-tab-button"
               onClick={onNewTab}
-              className={clsx(
-                'no-drag flex items-center justify-center px-3 h-full',
-                'text-muted-foreground hover:text-foreground',
-                'hover:bg-card/50 transition-colors'
-              )}
+              className="no-drag px-3 h-full"
               aria-label="New tab"
             >
               <Plus size={16} />
-            </button>
+            </Button>
           </TooltipTrigger>
           <TooltipContent side="bottom">New tab</TooltipContent>
         </Tooltip>
@@ -175,18 +170,15 @@ export function TopBar({
         {/* Settings */}
         <Tooltip>
           <TooltipTrigger asChild>
-            <button
-              type="button"
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => openSettings()}
-              className={clsx(
-                'no-drag w-7 h-7 flex items-center justify-center rounded',
-                'text-muted-foreground hover:text-foreground',
-                'hover:bg-card transition-colors'
-              )}
+              className="no-drag w-7 h-7"
               aria-label="Settings"
             >
               <Settings size={15} />
-            </button>
+            </Button>
           </TooltipTrigger>
           <TooltipContent side="bottom">Settings</TooltipContent>
         </Tooltip>
@@ -195,19 +187,16 @@ export function TopBar({
         {canAddMore && onOpenLaunchModal && (
           <Tooltip>
             <TooltipTrigger asChild>
-              <button
-                type="button"
+              <Button
+                variant="ghost"
+                size="icon"
                 data-testid="setup-sessions-button"
                 onClick={onOpenLaunchModal}
-                className={clsx(
-                  'no-drag w-7 h-7 flex items-center justify-center rounded',
-                  'text-muted-foreground hover:text-foreground',
-                  'hover:bg-card transition-colors'
-                )}
+                className="no-drag w-7 h-7"
                 aria-label="Set up sessions"
               >
                 <LayoutGrid size={15} />
-              </button>
+              </Button>
             </TooltipTrigger>
             <TooltipContent side="bottom">
               Set up sessions
@@ -220,19 +209,16 @@ export function TopBar({
         {canAddMore && onAddSlot && preLaunchSlotCount > 0 && (
           <Tooltip>
             <TooltipTrigger asChild>
-              <button
-                type="button"
+              <Button
+                variant="ghost"
+                size="icon"
                 data-testid="add-session-button"
                 onClick={onAddSlot}
-                className={clsx(
-                  'no-drag w-7 h-7 flex items-center justify-center rounded',
-                  'text-muted-foreground hover:text-foreground',
-                  'hover:bg-card transition-colors'
-                )}
+                className="no-drag w-7 h-7"
                 aria-label="Add session"
               >
                 <Plus size={15} />
-              </button>
+              </Button>
             </TooltipTrigger>
             <TooltipContent side="bottom">
               Add session
@@ -245,19 +231,16 @@ export function TopBar({
         {hasActiveSessions && (
           <Tooltip>
             <TooltipTrigger asChild>
-              <button
-                type="button"
+              <Button
+                variant="ghost"
+                size="icon"
                 data-testid="stop-all-button"
                 onClick={onStopAll}
-                className={clsx(
-                  'no-drag w-7 h-7 flex items-center justify-center rounded',
-                  'text-destructive hover:text-destructive',
-                  'hover:bg-destructive/10 transition-colors'
-                )}
+                className="no-drag w-7 h-7 text-destructive hover:text-destructive hover:bg-destructive/10"
                 aria-label="Stop all sessions"
               >
                 <Square size={14} fill="currentColor" />
-              </button>
+              </Button>
             </TooltipTrigger>
             <TooltipContent side="bottom">
               Stop all sessions
@@ -271,22 +254,20 @@ export function TopBar({
         {/* Launch */}
         <Tooltip>
           <TooltipTrigger asChild>
-            <button
-              type="button"
+            <Button
+              variant="ghost"
+              size="icon"
               data-testid="launch-button"
               onClick={onLaunch}
               disabled={!canLaunch || isLaunching}
               className={clsx(
-                'no-drag w-7 h-7 flex items-center justify-center rounded',
-                'transition-colors',
-                canLaunch && !isLaunching
-                  ? 'text-primary hover:bg-primary/10'
-                  : 'text-muted-foreground cursor-not-allowed opacity-60'
+                'no-drag w-7 h-7',
+                canLaunch && !isLaunching && 'text-primary hover:bg-primary/10'
               )}
               aria-label="Launch all sessions"
             >
               <Play size={15} fill="currentColor" />
-            </button>
+            </Button>
           </TooltipTrigger>
           <TooltipContent side="bottom">
             {isLaunching ? 'Launching...' : 'Launch all sessions'}
@@ -304,52 +285,43 @@ export function TopBar({
           <div className="flex items-center gap-1">
             <Tooltip>
               <TooltipTrigger asChild>
-                <button
-                  type="button"
+                <Button
+                  variant="ghost"
+                  size="icon"
                   onClick={() => window.electronAPI?.window.minimize()}
-                  className={clsx(
-                    'w-7 h-7 flex items-center justify-center rounded',
-                    'hover:bg-card transition-colors',
-                    'text-muted-foreground hover:text-foreground'
-                  )}
+                  className="w-7 h-7"
                   aria-label="Minimize"
                 >
                   <Minus size={14} />
-                </button>
+                </Button>
               </TooltipTrigger>
               <TooltipContent side="bottom">Minimize</TooltipContent>
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
-                <button
-                  type="button"
+                <Button
+                  variant="ghost"
+                  size="icon"
                   onClick={() => window.electronAPI?.window.maximize()}
-                  className={clsx(
-                    'w-7 h-7 flex items-center justify-center rounded',
-                    'hover:bg-card transition-colors',
-                    'text-muted-foreground hover:text-foreground'
-                  )}
+                  className="w-7 h-7"
                   aria-label="Maximize"
                 >
                   <Square size={12} />
-                </button>
+                </Button>
               </TooltipTrigger>
               <TooltipContent side="bottom">Maximize</TooltipContent>
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
-                <button
-                  type="button"
+                <Button
+                  variant="ghost"
+                  size="icon"
                   onClick={() => window.electronAPI?.window.close()}
-                  className={clsx(
-                    'w-7 h-7 flex items-center justify-center rounded',
-                    'hover:bg-destructive/20 transition-colors',
-                    'text-muted-foreground hover:text-destructive'
-                  )}
+                  className="w-7 h-7 hover:bg-destructive/20 hover:text-destructive"
                   aria-label="Close"
                 >
                   <XIcon size={14} />
-                </button>
+                </Button>
               </TooltipTrigger>
               <TooltipContent side="bottom">Close</TooltipContent>
             </Tooltip>

@@ -1,6 +1,7 @@
 import { clsx } from 'clsx';
 import { useMemo } from 'react';
 import { getLayout } from '@/lib/terminal-layout';
+import { Button } from '@/components/ui/button';
 
 interface GridPresetCardProps {
   count: number;
@@ -13,19 +14,17 @@ export function GridPresetCard({ count, selected, disabled, onClick }: GridPrese
   const layout = useMemo(() => getLayout(count), [count]);
 
   return (
-    <button
-      type="button"
+    <Button
+      variant="outline"
       onClick={onClick}
       disabled={disabled}
       title={`${count} ${count === 1 ? 'session' : 'sessions'}`}
       className={clsx(
-        'flex flex-col items-center p-2.5 rounded-lg',
-        'border transition-all duration-200',
-        'cursor-pointer',
-        disabled && 'opacity-40 cursor-not-allowed',
+        'flex flex-col items-center p-2.5 h-auto',
+        'transition-all duration-200',
         selected
           ? 'border-primary shadow-[0_0_8px_var(--primary)] bg-primary/5'
-          : 'border-border hover:border-muted-foreground bg-card/30 hover:bg-card/50'
+          : 'bg-card/30 hover:bg-card/50'
       )}
     >
       {/* Mini grid preview */}
@@ -46,6 +45,6 @@ export function GridPresetCard({ count, selected, disabled, onClick }: GridPrese
           </div>
         ))}
       </div>
-    </button>
+    </Button>
   );
 }

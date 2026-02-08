@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { clsx } from 'clsx';
 import { Terminal, ChevronDown, X } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
+import { Button } from '@/components/ui/button';
 import { BranchAutocomplete } from '@/components/shared/BranchAutocomplete';
 import { ClaudeIcon } from '@/components/shared/ClaudeIcon';
 import { useClickOutside } from '@/hooks/useClickOutside';
@@ -118,14 +119,14 @@ export function LaunchPresetsModal({
             </h2>
             <p className="text-sm text-muted-foreground">Choose a layout and configure defaults</p>
           </div>
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => onOpenChange(false)}
-            className="p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
             aria-label="Close"
           >
             <X className="w-4 h-4" />
-          </button>
+          </Button>
         </div>
 
         {/* Content */}
@@ -155,16 +156,11 @@ export function LaunchPresetsModal({
             <div className="flex items-center gap-3">
               {/* AI Mode selector */}
               <div ref={dropdownRef} className="relative">
-                <button
-                  type="button"
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={() => setIsAIModeOpen(!isAIModeOpen)}
-                  className={clsx(
-                    'flex items-center gap-2 px-2 py-1.5 rounded',
-                    'bg-muted border border-border',
-                    'text-xs text-foreground',
-                    'hover:border-muted-foreground',
-                    'transition-colors min-w-[110px]'
-                  )}
+                  className="min-w-[110px] text-xs"
                 >
                   {aiMode === 'claude' ? (
                     <ClaudeIcon size={14} className="text-orange-400" />
@@ -179,7 +175,7 @@ export function LaunchPresetsModal({
                       isAIModeOpen && 'rotate-180'
                     )}
                   />
-                </button>
+                </Button>
 
                 {isAIModeOpen && (
                   <div
@@ -192,9 +188,10 @@ export function LaunchPresetsModal({
                     {(['claude', 'plain'] as const).map(mode => {
                       const isDisabled = mode === 'claude' && !claudeAvailable;
                       return (
-                        <button
-                          type="button"
+                        <Button
                           key={mode}
+                          variant="ghost"
+                          size="sm"
                           onClick={() => {
                             if (isDisabled) return;
                             setAiMode(mode);
@@ -203,13 +200,8 @@ export function LaunchPresetsModal({
                           disabled={isDisabled}
                           title={isDisabled ? 'Claude CLI is not installed' : undefined}
                           className={clsx(
-                            'w-full flex items-center gap-2 px-3 py-1.5',
-                            'text-xs text-left transition-colors',
-                            isDisabled
-                              ? 'opacity-40 cursor-not-allowed'
-                              : mode === aiMode
-                                ? 'bg-primary/10 text-primary'
-                                : 'text-foreground hover:bg-card'
+                            'w-full justify-start text-xs',
+                            mode === aiMode && 'bg-primary/10 text-primary'
                           )}
                         >
                           {mode === 'claude' ? (
@@ -223,7 +215,7 @@ export function LaunchPresetsModal({
                               Not installed
                             </span>
                           )}
-                        </button>
+                        </Button>
                       );
                     })}
                   </div>
@@ -244,31 +236,12 @@ export function LaunchPresetsModal({
 
         {/* Footer */}
         <div className="flex justify-end gap-2 px-6 pb-6 pt-2">
-          <button
-            type="button"
-            onClick={() => onOpenChange(false)}
-            className={clsx(
-              'px-4 py-2 rounded-md text-sm',
-              'text-muted-foreground hover:text-foreground',
-              'hover:bg-muted transition-colors'
-            )}
-          >
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
-          </button>
-          <button
-            type="button"
-            onClick={handleCreate}
-            disabled={selectedCount === null}
-            className={clsx(
-              'px-4 py-2 rounded-md text-sm font-medium',
-              'transition-colors',
-              selectedCount !== null
-                ? 'bg-primary hover:brightness-110 text-primary-foreground'
-                : 'bg-border text-muted-foreground cursor-not-allowed'
-            )}
-          >
+          </Button>
+          <Button variant="default" onClick={handleCreate} disabled={selectedCount === null}>
             {selectedCount !== null ? `Create ${selectedCount} Sessions` : 'Select a layout'}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

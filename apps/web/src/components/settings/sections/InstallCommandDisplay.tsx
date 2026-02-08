@@ -1,6 +1,7 @@
 import { Copy, Check, Play, TriangleAlert } from 'lucide-react';
 import { clsx } from 'clsx';
 import type { ClaudeInstallCommand } from '@omniscribe/shared';
+import { Button } from '@/components/ui/button';
 
 interface InstallCommandDisplayProps {
   installCommand: ClaudeInstallCommand;
@@ -22,14 +23,11 @@ export function InstallCommandDisplay({
       <div className="flex items-center justify-between mb-2">
         <span className="text-sm font-medium text-foreground">{installCommand.description}</span>
         <div className="flex items-center gap-2">
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={onCopy}
-            className={clsx(
-              'flex items-center gap-1 px-2 py-1 rounded text-xs',
-              'hover:bg-muted transition-colors',
-              copiedCommand ? 'text-status-success' : 'text-muted-foreground hover:text-foreground'
-            )}
+            className={clsx('text-xs', copiedCommand ? 'text-status-success' : '')}
           >
             {copiedCommand ? (
               <>
@@ -42,7 +40,7 @@ export function InstallCommandDisplay({
                 Copy
               </>
             )}
-          </button>
+          </Button>
         </div>
       </div>
       <div className="p-3 rounded-lg bg-muted font-mono text-xs text-foreground overflow-x-auto">
@@ -66,18 +64,10 @@ export function InstallCommandDisplay({
         <p className="text-xs text-muted-foreground">
           Click the button to open a terminal with this command.
         </p>
-        <button
-          type="button"
-          onClick={onRunInTerminal}
-          className={clsx(
-            'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium',
-            'bg-primary text-primary-foreground',
-            'hover:bg-primary/90 transition-colors'
-          )}
-        >
+        <Button variant="default" size="sm" onClick={onRunInTerminal} className="text-xs">
           <Play className="w-3.5 h-3.5" />
           Run in Terminal
-        </button>
+        </Button>
       </div>
     </div>
   );
