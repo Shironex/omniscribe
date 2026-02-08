@@ -9,6 +9,7 @@ import type {
 } from '@omniscribe/shared';
 import { createLogger } from '@omniscribe/shared';
 import { themeOptions } from '@/lib/theme';
+import { persistTheme, getPersistedTheme } from '@/lib/theme-persistence';
 
 const logger = createLogger('Settings');
 
@@ -111,16 +112,21 @@ const DEFAULT_THEME: Theme = 'dark';
 export const useSettingsStore = create<SettingsStore>()(
   devtools(
     (set, get) => {
-      // Apply default theme on store initialization
+      // Resolve initial theme from localStorage (instant) or fall back to default
+      const initialTheme = (
+        typeof document !== 'undefined' ? getPersistedTheme() : DEFAULT_THEME
+      ) as Theme;
+
+      // Apply initial theme on store initialization
       if (typeof document !== 'undefined') {
-        applyThemeToDOM(DEFAULT_THEME);
+        applyThemeToDOM(initialTheme);
       }
 
       return {
         // Initial state
         isOpen: false,
         activeSection: 'appearance',
-        theme: DEFAULT_THEME,
+        theme: initialTheme,
         claudeCliStatus: null,
         isClaudeCliLoading: false,
         claudeVersionCheck: null,
@@ -166,6 +172,7 @@ export const useSettingsStore = create<SettingsStore>()(
         setTheme: (theme: Theme) => {
           set({ theme, previewTheme: null }, undefined, 'settings/setTheme');
           applyThemeToDOM(theme);
+          persistTheme(theme);
         },
 
         setPreviewTheme: (theme: Theme | null) => {

@@ -69,7 +69,8 @@ describe('WorkspaceService', () => {
     const mockTab: ProjectTabDTO = {
       id: 'tab-1',
       projectPath: '/project/one',
-      projectName: 'Project One',
+      name: 'Project One',
+      sessionIds: [],
       isActive: false,
       lastAccessedAt: new Date().toISOString(),
     };
@@ -100,7 +101,8 @@ describe('WorkspaceService', () => {
       const tabs = service.addTab({
         id: 'tab-2',
         projectPath: '/project/two',
-        projectName: 'Project Two',
+        name: 'Project Two',
+        sessionIds: [],
         isActive: false,
         lastAccessedAt: new Date().toISOString(),
       });
@@ -123,7 +125,8 @@ describe('WorkspaceService', () => {
       service.addTab({
         id: 'tab-2',
         projectPath: '/project/two',
-        projectName: 'Project Two',
+        name: 'Project Two',
+        sessionIds: [],
         isActive: false,
         lastAccessedAt: new Date().toISOString(),
       });
@@ -140,7 +143,8 @@ describe('WorkspaceService', () => {
       service.addTab({
         id: 'tab-2',
         projectPath: '/project/two',
-        projectName: 'Project Two',
+        name: 'Project Two',
+        sessionIds: [],
         isActive: false,
         lastAccessedAt: new Date().toISOString(),
       });
@@ -164,10 +168,20 @@ describe('WorkspaceService', () => {
     it('should return default quick actions', () => {
       const actions = service.getQuickActions();
 
-      expect(actions.length).toBe(4);
-      expect(actions.map(a => a.id)).toEqual(
-        expect.arrayContaining(['run-app', 'commit-push', 'fix-errors', 'lint-format'])
-      );
+      expect(actions.length).toBe(11);
+      expect(actions.map(a => a.id)).toEqual([
+        'git-commit',
+        'git-commit-push',
+        'git-push',
+        'git-pull',
+        'git-status',
+        'resolve-conflicts',
+        'address-pr-comments',
+        'run-app',
+        'lint-format',
+        'fix-errors',
+        'plan-implementation',
+      ]);
     });
 
     it('should set custom quick actions', () => {
@@ -196,7 +210,7 @@ describe('WorkspaceService', () => {
       service.resetQuickActionsToDefaults();
 
       const actions = service.getQuickActions();
-      expect(actions.length).toBe(4);
+      expect(actions.length).toBe(11);
     });
   });
 
@@ -211,7 +225,7 @@ describe('WorkspaceService', () => {
     it('should update preferences', () => {
       service.setPreferences({
         theme: 'light',
-        worktree: { enabled: false, autoCleanup: false, location: 'project' },
+        worktree: { mode: 'never', autoCleanup: false, location: 'project' },
       });
 
       expect(service.getPreferences().theme).toBe('light');

@@ -218,7 +218,7 @@ describe('McpWriterService', () => {
     });
 
     it('should omit instance ID from env when not available', async () => {
-      statusServer.getInstanceId.mockReturnValue(null);
+      statusServer.getInstanceId.mockReturnValue(null as unknown as string);
 
       await service.writeConfig('/work', 'session-1', '/project', []);
 

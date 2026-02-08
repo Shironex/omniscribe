@@ -23,6 +23,22 @@ const DEFAULT_QUICK_ACTIONS: QuickAction[] = [
     },
   },
   {
+    id: 'git-commit-push',
+    title: 'Commit & Push',
+    description:
+      'Analyze changes, generate a conventional commit message, commit, and push to remote',
+    category: 'git',
+    icon: 'GitCommitVertical',
+    enabled: true,
+    handler: 'terminal:execute',
+    params: {
+      command:
+        'Analyze the current changes, generate a conventional commit message (feat/fix/refactor/etc.), ' +
+        'stage all changes, commit with the generated message, and push to the remote repository. ' +
+        'Handle any errors autonomously (e.g., resolve push conflicts, retry after fixing issues).',
+    },
+  },
+  {
     id: 'git-push',
     title: 'Git Push',
     description: 'Push committed changes to remote',
@@ -288,6 +304,29 @@ export const useQuickActionStore = create<QuickActionStore>()(
         partialize: state => ({
           actions: state.actions,
         }),
+        version: 2,
+        migrate: (persistedState, oldVersion) => {
+          const state = persistedState as QuickActionState;
+          if (!state?.actions) {
+            return state;
+          }
+          if (oldVersion >= 2 || state.actions.some(a => a.id === 'git-commit-push')) {
+            return state;
+          }
+          const commitPushAction = DEFAULT_QUICK_ACTIONS.find(a => a.id === 'git-commit-push');
+          if (!commitPushAction) {
+            return state;
+          }
+          const commitIndex = state.actions.findIndex(a => a.id === 'git-commit');
+          const nextActions = [...state.actions];
+          if (commitIndex >= 0) {
+            nextActions.splice(commitIndex + 1, 0, commitPushAction);
+          } else {
+            nextActions.push(commitPushAction);
+          }
+          logger.info('Migrated: added Commit & Push quick action');
+          return { ...state, actions: nextActions };
+        },
       }
     ),
     { name: 'quick-actions' }

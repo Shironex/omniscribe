@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   Info,
   RefreshCw,
@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Markdown } from '@/components/ui/markdown';
 import { Progress } from '@/components/ui/progress';
 import { useUpdateStore } from '@/stores/useUpdateStore';
+import { useAppVersion } from '@/hooks/useAppVersion';
 import { IS_MAC } from '@/lib/platform';
 
 const logger = createLogger('GeneralSection');
@@ -39,27 +40,12 @@ function MacDownloadFallback({ message }: { message: string }) {
 }
 
 export function GeneralSection() {
-  const [version, setVersion] = useState<string | null>(null);
+  const version = useAppVersion();
   const [hasChecked, setHasChecked] = useState(false);
   const { status, updateInfo, progress, error, checkForUpdates, startDownload, installNow } =
     useUpdateStore();
 
   const openGitHubReleases = () => window.open(GITHUB_RELEASES_URL, '_blank');
-
-  useEffect(() => {
-    async function fetchVersion() {
-      if (window.electronAPI?.app?.getVersion) {
-        try {
-          logger.debug('Fetching app version');
-          const v = await window.electronAPI.app.getVersion();
-          setVersion(v);
-        } catch (err) {
-          logger.error('Failed to get app version:', err);
-        }
-      }
-    }
-    fetchVersion();
-  }, []);
 
   const handleCheckForUpdates = () => {
     setHasChecked(true);

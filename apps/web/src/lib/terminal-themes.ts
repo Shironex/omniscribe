@@ -10,6 +10,33 @@ export interface TerminalTheme extends ITheme {
 }
 
 export const terminalThemes: Record<string, TerminalTheme> = {
+  midnight: {
+    name: 'Midnight',
+    background: '#0a0a14',
+    foreground: '#d4d4e8',
+    cursor: '#818cf8',
+    cursorAccent: '#0a0a14',
+    selectionBackground: '#2e2e4a',
+    selectionForeground: '#e8e8f0',
+    black: '#0a0a14',
+    red: '#f87171',
+    green: '#6ee7b7',
+    yellow: '#fbbf24',
+    blue: '#818cf8',
+    magenta: '#c084fc',
+    cyan: '#67e8f9',
+    white: '#d4d4e8',
+    brightBlack: '#3a3a5c',
+    brightRed: '#fca5a5',
+    brightGreen: '#86efac',
+    brightYellow: '#fcd34d',
+    brightBlue: '#a5b4fc',
+    brightMagenta: '#d8b4fe',
+    brightCyan: '#a5f3fc',
+    brightWhite: '#f0f0ff',
+    searchHighlightBackground: '#818cf880',
+    searchActiveHighlightBackground: '#a5b4fc',
+  },
   tokyonight: {
     name: 'Tokyo Night',
     background: '#1a1b26',

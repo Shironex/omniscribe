@@ -248,3 +248,39 @@ export interface StatusPayload {
   /** ISO timestamp of status update */
   timestamp: string;
 }
+
+/**
+ * Task status states for MCP task reporting
+ */
+export type TaskStatus = 'pending' | 'in_progress' | 'completed';
+
+/**
+ * A single task item reported by the AI agent
+ */
+export interface TaskItem {
+  /** Unique task identifier */
+  id: string;
+
+  /** Brief task subject/title */
+  subject: string;
+
+  /** Current task status */
+  status: TaskStatus;
+}
+
+/**
+ * Tasks payload received from MCP server via HTTP POST
+ */
+export interface TasksPayload {
+  /** Session identifier */
+  sessionId: string;
+
+  /** Omniscribe instance ID for validation */
+  instanceId: string;
+
+  /** Current task list (complete snapshot) */
+  tasks: TaskItem[];
+
+  /** ISO timestamp of task update */
+  timestamp: string;
+}

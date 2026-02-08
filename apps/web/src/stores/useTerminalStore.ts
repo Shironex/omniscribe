@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
-import { isWindows, isMacOS } from '@/lib/os-detection';
+import { IS_WINDOWS, IS_MAC } from '@/lib/platform';
 import type { TerminalThemeName } from '@/lib/terminal-themes';
 
 export type CursorStyle = 'block' | 'underline' | 'bar';
@@ -47,7 +47,7 @@ function getDefaultSettings(): Omit<
   TerminalState,
   'focusedSessionId' | 'addSlotRequestCounter' | 'sessionOrder'
 > {
-  if (isWindows()) {
+  if (IS_WINDOWS) {
     return {
       fontSize: 14,
       fontFamily: ['Cascadia Code', 'Consolas', 'Courier New', 'monospace'],
@@ -60,7 +60,7 @@ function getDefaultSettings(): Omit<
       terminalThemeName: 'tokyonight',
     };
   }
-  if (isMacOS()) {
+  if (IS_MAC) {
     return {
       fontSize: 13,
       fontFamily: ['SF Mono', 'Menlo', 'Monaco', 'monospace'],

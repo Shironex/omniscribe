@@ -60,6 +60,8 @@ export function useProjectSessions(
       branch: session.branch,
       statusMessage: session.statusMessage,
       terminalSessionId: session.terminalSessionId,
+      worktreePath: session.worktreePath,
+      skipPermissions: session.skipPermissions,
     }));
   }, [activeProjectSessions]);
 

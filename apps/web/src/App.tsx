@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useEffect } from 'react';
+import { useCallback, useMemo, useEffect, useState } from 'react';
 import {
   ProjectTabs,
   TopBar,
@@ -7,6 +7,7 @@ import {
   IdleLandingView,
   WelcomeView,
   SettingsModal,
+  LaunchPresetsModal,
 } from '@/components';
 import {
   useAppInitialization,
@@ -18,6 +19,7 @@ import {
   useSessionLifecycle,
   useAppKeyboardShortcuts,
   useQuickActionExecution,
+  useDefaultAiMode,
 } from '@/hooks';
 import { useUpdateToast } from '@/hooks/useUpdateToast';
 import { useTerminalStore, useWorkspaceStore } from '@/stores';
@@ -47,6 +49,7 @@ function App() {
     isLaunching,
     launchingSlotIds,
     handleAddSession,
+    handleBatchAddSessions,
     handleRemoveSlot,
     handleUpdateSlot,
     handleLaunchSlot,
@@ -120,6 +123,13 @@ function App() {
 
   const hasContent = terminalSessions.length > 0 || preLaunchSlots.length > 0;
 
+  // Launch presets modal state
+  const [isLaunchModalOpen, setIsLaunchModalOpen] = useState(false);
+  const handleOpenLaunchModal = useCallback(() => setIsLaunchModalOpen(true), []);
+
+  // Default AI mode for modal
+  const { defaultAiMode, claudeAvailable } = useDefaultAiMode();
+
   useAppKeyboardShortcuts({
     canLaunch,
     isLaunching,
@@ -129,6 +139,7 @@ function App() {
     launchingSlotIds,
     activeProjectPath,
     handleAddSession,
+    handleOpenLaunchModal,
     handleLaunch,
     handleLaunchSlot,
     handleStopAll,
@@ -161,6 +172,7 @@ function App() {
               focusedSessionId={focusedSessionId}
               onFocusSession={handleFocusSession}
               onAddSlot={handleAddSession}
+              onOpenLaunchModal={handleOpenLaunchModal}
               onRemoveSlot={handleRemoveSlot}
               onUpdateSlot={handleUpdateSlot}
               onLaunch={handleLaunchSlot}
@@ -170,7 +182,10 @@ function App() {
               onReorderSessions={handleReorderSessions}
             />
           ) : (
-            <IdleLandingView onAddSession={handleAddSession} />
+            <IdleLandingView
+              onAddSession={handleAddSession}
+              onOpenLaunchModal={handleOpenLaunchModal}
+            />
           )
         ) : (
           <WelcomeView
@@ -190,6 +205,17 @@ function App() {
       />
 
       <SettingsModal />
+
+      <LaunchPresetsModal
+        open={isLaunchModalOpen}
+        onOpenChange={setIsLaunchModalOpen}
+        branches={branches}
+        claudeAvailable={claudeAvailable}
+        currentBranch={currentBranch}
+        defaultAiMode={defaultAiMode}
+        existingSessionCount={terminalSessions.length}
+        onCreateSessions={handleBatchAddSessions}
+      />
     </div>
   );
 }

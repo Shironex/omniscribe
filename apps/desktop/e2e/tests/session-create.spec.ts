@@ -28,17 +28,13 @@ test.describe('Session Create and Launch', () => {
   test('should create a session via the Add Session button', async () => {
     const page = fixture.page;
 
-    // The app shows IdleLandingView when no sessions/pre-launch slots exist.
-    // IdleLandingView has a "+" button with aria-label="Add session".
-    // After clicking, PreLaunchSection appears with the add-session-button.
-    const addButton = page.locator(
-      '[data-testid="add-session-button"], [aria-label="Add session"]'
-    );
-    await addButton.first().click();
+    // Press "N" to add a single pre-launch slot (global keyboard shortcut).
+    // This works from both IdleLandingView and when sessions exist.
+    await page.keyboard.press('n');
 
-    // After clicking, a pre-launch slot should appear in the PreLaunchSection.
-    // The add-session-button from PreLaunchSection should now be visible.
-    await expect(page.locator('[data-testid="add-session-button"]')).toBeVisible({
+    // After pressing N, a pre-launch slot should appear in the PreLaunchSection.
+    // The setup-sessions-button should now be visible (always shown when slots exist).
+    await expect(page.locator('[data-testid="setup-sessions-button"]')).toBeVisible({
       timeout: 5_000,
     });
 
@@ -59,10 +55,7 @@ test.describe('Session Create and Launch', () => {
     const launchButton = page.locator('[data-testid="launch-button"]');
     const isEnabled = await launchButton.isEnabled();
     if (!isEnabled) {
-      const addButton = page.locator(
-        '[data-testid="add-session-button"], [aria-label="Add session"]'
-      );
-      await addButton.first().click();
+      await page.keyboard.press('n');
       await expect(launchButton).toBeEnabled({ timeout: 5_000 });
     }
 

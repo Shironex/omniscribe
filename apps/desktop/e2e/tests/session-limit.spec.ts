@@ -34,16 +34,13 @@ test.describe('Session Limit (12 cap)', () => {
     // Add Session button is hidden. Then try pressing "N" (keyboard shortcut) and
     // verify no 13th slot is added.
 
-    // Add 12 pre-launch slots
+    // Add 12 pre-launch slots via keyboard shortcut
     for (let i = 0; i < 12; i++) {
-      const addButton = page.locator(
-        '[data-testid="add-session-button"], [aria-label="Add session"]'
-      );
-      await addButton.first().click();
-      if (i < 11) {
-        // After click, wait for the button to be ready for next click
-        await expect(addButton.first()).toBeVisible({ timeout: 5_000 });
-      }
+      await page.keyboard.press('n');
+      // Wait for the (i+1)-th slot to appear before pressing again
+      await expect(page.locator('[data-testid="ai-mode-label"]')).toHaveCount(i + 1, {
+        timeout: 5_000,
+      });
     }
 
     // Verify the first slot defaults to plain mode (Claude CLI not available in test env)
@@ -51,9 +48,9 @@ test.describe('Session Limit (12 cap)', () => {
       timeout: 5_000,
     });
 
-    // The add-session-button should be hidden (12 slots = at the limit)
-    const addButton = page.locator('[data-testid="add-session-button"]');
-    await expect(addButton).toBeHidden({ timeout: 5_000 });
+    // The setup-sessions-button should be hidden (12 slots = at the limit)
+    const setupButton = page.locator('[data-testid="setup-sessions-button"]');
+    await expect(setupButton).toBeHidden({ timeout: 5_000 });
 
     // Try to add a 13th slot via keyboard shortcut "N"
     await page.keyboard.press('n');
@@ -63,8 +60,8 @@ test.describe('Session Limit (12 cap)', () => {
     // We can count them by counting the per-slot launch buttons or mode selectors.
     // The TerminalGrid renders PreLaunchSection which maps over preLaunchSlots.
 
-    // Verify the add button is still hidden -- no 13th slot was created
-    await expect(addButton).toBeHidden({ timeout: 2_000 });
+    // Verify the setup button is still hidden -- no 13th slot was created
+    await expect(setupButton).toBeHidden({ timeout: 2_000 });
 
     // Now launch all 12 to verify they create session cards.
     // Use the global launch button to launch all at once.
@@ -77,9 +74,9 @@ test.describe('Session Limit (12 cap)', () => {
     // We wait for at least some to appear within the test timeout (120s).
     await page.waitForSelector('[data-testid^="session-card-"]', { timeout: 60_000 });
 
-    // After launch starts, the add button should still be hidden
+    // After launch starts, the setup button should still be hidden
     // (session cards replace pre-launch slots, keeping the total at 12)
-    await expect(addButton).toBeHidden({ timeout: 5_000 });
+    await expect(setupButton).toBeHidden({ timeout: 5_000 });
 
     // Wait for the session count to stabilize (all 12 created or timed out)
     // Some sessions may fail but each attempt still creates a session card

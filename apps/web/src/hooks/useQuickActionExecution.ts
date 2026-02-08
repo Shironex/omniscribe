@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from 'react';
-import { createLogger } from '@omniscribe/shared';
-import { useQuickActionStore } from '@/stores';
+import { createLogger, DEFAULT_SESSION_SETTINGS } from '@omniscribe/shared';
+import type { SessionSettings } from '@omniscribe/shared';
+import { useQuickActionStore, useWorkspaceStore } from '@/stores';
 import { writeToTerminal } from '@/lib/terminal';
 import type { TerminalSession } from '@/components/terminal/TerminalGrid';
 
@@ -18,6 +19,9 @@ export function useQuickActionExecution(
   terminalSessions: TerminalSession[]
 ): UseQuickActionExecutionReturn {
   const allQuickActions = useQuickActionStore(state => state.actions);
+  const preferences = useWorkspaceStore(state => state.preferences);
+  const sessionSettings: SessionSettings = preferences.session ?? DEFAULT_SESSION_SETTINGS;
+  const executionMode = sessionSettings.quickActionMode ?? 'paste-only';
   const quickActions = useMemo(
     () => allQuickActions.filter(a => a.enabled !== false),
     [allQuickActions]
@@ -52,10 +56,15 @@ export function useQuickActionExecution(
       }
 
       if (command) {
-        writeToTerminal(session.terminalSessionId, command + '\n');
+        if (executionMode === 'execute') {
+          // Append \r so the terminal submits the command immediately
+          writeToTerminal(session.terminalSessionId, command + '\r');
+        } else {
+          writeToTerminal(session.terminalSessionId, command);
+        }
       }
     },
-    [quickActions, terminalSessions]
+    [quickActions, terminalSessions, executionMode]
   );
 
   return { quickActionsForTerminal, handleQuickAction };

@@ -1,12 +1,13 @@
 import React, { useMemo } from 'react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { DndContext, closestCenter } from '@dnd-kit/core';
+import { DndContext, DragOverlay, closestCenter } from '@dnd-kit/core';
 import { SortableContext, rectSwappingStrategy } from '@dnd-kit/sortable';
 import { PanelGroup, Panel, PanelResizeHandle } from 'react-resizable-panels';
 import { SortableTerminalWrapper } from './SortableTerminalWrapper';
 import { TerminalCard } from './TerminalCard';
 import type { QuickActionItem } from './TerminalCard';
+import { TerminalHeader } from './TerminalHeader';
 import type { TerminalSession } from './TerminalHeader';
 import { PreLaunchSection } from './PreLaunchSection';
 import type { PreLaunchSlot } from './PreLaunchBar';
@@ -15,6 +16,8 @@ import { Branch } from '@/components/shared/BranchSelector';
 import { buildColumns, getLayout } from '@/lib/terminal-layout';
 import { useTerminalGridDnd } from '@/hooks/useTerminalGridDnd';
 import { useTerminalPanelResize } from '@/hooks/useTerminalPanelResize';
+
+const NOOP = () => {};
 
 interface TerminalGridProps {
   sessions: TerminalSession[];
@@ -36,6 +39,7 @@ interface TerminalGridProps {
   onKill: (sessionId: string) => void;
   onSessionClose?: (sessionId: string, exitCode: number) => void;
   onQuickAction?: (sessionId: string, actionId: string) => void;
+  onOpenLaunchModal?: () => void;
   onReorderSessions?: (activeId: string, overId: string) => void;
   className?: string;
 }
@@ -56,6 +60,7 @@ export function TerminalGrid({
   onKill,
   onSessionClose,
   onQuickAction,
+  onOpenLaunchModal,
   onReorderSessions,
   className,
 }: TerminalGridProps) {
@@ -75,19 +80,27 @@ export function TerminalGrid({
       .filter((sessionId): sessionId is string => Boolean(sessionId));
   }, [columns, layout.rows, sessions, useRowPrimaryLayout]);
 
-  const { sensors, handleDragEnd, dispatchRefitAll } = useTerminalGridDnd(onReorderSessions);
+  const { sensors, activeId, handleDragStart, handleDragEnd, handleDragCancel, dispatchRefitAll } =
+    useTerminalGridDnd(onReorderSessions);
+  const activeSession = activeId ? sessions.find(s => s.id === activeId) : null;
   const { handlePanelResize } = useTerminalPanelResize(dispatchRefitAll);
 
   // Empty state
   if (sessionCount === 0 && preLaunchSlots.length === 0) {
-    return <IdleLandingView onAddSession={onAddSlot} className={className} />;
+    return (
+      <IdleLandingView
+        onAddSession={onAddSlot}
+        onOpenLaunchModal={onOpenLaunchModal}
+        className={className}
+      />
+    );
   }
 
   // Max terminals: 12
   const canAddMore = sessionCount + preLaunchSlots.length < 12;
 
   const renderTerminalCard = (session: TerminalSession) => (
-    <SortableTerminalWrapper id={session.id}>
+    <SortableTerminalWrapper id={session.id} sessionCount={sessionCount}>
       <TerminalCard
         session={session}
         quickActions={quickActions}
@@ -113,7 +126,9 @@ export function TerminalGrid({
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
+            onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
+            onDragCancel={handleDragCancel}
           >
             <SortableContext items={sessionIds} strategy={rectSwappingStrategy}>
               {useRowPrimaryLayout ? (
@@ -222,6 +237,13 @@ export function TerminalGrid({
                 </PanelGroup>
               )}
             </SortableContext>
+            <DragOverlay dropAnimation={{ duration: 200, easing: 'ease' }}>
+              {activeSession ? (
+                <div className="opacity-80 shadow-lg rounded-lg border border-primary/30 bg-muted">
+                  <TerminalHeader session={activeSession} onClose={NOOP} />
+                </div>
+              ) : null}
+            </DragOverlay>
           </DndContext>
         ) : (
           /* Empty state when no sessions but have pre-launch slots */
@@ -239,6 +261,7 @@ export function TerminalGrid({
         claudeAvailable={claudeAvailable}
         canAddMore={canAddMore}
         onAddSlot={onAddSlot}
+        onOpenLaunchModal={onOpenLaunchModal ?? NOOP}
         onRemoveSlot={onRemoveSlot}
         onUpdateSlot={onUpdateSlot}
         onLaunch={onLaunch}

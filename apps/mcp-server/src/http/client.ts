@@ -2,7 +2,7 @@
  * HTTP client for communicating with Omniscribe desktop app
  */
 
-import type { StatusPayload, SessionStatusState } from '@omniscribe/shared';
+import type { StatusPayload, SessionStatusState, TaskItem, TasksPayload } from '@omniscribe/shared';
 import type { EnvironmentConfig } from '../config/index.js';
 import type { Logger } from '../utils/index.js';
 
@@ -15,6 +15,11 @@ export interface OmniscribeHttpClient {
     message?: string,
     needsInputPrompt?: string
   ): Promise<boolean>;
+
+  /**
+   * Report task list to Omniscribe
+   */
+  reportTasks(tasks: TaskItem[]): Promise<boolean>;
 }
 
 /**
@@ -62,7 +67,41 @@ export function createHttpClient(config: EnvironmentConfig, logger: Logger): Omn
     }
   }
 
+  async function reportTasks(tasks: TaskItem[]): Promise<boolean> {
+    if (!statusUrl || !sessionId || !instanceId) {
+      logger.error('Tasks reporting not configured');
+      return false;
+    }
+
+    const tasksUrl = new URL(statusUrl).origin + '/tasks';
+
+    const payload: TasksPayload = {
+      sessionId,
+      instanceId,
+      tasks,
+      timestamp: new Date().toISOString(),
+    };
+
+    logger.debug(`Sending tasks to ${tasksUrl}: ${tasks.length} task(s)`);
+
+    try {
+      const response = await fetch(tasksUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(5000),
+      });
+
+      logger.debug(`Tasks response: ${response.status}`);
+      return response.ok;
+    } catch (error) {
+      logger.error('Tasks report error:', error);
+      return false;
+    }
+  }
+
   return {
     reportStatus,
+    reportTasks,
   };
 }

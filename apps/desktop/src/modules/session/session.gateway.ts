@@ -25,6 +25,8 @@ import {
   SessionRemoveResponse,
   WorktreeSettings,
   DEFAULT_WORKTREE_SETTINGS,
+  SessionSettings,
+  DEFAULT_SESSION_SETTINGS,
   MAX_CONCURRENT_SESSIONS,
   createLogger,
 } from '@omniscribe/shared';
@@ -117,17 +119,23 @@ export class SessionGateway implements OnGatewayInit {
       };
     }
 
+    // Get settings from workspace preferences
+    const preferences = this.workspaceService.getPreferences();
+    const worktreeSettings: WorktreeSettings = preferences.worktree ?? DEFAULT_WORKTREE_SETTINGS;
+    const sessionSettings: SessionSettings = preferences.session ?? DEFAULT_SESSION_SETTINGS;
+
+    // Determine skip-permissions flag (only for AI sessions)
+    const skipPermissions =
+      payload.mode !== 'plain' && sessionSettings.skipPermissions ? true : undefined;
+
     const session = this.sessionService.create(payload.mode, payload.projectPath, {
       name: payload.name,
       workingDirectory: payload.workingDirectory,
       model: payload.model,
       systemPrompt: payload.systemPrompt,
       mcpServers: payload.mcpServers,
+      skipPermissions,
     });
-
-    // Get worktree settings from workspace preferences
-    const preferences = this.workspaceService.getPreferences();
-    const worktreeSettings: WorktreeSettings = preferences.worktree ?? DEFAULT_WORKTREE_SETTINGS;
 
     // Determine the working directory based on worktree mode
     let worktreePath: string | null = null;

@@ -3,7 +3,7 @@ import { createLogger } from '@omniscribe/shared';
 import type { Terminal } from '@xterm/xterm';
 import { writeToTerminal, writeToTerminalChunked } from '@/lib/terminal';
 import { LARGE_PASTE_WARNING_THRESHOLD } from '@/lib/terminal-constants';
-import { isMacOS } from '@/lib/os-detection';
+import { IS_MAC } from '@/lib/platform';
 
 const logger = createLogger('TerminalKeyboard');
 
@@ -32,7 +32,7 @@ export function useTerminalKeyboard(
 ): (terminal: Terminal) => void {
   const attachKeyboardHandler = useCallback(
     (terminal: Terminal) => {
-      const macOS = isMacOS();
+      const macOS = IS_MAC;
       terminal.attachCustomKeyEventHandler((e: KeyboardEvent) => {
         const key = e.key.toLowerCase();
         const isPrimaryModifier = macOS ? e.metaKey : e.ctrlKey;

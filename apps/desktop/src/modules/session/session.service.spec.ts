@@ -49,7 +49,7 @@ describe('SessionService', () => {
     workspaceService = {
       getPreferences: jest.fn().mockReturnValue({
         theme: 'dark',
-        worktree: { enabled: true, autoCleanup: true, location: 'project' },
+        worktree: { mode: 'always', autoCleanup: true, location: 'project' },
       }),
     } as unknown as jest.Mocked<WorkspaceService>;
 
@@ -383,7 +383,7 @@ describe('SessionService', () => {
     it('should skip worktree cleanup when autoCleanup is disabled', async () => {
       workspaceService.getPreferences.mockReturnValue({
         theme: 'dark',
-        worktree: { enabled: true, autoCleanup: false, location: 'project' },
+        worktree: { mode: 'always', autoCleanup: false, location: 'project' },
       });
 
       const session = service.create('claude', '/project');

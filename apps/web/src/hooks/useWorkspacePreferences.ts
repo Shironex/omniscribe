@@ -2,6 +2,7 @@ import { useEffect, useRef, useMemo } from 'react';
 import { createLogger } from '@omniscribe/shared';
 import { useWorkspaceStore } from '@/stores/useWorkspaceStore';
 import { useSettingsStore } from '@/stores/useSettingsStore';
+import { persistTheme } from '@/lib/theme-persistence';
 import type { Theme } from '@omniscribe/shared';
 
 const logger = createLogger('Preferences');
@@ -57,6 +58,8 @@ export function useWorkspacePreferences(): void {
       logger.debug('Initial theme sync:', themeToApply);
       setSettingsTheme(themeToApply as Theme);
     }
+    // Always persist the backend-restored theme so next startup uses it
+    persistTheme(themeToApply);
   }, [
     isWorkspaceRestored,
     activeTab?.theme,

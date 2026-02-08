@@ -11,6 +11,7 @@ interface UseAppKeyboardShortcutsParams {
   launchingSlotIds?: Set<string>;
   activeProjectPath: string | null;
   handleAddSession: () => void;
+  handleOpenLaunchModal: () => void;
   handleLaunch: () => void;
   handleLaunchSlot: (slotId: string) => void;
   handleStopAll: () => void;
@@ -28,6 +29,7 @@ export function useAppKeyboardShortcuts({
   launchingSlotIds,
   activeProjectPath,
   handleAddSession,
+  handleOpenLaunchModal,
   handleLaunch,
   handleLaunchSlot,
   handleStopAll,
@@ -50,6 +52,18 @@ export function useAppKeyboardShortcuts({
 
       // Below shortcuts only work when not typing and no modifier keys
       if (isTyping || isMod || e.altKey) {
+        return;
+      }
+
+      // Shift+N - Open launch presets modal
+      if (key === 'n' && e.shiftKey && activeProjectPath) {
+        e.preventDefault();
+        handleOpenLaunchModal();
+        return;
+      }
+
+      // Below shortcuts should not fire with Shift held
+      if (e.shiftKey) {
         return;
       }
 
@@ -89,6 +103,7 @@ export function useAppKeyboardShortcuts({
     launchingSlotIds,
     activeProjectPath,
     handleAddSession,
+    handleOpenLaunchModal,
     handleLaunch,
     handleLaunchSlot,
     handleStopAll,

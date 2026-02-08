@@ -1,5 +1,5 @@
 import { clsx } from 'clsx';
-import { Terminal, GitBranch, ArrowUp, ArrowDown, FolderGit2 } from 'lucide-react';
+import { Terminal, GitBranch, ArrowUp, ArrowDown, FolderGit2, ShieldOff } from 'lucide-react';
 import { type ComponentType } from 'react';
 import { StatusDot } from '@/components/shared/StatusLegend';
 import { ClaudeIcon } from '@/components/shared/ClaudeIcon';
@@ -72,6 +72,19 @@ export function SessionStatusDisplay({ session, gitBranch }: SessionStatusDispla
         >
           <FolderGit2 size={11} />
           <span>worktree</span>
+        </div>
+      )}
+
+      {/* Skip-permissions indicator */}
+      {session.skipPermissions && (
+        <div
+          className="flex items-center gap-1 text-xs text-amber-400 shrink-0 px-1.5 py-0.5 rounded bg-amber-500/10"
+          title="Running with skip-permissions mode"
+          role="status"
+          aria-label="Running with skip-permissions mode"
+        >
+          <ShieldOff size={11} aria-hidden="true" />
+          <span className="sr-only">Skip-permissions enabled</span>
         </div>
       )}
 
