@@ -24,7 +24,7 @@ export function GridPresetCard({ count, selected, disabled, onClick }: GridPrese
         'transition-all duration-200',
         selected
           ? 'border-primary shadow-[0_0_8px_var(--primary)] bg-primary/5'
-          : 'bg-card/30 hover:bg-card/50'
+          : 'border-border hover:bg-accent hover:border-primary'
       )}
     >
       {/* Mini grid preview */}
