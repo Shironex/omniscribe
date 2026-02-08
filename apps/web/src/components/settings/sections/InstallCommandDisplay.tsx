@@ -1,10 +1,11 @@
-import { Copy, Check, Play } from 'lucide-react';
+import { Copy, Check, Play, TriangleAlert } from 'lucide-react';
 import { clsx } from 'clsx';
 import type { ClaudeInstallCommand } from '@omniscribe/shared';
 
 interface InstallCommandDisplayProps {
   installCommand: ClaudeInstallCommand;
   copiedCommand: boolean;
+  isUpdate?: boolean;
   onCopy: () => Promise<void>;
   onRunInTerminal: () => Promise<void>;
 }
@@ -12,6 +13,7 @@ interface InstallCommandDisplayProps {
 export function InstallCommandDisplay({
   installCommand,
   copiedCommand,
+  isUpdate,
   onCopy,
   onRunInTerminal,
 }: InstallCommandDisplayProps) {
@@ -46,6 +48,17 @@ export function InstallCommandDisplay({
       <div className="p-3 rounded-lg bg-muted font-mono text-xs text-foreground overflow-x-auto">
         {installCommand.command}
       </div>
+
+      {isUpdate && (
+        <div className="flex items-start gap-2 mt-3 p-2.5 rounded-lg bg-status-warning-bg/50 border border-status-warning/20">
+          <TriangleAlert className="w-3.5 h-3.5 text-status-warning shrink-0 mt-0.5" />
+          <p className="text-xs text-status-warning">
+            This will terminate all running Claude Code instances. Make sure all your tasks are
+            completed before updating.
+          </p>
+        </div>
+      )}
+
       <div className="flex items-center justify-between mt-3">
         <p className="text-xs text-muted-foreground">
           Click the button to open a terminal with this command.

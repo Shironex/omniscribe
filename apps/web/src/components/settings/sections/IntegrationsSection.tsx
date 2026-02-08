@@ -97,6 +97,7 @@ export function IntegrationsSection() {
             <InstallCommandDisplay
               installCommand={installCommand}
               copiedCommand={copiedCommand}
+              isUpdate={claudeCliStatus.installed}
               onCopy={copyCommand}
               onRunInTerminal={runInTerminal}
             />
