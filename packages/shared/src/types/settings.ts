@@ -6,10 +6,10 @@ import type { AiMode } from './session';
 
 /**
  * Theme - All available color themes
- * 20 dark themes + 20 light themes = 40 total
+ * 21 dark themes + 20 light themes = 41 total
  */
 export type Theme =
-  // Dark themes (20)
+  // Dark themes (21)
   | 'dark'
   | 'ayu-dark'
   | 'ayu-mirage'
@@ -20,6 +20,7 @@ export type Theme =
   | 'gray'
   | 'gruvbox'
   | 'matcha'
+  | 'midnight'
   | 'monokai'
   | 'nord'
   | 'ocean'
@@ -245,6 +246,7 @@ export const DARK_THEMES: Theme[] = [
   'gray',
   'gruvbox',
   'matcha',
+  'midnight',
   'monokai',
   'nord',
   'ocean',

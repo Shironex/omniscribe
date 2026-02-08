@@ -40,7 +40,7 @@ export interface ThemeOption {
 
 // All theme options with dark/light categorization (alphabetically sorted, Dark/Light first)
 export const themeOptions: ReadonlyArray<ThemeOption> = [
-  // Dark themes (20) - alphabetical, Dark first
+  // Dark themes (21) - alphabetical, Dark first
   {
     value: 'dark',
     label: 'Dark',
@@ -120,6 +120,14 @@ export const themeOptions: ReadonlyArray<ThemeOption> = [
     testId: 'matcha-mode-button',
     isDark: true,
     color: '#A4B07E',
+  },
+  {
+    value: 'midnight',
+    label: 'Midnight',
+    Icon: Moon,
+    testId: 'midnight-mode-button',
+    isDark: true,
+    color: '#818cf8',
   },
   {
     value: 'monokai',

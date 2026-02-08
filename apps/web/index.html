@@ -6,11 +6,27 @@
     <meta name="theme-color" content="#0a0a0f" />
     <title>Omniscribe</title>
     <style>
-      /* Prevent flash of unstyled content */
+      /* Base style — overridden by inline theme script below */
       html {
-        background-color: #0a0a0f;
+        background-color: transparent;
       }
     </style>
+    <script>
+      // Apply persisted theme class and background BEFORE React mounts to prevent flicker.
+      // The dark themes array below is injected at build time by themeInjectionPlugin
+      // (vite.config.ts) from packages/shared/src/types/settings.ts (single source of truth).
+      (function () {
+        try {
+          var theme = localStorage.getItem('omniscribe-theme') || 'dark';
+          document.documentElement.classList.add(theme);
+          var darkThemes = __DARK_THEMES__;
+          var isDark = darkThemes.indexOf(theme) !== -1;
+          document.documentElement.style.backgroundColor = isDark ? '#0a0a0f' : '#fafafa';
+        } catch (e) {
+          console.error('Failed to apply initial theme from localStorage:', e);
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
