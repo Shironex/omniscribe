@@ -1,5 +1,13 @@
 import { clsx } from 'clsx';
-import { Terminal, GitBranch, ArrowUp, ArrowDown, FolderGit2, ShieldOff } from 'lucide-react';
+import {
+  Terminal,
+  GitBranch,
+  ArrowUp,
+  ArrowDown,
+  FolderGit2,
+  ShieldOff,
+  RotateCcw,
+} from 'lucide-react';
 import { type ComponentType } from 'react';
 import { StatusDot } from '@/components/shared/StatusLegend';
 import { ClaudeIcon } from '@/components/shared/ClaudeIcon';
@@ -85,6 +93,17 @@ export function SessionStatusDisplay({ session, gitBranch }: SessionStatusDispla
         >
           <ShieldOff size={11} aria-hidden="true" />
           <span className="sr-only">Skip-permissions enabled</span>
+        </div>
+      )}
+
+      {/* Resumed session indicator */}
+      {session.isResumed && (
+        <div
+          className="flex items-center gap-1 text-xs text-emerald-400 shrink-0 px-1.5 py-0.5 rounded bg-emerald-500/10"
+          title="Resumed from previous Claude Code session"
+        >
+          <RotateCcw size={11} />
+          <span>Resumed</span>
         </div>
       )}
 
