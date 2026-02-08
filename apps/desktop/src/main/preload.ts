@@ -8,6 +8,7 @@ import type {
   ClaudeInstallCommand,
   UpdateInfo,
   UpdateDownloadProgress,
+  UpdateChannel,
 } from '@omniscribe/shared';
 
 export interface ElectronAPI {
@@ -53,15 +54,18 @@ export interface ElectronAPI {
     getStatus: () => Promise<GhCliStatus>;
   };
   updater: {
-    checkForUpdates: () => Promise<{ enabled: boolean }>;
+    checkForUpdates: () => Promise<{ enabled: boolean; channel: UpdateChannel }>;
     startDownload: () => Promise<void>;
     installNow: () => Promise<void>;
+    getChannel: () => Promise<UpdateChannel>;
+    setChannel: (channel: UpdateChannel) => Promise<UpdateChannel>;
     onCheckingForUpdate: (callback: () => void) => () => void;
     onUpdateAvailable: (callback: (info: UpdateInfo) => void) => () => void;
     onUpdateNotAvailable: (callback: (info: UpdateInfo) => void) => () => void;
     onDownloadProgress: (callback: (progress: UpdateDownloadProgress) => void) => () => void;
     onUpdateDownloaded: (callback: (info: UpdateInfo) => void) => () => void;
     onUpdateError: (callback: (message: string) => void) => () => void;
+    onChannelChanged: (callback: (channel: UpdateChannel) => void) => () => void;
   };
   platform: NodeJS.Platform;
 }
@@ -118,6 +122,8 @@ const electronAPI: ElectronAPI = {
     checkForUpdates: () => ipcRenderer.invoke('updater:check-for-updates'),
     startDownload: () => ipcRenderer.invoke('updater:start-download'),
     installNow: () => ipcRenderer.invoke('updater:install-now'),
+    getChannel: () => ipcRenderer.invoke('updater:get-channel'),
+    setChannel: (channel: UpdateChannel) => ipcRenderer.invoke('updater:set-channel', channel),
     onCheckingForUpdate: (callback: () => void) => {
       const listener = () => callback();
       ipcRenderer.on('updater:checking-for-update', listener);
@@ -159,6 +165,14 @@ const electronAPI: ElectronAPI = {
       ipcRenderer.on('updater:error', listener);
       return () => {
         ipcRenderer.removeListener('updater:error', listener);
+      };
+    },
+    onChannelChanged: (callback: (channel: UpdateChannel) => void) => {
+      const listener = (_event: Electron.IpcRendererEvent, channel: UpdateChannel) =>
+        callback(channel);
+      ipcRenderer.on('updater:channel-changed', listener);
+      return () => {
+        ipcRenderer.removeListener('updater:channel-changed', listener);
       };
     },
   },

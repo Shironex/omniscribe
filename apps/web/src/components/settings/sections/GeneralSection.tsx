@@ -48,8 +48,18 @@ function MacDownloadFallback({ message }: { message: string }) {
 export function GeneralSection() {
   const version = useAppVersion();
   const [hasChecked, setHasChecked] = useState(false);
-  const { status, updateInfo, progress, error, checkForUpdates, startDownload, installNow } =
-    useUpdateStore();
+  const {
+    status,
+    updateInfo,
+    progress,
+    error,
+    channel,
+    isChannelSwitching,
+    checkForUpdates,
+    startDownload,
+    installNow,
+    setChannel,
+  } = useUpdateStore();
 
   const openGitHubReleases = () => window.open(GITHUB_RELEASES_URL, '_blank');
 
@@ -137,6 +147,46 @@ export function GeneralSection() {
           )}
         </div>
 
+        {/* Channel Selector */}
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <Button
+              variant={channel === 'stable' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setChannel('stable')}
+              disabled={
+                channel === 'stable' ||
+                status === 'checking' ||
+                status === 'downloading' ||
+                isChannelSwitching
+              }
+            >
+              Stable
+            </Button>
+            <Button
+              variant={channel === 'beta' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setChannel('beta')}
+              disabled={
+                channel === 'beta' ||
+                status === 'checking' ||
+                status === 'downloading' ||
+                isChannelSwitching
+              }
+            >
+              Beta
+            </Button>
+            {isChannelSwitching && (
+              <RefreshCw className="w-3.5 h-3.5 animate-spin text-muted-foreground" />
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {channel === 'beta'
+              ? 'Receive pre-release updates with new features'
+              : 'Receive stable, tested releases only'}
+          </p>
+        </div>
+
         {/* Status: Up to date */}
         {status === 'idle' && hasChecked && (
           <div className="flex items-center gap-2 text-sm text-emerald-400">
@@ -150,10 +200,29 @@ export function GeneralSection() {
           <div className="space-y-3">
             <div className="flex items-center gap-2">
               <span className="text-sm text-foreground">
-                Version{' '}
-                <span className="font-mono font-semibold text-primary">{updateInfo.version}</span>{' '}
-                is available
+                {updateInfo.isDowngrade ? (
+                  <>
+                    Stable version{' '}
+                    <span className="font-mono font-semibold text-primary">
+                      {updateInfo.version}
+                    </span>{' '}
+                    available (current: {version ?? 'unknown'})
+                  </>
+                ) : (
+                  <>
+                    Version{' '}
+                    <span className="font-mono font-semibold text-primary">
+                      {updateInfo.version}
+                    </span>{' '}
+                    is available
+                  </>
+                )}
               </span>
+              {updateInfo.channel === 'beta' && (
+                <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400">
+                  Beta
+                </span>
+              )}
             </div>
             {updateInfo.releaseNotes && (
               <div className="rounded-lg border border-border/50 bg-background/50 p-3 max-h-48 overflow-y-auto">
@@ -224,7 +293,9 @@ export function GeneralSection() {
             <div className="flex items-start gap-2 text-sm text-amber-400">
               <Clock className="w-4 h-4 mt-0.5 shrink-0" />
               <span>
-                A new release is being prepared. The update should be available in 5–10 minutes.
+                {channel === 'beta'
+                  ? 'No beta release is currently available.'
+                  : 'A new release is being prepared. The update should be available in 5–10 minutes.'}
               </span>
             </div>
             <Button size="sm" variant="outline" onClick={handleCheckForUpdates}>

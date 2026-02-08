@@ -7,6 +7,7 @@ import type {
   ClaudeInstallCommand,
   UpdateInfo,
   UpdateDownloadProgress,
+  UpdateChannel,
 } from '@omniscribe/shared';
 
 /**
@@ -55,15 +56,18 @@ interface ElectronAPI {
     getStatus: () => Promise<GhCliStatus>;
   };
   updater?: {
-    checkForUpdates: () => Promise<{ enabled: boolean }>;
+    checkForUpdates: () => Promise<{ enabled: boolean; channel: UpdateChannel }>;
     startDownload: () => Promise<void>;
     installNow: () => Promise<void>;
+    getChannel: () => Promise<UpdateChannel>;
+    setChannel: (channel: UpdateChannel) => Promise<UpdateChannel>;
     onCheckingForUpdate: (callback: () => void) => () => void;
     onUpdateAvailable: (callback: (info: UpdateInfo) => void) => () => void;
     onUpdateNotAvailable: (callback: (info: UpdateInfo) => void) => () => void;
     onDownloadProgress: (callback: (progress: UpdateDownloadProgress) => void) => () => void;
     onUpdateDownloaded: (callback: (info: UpdateInfo) => void) => () => void;
     onUpdateError: (callback: (message: string) => void) => () => void;
+    onChannelChanged: (callback: (channel: UpdateChannel) => void) => () => void;
   };
   platform: NodeJS.Platform;
 }

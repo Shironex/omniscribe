@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, AlertTriangle, ExternalLink, Loader2 } from 'lucide-react';
 import { clsx } from 'clsx';
@@ -93,12 +94,15 @@ export function UsagePopover() {
   // Error info
   const errorInfo = error ? ERROR_MESSAGES[error] : null;
 
+  const tooltipLabel = claudeUsage
+    ? `Claude usage: ${Math.round(sessionPercentage)}% (${CLAUDE_SESSION_WINDOW_HOURS}h window)`
+    : 'Claude usage';
+
   const trigger = (
     <Button variant="ghost" size="sm" className="h-8 gap-2 px-2 hover:bg-accent">
       <ClaudeIcon className={clsx('w-4 h-4', claudeUsage && statusColor)} size={16} />
       {claudeUsage && (
         <div
-          title={`Session usage (${CLAUDE_SESSION_WINDOW_HOURS}h window)`}
           className={clsx(
             'h-1.5 w-12 bg-muted rounded-full overflow-hidden border border-border/50 transition-opacity',
             isStale && 'opacity-60'
@@ -115,7 +119,12 @@ export function UsagePopover() {
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>{trigger}</PopoverTrigger>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <PopoverTrigger asChild>{trigger}</PopoverTrigger>
+        </TooltipTrigger>
+        {!open && <TooltipContent side="bottom">{tooltipLabel}</TooltipContent>}
+      </Tooltip>
       <PopoverContent
         className="w-[340px] p-0 overflow-hidden bg-background/95 backdrop-blur-xl border-border shadow-2xl"
         align="end"

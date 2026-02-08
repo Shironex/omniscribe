@@ -6,6 +6,7 @@ import type { ProjectTab } from '@omniscribe/shared';
 import { APP_NAME } from '@omniscribe/shared';
 import { getGreeting, formatRelativeTime } from '@/lib/date-utils';
 import { truncatePath } from '@/lib/path-utils';
+import { Button } from '@/components/ui/button';
 
 interface WelcomeViewProps {
   recentProjects: ProjectTab[];
@@ -112,16 +113,17 @@ export function WelcomeView({
             </div>
             <div className="space-y-2">
               {recentProjects.slice(0, 5).map((project, index) => (
-                <button
+                <Button
                   key={project.id}
+                  variant="outline"
                   onClick={() => onSelectProject(project.id)}
                   className={clsx(
-                    'w-full flex items-center gap-3 px-4 py-3 rounded-lg',
+                    'w-full justify-start h-auto px-4 py-3',
                     'bg-card/50 backdrop-blur-lg',
-                    'border border-border/60',
+                    'border-border/60',
                     'hover:bg-card/80 hover:border-border',
                     'transition-all duration-200',
-                    'text-left group'
+                    'group'
                   )}
                 >
                   <div
@@ -147,17 +149,18 @@ export function WelcomeView({
                   <span className="text-xs text-muted-foreground whitespace-nowrap">
                     {formatRelativeTime(project.lastAccessedAt)}
                   </span>
-                </button>
+                </Button>
               ))}
             </div>
           </div>
         )}
 
         {/* Open Project Action */}
-        <button
+        <Button
+          variant="default"
           onClick={onOpenProject}
           className={clsx(
-            'flex items-center gap-3 px-6 py-3 rounded-xl',
+            'gap-3 px-6 py-3 rounded-xl',
             'bg-gradient-to-r from-primary to-brand-600',
             'text-white font-medium',
             'shadow-lg shadow-primary/25',
@@ -168,7 +171,7 @@ export function WelcomeView({
         >
           <FolderOpen size={20} />
           <span>Open Project</span>
-        </button>
+        </Button>
 
         {/* Keyboard hint */}
         <p className="mt-4 text-xs text-muted-foreground">

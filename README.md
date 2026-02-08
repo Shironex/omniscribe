@@ -16,6 +16,8 @@
 
 **[Download Latest Release](https://github.com/Shironex/omniscribe/releases/latest)** | [macOS](https://github.com/Shironex/omniscribe/releases/latest) | [Windows](https://github.com/Shironex/omniscribe/releases/latest) | [Linux](https://github.com/Shironex/omniscribe/releases/latest)
 
+**[Beta Releases](https://github.com/Shironex/omniscribe/releases)** — opt into pre-release builds via Settings > General > Updates
+
 </div>
 
 ## Table of Contents
@@ -27,6 +29,7 @@
 - [Quick Start](#quick-start)
 - [Architecture](#architecture)
 - [Tech Stack](#tech-stack)
+- [Beta Releases](#beta-releases)
 - [Contributing](#contributing)
 - [License](#license)
 
@@ -145,6 +148,20 @@ omniscribe/
 | Styling  | Tailwind CSS               |
 | Build    | Vite, esbuild              |
 | IPC      | Socket.io, Electron IPC    |
+
+## Beta Releases
+
+Omniscribe supports a beta update channel for testing new features before stable release.
+
+**To opt in:**
+
+1. Open **Settings > About > Updates**
+2. Click the **Beta** button to switch channels
+3. The app will automatically check for and offer beta updates
+
+**To opt out:** Switch back to **Stable** in the same settings panel. If a stable version is older than your current beta, a downgrade will be offered.
+
+Beta releases are tagged with a `-beta` suffix (e.g. `v0.5.0-beta.1`) and marked as pre-release on the [Releases page](https://github.com/Shironex/omniscribe/releases).
 
 ## Contributing
 

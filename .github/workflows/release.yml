@@ -21,7 +21,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
-      - name: Extract version from tag
+      - name: Extract version and channel from tag
         id: version
         shell: bash
         env:
@@ -31,6 +31,18 @@ jobs:
           VERSION="${VERSION#v}"
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "Extracted version: ${VERSION}"
+
+          # Detect update channel from pre-release suffix
+          if echo "${VERSION}" | grep -qE '\-beta(\.|$)'; then
+            echo "channel=beta" >> "$GITHUB_OUTPUT"
+            echo "Detected channel: beta"
+          elif echo "${VERSION}" | grep -qE '\-alpha(\.|$)'; then
+            echo "channel=alpha" >> "$GITHUB_OUTPUT"
+            echo "Detected channel: alpha"
+          else
+            echo "channel=latest" >> "$GITHUB_OUTPUT"
+            echo "Detected channel: latest (stable)"
+          fi
 
       - name: Update package.json versions
         shell: bash
@@ -52,7 +64,7 @@ jobs:
         if: matrix.os == 'macos-latest'
         shell: bash
         working-directory: apps/desktop
-        run: pnpm exec electron-builder --mac --publish never
+        run: pnpm exec electron-builder --mac --publish never -c.publish.channel=${{ steps.version.outputs.channel }}
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
 
@@ -60,13 +72,13 @@ jobs:
         if: matrix.os == 'windows-latest'
         shell: bash
         working-directory: apps/desktop
-        run: pnpm exec electron-builder --win --publish never
+        run: pnpm exec electron-builder --win --publish never -c.publish.channel=${{ steps.version.outputs.channel }}
 
       - name: Build Electron app (Linux)
         if: matrix.os == 'ubuntu-latest'
         shell: bash
         working-directory: apps/desktop
-        run: pnpm exec electron-builder --linux --publish never
+        run: pnpm exec electron-builder --linux --publish never -c.publish.channel=${{ steps.version.outputs.channel }}
 
       - name: Upload macOS artifacts
         if: matrix.os == 'macos-latest'
@@ -76,7 +88,7 @@ jobs:
           path: |
             apps/desktop/release/*.dmg
             apps/desktop/release/*.zip
-            apps/desktop/release/latest-mac.yml
+            apps/desktop/release/*-mac.yml
           if-no-files-found: error
           retention-days: 30
 
@@ -87,7 +99,8 @@ jobs:
           name: windows-builds
           path: |
             apps/desktop/release/*.exe
-            apps/desktop/release/latest.yml
+            # Windows emits un-prefixed YML (latest.yml, beta.yml) unlike macOS/Linux
+            apps/desktop/release/*.yml
           if-no-files-found: error
           retention-days: 30
 
@@ -99,7 +112,7 @@ jobs:
           path: |
             apps/desktop/release/*.AppImage
             apps/desktop/release/*.deb
-            apps/desktop/release/latest-linux.yml
+            apps/desktop/release/*-linux.yml
           if-no-files-found: error
           retention-days: 30
 
@@ -134,19 +147,19 @@ jobs:
           files: |
             artifacts/macos-builds/*.dmg
             artifacts/macos-builds/*.zip
-            artifacts/macos-builds/latest-mac.yml
+            artifacts/macos-builds/*-mac.yml
             artifacts/windows-builds/*.exe
-            artifacts/windows-builds/latest.yml
+            artifacts/windows-builds/*.yml
             artifacts/linux-builds/*.AppImage
             artifacts/linux-builds/*.deb
-            artifacts/linux-builds/latest-linux.yml
+            artifacts/linux-builds/*-linux.yml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   version-sync:
     needs: upload
     runs-on: ubuntu-latest
-    if: github.event.release.draft == false
+    if: github.event.release.draft == false && github.event.release.prerelease == false
 
     env:
       HUSKY: 0

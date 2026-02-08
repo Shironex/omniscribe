@@ -1,14 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UsageService } from './usage.service';
+import type { ClaudeCliStatus } from '@omniscribe/shared';
 
 // ---- Mocks ----
 
-// Mock child_process
-const mockSpawn = jest.fn();
-const mockExecSync = jest.fn();
-jest.mock('child_process', () => ({
-  spawn: (...args: unknown[]) => mockSpawn(...args),
-  execSync: (...args: unknown[]) => mockExecSync(...args),
+// Mock getClaudeCliStatus from claude-detection
+const mockGetClaudeCliStatus = jest.fn<Promise<ClaudeCliStatus>, []>();
+jest.mock('../../main/utils/claude-detection', () => ({
+  getClaudeCliStatus: () => mockGetClaudeCliStatus(),
 }));
 
 // Mock os module for platform-specific testing
@@ -26,29 +25,6 @@ jest.mock('node-pty', () => ({
 }));
 
 // ---- Helpers ----
-
-/**
- * Create a fake child process EventEmitter for spawn() calls.
- * Call `fakeProc.emitClose(code)` or `fakeProc.emitError(err)` to trigger.
- */
-function createFakeProc() {
-  const listeners: Record<string, ((...args: unknown[]) => void)[]> = {};
-  const proc = {
-    on(event: string, cb: (...args: unknown[]) => void) {
-      if (!listeners[event]) listeners[event] = [];
-      listeners[event].push(cb);
-      return proc;
-    },
-    kill: jest.fn(),
-    emitClose(code: number) {
-      for (const cb of listeners['close'] ?? []) cb(code);
-    },
-    emitError(err: Error) {
-      for (const cb of listeners['error'] ?? []) cb(err);
-    },
-  };
-  return proc;
-}
 
 /**
  * Create a fake PTY process for node-pty.spawn() calls.
@@ -97,68 +73,30 @@ describe('UsageService', () => {
   });
 
   // ================================================================
-  // isAvailable()
-  // ================================================================
-  describe('isAvailable', () => {
-    it('should return true when the CLI is found on PATH', async () => {
-      const fakeProc = createFakeProc();
-      mockSpawn.mockReturnValue(fakeProc);
-
-      const promise = service.isAvailable();
-      fakeProc.emitClose(0);
-
-      await expect(promise).resolves.toBe(true);
-    });
-
-    it('should return false when the CLI is not found', async () => {
-      const fakeProc = createFakeProc();
-      mockSpawn.mockReturnValue(fakeProc);
-
-      const promise = service.isAvailable();
-      fakeProc.emitClose(1);
-
-      await expect(promise).resolves.toBe(false);
-    });
-
-    it('should return false when spawn emits an error', async () => {
-      const fakeProc = createFakeProc();
-      mockSpawn.mockReturnValue(fakeProc);
-
-      const promise = service.isAvailable();
-      fakeProc.emitError(new Error('ENOENT'));
-
-      await expect(promise).resolves.toBe(false);
-    });
-
-    it('should use "where" on Windows and "which" on other platforms', async () => {
-      const fakeProc = createFakeProc();
-      mockSpawn.mockReturnValue(fakeProc);
-
-      const promise = service.isAvailable();
-      fakeProc.emitClose(0);
-      await promise;
-
-      // The service checks os.platform() at class construction time.
-      // On Windows (our test env), it should use 'where'.
-      const calledCommand = mockSpawn.mock.calls[0][0];
-      expect(['where', 'which']).toContain(calledCommand);
-      expect(mockSpawn.mock.calls[0][1]).toEqual(['claude']);
-    });
-  });
-
-  // ================================================================
   // getStatus()
   // ================================================================
   describe('getStatus', () => {
-    it('should return not-installed status when CLI is not available', async () => {
-      // isAvailable => false
-      const fakeProc = createFakeProc();
-      mockSpawn.mockReturnValue(fakeProc);
+    const installedStatus: ClaudeCliStatus = {
+      installed: true,
+      version: '1.0.27',
+      path: '/usr/local/bin/claude',
+      method: 'path',
+      platform: 'linux',
+      arch: 'x64',
+      auth: { authenticated: true },
+    };
 
-      const promise = service.getStatus();
-      fakeProc.emitClose(1); // not found
+    const notInstalledStatus: ClaudeCliStatus = {
+      installed: false,
+      platform: 'win32',
+      arch: 'x64',
+      auth: { authenticated: false },
+    };
 
-      const status = await promise;
+    it('should return not-installed status when CLI is not found', async () => {
+      mockGetClaudeCliStatus.mockResolvedValue(notInstalledStatus);
+
+      const status = await service.getStatus();
 
       expect(status.installed).toBe(false);
       expect(status.auth.authenticated).toBe(false);
@@ -166,176 +104,86 @@ describe('UsageService', () => {
       expect(status.arch).toBeDefined();
     });
 
-    it('should return installed status with version and path when CLI is available', async () => {
-      // isAvailable => true (spawn for 'where'/'which')
-      mockSpawn.mockImplementation((_cmd: string, _args: string[]) => {
-        const proc = createFakeProc();
-        // Immediately resolve on next tick
-        setTimeout(() => proc.emitClose(0), 0);
-        return proc;
-      });
+    it('should return installed status with version and path when CLI is found', async () => {
+      mockGetClaudeCliStatus.mockResolvedValue(installedStatus);
 
-      // execSync for version
-      mockExecSync.mockImplementation((cmd: string) => {
-        if (cmd.includes('--version')) return 'Claude Code v1.0.27\n';
-        // 'where'/'which' for path
-        return '/usr/local/bin/claude\n';
-      });
-
-      jest.advanceTimersByTime(0);
       const status = await service.getStatus();
 
       expect(status.installed).toBe(true);
       expect(status.version).toBe('1.0.27');
       expect(status.path).toBe('/usr/local/bin/claude');
       expect(status.method).toBe('path');
-    });
-
-    it('should handle version check failure gracefully', async () => {
-      mockSpawn.mockImplementation(() => {
-        const proc = createFakeProc();
-        setTimeout(() => proc.emitClose(0), 0);
-        return proc;
-      });
-
-      mockExecSync.mockImplementation((cmd: string) => {
-        if (cmd.includes('--version')) throw new Error('version failed');
-        return '/usr/local/bin/claude\n';
-      });
-
-      const status = await service.getStatus();
-
-      expect(status.installed).toBe(true);
-      expect(status.version).toBeUndefined();
-    });
-
-    it('should handle path check failure gracefully', async () => {
-      mockSpawn.mockImplementation(() => {
-        const proc = createFakeProc();
-        setTimeout(() => proc.emitClose(0), 0);
-        return proc;
-      });
-
-      mockExecSync.mockImplementation((cmd: string) => {
-        if (cmd.includes('--version')) return 'Claude Code v1.0.27\n';
-        throw new Error('path failed');
-      });
-
-      const status = await service.getStatus();
-
-      expect(status.installed).toBe(true);
-      expect(status.path).toBeUndefined();
+      expect(status.auth.authenticated).toBe(true);
     });
 
     it('should return cached status on subsequent calls within TTL', async () => {
-      // First call
-      mockSpawn.mockImplementation(() => {
-        const proc = createFakeProc();
-        setTimeout(() => proc.emitClose(0), 0);
-        return proc;
-      });
-      mockExecSync.mockReturnValue('Claude Code v1.0.27\n');
+      mockGetClaudeCliStatus.mockResolvedValue(installedStatus);
 
       const first = await service.getStatus();
 
-      // Clear mocks - second call should NOT trigger new spawns
-      mockSpawn.mockClear();
-      mockExecSync.mockClear();
+      // Clear mock - second call should NOT call getClaudeCliStatus again
+      mockGetClaudeCliStatus.mockClear();
 
       const second = await service.getStatus();
 
       expect(second).toEqual(first);
-      expect(mockSpawn).not.toHaveBeenCalled();
-      expect(mockExecSync).not.toHaveBeenCalled();
+      expect(mockGetClaudeCliStatus).not.toHaveBeenCalled();
     });
 
     it('should refresh when forceRefresh is true even within TTL', async () => {
-      // First call
-      mockSpawn.mockImplementation(() => {
-        const proc = createFakeProc();
-        setTimeout(() => proc.emitClose(0), 0);
-        return proc;
-      });
-      mockExecSync.mockReturnValue('Claude Code v1.0.27\n');
-
+      mockGetClaudeCliStatus.mockResolvedValue(installedStatus);
       await service.getStatus();
 
-      // Force refresh
-      mockSpawn.mockClear();
-      mockSpawn.mockImplementation(() => {
-        const proc = createFakeProc();
-        setTimeout(() => proc.emitClose(0), 0);
-        return proc;
-      });
-      mockExecSync.mockReturnValue('Claude Code v2.0.0\n');
+      // Force refresh with updated status
+      const updatedStatus: ClaudeCliStatus = {
+        ...installedStatus,
+        version: '2.0.0',
+      };
+      mockGetClaudeCliStatus.mockClear();
+      mockGetClaudeCliStatus.mockResolvedValue(updatedStatus);
 
       const refreshed = await service.getStatus(true);
 
-      // spawn should have been called again
-      expect(mockSpawn).toHaveBeenCalled();
+      expect(mockGetClaudeCliStatus).toHaveBeenCalledTimes(1);
       expect(refreshed.version).toBe('2.0.0');
     });
 
     it('should refresh after cache TTL expires', async () => {
-      // First call
-      mockSpawn.mockImplementation(() => {
-        const proc = createFakeProc();
-        setTimeout(() => proc.emitClose(0), 0);
-        return proc;
-      });
-      mockExecSync.mockReturnValue('Claude Code v1.0.27\n');
-
+      mockGetClaudeCliStatus.mockResolvedValue(installedStatus);
       await service.getStatus();
 
       // Advance time past TTL (5 minutes)
       jest.advanceTimersByTime(5 * 60 * 1000 + 1);
 
-      mockSpawn.mockClear();
-      mockSpawn.mockImplementation(() => {
-        const proc = createFakeProc();
-        setTimeout(() => proc.emitClose(0), 0);
-        return proc;
-      });
-      mockExecSync.mockReturnValue('Claude Code v2.0.0\n');
+      const updatedStatus: ClaudeCliStatus = {
+        ...installedStatus,
+        version: '2.0.0',
+      };
+      mockGetClaudeCliStatus.mockClear();
+      mockGetClaudeCliStatus.mockResolvedValue(updatedStatus);
 
       const refreshed = await service.getStatus();
 
-      expect(mockSpawn).toHaveBeenCalled();
+      expect(mockGetClaudeCliStatus).toHaveBeenCalledTimes(1);
       expect(refreshed.version).toBe('2.0.0');
     });
 
-    it('should parse version from various formats', async () => {
-      mockSpawn.mockImplementation(() => {
-        const proc = createFakeProc();
-        setTimeout(() => proc.emitClose(0), 0);
-        return proc;
-      });
-
-      // Without "v" prefix
-      mockExecSync.mockImplementation((cmd: string) => {
-        if (cmd.includes('--version')) return '1.2.3\n';
-        return '/usr/local/bin/claude\n';
-      });
-
-      const status = await service.getStatus();
-      expect(status.version).toBe('1.2.3');
-    });
-
-    it('should handle multiline path output (use first line)', async () => {
-      mockSpawn.mockImplementation(() => {
-        const proc = createFakeProc();
-        setTimeout(() => proc.emitClose(0), 0);
-        return proc;
-      });
-
-      mockExecSync.mockImplementation((cmd: string) => {
-        if (cmd.includes('--version')) return 'Claude Code v1.0.0\n';
-        // 'where' on Windows can return multiple lines
-        return 'C:\\Users\\user\\AppData\\Roaming\\npm\\claude\nC:\\Program Files\\claude\n';
-      });
+    it('should return unauthenticated when credentials not found', async () => {
+      const unauthenticatedStatus: ClaudeCliStatus = {
+        installed: true,
+        version: '1.0.27',
+        path: '/usr/local/bin/claude',
+        method: 'path',
+        platform: 'linux',
+        arch: 'x64',
+        auth: { authenticated: false },
+      };
+      mockGetClaudeCliStatus.mockResolvedValue(unauthenticatedStatus);
 
       const status = await service.getStatus();
-      expect(status.path).toBe('C:\\Users\\user\\AppData\\Roaming\\npm\\claude');
+
+      expect(status.installed).toBe(true);
+      expect(status.auth.authenticated).toBe(false);
     });
   });
 
@@ -1160,27 +1008,28 @@ describe('UsageService', () => {
   // ================================================================
   describe('concurrent status calls', () => {
     it('should share cached status across concurrent getStatus calls', async () => {
-      mockSpawn.mockImplementation(() => {
-        const proc = createFakeProc();
-        setTimeout(() => proc.emitClose(1), 0);
-        return proc;
+      mockGetClaudeCliStatus.mockResolvedValue({
+        installed: false,
+        platform: 'linux',
+        arch: 'x64',
+        auth: { authenticated: false },
       });
 
       // First call populates cache
       const first = await service.getStatus();
 
-      mockSpawn.mockClear();
+      mockGetClaudeCliStatus.mockClear();
 
       // Second call should use cache
       const second = await service.getStatus();
 
       expect(second).toEqual(first);
-      expect(mockSpawn).not.toHaveBeenCalled();
+      expect(mockGetClaudeCliStatus).not.toHaveBeenCalled();
     });
   });
 
   // ================================================================
-  // Cross-platform behavior
+  // Cross-platform behavior (PTY only - CLI detection is in claude-detection.ts)
   // ================================================================
   describe('cross-platform behavior', () => {
     describe('Windows platform', () => {
@@ -1201,18 +1050,6 @@ describe('UsageService', () => {
       afterEach(() => {
         jest.useRealTimers();
         mockOsPlatform.mockReturnValue(process.platform);
-      });
-
-      it('should use "where" to check CLI availability', async () => {
-        const fakeProc = createFakeProc();
-        mockSpawn.mockReturnValue(fakeProc);
-
-        const promise = winService.isAvailable();
-        fakeProc.emitClose(0);
-        await promise;
-
-        expect(mockSpawn.mock.calls[0][0]).toBe('where');
-        expect(mockSpawn.mock.calls[0][1]).toEqual(['claude']);
       });
 
       it('should use cmd.exe as shell for PTY commands', async () => {
@@ -1253,26 +1090,6 @@ describe('UsageService', () => {
         const ptyOptions = mockPtySpawn.mock.calls[0][2];
         expect(ptyOptions.useConpty).toBe(false);
       });
-
-      it('should use "where" for path lookup in getStatus', async () => {
-        mockSpawn.mockImplementation(() => {
-          const proc = createFakeProc();
-          setTimeout(() => proc.emitClose(0), 0);
-          return proc;
-        });
-        mockExecSync.mockReturnValue('claude.cmd\n');
-
-        const status = await winService.getStatus();
-
-        // The second execSync call should use "where"
-        const pathCalls = mockExecSync.mock.calls.filter(
-          (call: unknown[]) => !(call[0] as string).includes('--version')
-        );
-        if (pathCalls.length > 0) {
-          expect(pathCalls[0][0] as string).toContain('where');
-        }
-        expect(status.platform).toBe('win32');
-      });
     });
 
     describe('Linux platform', () => {
@@ -1293,17 +1110,6 @@ describe('UsageService', () => {
       afterEach(() => {
         jest.useRealTimers();
         mockOsPlatform.mockReturnValue(process.platform);
-      });
-
-      it('should use "which" to check CLI availability', async () => {
-        const fakeProc = createFakeProc();
-        mockSpawn.mockReturnValue(fakeProc);
-
-        const promise = linuxService.isAvailable();
-        fakeProc.emitClose(0);
-        await promise;
-
-        expect(mockSpawn.mock.calls[0][0]).toBe('which');
       });
 
       it('should use /bin/sh as shell for PTY commands', async () => {
@@ -1343,25 +1149,6 @@ describe('UsageService', () => {
 
         const ptyOptions = mockPtySpawn.mock.calls[0][2];
         expect(ptyOptions.useConpty).toBeUndefined();
-      });
-
-      it('should use "which" for path lookup in getStatus', async () => {
-        mockSpawn.mockImplementation(() => {
-          const proc = createFakeProc();
-          setTimeout(() => proc.emitClose(0), 0);
-          return proc;
-        });
-        mockExecSync.mockReturnValue('/usr/local/bin/claude\n');
-
-        const status = await linuxService.getStatus();
-
-        const pathCalls = mockExecSync.mock.calls.filter(
-          (call: unknown[]) => !(call[0] as string).includes('--version')
-        );
-        if (pathCalls.length > 0) {
-          expect(pathCalls[0][0] as string).toContain('which');
-        }
-        expect(status.platform).toBe('linux');
       });
     });
   });

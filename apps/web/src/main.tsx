@@ -4,6 +4,7 @@ import App from './App';
 import { ErrorBoundary } from '@/components';
 import { SplashScreen } from '@/components/splash';
 import { Toaster } from '@/components/ui/sonner';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { useWorkspaceStore, useConnectionStore } from '@/stores';
 import './styles/globals.css';
 
@@ -16,9 +17,11 @@ if (!rootElement) {
 createRoot(rootElement).render(
   <StrictMode>
     <ErrorBoundary>
-      <SplashScreen />
-      <App />
-      <Toaster />
+      <TooltipProvider delayDuration={300}>
+        <SplashScreen />
+        <App />
+        <Toaster />
+      </TooltipProvider>
     </ErrorBoundary>
   </StrictMode>
 );

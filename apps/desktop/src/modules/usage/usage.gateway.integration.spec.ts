@@ -25,7 +25,6 @@ describe('UsageGateway (integration)', () => {
 
   beforeAll(async () => {
     mockUsageService = {
-      isAvailable: jest.fn().mockResolvedValue(true),
       fetchUsageData: jest.fn().mockResolvedValue({
         usage: {
           sessionPercentage: 25,
@@ -79,7 +78,12 @@ describe('UsageGateway (integration)', () => {
   });
 
   it('should return error when CLI is not available', async () => {
-    mockUsageService.isAvailable.mockResolvedValueOnce(false);
+    mockUsageService.getStatus.mockResolvedValueOnce({
+      installed: false,
+      platform: 'darwin',
+      arch: 'arm64',
+      auth: { authenticated: false },
+    });
 
     const response = await emitWithAck<{ usage?: any; error?: string; message?: string }>(
       client,

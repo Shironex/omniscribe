@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import * as pty from 'node-pty';
 import * as os from 'os';
-import { spawn, execSync } from 'child_process';
 import { createLogger } from '@omniscribe/shared';
 import type { ClaudeUsage, UsageError, ClaudeCliStatus } from '@omniscribe/shared';
+import { getClaudeCliStatus } from '../../main/utils/claude-detection';
 
 /** Cache TTL for status checks (5 minutes) */
 const STATUS_CACHE_TTL_MS = 5 * 60 * 1000;
@@ -22,7 +22,6 @@ const STATUS_CACHE_TTL_MS = 5 * 60 * 1000;
 @Injectable()
 export class UsageService {
   private readonly logger = createLogger('UsageService');
-  private readonly claudeBinary = 'claude';
   private readonly timeout = 45000; // 45 second timeout
   private readonly isWindows = os.platform() === 'win32';
 
@@ -31,28 +30,14 @@ export class UsageService {
   private statusCacheTimestamp = 0;
 
   /**
-   * Check if Claude CLI is available on the system
-   */
-  async isAvailable(): Promise<boolean> {
-    return new Promise(resolve => {
-      const checkCmd = this.isWindows ? 'where' : 'which';
-      const proc = spawn(checkCmd, [this.claudeBinary]);
-      proc.on('close', code => {
-        resolve(code === 0);
-      });
-      proc.on('error', () => {
-        resolve(false);
-      });
-    });
-  }
-
-  /**
    * Get Claude CLI status (with caching)
+   *
+   * Delegates to getClaudeCliStatus() which detects the CLI installation
+   * and checks authentication by reading ~/.claude/.credentials.json
+   * for OAuth tokens, rather than spawning a process.
    */
   async getStatus(forceRefresh = false): Promise<ClaudeCliStatus> {
     const now = Date.now();
-    const platform = os.platform();
-    const arch = os.arch();
 
     // Return cached status if still valid
     if (
@@ -63,99 +48,10 @@ export class UsageService {
       return this.cachedStatus;
     }
 
-    // Check if installed
-    const installed = await this.isAvailable();
-    if (!installed) {
-      this.cachedStatus = {
-        installed: false,
-        platform,
-        arch,
-        auth: { authenticated: false },
-      };
-      this.statusCacheTimestamp = now;
-      return this.cachedStatus;
-    }
-
-    // Get version and path
-    let version: string | undefined;
-    let cliPath: string | undefined;
-    try {
-      const versionOutput = execSync(`${this.claudeBinary} --version`, {
-        encoding: 'utf-8',
-        timeout: 5000,
-      }).trim();
-      // Parse version from output like "Claude Code v1.0.27"
-      const versionMatch = versionOutput.match(/v?(\d+\.\d+\.\d+)/);
-      if (versionMatch) {
-        version = versionMatch[1];
-      }
-    } catch {
-      // Version check failed, continue without it
-    }
-
-    // Get CLI path
-    try {
-      const checkCmd = this.isWindows ? 'where' : 'which';
-      cliPath = execSync(`${checkCmd} ${this.claudeBinary}`, {
-        encoding: 'utf-8',
-        timeout: 5000,
-      })
-        .trim()
-        .split('\n')[0];
-    } catch {
-      // Path check failed, continue without it
-    }
-
-    // Check authentication by running a quick command
-    const authenticated = await this.checkAuth();
-
-    this.cachedStatus = {
-      installed: true,
-      version,
-      path: cliPath,
-      method: 'path',
-      platform,
-      arch,
-      auth: { authenticated },
-    };
+    this.cachedStatus = await getClaudeCliStatus();
     this.statusCacheTimestamp = now;
 
     return this.cachedStatus;
-  }
-
-  /**
-   * Check if Claude CLI is authenticated
-   * This is a quick check that doesn't require PTY
-   */
-  private async checkAuth(): Promise<boolean> {
-    return new Promise(resolve => {
-      try {
-        // Run `claude --help` which should work if authenticated
-        // If not authenticated, some commands may fail
-        const proc = spawn(this.claudeBinary, ['--help'], {
-          timeout: 10000,
-        });
-
-        proc.on('close', code => {
-          // If help works, CLI is at least installed and runnable
-          // A more thorough check would require PTY, which is expensive
-          // For now, assume authenticated if CLI works
-          resolve(code === 0);
-        });
-
-        proc.on('error', () => {
-          resolve(false);
-        });
-
-        // Timeout fallback
-        setTimeout(() => {
-          proc.kill();
-          resolve(false);
-        }, 10000);
-      } catch {
-        resolve(false);
-      }
-    });
   }
 
   /**

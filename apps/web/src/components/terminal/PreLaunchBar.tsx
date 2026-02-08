@@ -6,6 +6,7 @@ import type { Branch } from '@/components/shared/BranchSelector';
 import { BranchAutocomplete } from '@/components/shared/BranchAutocomplete';
 import { ClaudeIcon } from '@/components/shared/ClaudeIcon';
 import { getPrelaunchShortcutForIndex } from '@/lib/prelaunch-shortcuts';
+import { Button } from '@/components/ui/button';
 
 export type AIMode = 'claude' | 'plain';
 
@@ -86,15 +87,11 @@ export function PreLaunchBar({
     >
       {/* AI Mode selector */}
       <div ref={aiModeRef} className="relative">
-        <button
+        <Button
+          variant="outline"
+          size="sm"
           onClick={() => setIsAIModeOpen(!isAIModeOpen)}
-          className={clsx(
-            'flex items-center gap-2 px-2 py-1 rounded',
-            'bg-muted border border-border',
-            'text-xs text-foreground',
-            'hover:border-muted-foreground',
-            'transition-colors min-w-[100px]'
-          )}
+          className="min-w-[100px] text-xs"
         >
           <SelectedIcon size={14} className={selectedMode.color} />
           <span data-testid="ai-mode-label">{selectedMode.label}</span>
@@ -105,7 +102,7 @@ export function PreLaunchBar({
               isAIModeOpen && 'rotate-180'
             )}
           />
-        </button>
+        </Button>
 
         {/* AI Mode dropdown */}
         {isAIModeOpen && (
@@ -120,9 +117,10 @@ export function PreLaunchBar({
               const Icon = option.icon;
               const isDisabled = option.value === 'claude' && !claudeAvailable;
               return (
-                <button
-                  type="button"
+                <Button
                   key={option.value}
+                  variant="ghost"
+                  size="sm"
                   onClick={() => {
                     if (isDisabled) return;
                     onUpdate(slot.id, { aiMode: option.value });
@@ -131,13 +129,8 @@ export function PreLaunchBar({
                   disabled={isDisabled}
                   title={isDisabled ? 'Claude CLI is not installed' : undefined}
                   className={clsx(
-                    'w-full flex items-center gap-2 px-3 py-1.5',
-                    'text-xs text-left transition-colors',
-                    isDisabled
-                      ? 'opacity-40 cursor-not-allowed'
-                      : option.value === slot.aiMode
-                        ? 'bg-primary/10 text-primary'
-                        : 'text-foreground hover:bg-card'
+                    'w-full justify-start text-xs',
+                    option.value === slot.aiMode && 'bg-primary/10 text-primary'
                   )}
                 >
                   <Icon size={14} className={option.color} />
@@ -145,7 +138,7 @@ export function PreLaunchBar({
                   {isDisabled && (
                     <span className="ml-auto text-[10px] text-muted-foreground">Not installed</span>
                   )}
-                </button>
+                </Button>
               );
             })}
           </div>
@@ -167,17 +160,12 @@ export function PreLaunchBar({
       <div className="flex-1" />
 
       {/* Launch button */}
-      <button
+      <Button
+        variant="default"
+        size="sm"
         onClick={() => onLaunch(slot.id)}
         disabled={isLaunching}
-        className={clsx(
-          'flex items-center gap-1.5 px-3 py-1 rounded',
-          'text-xs font-medium',
-          'transition-colors',
-          isLaunching
-            ? 'bg-border text-muted-foreground cursor-not-allowed opacity-60'
-            : 'bg-[var(--status-success)] hover:brightness-110 text-white'
-        )}
+        className="text-xs"
         title={shortcutKey ? `Press ${shortcutKey} to launch` : undefined}
       >
         <Play size={12} fill="currentColor" />
@@ -185,20 +173,18 @@ export function PreLaunchBar({
         {shortcutKey && !isLaunching && (
           <kbd className="ml-1 px-1 py-0.5 text-[10px] bg-white/20 rounded">{shortcutKey}</kbd>
         )}
-      </button>
+      </Button>
 
       {/* Remove button */}
-      <button
+      <Button
+        variant="ghost"
+        size="icon"
         onClick={() => onRemove(slot.id)}
-        className={clsx(
-          'p-1 rounded',
-          'text-muted-foreground hover:text-red-400',
-          'hover:bg-red-400/10 transition-colors'
-        )}
+        className="text-muted-foreground hover:text-red-400 hover:bg-red-400/10"
         aria-label="Remove"
       >
         <X size={14} />
-      </button>
+      </Button>
     </div>
   );
 }

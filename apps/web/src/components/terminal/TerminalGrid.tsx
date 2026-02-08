@@ -96,9 +96,6 @@ export function TerminalGrid({
     );
   }
 
-  // Max terminals: 12
-  const canAddMore = sessionCount + preLaunchSlots.length < 12;
-
   const renderTerminalCard = (session: TerminalSession) => (
     <SortableTerminalWrapper id={session.id} sessionCount={sessionCount}>
       <TerminalCard
@@ -259,9 +256,6 @@ export function TerminalGrid({
         launchingSlotIds={launchingSlotIds}
         branches={branches}
         claudeAvailable={claudeAvailable}
-        canAddMore={canAddMore}
-        onAddSlot={onAddSlot}
-        onOpenLaunchModal={onOpenLaunchModal ?? NOOP}
         onRemoveSlot={onRemoveSlot}
         onUpdateSlot={onUpdateSlot}
         onLaunch={onLaunch}
