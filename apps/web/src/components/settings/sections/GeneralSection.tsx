@@ -5,13 +5,19 @@ import {
   Download,
   CheckCircle,
   AlertCircle,
+  Clock,
   RotateCcw,
   ExternalLink,
   FileText,
   FolderOpen,
 } from 'lucide-react';
 import { clsx } from 'clsx';
-import { APP_NAME, GITHUB_RELEASES_URL, createLogger } from '@omniscribe/shared';
+import {
+  APP_NAME,
+  GITHUB_RELEASES_URL,
+  UPDATE_ERROR_RELEASE_PENDING,
+  createLogger,
+} from '@omniscribe/shared';
 import { Button } from '@/components/ui/button';
 import { Markdown } from '@/components/ui/markdown';
 import { Progress } from '@/components/ui/progress';
@@ -212,8 +218,24 @@ export function GeneralSection() {
           </div>
         )}
 
+        {/* Status: Release still building */}
+        {status === 'error' && error === UPDATE_ERROR_RELEASE_PENDING && (
+          <div className="space-y-2">
+            <div className="flex items-start gap-2 text-sm text-amber-400">
+              <Clock className="w-4 h-4 mt-0.5 shrink-0" />
+              <span>
+                A new release is being prepared. The update should be available in 5–10 minutes.
+              </span>
+            </div>
+            <Button size="sm" variant="outline" onClick={handleCheckForUpdates}>
+              <RefreshCw className={clsx('w-3.5 h-3.5', status === 'checking' && 'animate-spin')} />
+              Recheck
+            </Button>
+          </div>
+        )}
+
         {/* Status: Error */}
-        {status === 'error' && error && (
+        {status === 'error' && error && error !== UPDATE_ERROR_RELEASE_PENDING && (
           <div className="space-y-2">
             <div className="flex items-start gap-2 text-sm text-destructive">
               <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />

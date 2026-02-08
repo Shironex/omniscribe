@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { toast } from 'sonner';
-import { GITHUB_RELEASES_URL } from '@omniscribe/shared';
+import { GITHUB_RELEASES_URL, UPDATE_ERROR_RELEASE_PENDING } from '@omniscribe/shared';
 import { useUpdateStore } from '@/stores/useUpdateStore';
 import { useSettingsStore } from '@/stores/useSettingsStore';
 import { IS_MAC } from '@/lib/platform';
@@ -77,9 +77,16 @@ export function useUpdateToast(): void {
     }
 
     if (status === 'error') {
-      const isSignatureError = error?.includes('Code signature') || error?.includes('signature');
-
-      if (IS_MAC && isSignatureError) {
+      if (error === UPDATE_ERROR_RELEASE_PENDING) {
+        toast.info('New release detected', {
+          description: 'The release is still being built. Check back in 5–10 minutes.',
+          action: {
+            label: 'View',
+            onClick: () => openSettings('general'),
+          },
+          duration: TOAST_DURATION_NORMAL,
+        });
+      } else if (IS_MAC && (error?.includes('Code signature') || error?.includes('signature'))) {
         toast.error('Auto-install unavailable on macOS', {
           description: 'Download the update manually from GitHub.',
           action: {
