@@ -15,6 +15,10 @@ interface UseAppKeyboardShortcutsParams {
   handleLaunch: () => void;
   handleLaunchSlot: (slotId: string) => void;
   handleStopAll: () => void;
+  handleToggleSettings: () => void;
+  handleToggleHistory: () => void;
+  handleCloseCurrentTab: () => void;
+  handleSelectTabByIndex: (index: number) => void;
 }
 
 /**
@@ -33,6 +37,10 @@ export function useAppKeyboardShortcuts({
   handleLaunch,
   handleLaunchSlot,
   handleStopAll,
+  handleToggleSettings,
+  handleToggleHistory,
+  handleCloseCurrentTab,
+  handleSelectTabByIndex,
 }: UseAppKeyboardShortcutsParams): void {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -47,6 +55,34 @@ export function useAppKeyboardShortcuts({
       if (isMod && key === 'k' && hasActiveSessions) {
         e.preventDefault();
         handleStopAll();
+        return;
+      }
+
+      // Cmd/Ctrl + , - Toggle settings modal (works even when typing)
+      if (isMod && key === ',' && !e.shiftKey) {
+        e.preventDefault();
+        handleToggleSettings();
+        return;
+      }
+
+      // Cmd/Ctrl + Shift + H - Toggle session history panel (works even when typing)
+      if (isMod && e.shiftKey && key === 'h') {
+        e.preventDefault();
+        handleToggleHistory();
+        return;
+      }
+
+      // Cmd/Ctrl + W - Close current tab (works even when typing)
+      if (isMod && key === 'w' && !e.shiftKey) {
+        e.preventDefault();
+        handleCloseCurrentTab();
+        return;
+      }
+
+      // Cmd/Ctrl + 1-9 - Switch tabs by index (works even when typing)
+      if (isMod && key >= '1' && key <= '9') {
+        e.preventDefault();
+        handleSelectTabByIndex(parseInt(key) - 1);
         return;
       }
 
@@ -107,5 +143,9 @@ export function useAppKeyboardShortcuts({
     handleLaunch,
     handleLaunchSlot,
     handleStopAll,
+    handleToggleSettings,
+    handleToggleHistory,
+    handleCloseCurrentTab,
+    handleSelectTabByIndex,
   ]);
 }

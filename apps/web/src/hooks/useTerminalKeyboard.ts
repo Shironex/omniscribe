@@ -76,6 +76,12 @@ export function useTerminalKeyboard(
           return false;
         }
 
+        // Primary+L: clear terminal scrollback
+        if (isPrimaryModifier && !e.shiftKey && key === 'l' && e.type === 'keydown') {
+          terminal.clear();
+          return false;
+        }
+
         // Let primary modifier + number pass through for tab switching
         if (isPrimaryModifier && key >= '1' && key <= '9') {
           return false;
