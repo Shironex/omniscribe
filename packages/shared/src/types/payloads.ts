@@ -6,6 +6,7 @@ import type { ProjectTabDTO, UserPreferences } from './project-tab';
 import type { QuickAction } from './workspace';
 import type { BranchInfo, CommitInfo } from './git';
 import type { TaskItem } from './mcp';
+import type { ClaudeSessionEntry } from './session';
 
 // ============================================
 // Connection Types
@@ -712,4 +713,80 @@ export interface GithubIssuesResponse {
 export interface GithubIssueResponse {
   issue: import('./github').Issue | null;
   error?: string;
+}
+
+// ============================================
+// Claude Session History Payloads
+// ============================================
+
+/**
+ * Request to fetch Claude Code session history for a project
+ */
+export interface ClaudeSessionHistoryPayload {
+  projectPath: string;
+}
+
+/**
+ * Response with Claude Code session history
+ */
+export interface ClaudeSessionHistoryResponse {
+  sessions: ClaudeSessionEntry[];
+  error?: string;
+}
+
+/**
+ * Request to resume a Claude Code session
+ */
+export interface ResumeSessionPayload {
+  claudeSessionId: string;
+  projectPath: string;
+  name?: string;
+  branch?: string;
+}
+
+/**
+ * Event emitted when a Claude session ID is captured for an Omniscribe session
+ */
+export interface ClaudeSessionIdCapturedEvent {
+  /** Omniscribe session ID */
+  sessionId: string;
+  /** Claude Code session UUID */
+  claudeSessionId: string;
+}
+
+/**
+ * Request to fork a Claude Code session (creates a branch from existing history)
+ */
+export interface ForkSessionPayload {
+  claudeSessionId: string;
+  projectPath: string;
+  name?: string;
+  branch?: string;
+}
+
+/**
+ * Request to continue the most recent Claude Code session in a project
+ */
+export interface ContinueLastSessionPayload {
+  projectPath: string;
+  branch?: string;
+  name?: string;
+}
+
+/**
+ * Request to get the active sessions snapshot for auto-resume on restart
+ */
+export interface RestoreSnapshotResponse {
+  sessions: ActiveSessionSnapshot[];
+  autoResumeEnabled: boolean;
+}
+
+/**
+ * Snapshot of an active session for auto-resume on restart
+ */
+export interface ActiveSessionSnapshot {
+  claudeSessionId: string;
+  projectPath: string;
+  branch?: string;
+  name: string;
 }
