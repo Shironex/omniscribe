@@ -21,6 +21,7 @@ export function useUpdateToast(): void {
   const status = useUpdateStore(state => state.status);
   const updateInfo = useUpdateStore(state => state.updateInfo);
   const error = useUpdateStore(state => state.error);
+  const channel = useUpdateStore(state => state.channel);
   const installNow = useUpdateStore(state => state.installNow);
   const openSettings = useSettingsStore(state => state.openSettings);
   const prevStatus = useRef<UpdateStatus>('idle');
@@ -30,8 +31,10 @@ export function useUpdateToast(): void {
     prevStatus.current = status;
 
     if (status === 'available' && updateInfo) {
+      const channelLabel = channel === 'beta' ? ' (Beta)' : '';
+      const title = `Update v${updateInfo.version}${channelLabel} available`;
       if (IS_MAC) {
-        toast.info(`Update v${updateInfo.version} available`, {
+        toast.info(title, {
           description: 'Download the latest version from GitHub Releases.',
           action: {
             label: 'Download',
@@ -40,7 +43,7 @@ export function useUpdateToast(): void {
           duration: TOAST_DURATION_LONG,
         });
       } else {
-        toast.info(`Update v${updateInfo.version} available`, {
+        toast.info(title, {
           description: 'A new version of Omniscribe is ready to download.',
           action: {
             label: 'View',
@@ -102,5 +105,5 @@ export function useUpdateToast(): void {
         });
       }
     }
-  }, [status, updateInfo, error, installNow, openSettings]);
+  }, [status, updateInfo, error, channel, installNow, openSettings]);
 }

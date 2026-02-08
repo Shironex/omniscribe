@@ -1,6 +1,13 @@
-import { ipcMain } from 'electron';
+import { BrowserWindow, ipcMain } from 'electron';
 import { createLogger } from '@omniscribe/shared';
-import { checkForUpdates, downloadUpdate, quitAndInstall } from '../updater';
+import type { UpdateChannel } from '@omniscribe/shared';
+import {
+  checkForUpdates,
+  downloadUpdate,
+  quitAndInstall,
+  getUpdateChannel,
+  setUpdateChannel,
+} from '../updater';
 
 const logger = createLogger('IPC:Updater');
 
@@ -34,6 +41,24 @@ export function registerUpdaterHandlers(): void {
       throw error;
     }
   });
+
+  ipcMain.handle('updater:get-channel', () => {
+    return getUpdateChannel();
+  });
+
+  ipcMain.handle('updater:set-channel', async (_event, channel: UpdateChannel) => {
+    try {
+      const result = await setUpdateChannel(channel);
+      // Broadcast to all windows
+      for (const win of BrowserWindow.getAllWindows()) {
+        win.webContents.send('updater:channel-changed', result);
+      }
+      return result;
+    } catch (error) {
+      logger.error('Failed to set update channel:', error);
+      throw error;
+    }
+  });
 }
 
 /**
@@ -43,4 +68,6 @@ export function cleanupUpdaterHandlers(): void {
   ipcMain.removeHandler('updater:check-for-updates');
   ipcMain.removeHandler('updater:start-download');
   ipcMain.removeHandler('updater:install-now');
+  ipcMain.removeHandler('updater:get-channel');
+  ipcMain.removeHandler('updater:set-channel');
 }
