@@ -10,6 +10,10 @@ import { createLogger, DEFAULT_UPDATE_CHANNEL } from '@omniscribe/shared';
 
 const logger = createLogger('UpdateStore');
 
+function isValidChannel(value: unknown): value is UpdateChannel {
+  return value === 'stable' || value === 'beta';
+}
+
 interface UpdateState {
   status: UpdateStatus;
   updateInfo: UpdateInfo | null;
@@ -31,7 +35,7 @@ type UpdateStore = UpdateState & UpdateActions;
 
 export const useUpdateStore = create<UpdateStore>()(
   devtools(
-    set => ({
+    (set, get) => ({
       // Initial state
       status: 'idle',
       updateInfo: null,
@@ -92,7 +96,7 @@ export const useUpdateStore = create<UpdateStore>()(
         updater
           .setChannel(channel)
           .then(result => {
-            const newChannel = result as UpdateChannel;
+            const newChannel = isValidChannel(result) ? result : DEFAULT_UPDATE_CHANNEL;
             set(
               {
                 channel: newChannel,
@@ -112,7 +116,11 @@ export const useUpdateStore = create<UpdateStore>()(
           })
           .catch((err: Error) => {
             logger.error('Failed to set update channel:', err);
-            set({ isChannelSwitching: false }, undefined, 'update/setChannelError');
+            set(
+              { isChannelSwitching: false, status: 'error', error: err.message },
+              undefined,
+              'update/setChannelError'
+            );
           });
       },
 
@@ -129,7 +137,8 @@ export const useUpdateStore = create<UpdateStore>()(
         updater
           .getChannel()
           .then(ch => {
-            set({ channel: ch as UpdateChannel }, undefined, 'update/initialChannel');
+            const validated = isValidChannel(ch) ? ch : DEFAULT_UPDATE_CHANNEL;
+            set({ channel: validated }, undefined, 'update/initialChannel');
           })
           .catch((err: Error) => {
             logger.error('Failed to fetch initial channel:', err);
@@ -167,8 +176,26 @@ export const useUpdateStore = create<UpdateStore>()(
           set({ status: 'error', error: message }, undefined, 'update/error');
         });
 
-        const unsubChannelChanged = updater.onChannelChanged(channel => {
-          set({ channel: channel as UpdateChannel }, undefined, 'update/channelChanged');
+        const unsubChannelChanged = updater.onChannelChanged(newChannel => {
+          // If this window initiated the change, setChannel handles the state update
+          if (get().isChannelSwitching) return;
+
+          const validated = isValidChannel(newChannel) ? newChannel : DEFAULT_UPDATE_CHANNEL;
+          set(
+            {
+              channel: validated,
+              status: 'idle',
+              updateInfo: null,
+              progress: null,
+              error: null,
+            },
+            undefined,
+            'update/channelChanged'
+          );
+          // Re-check for updates on the new channel
+          updater.checkForUpdates().catch((err: Error) => {
+            logger.error('Failed to re-check after external channel switch:', err);
+          });
         });
 
         return () => {

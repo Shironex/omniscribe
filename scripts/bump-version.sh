@@ -30,7 +30,7 @@ fi
 # Calculate target version
 case "$1" in
   patch|minor|major)
-    BASE_VERSION="${CURRENT%%-*}"
+    BASE_VERSION="${CURRENT%%[-+]*}"
     IFS='.' read -r MAJOR MINOR PATCH <<< "$BASE_VERSION"
     case "$1" in
       patch) PATCH=$((PATCH + 1)) ;;
@@ -42,7 +42,7 @@ case "$1" in
   *)
     VERSION="$1"
     # Validate semver format (anchored to prevent injection)
-    if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9]+(\.[0-9]+)?)?$'; then
+    if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?(\\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$'; then
       echo "Error: '$VERSION' is not a valid semver version"
       exit 1
     fi

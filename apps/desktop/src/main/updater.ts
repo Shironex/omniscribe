@@ -74,7 +74,12 @@ export function initializeAutoUpdater(mainWindow: BrowserWindow, isDev: boolean)
 
   autoUpdater.on('update-available', (info: ElectronUpdateInfo) => {
     logger.info('Update available:', info.version);
-    const isDowngrade = semver.lt(info.version, app.getVersion());
+    let isDowngrade = false;
+    try {
+      isDowngrade = semver.lt(info.version, app.getVersion());
+    } catch {
+      logger.warn(`Could not compare versions: ${info.version} vs ${app.getVersion()}`);
+    }
     mainWindow.webContents.send('updater:update-available', {
       version: info.version,
       releaseNotes: parseReleaseNotes(info.releaseNotes),

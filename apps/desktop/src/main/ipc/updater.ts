@@ -48,6 +48,9 @@ export function registerUpdaterHandlers(): void {
 
   ipcMain.handle('updater:set-channel', async (_event, channel: UpdateChannel) => {
     try {
+      if (channel !== 'stable' && channel !== 'beta') {
+        throw new Error(`Invalid update channel: ${String(channel)}`);
+      }
       const result = await setUpdateChannel(channel);
       // Broadcast to all windows
       for (const win of BrowserWindow.getAllWindows()) {

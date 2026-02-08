@@ -196,7 +196,7 @@ export function GeneralSection() {
                     <span className="font-mono font-semibold text-primary">
                       {updateInfo.version}
                     </span>{' '}
-                    available (current: {version})
+                    available (current: {version ?? 'unknown'})
                   </>
                 ) : (
                   <>

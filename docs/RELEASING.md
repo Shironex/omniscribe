@@ -60,7 +60,7 @@ The `scripts/bump-version.sh` script handles version changes across all packages
 
 ## Typical Workflow
 
-```
+```text
 master (stable)
   |
   +-- v0.5.0 (release branch)
