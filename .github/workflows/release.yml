@@ -21,7 +21,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
-      - name: Extract version from tag
+      - name: Extract version and channel from tag
         id: version
         shell: bash
         env:
@@ -31,6 +31,18 @@ jobs:
           VERSION="${VERSION#v}"
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "Extracted version: ${VERSION}"
+
+          # Detect update channel from pre-release suffix
+          if echo "${VERSION}" | grep -qE '\-beta'; then
+            echo "channel=beta" >> "$GITHUB_OUTPUT"
+            echo "Detected channel: beta"
+          elif echo "${VERSION}" | grep -qE '\-alpha'; then
+            echo "channel=alpha" >> "$GITHUB_OUTPUT"
+            echo "Detected channel: alpha"
+          else
+            echo "channel=latest" >> "$GITHUB_OUTPUT"
+            echo "Detected channel: latest (stable)"
+          fi
 
       - name: Update package.json versions
         shell: bash
@@ -52,7 +64,7 @@ jobs:
         if: matrix.os == 'macos-latest'
         shell: bash
         working-directory: apps/desktop
-        run: pnpm exec electron-builder --mac --publish never
+        run: pnpm exec electron-builder --mac --publish never -c.publish.channel=${{ steps.version.outputs.channel }}
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
 
@@ -60,13 +72,13 @@ jobs:
         if: matrix.os == 'windows-latest'
         shell: bash
         working-directory: apps/desktop
-        run: pnpm exec electron-builder --win --publish never
+        run: pnpm exec electron-builder --win --publish never -c.publish.channel=${{ steps.version.outputs.channel }}
 
       - name: Build Electron app (Linux)
         if: matrix.os == 'ubuntu-latest'
         shell: bash
         working-directory: apps/desktop
-        run: pnpm exec electron-builder --linux --publish never
+        run: pnpm exec electron-builder --linux --publish never -c.publish.channel=${{ steps.version.outputs.channel }}
 
       - name: Upload macOS artifacts
         if: matrix.os == 'macos-latest'

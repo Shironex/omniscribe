@@ -4,10 +4,10 @@ How to create stable and beta releases for Omniscribe.
 
 ## How It Works
 
-electron-builder auto-detects the update channel from the version suffix:
+The CI workflow detects the channel from the version suffix and passes it explicitly to electron-builder via `-c.publish.channel=<channel>` (required for GitHub provider — auto-detection doesn't work):
 
-- `0.5.0` (no suffix) -> generates `latest.yml` -> picked up by **stable** channel users
-- `0.5.0-beta.1` (`-beta` suffix) -> generates `beta.yml` -> picked up by **beta** channel users
+- `0.5.0` (no suffix) -> `-c.publish.channel=latest` -> generates `latest.yml` -> picked up by **stable** channel users
+- `0.5.0-beta.1` (`-beta` suffix) -> `-c.publish.channel=beta` -> generates `beta.yml` -> picked up by **beta** channel users
 
 Users switch channels at runtime in **Settings > General > Updates**.
 
