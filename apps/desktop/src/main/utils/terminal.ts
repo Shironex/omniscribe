@@ -65,15 +65,20 @@ export async function openTerminalWithCommand(command: string): Promise<void> {
   logger.info(`Opening terminal with command on ${platform}`);
 
   if (platform === 'win32') {
-    // Windows: Use spawn with argument array to avoid shell interpretation
-    // -NoExit keeps the window open, -Command runs the command
+    // Windows: Use 'start' via cmd.exe to open a visible PowerShell window.
+    // spawn with detached+stdio:'ignore' runs without a console window,
+    // so we need cmd's 'start' to create one.
     const escapedCommand = escapePowerShellArg(command);
     return new Promise((resolve, reject) => {
-      const proc = spawn('powershell', ['-NoExit', '-Command', escapedCommand], {
-        detached: true,
-        stdio: 'ignore',
-        shell: false, // Important: don't use shell
-      });
+      const proc = spawn(
+        'cmd.exe',
+        ['/c', 'start', 'powershell', '-NoExit', '-Command', escapedCommand],
+        {
+          detached: true,
+          stdio: 'ignore',
+          shell: false,
+        }
+      );
       proc.unref();
       proc.on('error', reject);
       // Resolve immediately since we detached the process

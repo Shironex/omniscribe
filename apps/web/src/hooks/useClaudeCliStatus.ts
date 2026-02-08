@@ -1,4 +1,5 @@
 import { useEffect, useCallback, useState } from 'react';
+import { toast } from 'sonner';
 import { createLogger } from '@omniscribe/shared';
 import type {
   ClaudeCliStatus,
@@ -124,11 +125,17 @@ export function useClaudeCliStatus(): UseClaudeCliStatusReturn {
   const copyCommand = useCallback(async () => {
     if (installCommand?.command) {
       try {
-        await navigator.clipboard.writeText(installCommand.command);
+        if (window.electronAPI?.app?.clipboardWrite) {
+          await window.electronAPI.app.clipboardWrite(installCommand.command);
+        } else {
+          await navigator.clipboard.writeText(installCommand.command);
+        }
         setCopiedCommand(true);
+        toast.success('Command copied to clipboard');
         setTimeout(() => setCopiedCommand(false), 2000);
       } catch (error) {
         logger.error('Failed to copy command to clipboard:', error);
+        toast.error('Failed to copy command to clipboard');
       }
     }
   }, [installCommand]);
@@ -137,8 +144,10 @@ export function useClaudeCliStatus(): UseClaudeCliStatusReturn {
     if (installCommand?.command && window.electronAPI?.claude?.runInstall) {
       try {
         await window.electronAPI.claude.runInstall(installCommand.command);
+        toast.success('Terminal opened with install command');
       } catch (error) {
         logger.error('Failed to open terminal:', error);
+        toast.error('Failed to open terminal');
       }
     }
   }, [installCommand]);

@@ -1,4 +1,4 @@
-import { ipcMain, app, shell } from 'electron';
+import { ipcMain, app, shell, clipboard } from 'electron';
 import { existsSync } from 'fs';
 import { join } from 'path';
 import { createLogger } from '@omniscribe/shared';
@@ -54,6 +54,10 @@ export function registerAppHandlers(): void {
     const logsPath = getLogsDir();
     await shell.openPath(logsPath);
   });
+
+  ipcMain.handle('app:clipboard-write', (_event, text: string) => {
+    clipboard.writeText(text);
+  });
 }
 
 /**
@@ -65,4 +69,5 @@ export function cleanupAppHandlers(): void {
   ipcMain.removeHandler('app:check-cli');
   ipcMain.removeHandler('app:is-valid-project');
   ipcMain.removeHandler('app:open-logs-folder');
+  ipcMain.removeHandler('app:clipboard-write');
 }
