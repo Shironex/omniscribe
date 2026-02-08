@@ -56,6 +56,9 @@ export function registerAppHandlers(): void {
   });
 
   ipcMain.handle('app:clipboard-write', (_event, text: string) => {
+    if (typeof text !== 'string') {
+      throw new Error('clipboard-write expects a string');
+    }
     clipboard.writeText(text);
   });
 }

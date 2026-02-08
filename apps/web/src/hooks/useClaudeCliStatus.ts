@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useState } from 'react';
+import { useEffect, useCallback, useState, useRef } from 'react';
 import { toast } from 'sonner';
 import { createLogger } from '@omniscribe/shared';
 import type {
@@ -56,6 +56,7 @@ export function useClaudeCliStatus(): UseClaudeCliStatusReturn {
   const [installCommand, setInstallCommand] = useState<ClaudeInstallCommand | null>(null);
   const [copiedCommand, setCopiedCommand] = useState(false);
   const [versionCheckAttempted, setVersionCheckAttempted] = useState(false);
+  const copiedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Callbacks
   const refreshStatus = useCallback(async () => {
@@ -124,6 +125,9 @@ export function useClaudeCliStatus(): UseClaudeCliStatusReturn {
 
   const copyCommand = useCallback(async () => {
     if (installCommand?.command) {
+      if (copiedTimeoutRef.current) {
+        clearTimeout(copiedTimeoutRef.current);
+      }
       try {
         if (window.electronAPI?.app?.clipboardWrite) {
           await window.electronAPI.app.clipboardWrite(installCommand.command);
@@ -132,7 +136,7 @@ export function useClaudeCliStatus(): UseClaudeCliStatusReturn {
         }
         setCopiedCommand(true);
         toast.success('Command copied to clipboard');
-        setTimeout(() => setCopiedCommand(false), 2000);
+        copiedTimeoutRef.current = setTimeout(() => setCopiedCommand(false), 2000);
       } catch (error) {
         logger.error('Failed to copy command to clipboard:', error);
         toast.error('Failed to copy command to clipboard');
@@ -151,6 +155,15 @@ export function useClaudeCliStatus(): UseClaudeCliStatusReturn {
       }
     }
   }, [installCommand]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (copiedTimeoutRef.current) {
+        clearTimeout(copiedTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Fetch status on mount
   useEffect(() => {

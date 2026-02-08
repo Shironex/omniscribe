@@ -16,13 +16,12 @@ function escapeShellArg(arg: string): string {
 }
 
 /**
- * Security: Escape a string for PowerShell
- * PowerShell has different escaping rules
+ * Security: Encode a command for PowerShell's -EncodedCommand parameter.
+ * Base64-encoding the UTF-16LE command string avoids all shell escaping issues
+ * when launching PowerShell via cmd.exe.
  */
-function escapePowerShellArg(arg: string): string {
-  // Escape special PowerShell characters
-  // Replace backticks, dollars, and quotes
-  return arg.replace(/`/g, '``').replace(/\$/g, '`$').replace(/"/g, '`"').replace(/'/g, "''");
+function encodePowerShellCommand(command: string): string {
+  return Buffer.from(command, 'utf16le').toString('base64');
 }
 
 /**
@@ -68,11 +67,11 @@ export async function openTerminalWithCommand(command: string): Promise<void> {
     // Windows: Use 'start' via cmd.exe to open a visible PowerShell window.
     // spawn with detached+stdio:'ignore' runs without a console window,
     // so we need cmd's 'start' to create one.
-    const escapedCommand = escapePowerShellArg(command);
+    const encodedCommand = encodePowerShellCommand(command);
     return new Promise((resolve, reject) => {
       const proc = spawn(
         'cmd.exe',
-        ['/c', 'start', 'powershell', '-NoExit', '-Command', escapedCommand],
+        ['/c', 'start', 'powershell', '-NoExit', '-EncodedCommand', encodedCommand],
         {
           detached: true,
           stdio: 'ignore',
