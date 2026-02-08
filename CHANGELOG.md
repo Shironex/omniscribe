@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.5.1 (2026-02-08)
+
+### Bug Fixes
+
+- **Clipboard copy broken on Windows** — `navigator.clipboard.writeText()` silently fails in production because `file://` is not a secure context; replaced with Electron's native `clipboard` module via IPC
+- **"Run in Terminal" broken on Windows** — `spawn('powershell', ...)` with `detached: true` ran as a hidden background process; fixed by using `cmd.exe /c start powershell` to open a visible console window
+- **No feedback on copy/run actions** — Added toast notifications for success and error states on both the Copy and Run in Terminal buttons
+
 ## 0.5.0 (2026-02-08)
 
 ### Features
