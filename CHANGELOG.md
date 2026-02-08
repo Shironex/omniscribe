@@ -2,6 +2,32 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.4.0 (2026-02-08)
+
+### Features
+
+- **Launch presets modal** — Batch session creation with grid preset cards (2×1, 2×2, 3×2) for quick multi-session setup; opens via Shift+N shortcut
+- **MCP task list** — New `omniscribe_tasks` MCP tool lets Claude report its task list to Omniscribe; per-session TaskBadge and TaskListPopover in terminal header show real-time progress
+- **Splash screen** — Branded loading screen with logo, version, and spinner; waits for WebSocket, theme, and stores to be ready before fading out
+- **Terminal drag handle** — Grip icon on terminal headers for precise drag-and-drop reordering with ghost preview overlay (no more accidental drags on header clicks)
+- **Skip-permissions setting** — Global toggle in Settings > Sessions to launch Claude sessions with `--dangerously-skip-permissions`
+- **Quick action execution mode** — Choose between paste-only and paste+execute behavior in Settings > Quick Actions
+- **Commit & Push quick action** — Combined git action available on AI session terminals
+- **Midnight theme** — New dark theme with purple palette
+- **Theme persistence** — Inline script in `index.html` applies saved theme instantly, eliminating flash-of-wrong-theme on startup
+
+### Improvements
+
+- Quick action buttons now hidden on plain terminals (only shown on AI sessions)
+- Skip-permissions badge shown on terminal header when enabled
+- CI now runs on version branches in addition to master
+- Extracted `useAppVersion` hook for dynamic version display
+
+### Stats
+
+- 39 commits across 7 PRs
+- 78 files changed — +2,592 / −253 lines
+
 ## 0.3.2 (2026-02-07)
 
 ### Bug Fixes
