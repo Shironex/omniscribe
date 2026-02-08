@@ -50,7 +50,10 @@ export function InstallCommandDisplay({
       </div>
 
       {isUpdate && (
-        <div className="flex items-start gap-2 mt-3 p-2.5 rounded-lg bg-status-warning-bg/50 border border-status-warning/20">
+        <div
+          role="alert"
+          className="flex items-start gap-2 mt-3 p-2.5 rounded-lg bg-status-warning-bg/50 border border-status-warning/20"
+        >
           <TriangleAlert className="w-3.5 h-3.5 text-status-warning shrink-0 mt-0.5" />
           <p className="text-xs text-status-warning">
             This will terminate all running Claude CLI instances. Make sure all your tasks are
