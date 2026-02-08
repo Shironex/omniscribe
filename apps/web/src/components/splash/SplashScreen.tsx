@@ -30,7 +30,12 @@ export function SplashScreen() {
       }}
     >
       {/* Logo */}
-      <img src="/logo.png" alt="Omniscribe" className="h-24 w-24" draggable={false} />
+      <img
+        src={`${import.meta.env.BASE_URL}logo.png`}
+        alt="Omniscribe"
+        className="h-24 w-24"
+        draggable={false}
+      />
 
       {/* Version label */}
       {version && (
@@ -53,6 +58,8 @@ export function SplashScreen() {
           opacity: showSpinner ? 1 : 0,
           transition: 'opacity 300ms ease-in',
         }}
+        role="status"
+        aria-live="polite"
       >
         <Loader2
           className={cn(

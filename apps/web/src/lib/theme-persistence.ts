@@ -9,6 +9,7 @@ export const THEME_STORAGE_KEY = 'omniscribe-theme';
  * Set of dark theme values, derived from the single source of truth in theme.ts.
  */
 const darkThemeSet: Set<string> = new Set(themeOptions.filter(t => t.isDark).map(t => t.value));
+const themeValueSet: Set<string> = new Set(themeOptions.map(t => t.value));
 
 /**
  * Persist the current theme to localStorage for instant restoration on next startup.
@@ -28,7 +29,8 @@ export function persistTheme(theme: string): void {
  */
 export function getPersistedTheme(): string {
   try {
-    return localStorage.getItem(THEME_STORAGE_KEY) || 'dark';
+    const stored = localStorage.getItem(THEME_STORAGE_KEY);
+    return stored && themeValueSet.has(stored) ? stored : 'dark';
   } catch {
     return 'dark';
   }

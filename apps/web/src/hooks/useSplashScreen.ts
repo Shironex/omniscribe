@@ -106,10 +106,14 @@ export function useSplashScreen(): SplashScreenState {
  */
 function deriveStatusText(connectionStatus: string, isWorkspaceRestored: boolean): string {
   if (connectionStatus !== 'connected') {
-    // Socket hasn't connected yet — could be 'reconnecting' (initial state)
-    // Show "Initializing..." at the very start, then "Connecting..." once we know
-    // the socket is actively trying
-    return connectionStatus === 'reconnecting' ? 'Connecting...' : 'Initializing...';
+    switch (connectionStatus) {
+      case 'reconnecting':
+        return 'Connecting...';
+      case 'failed':
+        return 'Connection failed. Retrying...';
+      default:
+        return 'Initializing...';
+    }
   }
   if (!isWorkspaceRestored) {
     return 'Loading workspace...';
