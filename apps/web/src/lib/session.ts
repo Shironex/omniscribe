@@ -118,6 +118,83 @@ export async function listSessions(projectPath?: string): Promise<ExtendedSessio
 }
 
 /**
+ * Resume a Claude Code session
+ */
+export async function resumeSession(
+  claudeSessionId: string,
+  projectPath: string,
+  branch?: string,
+  name?: string
+): Promise<ExtendedSessionConfig> {
+  logger.info('Resuming Claude session', claudeSessionId, projectPath);
+  const response = await emitAsync<
+    { claudeSessionId: string; projectPath: string; branch?: string; name?: string },
+    CreateSessionResponse
+  >('session:resume', { claudeSessionId, projectPath, branch, name });
+
+  if (response.error) {
+    logger.warn('Session resume rejected:', response.error);
+    throw new Error(response.error);
+  }
+  if (!response.session) {
+    logger.error('No session returned from server');
+    throw new Error('No session returned from server');
+  }
+  return response.session;
+}
+
+/**
+ * Fork a Claude Code session (creates a conversation branch)
+ */
+export async function forkSession(
+  claudeSessionId: string,
+  projectPath: string,
+  branch?: string,
+  name?: string
+): Promise<ExtendedSessionConfig> {
+  logger.info('Forking Claude session', claudeSessionId, projectPath);
+  const response = await emitAsync<
+    { claudeSessionId: string; projectPath: string; branch?: string; name?: string },
+    CreateSessionResponse
+  >('session:fork', { claudeSessionId, projectPath, branch, name });
+
+  if (response.error) {
+    logger.warn('Session fork rejected:', response.error);
+    throw new Error(response.error);
+  }
+  if (!response.session) {
+    logger.error('No session returned from server');
+    throw new Error('No session returned from server');
+  }
+  return response.session;
+}
+
+/**
+ * Continue the most recent Claude Code session in a project
+ */
+export async function continueLastSession(
+  projectPath: string,
+  branch?: string,
+  name?: string
+): Promise<ExtendedSessionConfig> {
+  logger.info('Continuing last Claude session', projectPath);
+  const response = await emitAsync<
+    { projectPath: string; branch?: string; name?: string },
+    CreateSessionResponse
+  >('session:continue-last', { projectPath, branch, name });
+
+  if (response.error) {
+    logger.warn('Continue last session rejected:', response.error);
+    throw new Error(response.error);
+  }
+  if (!response.session) {
+    logger.error('No session returned from server');
+    throw new Error('No session returned from server');
+  }
+  return response.session;
+}
+
+/**
  * Initialize session socket listeners
  * Should be called once when the app initializes
  */
