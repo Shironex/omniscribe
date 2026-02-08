@@ -124,8 +124,7 @@ export function initializeAutoUpdater(mainWindow: BrowserWindow, isDev: boolean)
     // We check both filenames to handle race conditions when the channel changes
     // mid-check, and also when stable checks hit a beta-only release tag.
     const isReleasePending =
-      error.message.includes('Cannot find latest.yml') ||
-      error.message.includes('Cannot find beta.yml') ||
+      /Cannot find (latest|beta)\.yml/.test(error.message) ||
       (error.message.includes('.yml') && error.message.includes('404'));
 
     if (isReleasePending) {
@@ -154,17 +153,18 @@ export function initializeAutoUpdater(mainWindow: BrowserWindow, isDev: boolean)
 }
 
 export async function checkForUpdates(): Promise<{ enabled: boolean; channel: UpdateChannel }> {
+  const channel = currentChannel;
   if (!updaterEnabled) {
     logger.info('Update check skipped — updater not enabled');
-    return { enabled: false, channel: currentChannel };
+    return { enabled: false, channel };
   }
   try {
-    logger.info(`Triggering update check on '${currentChannel}' channel...`);
+    logger.info(`Triggering update check on '${channel}' channel...`);
     await autoUpdater.checkForUpdates();
   } catch (error) {
     logger.error('Failed to check for updates:', error);
   }
-  return { enabled: true, channel: currentChannel };
+  return { enabled: true, channel };
 }
 
 export async function downloadUpdate(): Promise<void> {

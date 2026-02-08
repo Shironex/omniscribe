@@ -154,7 +154,12 @@ export function GeneralSection() {
               variant={channel === 'stable' ? 'default' : 'outline'}
               size="sm"
               onClick={() => setChannel('stable')}
-              disabled={channel === 'stable' || status === 'downloading' || isChannelSwitching}
+              disabled={
+                channel === 'stable' ||
+                status === 'checking' ||
+                status === 'downloading' ||
+                isChannelSwitching
+              }
             >
               Stable
             </Button>
@@ -162,7 +167,12 @@ export function GeneralSection() {
               variant={channel === 'beta' ? 'default' : 'outline'}
               size="sm"
               onClick={() => setChannel('beta')}
-              disabled={channel === 'beta' || status === 'downloading' || isChannelSwitching}
+              disabled={
+                channel === 'beta' ||
+                status === 'checking' ||
+                status === 'downloading' ||
+                isChannelSwitching
+              }
             >
               Beta
             </Button>

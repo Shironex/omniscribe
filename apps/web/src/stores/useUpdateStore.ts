@@ -92,7 +92,7 @@ export const useUpdateStore = create<UpdateStore>()(
       setChannel: (channel: UpdateChannel) => {
         const updater = window.electronAPI?.updater;
         if (!updater) return;
-        set({ isChannelSwitching: true }, undefined, 'update/setChannelStart');
+        set({ isChannelSwitching: true, channel }, undefined, 'update/setChannelStart');
         updater
           .setChannel(channel)
           .then(result => {
@@ -177,10 +177,9 @@ export const useUpdateStore = create<UpdateStore>()(
         });
 
         const unsubChannelChanged = updater.onChannelChanged(newChannel => {
-          // If this window initiated the change, setChannel handles the state update
-          if (get().isChannelSwitching) return;
-
           const validated = isValidChannel(newChannel) ? newChannel : DEFAULT_UPDATE_CHANNEL;
+          // Skip if channel already matches (local switch already handled it)
+          if (get().channel === validated && !get().error) return;
           set(
             {
               channel: validated,

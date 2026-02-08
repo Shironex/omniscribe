@@ -73,7 +73,13 @@ export function IdleLandingView({
         </p>
 
         {/* Add session button - opens modal as primary action */}
-        <Button onClick={handlePrimaryCTA} type="button" size={'icon'} aria-label="Set up sessions">
+        <Button
+          onClick={handlePrimaryCTA}
+          type="button"
+          size={'icon'}
+          aria-label="Set up sessions"
+          className="group"
+        >
           <Plus
             className="text-white group-hover:rotate-90 transition-transform duration-200"
             strokeWidth={2}

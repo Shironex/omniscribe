@@ -62,7 +62,9 @@ export function TopBar({
   className,
 }: TopBarProps) {
   const isElectron = typeof window !== 'undefined' && !!window.electronAPI;
-  const isMac = isElectron && window.electronAPI?.platform === 'darwin';
+  const isMac = isElectron
+    ? window.electronAPI?.platform === 'darwin'
+    : typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
   const openSettings = useSettingsStore(state => state.openSettings);
 
   const canAddMore = hasActiveProject && sessionCount + preLaunchSlotCount < MAX_SESSIONS;
@@ -75,7 +77,7 @@ export function TopBar({
         clsx(
           'h-11 bg-muted border-b border-border',
           'flex items-center select-none drag',
-          isMac && 'pl-[78px]',
+          isElectron && isMac && 'pl-[78px]',
           className
         )
       )}
@@ -86,7 +88,7 @@ export function TopBar({
           <div
             key={tab.id}
             role="tab"
-            tabIndex={0}
+            tabIndex={activeTabId === tab.id ? 0 : -1}
             aria-selected={activeTabId === tab.id}
             className={clsx(
               'no-drag group flex items-center gap-2 px-3 h-full min-w-0',

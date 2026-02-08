@@ -18,6 +18,23 @@ function createMockSocket(id = 'client-1'): Socket {
 
 // ---- Tests ----
 
+const installedStatus = {
+  installed: true,
+  version: '1.0.27',
+  path: '/usr/local/bin/claude',
+  method: 'path' as const,
+  platform: 'linux',
+  arch: 'x64',
+  auth: { authenticated: true },
+};
+
+const notInstalledStatus = {
+  installed: false,
+  platform: 'win32',
+  arch: 'x64',
+  auth: { authenticated: false },
+};
+
 describe('UsageGateway', () => {
   let gateway: UsageGateway;
   let usageService: jest.Mocked<UsageService>;
@@ -43,23 +60,6 @@ describe('UsageGateway', () => {
   // ================================================================
   describe('handleFetch', () => {
     const payload = { workingDir: '/my/project' };
-
-    const installedStatus = {
-      installed: true,
-      version: '1.0.27',
-      path: '/usr/local/bin/claude',
-      method: 'path' as const,
-      platform: 'linux',
-      arch: 'x64',
-      auth: { authenticated: true },
-    };
-
-    const notInstalledStatus = {
-      installed: false,
-      platform: 'win32',
-      arch: 'x64',
-      auth: { authenticated: false },
-    };
 
     it('should return cli_not_found error when CLI is not installed', async () => {
       usageService.getStatus.mockResolvedValue(notInstalledStatus);
@@ -194,23 +194,6 @@ describe('UsageGateway', () => {
   // handleStatus
   // ================================================================
   describe('handleStatus', () => {
-    const installedStatus = {
-      installed: true,
-      version: '1.0.27',
-      path: '/usr/local/bin/claude',
-      method: 'path' as const,
-      platform: 'linux',
-      arch: 'x64',
-      auth: { authenticated: true },
-    };
-
-    const notInstalledStatus = {
-      installed: false,
-      platform: 'win32',
-      arch: 'x64',
-      auth: { authenticated: false },
-    };
-
     it('should return CLI status on success', async () => {
       usageService.getStatus.mockResolvedValue(installedStatus);
 

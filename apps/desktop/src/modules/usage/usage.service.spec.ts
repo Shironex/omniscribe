@@ -7,7 +7,7 @@ import type { ClaudeCliStatus } from '@omniscribe/shared';
 // Mock getClaudeCliStatus from claude-detection
 const mockGetClaudeCliStatus = jest.fn<Promise<ClaudeCliStatus>, []>();
 jest.mock('../../main/utils/claude-detection', () => ({
-  getClaudeCliStatus: (...args: unknown[]) => mockGetClaudeCliStatus(...(args as [])),
+  getClaudeCliStatus: () => mockGetClaudeCliStatus(),
 }));
 
 // Mock os module for platform-specific testing

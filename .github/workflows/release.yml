@@ -33,10 +33,10 @@ jobs:
           echo "Extracted version: ${VERSION}"
 
           # Detect update channel from pre-release suffix
-          if echo "${VERSION}" | grep -qE '\-beta'; then
+          if echo "${VERSION}" | grep -qE '\-beta(\.|$)'; then
             echo "channel=beta" >> "$GITHUB_OUTPUT"
             echo "Detected channel: beta"
-          elif echo "${VERSION}" | grep -qE '\-alpha'; then
+          elif echo "${VERSION}" | grep -qE '\-alpha(\.|$)'; then
             echo "channel=alpha" >> "$GITHUB_OUTPUT"
             echo "Detected channel: alpha"
           else
@@ -99,6 +99,7 @@ jobs:
           name: windows-builds
           path: |
             apps/desktop/release/*.exe
+            # Windows emits un-prefixed YML (latest.yml, beta.yml) unlike macOS/Linux
             apps/desktop/release/*.yml
           if-no-files-found: error
           retention-days: 30

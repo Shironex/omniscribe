@@ -155,7 +155,7 @@ Omniscribe supports a beta update channel for testing new features before stable
 
 **To opt in:**
 
-1. Open **Settings > General > Updates**
+1. Open **Settings > About > Updates**
 2. Click the **Beta** button to switch channels
 3. The app will automatically check for and offer beta updates
 
