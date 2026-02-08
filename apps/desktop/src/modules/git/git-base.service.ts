@@ -55,8 +55,17 @@ export class GitBaseService {
         throw new Error(`Git command timed out after ${timeoutMs}ms: ${commandStr}`);
       }
 
-      // Return stdout/stderr even on non-zero exit codes (some git commands use this)
-      if (execError.stdout !== undefined || execError.stderr !== undefined) {
+      // For non-fatal exit codes (1-127), return stdout/stderr.
+      // Some git commands use these codes for informational results
+      // (e.g., git diff --quiet returns 1 when there are differences).
+      // Fatal git errors (exit code >= 128) must always throw.
+      const exitCode = execError.code;
+      if (
+        typeof exitCode === 'number' &&
+        exitCode > 0 &&
+        exitCode < 128 &&
+        (execError.stdout !== undefined || execError.stderr !== undefined)
+      ) {
         return {
           stdout: execError.stdout ?? '',
           stderr: execError.stderr ?? '',

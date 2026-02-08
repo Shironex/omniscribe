@@ -223,6 +223,16 @@ export class WorktreeService {
       }
     }
 
+    // Defensive check: verify the worktree directory was actually created
+    try {
+      await fs.access(worktreePath);
+    } catch {
+      throw new Error(
+        `Worktree directory was not created at ${worktreePath}. ` +
+          `The git worktree add command may have failed silently for branch "${branch}".`
+      );
+    }
+
     return worktreePath;
   }
 
