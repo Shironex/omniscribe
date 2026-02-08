@@ -91,7 +91,7 @@ Omniscribe is a desktop application for managing multiple AI coding assistant se
 | `Ctrl/Cmd + W`         | Close current project tab        |
 | `Ctrl/Cmd + 1-9`       | Switch project tab by index      |
 | `Ctrl/Cmd + L`         | Clear focused terminal           |
-| `Ctrl + Shift + F`     | Open terminal search bar         |
+| `Ctrl/Cmd + F`         | Toggle terminal search bar       |
 
 ## Requirements
 
