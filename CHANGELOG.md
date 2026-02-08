@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.4.1 (2026-02-08)
+
+### Improvements
+
+- **Claude CLI update warning** — Added a warning in Settings > Integrations that informs users running the CLI update command will terminate existing Claude Code instances
+
 ## 0.4.0 (2026-02-08)
 
 ### Features
