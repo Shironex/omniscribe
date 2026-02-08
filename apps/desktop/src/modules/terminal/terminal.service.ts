@@ -5,8 +5,8 @@ import * as os from 'os';
 import { TERM_PROGRAM, createLogger } from '@omniscribe/shared';
 
 // Performance constants
-const OUTPUT_THROTTLE_MS = 4;
-const OUTPUT_BATCH_SIZE = 4096; // 4KB chunks
+const OUTPUT_THROTTLE_MS = 16; // ~1 frame at 60fps
+const OUTPUT_BATCH_SIZE = 16_384; // 16KB chunks
 const MAX_SCROLLBACK_SIZE = 50_000; // 50KB per terminal
 const MAX_OUTPUT_BUFFER_SIZE = 100_000; // 100KB cap
 const CHUNKED_WRITE_THRESHOLD = 1000;
@@ -524,6 +524,13 @@ export class TerminalService implements OnModuleDestroy {
     session.pty.resume();
     session.paused = false;
     this.logger.debug(`[resume] Resumed PTY for session ${sessionId}`);
+
+    // Restart flush if data accumulated during pause
+    if (session.outputBuffer.length > 0 && !session.flushTimer) {
+      session.flushTimer = setTimeout(() => {
+        this.flushOutput(sessionId);
+      }, OUTPUT_THROTTLE_MS);
+    }
   }
 
   /**
@@ -549,6 +556,12 @@ export class TerminalService implements OnModuleDestroy {
   private flushOutput(sessionId: number): void {
     const session = this.sessions.get(sessionId);
     if (!session) return;
+
+    // Stop flushing while paused — data stays in buffer until resume
+    if (session.paused) {
+      session.flushTimer = null;
+      return;
+    }
 
     if (session.outputBuffer.length > 0) {
       if (session.outputBuffer.length > OUTPUT_BATCH_SIZE) {

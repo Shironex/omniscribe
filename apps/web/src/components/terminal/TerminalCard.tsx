@@ -1,3 +1,4 @@
+import React from 'react';
 import { clsx } from 'clsx';
 import { TerminalView } from './TerminalView';
 import { TerminalErrorBoundary } from './TerminalErrorBoundary';
@@ -25,7 +26,7 @@ interface TerminalCardProps {
   dragHandleProps?: TerminalDragHandleProps;
 }
 
-export function TerminalCard({
+export const TerminalCard = React.memo(function TerminalCard({
   session,
   quickActions,
   isFocused,
@@ -74,4 +75,4 @@ export function TerminalCard({
       </div>
     </div>
   );
-}
+});
