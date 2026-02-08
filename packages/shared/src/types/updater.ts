@@ -1,7 +1,12 @@
+export type UpdateChannel = 'stable' | 'beta';
+export const DEFAULT_UPDATE_CHANNEL: UpdateChannel = 'stable';
+
 export interface UpdateInfo {
   version: string;
   releaseNotes: string | null;
   releaseDate: string;
+  channel?: UpdateChannel;
+  isDowngrade?: boolean;
 }
 
 export interface UpdateDownloadProgress {

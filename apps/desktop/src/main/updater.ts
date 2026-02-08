@@ -1,12 +1,21 @@
-import { BrowserWindow } from 'electron';
+import { app, BrowserWindow } from 'electron';
 import { autoUpdater } from 'electron-updater';
-import { createLogger, UPDATE_ERROR_RELEASE_PENDING } from '@omniscribe/shared';
+import Store from 'electron-store';
+import * as semver from 'semver';
+import {
+  createLogger,
+  UPDATE_ERROR_RELEASE_PENDING,
+  DEFAULT_UPDATE_CHANNEL,
+} from '@omniscribe/shared';
+import type { UpdateChannel } from '@omniscribe/shared';
 import type { UpdateInfo as ElectronUpdateInfo } from 'electron-updater';
 import type { ProgressInfo } from 'electron-updater';
 
 const logger = createLogger('AutoUpdater');
+const store = new Store();
 
 let updaterEnabled = false;
+let currentChannel: UpdateChannel = DEFAULT_UPDATE_CHANNEL;
 
 // Disable auto download — user controls when to download
 autoUpdater.autoDownload = false;
@@ -22,6 +31,31 @@ function parseReleaseNotes(releaseNotes: ElectronUpdateInfo['releaseNotes']): st
     .join('\n\n');
 }
 
+function getPersistedChannel(): UpdateChannel {
+  const stored = store.get('preferences.updateChannel') as string | undefined;
+  if (stored === 'stable' || stored === 'beta') return stored;
+  return DEFAULT_UPDATE_CHANNEL;
+}
+
+function applyChannel(channel: UpdateChannel): void {
+  currentChannel = channel;
+  autoUpdater.channel = channel === 'beta' ? 'beta' : 'latest';
+  autoUpdater.allowPrerelease = channel === 'beta';
+  autoUpdater.allowDowngrade = true;
+  logger.info(`Update channel set to '${channel}' (autoUpdater.channel='${autoUpdater.channel}')`);
+}
+
+export function getUpdateChannel(): UpdateChannel {
+  return currentChannel;
+}
+
+export async function setUpdateChannel(channel: UpdateChannel): Promise<UpdateChannel> {
+  logger.info(`Switching update channel: ${currentChannel} → ${channel}`);
+  store.set('preferences.updateChannel', channel);
+  applyChannel(channel);
+  return channel;
+}
+
 export function initializeAutoUpdater(mainWindow: BrowserWindow, isDev: boolean): void {
   if (isDev) {
     logger.info('Skipping auto-updater in development mode');
@@ -30,6 +64,7 @@ export function initializeAutoUpdater(mainWindow: BrowserWindow, isDev: boolean)
   }
 
   updaterEnabled = true;
+  applyChannel(getPersistedChannel());
 
   // Wire autoUpdater events → renderer via IPC
   autoUpdater.on('checking-for-update', () => {
@@ -39,10 +74,18 @@ export function initializeAutoUpdater(mainWindow: BrowserWindow, isDev: boolean)
 
   autoUpdater.on('update-available', (info: ElectronUpdateInfo) => {
     logger.info('Update available:', info.version);
+    let isDowngrade = false;
+    try {
+      isDowngrade = semver.lt(info.version, app.getVersion());
+    } catch {
+      logger.warn(`Could not compare versions: ${info.version} vs ${app.getVersion()}`);
+    }
     mainWindow.webContents.send('updater:update-available', {
       version: info.version,
       releaseNotes: parseReleaseNotes(info.releaseNotes),
       releaseDate: info.releaseDate,
+      channel: currentChannel,
+      isDowngrade,
     });
   });
 
@@ -77,14 +120,15 @@ export function initializeAutoUpdater(mainWindow: BrowserWindow, isDev: boolean)
   });
 
   autoUpdater.on('error', (error: Error) => {
-    // Detect 404 on latest.yml — means the CI release pipeline is still building
+    // Detect 404 on latest.yml or beta.yml — means the CI release pipeline is still building
+    const ymlFile = currentChannel === 'beta' ? 'beta.yml' : 'latest.yml';
     const isReleasePending =
-      error.message.includes('Cannot find latest.yml') ||
-      (error.message.includes('latest.yml') && error.message.includes('404'));
+      error.message.includes(`Cannot find ${ymlFile}`) ||
+      (error.message.includes(ymlFile) && error.message.includes('404'));
 
     if (isReleasePending) {
       logger.warn(
-        'Release artifacts not yet available (latest.yml 404) — build may still be in progress'
+        `Release artifacts not yet available (${ymlFile} 404) — build may still be in progress`
       );
       mainWindow.webContents.send('updater:error', UPDATE_ERROR_RELEASE_PENDING);
     } else {
@@ -107,18 +151,18 @@ export function initializeAutoUpdater(mainWindow: BrowserWindow, isDev: boolean)
   );
 }
 
-export async function checkForUpdates(): Promise<{ enabled: boolean }> {
+export async function checkForUpdates(): Promise<{ enabled: boolean; channel: UpdateChannel }> {
   if (!updaterEnabled) {
     logger.info('Update check skipped — updater not enabled');
-    return { enabled: false };
+    return { enabled: false, channel: currentChannel };
   }
   try {
-    logger.info('Triggering update check...');
+    logger.info(`Triggering update check on '${currentChannel}' channel...`);
     await autoUpdater.checkForUpdates();
   } catch (error) {
     logger.error('Failed to check for updates:', error);
   }
-  return { enabled: true };
+  return { enabled: true, channel: currentChannel };
 }
 
 export async function downloadUpdate(): Promise<void> {

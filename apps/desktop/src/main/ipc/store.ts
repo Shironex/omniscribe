@@ -25,6 +25,7 @@ const ALLOWED_STORE_KEYS = new Set([
   'preferences.fontFamily',
   'preferences.terminalFontSize',
   'preferences.autoSave',
+  'preferences.updateChannel',
   'preferences.worktree',
   'preferences', // Root preferences object
   // Recent projects

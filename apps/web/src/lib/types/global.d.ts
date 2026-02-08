@@ -55,15 +55,18 @@ interface ElectronAPI {
     getStatus: () => Promise<GhCliStatus>;
   };
   updater?: {
-    checkForUpdates: () => Promise<{ enabled: boolean }>;
+    checkForUpdates: () => Promise<{ enabled: boolean; channel: string }>;
     startDownload: () => Promise<void>;
     installNow: () => Promise<void>;
+    getChannel: () => Promise<string>;
+    setChannel: (channel: string) => Promise<string>;
     onCheckingForUpdate: (callback: () => void) => () => void;
     onUpdateAvailable: (callback: (info: UpdateInfo) => void) => () => void;
     onUpdateNotAvailable: (callback: (info: UpdateInfo) => void) => () => void;
     onDownloadProgress: (callback: (progress: UpdateDownloadProgress) => void) => () => void;
     onUpdateDownloaded: (callback: (info: UpdateInfo) => void) => () => void;
     onUpdateError: (callback: (message: string) => void) => () => void;
+    onChannelChanged: (callback: (channel: string) => void) => () => void;
   };
   platform: NodeJS.Platform;
 }

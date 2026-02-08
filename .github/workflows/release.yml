@@ -76,7 +76,7 @@ jobs:
           path: |
             apps/desktop/release/*.dmg
             apps/desktop/release/*.zip
-            apps/desktop/release/latest-mac.yml
+            apps/desktop/release/*-mac.yml
           if-no-files-found: error
           retention-days: 30
 
@@ -87,7 +87,7 @@ jobs:
           name: windows-builds
           path: |
             apps/desktop/release/*.exe
-            apps/desktop/release/latest.yml
+            apps/desktop/release/*.yml
           if-no-files-found: error
           retention-days: 30
 
@@ -99,7 +99,7 @@ jobs:
           path: |
             apps/desktop/release/*.AppImage
             apps/desktop/release/*.deb
-            apps/desktop/release/latest-linux.yml
+            apps/desktop/release/*-linux.yml
           if-no-files-found: error
           retention-days: 30
 
@@ -134,19 +134,19 @@ jobs:
           files: |
             artifacts/macos-builds/*.dmg
             artifacts/macos-builds/*.zip
-            artifacts/macos-builds/latest-mac.yml
+            artifacts/macos-builds/*-mac.yml
             artifacts/windows-builds/*.exe
-            artifacts/windows-builds/latest.yml
+            artifacts/windows-builds/*.yml
             artifacts/linux-builds/*.AppImage
             artifacts/linux-builds/*.deb
-            artifacts/linux-builds/latest-linux.yml
+            artifacts/linux-builds/*-linux.yml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   version-sync:
     needs: upload
     runs-on: ubuntu-latest
-    if: github.event.release.draft == false
+    if: github.event.release.draft == false && github.event.release.prerelease == false
 
     env:
       HUSKY: 0

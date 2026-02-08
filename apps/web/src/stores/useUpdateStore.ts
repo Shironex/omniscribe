@@ -1,21 +1,33 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
-import type { UpdateStatus, UpdateInfo, UpdateDownloadProgress } from '@omniscribe/shared';
-import { createLogger } from '@omniscribe/shared';
+import type {
+  UpdateStatus,
+  UpdateInfo,
+  UpdateDownloadProgress,
+  UpdateChannel,
+} from '@omniscribe/shared';
+import { createLogger, DEFAULT_UPDATE_CHANNEL } from '@omniscribe/shared';
 
 const logger = createLogger('UpdateStore');
+
+function isValidChannel(value: unknown): value is UpdateChannel {
+  return value === 'stable' || value === 'beta';
+}
 
 interface UpdateState {
   status: UpdateStatus;
   updateInfo: UpdateInfo | null;
   progress: UpdateDownloadProgress | null;
   error: string | null;
+  channel: UpdateChannel;
+  isChannelSwitching: boolean;
 }
 
 interface UpdateActions {
   checkForUpdates: () => void;
   startDownload: () => void;
   installNow: () => void;
+  setChannel: (channel: UpdateChannel) => void;
   initListeners: () => () => void;
 }
 
@@ -23,12 +35,14 @@ type UpdateStore = UpdateState & UpdateActions;
 
 export const useUpdateStore = create<UpdateStore>()(
   devtools(
-    set => ({
+    (set, get) => ({
       // Initial state
       status: 'idle',
       updateInfo: null,
       progress: null,
       error: null,
+      channel: DEFAULT_UPDATE_CHANNEL,
+      isChannelSwitching: false,
 
       // Actions
       checkForUpdates: () => {
@@ -75,6 +89,41 @@ export const useUpdateStore = create<UpdateStore>()(
         });
       },
 
+      setChannel: (channel: UpdateChannel) => {
+        const updater = window.electronAPI?.updater;
+        if (!updater) return;
+        set({ isChannelSwitching: true }, undefined, 'update/setChannelStart');
+        updater
+          .setChannel(channel)
+          .then(result => {
+            const newChannel = isValidChannel(result) ? result : DEFAULT_UPDATE_CHANNEL;
+            set(
+              {
+                channel: newChannel,
+                isChannelSwitching: false,
+                status: 'idle',
+                updateInfo: null,
+                progress: null,
+                error: null,
+              },
+              undefined,
+              'update/setChannelSuccess'
+            );
+            // Trigger a re-check on the new channel
+            updater.checkForUpdates().catch((err: Error) => {
+              logger.error('Failed to re-check after channel switch:', err);
+            });
+          })
+          .catch((err: Error) => {
+            logger.error('Failed to set update channel:', err);
+            set(
+              { isChannelSwitching: false, status: 'error', error: err.message },
+              undefined,
+              'update/setChannelError'
+            );
+          });
+      },
+
       initListeners: () => {
         const updater = window.electronAPI?.updater;
         if (!updater) {
@@ -83,6 +132,17 @@ export const useUpdateStore = create<UpdateStore>()(
         }
 
         logger.debug('Initializing updater listeners');
+
+        // Fetch initial channel
+        updater
+          .getChannel()
+          .then(ch => {
+            const validated = isValidChannel(ch) ? ch : DEFAULT_UPDATE_CHANNEL;
+            set({ channel: validated }, undefined, 'update/initialChannel');
+          })
+          .catch((err: Error) => {
+            logger.error('Failed to fetch initial channel:', err);
+          });
 
         const unsubChecking = updater.onCheckingForUpdate(() => {
           set({ status: 'checking', error: null }, undefined, 'update/checking');
@@ -116,6 +176,28 @@ export const useUpdateStore = create<UpdateStore>()(
           set({ status: 'error', error: message }, undefined, 'update/error');
         });
 
+        const unsubChannelChanged = updater.onChannelChanged(newChannel => {
+          // If this window initiated the change, setChannel handles the state update
+          if (get().isChannelSwitching) return;
+
+          const validated = isValidChannel(newChannel) ? newChannel : DEFAULT_UPDATE_CHANNEL;
+          set(
+            {
+              channel: validated,
+              status: 'idle',
+              updateInfo: null,
+              progress: null,
+              error: null,
+            },
+            undefined,
+            'update/channelChanged'
+          );
+          // Re-check for updates on the new channel
+          updater.checkForUpdates().catch((err: Error) => {
+            logger.error('Failed to re-check after external channel switch:', err);
+          });
+        });
+
         return () => {
           logger.debug('Cleaning up updater listeners');
           unsubChecking();
@@ -124,6 +206,7 @@ export const useUpdateStore = create<UpdateStore>()(
           unsubProgress();
           unsubDownloaded();
           unsubError();
+          unsubChannelChanged();
         };
       },
     }),
