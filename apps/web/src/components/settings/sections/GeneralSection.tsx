@@ -228,7 +228,7 @@ export function GeneralSection() {
               </span>
             </div>
             <Button size="sm" variant="outline" onClick={handleCheckForUpdates}>
-              <RefreshCw className={clsx('w-3.5 h-3.5', status === 'checking' && 'animate-spin')} />
+              <RefreshCw className="w-3.5 h-3.5" />
               Recheck
             </Button>
           </div>
