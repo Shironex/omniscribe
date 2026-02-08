@@ -305,12 +305,12 @@ export const useQuickActionStore = create<QuickActionStore>()(
           actions: state.actions,
         }),
         version: 2,
-        migrate: persistedState => {
+        migrate: (persistedState, oldVersion) => {
           const state = persistedState as QuickActionState;
           if (!state?.actions) {
             return state;
           }
-          if (state.actions.some(a => a.id === 'git-commit-push')) {
+          if (oldVersion >= 2 || state.actions.some(a => a.id === 'git-commit-push')) {
             return state;
           }
           const commitPushAction = DEFAULT_QUICK_ACTIONS.find(a => a.id === 'git-commit-push');

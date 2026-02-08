@@ -107,7 +107,6 @@ export function TaskListPopover({ sessionId }: TaskListPopoverProps) {
     useCallback(state => state.tasksBySession.get(sessionId) ?? EMPTY_TASKS, [sessionId])
   );
   const taskCount = tasks.length;
-  const hasInProgress = useMemo(() => tasks.some(t => t.status === 'in_progress'), [tasks]);
 
   const { inProgress, pending, completed } = useMemo(() => {
     const inProgress: TaskItem[] = [];
@@ -120,6 +119,7 @@ export function TaskListPopover({ sessionId }: TaskListPopoverProps) {
     }
     return { inProgress, pending, completed };
   }, [tasks]);
+  const hasInProgress = inProgress.length > 0;
 
   const groups = [
     { key: 'in_progress', label: 'In Progress', items: inProgress },

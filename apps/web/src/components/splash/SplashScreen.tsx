@@ -67,9 +67,7 @@ export function SplashScreen() {
             isDarkTheme ? 'text-indigo-400' : 'text-indigo-500'
           )}
         />
-        <p className={cn('text-sm select-none', isDarkTheme ? 'text-zinc-500' : 'text-zinc-400')}>
-          {statusText}
-        </p>
+        <p className="text-sm select-none text-zinc-500">{statusText}</p>
       </div>
     </div>
   );

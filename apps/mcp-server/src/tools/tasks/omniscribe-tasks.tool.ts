@@ -9,9 +9,10 @@ import type { OmniscribeHttpClient } from '../../http/index.js';
 import type { TaskItem } from '@omniscribe/shared';
 
 const TASK_STATUSES = ['pending', 'in_progress', 'completed'] as const;
+type TaskStatusLiteral = (typeof TASK_STATUSES)[number];
 
 interface OmniscribeTasksInput {
-  tasks: Array<{ id: string; subject: string; status: 'pending' | 'in_progress' | 'completed' }>;
+  tasks: Array<{ id: string; subject: string; status: TaskStatusLiteral }>;
 }
 
 export class OmniscribeTasksTool implements Tool<OmniscribeTasksInput> {

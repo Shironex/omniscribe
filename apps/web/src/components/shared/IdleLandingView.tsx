@@ -2,18 +2,12 @@ import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { BrainCircuit, Plus } from 'lucide-react';
 import { useMemo } from 'react';
+import { getGreeting } from '@/lib/date-utils';
 
 interface IdleLandingViewProps {
   onAddSession: () => void;
   onOpenLaunchModal?: () => void;
   className?: string;
-}
-
-function getGreeting(): string {
-  const hour = new Date().getHours();
-  if (hour < 12) return 'Good morning';
-  if (hour < 18) return 'Good afternoon';
-  return 'Good evening';
 }
 
 export function IdleLandingView({

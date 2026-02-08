@@ -113,7 +113,9 @@ export function SessionsSection() {
         <div className="rounded-xl border border-border/50 bg-card/50 p-4">
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-sm font-medium text-foreground">Allow skip-permissions mode</div>
+              <div id="skip-permissions-label" className="text-sm font-medium text-foreground">
+                Allow skip-permissions mode
+              </div>
               <div className="text-xs text-muted-foreground">
                 Launch Claude sessions with --dangerously-skip-permissions flag
               </div>
@@ -127,6 +129,7 @@ export function SessionsSection() {
               )}
               role="switch"
               aria-checked={skipPermissions}
+              aria-labelledby="skip-permissions-label"
             >
               <div
                 className={clsx(

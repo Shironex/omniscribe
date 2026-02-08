@@ -92,6 +92,10 @@ export function usePreLaunchSlots(
     (count: number, aiMode: PreLaunchSlot['aiMode'], branch: string) => {
       const activeSessionCount = selectRunningSessionCount(useSessionStore.getState());
       const capped = Math.min(count, MAX_PRELAUNCH_SLOTS - activeSessionCount);
+      if (capped <= 0) {
+        toast.error('Session limit reached (12 max)');
+        return;
+      }
       const slots: PreLaunchSlot[] = [];
       for (let i = 0; i < capped; i++) {
         const shortcutKey = PRELAUNCH_SHORTCUT_KEYS[i];

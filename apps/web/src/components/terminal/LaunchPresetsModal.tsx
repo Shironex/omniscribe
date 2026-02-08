@@ -56,7 +56,7 @@ export function LaunchPresetsModal({
   // Handle escape key and body scroll lock
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && open) {
+      if (e.key === 'Escape' && !e.defaultPrevented && open) {
         if (isAIModeOpen) {
           setIsAIModeOpen(false);
         } else {
@@ -94,13 +94,7 @@ export function LaunchPresetsModal({
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-        role="button"
-        tabIndex={-1}
-        aria-label="Close modal"
         onClick={() => onOpenChange(false)}
-        onKeyDown={e => {
-          if (e.key === 'Enter' || e.key === ' ') onOpenChange(false);
-        }}
       />
 
       {/* Modal */}

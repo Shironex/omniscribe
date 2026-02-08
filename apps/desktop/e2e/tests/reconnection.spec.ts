@@ -18,7 +18,8 @@ test.describe('Reconnection Overlay', () => {
     const page = fixture.page;
 
     // Add a pre-launch slot (press N keyboard shortcut)
-    await page.keyboard.press('n');
+    // Use body.press to avoid keypress being swallowed by a focused input element
+    await page.locator('body').press('n');
 
     // Verify the slot defaults to plain mode (Claude CLI not available in test env)
     await expect(page.locator('[data-testid="ai-mode-label"]').first()).toHaveText('Plain', {

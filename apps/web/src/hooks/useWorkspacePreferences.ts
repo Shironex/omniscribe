@@ -93,7 +93,6 @@ export function useWorkspacePreferences(): void {
       isTabSwitchInProgressRef.current = true;
       prevSettingsThemeRef.current = activeTab.theme;
       setSettingsTheme(activeTab.theme);
-      persistTheme(activeTab.theme);
 
       // Clear flag after microtask queue flushes to allow state to settle
       queueMicrotask(() => {
