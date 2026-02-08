@@ -25,7 +25,6 @@ describe('UsageGateway', () => {
 
   beforeEach(async () => {
     usageService = {
-      isAvailable: jest.fn(),
       fetchUsageData: jest.fn(),
       getStatus: jest.fn(),
     } as unknown as jest.Mocked<UsageService>;
@@ -45,8 +44,25 @@ describe('UsageGateway', () => {
   describe('handleFetch', () => {
     const payload = { workingDir: '/my/project' };
 
-    it('should return cli_not_found error when CLI is not available', async () => {
-      usageService.isAvailable.mockResolvedValue(false);
+    const installedStatus = {
+      installed: true,
+      version: '1.0.27',
+      path: '/usr/local/bin/claude',
+      method: 'path' as const,
+      platform: 'linux',
+      arch: 'x64',
+      auth: { authenticated: true },
+    };
+
+    const notInstalledStatus = {
+      installed: false,
+      platform: 'win32',
+      arch: 'x64',
+      auth: { authenticated: false },
+    };
+
+    it('should return cli_not_found error when CLI is not installed', async () => {
+      usageService.getStatus.mockResolvedValue(notInstalledStatus);
 
       const result = await gateway.handleFetch(mockSocket, payload);
 
@@ -54,7 +70,7 @@ describe('UsageGateway', () => {
         error: 'cli_not_found',
         message: 'Claude CLI not found. Please install Claude Code CLI.',
       });
-      expect(usageService.isAvailable).toHaveBeenCalled();
+      expect(usageService.getStatus).toHaveBeenCalled();
       expect(usageService.fetchUsageData).not.toHaveBeenCalled();
     });
 
@@ -72,18 +88,18 @@ describe('UsageGateway', () => {
         userTimezone: 'America/New_York',
       };
 
-      usageService.isAvailable.mockResolvedValue(true);
+      usageService.getStatus.mockResolvedValue(installedStatus);
       usageService.fetchUsageData.mockResolvedValue({ usage: usageData });
 
       const result = await gateway.handleFetch(mockSocket, payload);
 
       expect(result).toEqual({ usage: usageData });
-      expect(usageService.isAvailable).toHaveBeenCalled();
+      expect(usageService.getStatus).toHaveBeenCalled();
       expect(usageService.fetchUsageData).toHaveBeenCalledWith('/my/project');
     });
 
     it('should return error when fetchUsageData returns an error', async () => {
-      usageService.isAvailable.mockResolvedValue(true);
+      usageService.getStatus.mockResolvedValue(installedStatus);
       usageService.fetchUsageData.mockResolvedValue({
         error: 'auth_required',
         message: 'Authentication required',
@@ -99,7 +115,7 @@ describe('UsageGateway', () => {
     });
 
     it('should return timeout error from fetchUsageData', async () => {
-      usageService.isAvailable.mockResolvedValue(true);
+      usageService.getStatus.mockResolvedValue(installedStatus);
       usageService.fetchUsageData.mockResolvedValue({
         error: 'timeout',
         message: 'The Claude CLI took too long to respond.',
@@ -114,7 +130,7 @@ describe('UsageGateway', () => {
     });
 
     it('should return trust_prompt error from fetchUsageData', async () => {
-      usageService.isAvailable.mockResolvedValue(true);
+      usageService.getStatus.mockResolvedValue(installedStatus);
       usageService.fetchUsageData.mockResolvedValue({
         error: 'trust_prompt',
         message: 'TRUST_PROMPT_PENDING: Please approve folder access.',
@@ -129,7 +145,7 @@ describe('UsageGateway', () => {
     });
 
     it('should return unknown error from fetchUsageData', async () => {
-      usageService.isAvailable.mockResolvedValue(true);
+      usageService.getStatus.mockResolvedValue(installedStatus);
       usageService.fetchUsageData.mockResolvedValue({
         error: 'unknown',
         message: 'Something went wrong',
@@ -144,7 +160,7 @@ describe('UsageGateway', () => {
     });
 
     it('should pass the correct workingDir to fetchUsageData', async () => {
-      usageService.isAvailable.mockResolvedValue(true);
+      usageService.getStatus.mockResolvedValue(installedStatus);
       usageService.fetchUsageData.mockResolvedValue({
         usage: {
           sessionPercentage: 0,
@@ -165,8 +181,8 @@ describe('UsageGateway', () => {
       expect(usageService.fetchUsageData).toHaveBeenCalledWith('/different/path');
     });
 
-    it('should not call fetchUsageData when CLI is unavailable', async () => {
-      usageService.isAvailable.mockResolvedValue(false);
+    it('should not call fetchUsageData when CLI is not installed', async () => {
+      usageService.getStatus.mockResolvedValue(notInstalledStatus);
 
       await gateway.handleFetch(mockSocket, payload);
 

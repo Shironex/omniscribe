@@ -40,9 +40,9 @@ export class UsageGateway {
   ): Promise<UsageFetchResponse> {
     this.logger.debug(`Fetching usage for workingDir: ${payload.workingDir}`);
 
-    // Check if CLI is available
-    const isAvailable = await this.usageService.isAvailable();
-    if (!isAvailable) {
+    // Check if CLI is installed
+    const status = await this.usageService.getStatus();
+    if (!status.installed) {
       return {
         error: 'cli_not_found',
         message: 'Claude CLI not found. Please install Claude Code CLI.',
