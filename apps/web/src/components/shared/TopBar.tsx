@@ -7,6 +7,8 @@ import { UsagePopover } from '@/components/shared/UsagePopover';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { useSettingsStore } from '@/stores';
 
+const MAX_SESSIONS = 12;
+
 export interface Tab {
   id: string;
   label: string;
@@ -29,7 +31,7 @@ interface TopBarProps {
   hasActiveProject?: boolean;
   sessionCount?: number;
   preLaunchSlotCount?: number;
-  // Action props (from old BottomBar)
+  // Action props
   onStopAll: () => void;
   onLaunch: () => void;
   canLaunch: boolean;
@@ -62,7 +64,8 @@ export function TopBar({
   const isMac = isElectron && window.electronAPI?.platform === 'darwin';
   const openSettings = useSettingsStore(state => state.openSettings);
 
-  const canAddMore = hasActiveProject && sessionCount + preLaunchSlotCount < 12;
+  const canAddMore = hasActiveProject && sessionCount + preLaunchSlotCount < MAX_SESSIONS;
+  const stopShortcut = isMac ? '⌘ K' : 'Ctrl+K';
 
   return (
     <div
@@ -77,10 +80,13 @@ export function TopBar({
       )}
     >
       {/* Left: Project tabs */}
-      <div className="flex items-center overflow-x-auto no-scrollbar shrink min-w-0">
+      <div className="flex items-center overflow-x-auto no-scrollbar shrink min-w-0" role="tablist">
         {tabs.map(tab => (
           <div
             key={tab.id}
+            role="tab"
+            tabIndex={0}
+            aria-selected={activeTabId === tab.id}
             className={clsx(
               'no-drag group flex items-center gap-2 px-3 h-full min-w-0',
               'cursor-pointer transition-colors border-r border-border',
@@ -89,12 +95,19 @@ export function TopBar({
                 : 'text-foreground-secondary hover:bg-card/50 hover:text-foreground'
             )}
             onClick={() => onSelectTab(tab.id)}
+            onKeyDown={e => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onSelectTab(tab.id);
+              }
+            }}
           >
             {tab.status && <StatusDot status={tab.status} />}
             <span className="text-sm truncate max-w-32">{tab.label}</span>
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
+                  type="button"
                   onClick={e => {
                     e.stopPropagation();
                     onCloseTab(tab.id);
@@ -117,6 +130,7 @@ export function TopBar({
         <Tooltip>
           <TooltipTrigger asChild>
             <button
+              type="button"
               data-testid="new-tab-button"
               onClick={onNewTab}
               className={clsx(
@@ -162,6 +176,7 @@ export function TopBar({
         <Tooltip>
           <TooltipTrigger asChild>
             <button
+              type="button"
               onClick={() => openSettings()}
               className={clsx(
                 'no-drag w-7 h-7 flex items-center justify-center rounded',
@@ -181,6 +196,7 @@ export function TopBar({
           <Tooltip>
             <TooltipTrigger asChild>
               <button
+                type="button"
                 data-testid="setup-sessions-button"
                 onClick={onOpenLaunchModal}
                 className={clsx(
@@ -205,6 +221,7 @@ export function TopBar({
           <Tooltip>
             <TooltipTrigger asChild>
               <button
+                type="button"
                 data-testid="add-session-button"
                 onClick={onAddSlot}
                 className={clsx(
@@ -229,6 +246,7 @@ export function TopBar({
           <Tooltip>
             <TooltipTrigger asChild>
               <button
+                type="button"
                 data-testid="stop-all-button"
                 onClick={onStopAll}
                 className={clsx(
@@ -243,7 +261,9 @@ export function TopBar({
             </TooltipTrigger>
             <TooltipContent side="bottom">
               Stop all sessions
-              <kbd className="ml-1.5 px-1 py-0.5 text-[10px] bg-white/10 rounded">⌘ K</kbd>
+              <kbd className="ml-1.5 px-1 py-0.5 text-[10px] bg-white/10 rounded">
+                {stopShortcut}
+              </kbd>
             </TooltipContent>
           </Tooltip>
         )}
@@ -252,6 +272,7 @@ export function TopBar({
         <Tooltip>
           <TooltipTrigger asChild>
             <button
+              type="button"
               data-testid="launch-button"
               onClick={onLaunch}
               disabled={!canLaunch || isLaunching}
@@ -284,6 +305,7 @@ export function TopBar({
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
+                  type="button"
                   onClick={() => window.electronAPI?.window.minimize()}
                   className={clsx(
                     'w-7 h-7 flex items-center justify-center rounded',
@@ -300,6 +322,7 @@ export function TopBar({
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
+                  type="button"
                   onClick={() => window.electronAPI?.window.maximize()}
                   className={clsx(
                     'w-7 h-7 flex items-center justify-center rounded',
@@ -316,11 +339,12 @@ export function TopBar({
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
+                  type="button"
                   onClick={() => window.electronAPI?.window.close()}
                   className={clsx(
                     'w-7 h-7 flex items-center justify-center rounded',
-                    'hover:bg-red-500/20 transition-colors',
-                    'text-muted-foreground hover:text-red-500'
+                    'hover:bg-destructive/20 transition-colors',
+                    'text-muted-foreground hover:text-destructive'
                   )}
                   aria-label="Close"
                 >
