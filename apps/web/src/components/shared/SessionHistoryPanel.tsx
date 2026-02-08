@@ -21,6 +21,8 @@ import { formatRelativeTime } from '@/lib/date-utils';
 
 const logger = createLogger('SessionHistoryPanel');
 
+const MAX_HISTORY_ITEMS = 30;
+
 interface SessionHistoryPanelProps {
   isOpen: boolean;
   onClose: () => void;
@@ -117,7 +119,7 @@ export function SessionHistoryPanel({
     });
 
     // Limit
-    return result.slice(0, 30);
+    return result.slice(0, MAX_HISTORY_ITEMS);
   }, [sessions, activeClaudeIds, debouncedSearch, selectedBranch, sortNewestFirst]);
 
   const handleResume = useCallback(
@@ -199,6 +201,7 @@ export function SessionHistoryPanel({
         </span>
         <div className="flex items-center gap-1">
           <button
+            type="button"
             onClick={() => projectPath && fetchHistory(projectPath)}
             className="p-1 rounded hover:bg-muted-foreground/10 text-muted-foreground hover:text-foreground-secondary transition-colors"
             title="Refresh"
@@ -206,6 +209,7 @@ export function SessionHistoryPanel({
             <RefreshCw size={13} />
           </button>
           <button
+            type="button"
             onClick={onClose}
             className="p-1 rounded hover:bg-muted-foreground/10 text-muted-foreground hover:text-foreground-secondary transition-colors"
             title="Close"
@@ -218,6 +222,7 @@ export function SessionHistoryPanel({
       {/* Continue Last Button */}
       <div className="px-3 py-2 border-b border-border shrink-0">
         <button
+          type="button"
           onClick={handleContinueLast}
           disabled={!projectPath}
           className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
@@ -259,6 +264,7 @@ export function SessionHistoryPanel({
             ))}
           </select>
           <button
+            type="button"
             onClick={() => setSortNewestFirst(prev => !prev)}
             className="p-1 rounded hover:bg-muted-foreground/10 text-muted-foreground hover:text-foreground-secondary transition-colors"
             title={sortNewestFirst ? 'Showing newest first' : 'Showing oldest first'}
@@ -312,6 +318,7 @@ export function SessionHistoryPanel({
               </div>
               <div className="flex items-center gap-0.5 shrink-0">
                 <button
+                  type="button"
                   onClick={() => handleFork(entry)}
                   className="p-1 rounded opacity-0 group-hover:opacity-100 text-blue-400 hover:bg-blue-500/10 transition-all"
                   title="Fork this session"
@@ -319,6 +326,7 @@ export function SessionHistoryPanel({
                   <GitFork size={13} />
                 </button>
                 <button
+                  type="button"
                   onClick={() => handleResume(entry)}
                   className="p-1 rounded opacity-0 group-hover:opacity-100 text-emerald-400 hover:bg-emerald-500/10 transition-all"
                   title="Resume this session"

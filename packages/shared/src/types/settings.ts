@@ -232,6 +232,7 @@ export const DEFAULT_SESSION_SETTINGS: SessionSettings = {
   defaultMode: 'claude',
   skipPermissions: false,
   quickActionMode: 'paste-only',
+  autoResumeOnRestart: false,
 };
 
 /**

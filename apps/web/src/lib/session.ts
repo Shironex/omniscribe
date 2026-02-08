@@ -1,5 +1,12 @@
 import { socket } from './socket';
-import { AiMode, UpdateSessionOptions, createLogger } from '@omniscribe/shared';
+import {
+  AiMode,
+  UpdateSessionOptions,
+  createLogger,
+  ResumeSessionPayload,
+  ForkSessionPayload,
+  ContinueLastSessionPayload,
+} from '@omniscribe/shared';
 import { ExtendedSessionConfig } from '@/stores/useSessionStore';
 import { emitAsync, emitWithErrorHandling, emitWithSuccessHandling } from './socketHelpers';
 
@@ -127,10 +134,12 @@ export async function resumeSession(
   name?: string
 ): Promise<ExtendedSessionConfig> {
   logger.info('Resuming Claude session', claudeSessionId, projectPath);
-  const response = await emitAsync<
-    { claudeSessionId: string; projectPath: string; branch?: string; name?: string },
-    CreateSessionResponse
-  >('session:resume', { claudeSessionId, projectPath, branch, name });
+  const response = await emitAsync<ResumeSessionPayload, CreateSessionResponse>('session:resume', {
+    claudeSessionId,
+    projectPath,
+    branch,
+    name,
+  });
 
   if (response.error) {
     logger.warn('Session resume rejected:', response.error);
@@ -153,10 +162,12 @@ export async function forkSession(
   name?: string
 ): Promise<ExtendedSessionConfig> {
   logger.info('Forking Claude session', claudeSessionId, projectPath);
-  const response = await emitAsync<
-    { claudeSessionId: string; projectPath: string; branch?: string; name?: string },
-    CreateSessionResponse
-  >('session:fork', { claudeSessionId, projectPath, branch, name });
+  const response = await emitAsync<ForkSessionPayload, CreateSessionResponse>('session:fork', {
+    claudeSessionId,
+    projectPath,
+    branch,
+    name,
+  });
 
   if (response.error) {
     logger.warn('Session fork rejected:', response.error);
@@ -178,10 +189,10 @@ export async function continueLastSession(
   name?: string
 ): Promise<ExtendedSessionConfig> {
   logger.info('Continuing last Claude session', projectPath);
-  const response = await emitAsync<
-    { projectPath: string; branch?: string; name?: string },
-    CreateSessionResponse
-  >('session:continue-last', { projectPath, branch, name });
+  const response = await emitAsync<ContinueLastSessionPayload, CreateSessionResponse>(
+    'session:continue-last',
+    { projectPath, branch, name }
+  );
 
   if (response.error) {
     logger.warn('Continue last session rejected:', response.error);

@@ -30,6 +30,7 @@ import {
   ForkSessionPayload,
   ContinueLastSessionPayload,
   RestoreSnapshotResponse,
+  SessionHookEndedPayload,
   WorktreeSettings,
   DEFAULT_WORKTREE_SETTINGS,
   SessionSettings,
@@ -354,7 +355,8 @@ export class SessionGateway implements OnGatewayInit {
   @OnEvent('session.hook.end')
   onSessionHookEnd(payload: { session_id?: string; [key: string]: unknown }): void {
     if (payload.session_id) {
-      this.server.emit('session:hook-ended', { claudeSessionId: payload.session_id });
+      const hookEndedPayload: SessionHookEndedPayload = { claudeSessionId: payload.session_id };
+      this.server.emit('session:hook-ended', hookEndedPayload);
       this.logger.debug(`Session hook end broadcast for ${payload.session_id}`);
     }
   }
@@ -402,99 +404,15 @@ export class SessionGateway implements OnGatewayInit {
     @MessageBody() payload: ResumeSessionPayload,
     @ConnectedSocket() client: Socket
   ): Promise<CreateSessionResponse> {
-    // Check concurrency limit before creating session
-    const runningSessions = this.sessionService.getRunningSessions();
-    if (runningSessions.length >= MAX_CONCURRENT_SESSIONS) {
-      const idleSessions = this.sessionService.getIdleSessions();
-      const idleNames = idleSessions.map(s => s.name);
-      this.logger.warn(
-        `[handleResume] Session limit reached: ${runningSessions.length}/${MAX_CONCURRENT_SESSIONS} running`
-      );
-      return {
-        error: `Session limit reached (${runningSessions.length}/${MAX_CONCURRENT_SESSIONS}). Close a session to start a new one.`,
-        idleSessions: idleNames,
-      };
-    }
-
-    // Get settings from workspace preferences
-    const preferences = this.workspaceService.getPreferences();
-    const worktreeSettings: WorktreeSettings = preferences.worktree ?? DEFAULT_WORKTREE_SETTINGS;
-    const sessionSettings: SessionSettings = preferences.session ?? DEFAULT_SESSION_SETTINGS;
-
-    // Determine skip-permissions flag
-    const skipPermissions = sessionSettings.skipPermissions ? true : undefined;
-
-    // Create session with resumeSessionId set
-    const session = this.sessionService.create('claude', payload.projectPath, {
-      name: payload.name ?? `Resumed: ${payload.claudeSessionId.slice(0, 8)}`,
-      skipPermissions,
-      resumeSessionId: payload.claudeSessionId,
-    });
-
-    // Handle worktree setup for resumed sessions
-    let worktreePath: string | null = null;
-
-    try {
-      if (worktreeSettings.mode !== 'never' && payload.branch) {
-        const currentBranch = await this.gitService.getCurrentBranch(payload.projectPath);
-
-        if (worktreeSettings.mode === 'always') {
-          const uniqueSuffix = crypto.randomUUID().slice(0, 8);
-          const isolatedBranch = `${payload.branch}-${uniqueSuffix}`;
-          worktreePath = await this.worktreeService.prepare(
-            payload.projectPath,
-            isolatedBranch,
-            worktreeSettings.location
-          );
-          this.logger.log(
-            `Created isolated worktree at ${worktreePath} for resumed session ${session.id}`
-          );
-        } else if (worktreeSettings.mode === 'branch' && payload.branch !== currentBranch) {
-          worktreePath = await this.worktreeService.prepare(
-            payload.projectPath,
-            payload.branch,
-            worktreeSettings.location
-          );
-          this.logger.log(
-            `Created branch worktree at ${worktreePath} for resumed session ${session.id}`
-          );
-        }
-      }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      this.logger.warn(
-        `Failed to create worktree for resumed session ${session.id}: ${errorMessage}`
-      );
-    }
-
-    // Assign branch
-    if (payload.branch) {
-      this.sessionService.assignBranch(session.id, payload.branch, worktreePath ?? undefined);
-    }
-
-    // Launch the terminal session
-    const workingDir = worktreePath ?? session.workingDirectory;
-    const launchResult = await this.sessionService.launchSession(
-      session.id,
-      payload.projectPath,
-      workingDir,
-      'claude'
+    return this.launchSessionWithWorktree(
+      client,
+      { projectPath: payload.projectPath, branch: payload.branch, name: payload.name },
+      {
+        name: payload.name ?? `Resumed: ${payload.claudeSessionId.slice(0, 8)}`,
+        resumeSessionId: payload.claudeSessionId,
+      },
+      'resumed'
     );
-
-    if (!launchResult.success) {
-      return { error: launchResult.error ?? 'Failed to launch resumed session' };
-    }
-
-    // Join the client to the terminal room
-    if (launchResult.terminalSessionId !== undefined) {
-      client.join(`terminal:${launchResult.terminalSessionId}`);
-      this.terminalGateway.registerClientSession(client.id, launchResult.terminalSessionId);
-      this.logger.log(
-        `Client ${client.id} joined terminal room terminal:${launchResult.terminalSessionId} (resumed)`
-      );
-    }
-
-    return { session: this.sessionService.get(session.id) ?? session };
   }
 
   /**
@@ -507,86 +425,15 @@ export class SessionGateway implements OnGatewayInit {
     @MessageBody() payload: ForkSessionPayload,
     @ConnectedSocket() client: Socket
   ): Promise<CreateSessionResponse> {
-    // Check concurrency limit
-    const runningSessions = this.sessionService.getRunningSessions();
-    if (runningSessions.length >= MAX_CONCURRENT_SESSIONS) {
-      const idleSessions = this.sessionService.getIdleSessions();
-      const idleNames = idleSessions.map(s => s.name);
-      this.logger.warn(
-        `[handleFork] Session limit reached: ${runningSessions.length}/${MAX_CONCURRENT_SESSIONS} running`
-      );
-      return {
-        error: `Session limit reached (${runningSessions.length}/${MAX_CONCURRENT_SESSIONS}). Close a session to start a new one.`,
-        idleSessions: idleNames,
-      };
-    }
-
-    const preferences = this.workspaceService.getPreferences();
-    const worktreeSettings: WorktreeSettings = preferences.worktree ?? DEFAULT_WORKTREE_SETTINGS;
-    const sessionSettings: SessionSettings = preferences.session ?? DEFAULT_SESSION_SETTINGS;
-    const skipPermissions = sessionSettings.skipPermissions ? true : undefined;
-
-    // Create session with forkSessionId set
-    const session = this.sessionService.create('claude', payload.projectPath, {
-      name: payload.name ?? `Fork: ${payload.claudeSessionId.slice(0, 8)}`,
-      skipPermissions,
-      forkSessionId: payload.claudeSessionId,
-    });
-
-    // Handle worktree setup (same as resume)
-    let worktreePath: string | null = null;
-    try {
-      if (worktreeSettings.mode !== 'never' && payload.branch) {
-        const currentBranch = await this.gitService.getCurrentBranch(payload.projectPath);
-
-        if (worktreeSettings.mode === 'always') {
-          const uniqueSuffix = crypto.randomUUID().slice(0, 8);
-          const isolatedBranch = `${payload.branch}-${uniqueSuffix}`;
-          worktreePath = await this.worktreeService.prepare(
-            payload.projectPath,
-            isolatedBranch,
-            worktreeSettings.location
-          );
-        } else if (worktreeSettings.mode === 'branch' && payload.branch !== currentBranch) {
-          worktreePath = await this.worktreeService.prepare(
-            payload.projectPath,
-            payload.branch,
-            worktreeSettings.location
-          );
-        }
-      }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      this.logger.warn(
-        `Failed to create worktree for forked session ${session.id}: ${errorMessage}`
-      );
-    }
-
-    if (payload.branch) {
-      this.sessionService.assignBranch(session.id, payload.branch, worktreePath ?? undefined);
-    }
-
-    const workingDir = worktreePath ?? session.workingDirectory;
-    const launchResult = await this.sessionService.launchSession(
-      session.id,
-      payload.projectPath,
-      workingDir,
-      'claude'
+    return this.launchSessionWithWorktree(
+      client,
+      { projectPath: payload.projectPath, branch: payload.branch, name: payload.name },
+      {
+        name: payload.name ?? `Fork: ${payload.claudeSessionId.slice(0, 8)}`,
+        forkSessionId: payload.claudeSessionId,
+      },
+      'forked'
     );
-
-    if (!launchResult.success) {
-      return { error: launchResult.error ?? 'Failed to launch forked session' };
-    }
-
-    if (launchResult.terminalSessionId !== undefined) {
-      client.join(`terminal:${launchResult.terminalSessionId}`);
-      this.terminalGateway.registerClientSession(client.id, launchResult.terminalSessionId);
-      this.logger.log(
-        `Client ${client.id} joined terminal room terminal:${launchResult.terminalSessionId} (forked)`
-      );
-    }
-
-    return { session: this.sessionService.get(session.id) ?? session };
   }
 
   /**
@@ -599,17 +446,34 @@ export class SessionGateway implements OnGatewayInit {
     @MessageBody() payload: ContinueLastSessionPayload,
     @ConnectedSocket() client: Socket
   ): Promise<CreateSessionResponse> {
+    return this.launchSessionWithWorktree(
+      client,
+      { projectPath: payload.projectPath, branch: payload.branch, name: payload.name },
+      {
+        name: payload.name ?? 'Continue Last',
+        continueLastSession: true,
+      },
+      'continue-last'
+    );
+  }
+
+  /**
+   * Shared helper for resume/fork/continue-last session launch.
+   * Handles concurrency check, preferences, worktree setup, launch, and terminal room join.
+   */
+  private async launchSessionWithWorktree(
+    client: Socket,
+    payload: { projectPath: string; branch?: string; name?: string },
+    createOptions: Parameters<SessionService['create']>[2],
+    errorPrefix: string
+  ): Promise<CreateSessionResponse> {
     // Check concurrency limit
     const runningSessions = this.sessionService.getRunningSessions();
     if (runningSessions.length >= MAX_CONCURRENT_SESSIONS) {
       const idleSessions = this.sessionService.getIdleSessions();
-      const idleNames = idleSessions.map(s => s.name);
-      this.logger.warn(
-        `[handleContinueLast] Session limit reached: ${runningSessions.length}/${MAX_CONCURRENT_SESSIONS} running`
-      );
       return {
         error: `Session limit reached (${runningSessions.length}/${MAX_CONCURRENT_SESSIONS}). Close a session to start a new one.`,
-        idleSessions: idleNames,
+        idleSessions: idleSessions.map(s => s.name),
       };
     }
 
@@ -619,44 +483,47 @@ export class SessionGateway implements OnGatewayInit {
     const skipPermissions = sessionSettings.skipPermissions ? true : undefined;
 
     const session = this.sessionService.create('claude', payload.projectPath, {
-      name: payload.name ?? 'Continue Last',
+      ...createOptions,
       skipPermissions,
-      continueLastSession: true,
     });
 
-    // Handle worktree setup
+    // Worktree setup (use currentBranch fallback when branch is absent)
     let worktreePath: string | null = null;
     try {
-      if (worktreeSettings.mode !== 'never' && payload.branch) {
+      if (worktreeSettings.mode !== 'never') {
         const currentBranch = await this.gitService.getCurrentBranch(payload.projectPath);
+        const branchToUse = payload.branch ?? currentBranch;
 
         if (worktreeSettings.mode === 'always') {
           const uniqueSuffix = crypto.randomUUID().slice(0, 8);
-          const isolatedBranch = `${payload.branch}-${uniqueSuffix}`;
+          const isolatedBranch = `${branchToUse}-${uniqueSuffix}`;
           worktreePath = await this.worktreeService.prepare(
             payload.projectPath,
             isolatedBranch,
             worktreeSettings.location
           );
-        } else if (worktreeSettings.mode === 'branch' && payload.branch !== currentBranch) {
+        } else if (worktreeSettings.mode === 'branch' && branchToUse !== currentBranch) {
           worktreePath = await this.worktreeService.prepare(
             payload.projectPath,
-            payload.branch,
+            branchToUse,
             worktreeSettings.location
           );
         }
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      this.logger.warn(
-        `Failed to create worktree for continue-last session ${session.id}: ${errorMessage}`
-      );
+      this.logger.warn(`Failed to create worktree for session ${session.id}: ${errorMessage}`);
     }
 
+    // Assign branch
     if (payload.branch) {
       this.sessionService.assignBranch(session.id, payload.branch, worktreePath ?? undefined);
+    } else if (worktreePath) {
+      const currentBranch = await this.gitService.getCurrentBranch(payload.projectPath);
+      this.sessionService.assignBranch(session.id, currentBranch, worktreePath);
     }
 
+    // Launch
     const workingDir = worktreePath ?? session.workingDirectory;
     const launchResult = await this.sessionService.launchSession(
       session.id,
@@ -666,14 +533,15 @@ export class SessionGateway implements OnGatewayInit {
     );
 
     if (!launchResult.success) {
-      return { error: launchResult.error ?? 'Failed to launch continue-last session' };
+      return { error: launchResult.error ?? `Failed to launch ${errorPrefix} session` };
     }
 
+    // Join terminal room
     if (launchResult.terminalSessionId !== undefined) {
       client.join(`terminal:${launchResult.terminalSessionId}`);
       this.terminalGateway.registerClientSession(client.id, launchResult.terminalSessionId);
       this.logger.log(
-        `Client ${client.id} joined terminal room terminal:${launchResult.terminalSessionId} (continue-last)`
+        `Client ${client.id} joined terminal room terminal:${launchResult.terminalSessionId} (${errorPrefix})`
       );
     }
 

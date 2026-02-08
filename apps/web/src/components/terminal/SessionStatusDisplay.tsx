@@ -101,8 +101,10 @@ export function SessionStatusDisplay({ session, gitBranch }: SessionStatusDispla
         <div
           className="flex items-center gap-1 text-xs text-emerald-400 shrink-0 px-1.5 py-0.5 rounded bg-emerald-500/10"
           title="Resumed from previous Claude Code session"
+          role="status"
+          aria-label="Resumed from previous Claude Code session"
         >
-          <RotateCcw size={11} />
+          <RotateCcw size={11} aria-hidden="true" />
           <span>Resumed</span>
         </div>
       )}

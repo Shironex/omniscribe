@@ -224,13 +224,14 @@ export class SessionService implements OnModuleDestroy {
 
     this.sessions.set(id, session);
 
-    const detail = isResumed
-      ? `, resuming: ${options!.resumeSessionId}`
-      : options?.forkSessionId
-        ? `, forking: ${options.forkSessionId}`
-        : options?.continueLastSession
-          ? ', continuing last'
-          : '';
+    let detail = '';
+    if (isResumed) {
+      detail = `, resuming: ${options!.resumeSessionId}`;
+    } else if (options?.forkSessionId) {
+      detail = `, forking: ${options.forkSessionId}`;
+    } else if (options?.continueLastSession) {
+      detail = ', continuing last';
+    }
     this.logger.info(`Created session ${id} (mode: ${mode}, project: ${projectPath}${detail})`);
 
     this.eventEmitter.emit('session.created', session);

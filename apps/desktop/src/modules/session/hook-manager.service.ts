@@ -219,6 +219,7 @@ export class HookManagerService implements OnModuleDestroy {
     if (this.watcher) {
       this.watcher.close();
       this.watcher = null;
+      this.processedFiles.clear();
       this.logger.debug('Stopped watching hook directory');
     }
   }

@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
-import { createLogger } from '@omniscribe/shared';
 import type { ClaudeSessionEntry, ClaudeSessionHistoryResponse } from '@omniscribe/shared';
 import { socket } from '@/lib/socket';
 import {
@@ -10,8 +9,6 @@ import {
   createSocketActions,
   createSocketListeners,
 } from './utils';
-
-const logger = createLogger('SessionHistoryStore');
 
 /**
  * Session history store state (extends common socket state)
@@ -64,25 +61,7 @@ export const useSessionHistoryStore = create<SessionHistoryStore>()(
         set,
         'sessionHistory',
         {
-          listeners: [
-            {
-              event: 'session:resumable',
-              handler: (data, get) => {
-                const payload = data as {
-                  sessionId: string;
-                  claudeSessionId: string;
-                  sessionName: string;
-                };
-                logger.debug(
-                  'session:resumable',
-                  payload.sessionId,
-                  payload.claudeSessionId,
-                  payload.sessionName
-                );
-                get().addResumable(payload.sessionId, payload.claudeSessionId, payload.sessionName);
-              },
-            },
-          ],
+          listeners: [],
         }
       );
 
@@ -106,10 +85,20 @@ export const useSessionHistoryStore = create<SessionHistoryStore>()(
 
         fetchHistory: (projectPath: string) => {
           set({ isLoading: true }, undefined, 'sessionHistory/fetchHistory');
+
+          const timeout = setTimeout(() => {
+            set(
+              { isLoading: false, error: 'Request timed out while fetching session history' },
+              undefined,
+              'sessionHistory/fetchHistoryTimeout'
+            );
+          }, 15_000);
+
           socket.emit(
             'session:history',
             { projectPath },
             (response: ClaudeSessionHistoryResponse) => {
+              clearTimeout(timeout);
               if (response.error) {
                 set(
                   { error: response.error, isLoading: false },

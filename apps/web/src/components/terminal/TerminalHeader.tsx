@@ -117,6 +117,7 @@ export function TerminalHeader({
       <div className="flex items-center gap-0.5 shrink-0">
         {session.status === 'error' && session.claudeSessionId && onResume && (
           <button
+            type="button"
             onClick={onResume}
             className="flex items-center gap-1 px-1.5 py-0.5 rounded text-xs text-emerald-400 hover:bg-emerald-500/10 transition-colors"
             title="Resume this session"

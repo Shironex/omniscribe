@@ -91,6 +91,7 @@ export function SessionHistorySection({ className }: SessionHistorySectionProps)
           {displaySessions.length} past session{displaySessions.length !== 1 ? 's' : ''}
         </span>
         <button
+          type="button"
           onClick={handleRefresh}
           className={clsx(
             'p-1 rounded transition-colors',
@@ -157,6 +158,7 @@ export function SessionHistorySection({ className }: SessionHistorySectionProps)
               </div>
               {/* Resume button - visible on hover */}
               <button
+                type="button"
                 onClick={() => handleResume(entry)}
                 className={clsx(
                   'p-1 rounded transition-all flex-shrink-0',

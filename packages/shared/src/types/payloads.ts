@@ -790,3 +790,10 @@ export interface ActiveSessionSnapshot {
   branch?: string;
   name: string;
 }
+
+/**
+ * Event payload when a Claude Code session hook ends
+ */
+export interface SessionHookEndedPayload {
+  claudeSessionId: string;
+}

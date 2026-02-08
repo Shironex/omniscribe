@@ -324,7 +324,6 @@ export class ClaudeSessionReaderService implements OnModuleDestroy {
       }
 
       rl.close();
-      fileStream.destroy();
 
       // Must have at least a session ID (from filename or content)
       const finalSessionId = extractedSessionId ?? sessionId;

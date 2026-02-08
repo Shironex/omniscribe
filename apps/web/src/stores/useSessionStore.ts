@@ -6,6 +6,7 @@ import {
   HealthLevel,
   MAX_CONCURRENT_SESSIONS,
   createLogger,
+  ClaudeSessionIdCapturedEvent,
 } from '@omniscribe/shared';
 import { toast } from 'sonner';
 import { socket } from '@/lib/socket';
@@ -161,7 +162,7 @@ export const useSessionStore = create<SessionStore>()(
             {
               event: 'session:claude-id-captured',
               handler: (data, get) => {
-                const payload = data as { sessionId: string; claudeSessionId: string };
+                const payload = data as ClaudeSessionIdCapturedEvent;
                 logger.debug(
                   'session:claude-id-captured',
                   payload.sessionId,
