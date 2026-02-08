@@ -2,6 +2,30 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.5.0 (2026-02-08)
+
+### Features
+
+- **Unified TopBar** — Merged ProjectTabs, TopBar, and BottomBar into a single compact header with tabs, session actions, and settings all in one row (#54)
+- **Beta update channel** — Switch between Stable and Beta update channels at runtime in Settings > About > Updates; includes downgrade support, contextual error messages, and friendly "release pending" handling (#56)
+- **Claude usage tooltip** — Hover the Claude icon in TopBar to see usage percentage and rolling window at a glance
+- **Proper CLI auth detection** — Reads `~/.claude/.credentials.json` directly instead of spawning processes for reliable authentication state (#49)
+
+### Improvements
+
+- **Button consolidation** — Replaced raw HTML buttons across the frontend with shadcn `Button` component for consistent styling (#55)
+- **Accessibility** — Roving tabIndex on project tabs (WAI-ARIA tabs pattern), improved keyboard navigation
+- **macOS detection** — Correct keyboard shortcut labels (⌘ vs Ctrl) on macOS web builds
+- **CI release pipeline** — Explicit publish channel flag for electron-builder, glob-based YML artifact uploads, version-sync skipped for pre-releases
+- **Type safety** — `UpdateChannel` type used across IPC boundary (preload, global types, store) instead of plain strings
+
+### Bug Fixes
+
+- Fixed release pending detection to work across channel switches (channel-agnostic `.yml` 404 matching)
+- Fixed TOCTOU race in `checkForUpdates` by capturing channel before async gap
+- Fixed semver validation regex for build metadata in version bump script
+- Channel buttons now disabled during update checks to prevent mid-check switching
+
 ## 0.4.2 (2026-02-08)
 
 ### Bug Fixes
