@@ -94,27 +94,6 @@ const DEFAULT_QUICK_ACTIONS: QuickAction[] = [
         "Read the review comments on the current PR and address any feedback. Review the PR diff, understand the reviewer's concerns, and make the necessary changes to address their feedback.",
     },
   },
-  // Terminal Actions
-  {
-    id: 'run-app',
-    title: 'Run App',
-    description: 'Start the application development server',
-    category: 'terminal',
-    icon: 'Play',
-    enabled: true,
-    handler: 'terminal:execute',
-    params: { command: 'npm run dev' },
-  },
-  {
-    id: 'lint-format',
-    title: 'Lint & Format',
-    description: 'Run linter and formatter on the codebase',
-    category: 'terminal',
-    icon: 'Sparkles',
-    enabled: true,
-    handler: 'terminal:execute',
-    params: { command: 'npm run lint && npm run format' },
-  },
   // AI Actions
   {
     id: 'fix-errors',
@@ -127,19 +106,6 @@ const DEFAULT_QUICK_ACTIONS: QuickAction[] = [
     params: {
       command:
         'Analyze and fix any compilation errors or warnings in the codebase. Run the build/compile command, identify issues, and fix them.',
-    },
-  },
-  {
-    id: 'plan-implementation',
-    title: 'Plan Implementation',
-    description: 'Create a brief implementation plan for a task',
-    category: 'ai',
-    icon: 'ListTodo',
-    enabled: true,
-    handler: 'terminal:execute',
-    params: {
-      command:
-        "Create a brief implementation plan for this task:\n1. Goal: What we're accomplishing\n2. Approach: How we'll do it\n3. Files to modify and what changes\n4. Tasks (numbered list)\n5. Potential risks or gotchas",
     },
   },
 ];

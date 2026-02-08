@@ -104,7 +104,7 @@ export function QuickActionsDropdown({
         <Zap size={12} />
       </button>
       {!disabled && isOpen && quickActions.length > 0 && (
-        <div className="absolute right-0 top-full mt-1 z-50 min-w-[180px] bg-popover border border-border rounded-md shadow-lg py-1">
+        <div className="absolute right-0 top-full mt-1 z-50 min-w-[180px] max-h-[300px] overflow-y-auto bg-popover border border-border rounded-md shadow-lg py-1">
           {groupedActions.map((group, groupIndex) => (
             <div key={group.category}>
               {groupIndex > 0 && <div className="my-1 border-t border-border" />}
