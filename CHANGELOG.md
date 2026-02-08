@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.4.2 (2026-02-08)
+
+### Bug Fixes
+
+- **Friendly message when release is still building** — Detects `latest.yml` 404 errors during the CI build window and shows an amber "release is being prepared" message in About section with a Recheck button, instead of a raw HTTP error dump
+- **Info toast instead of error toast** — Shows a gentle "New release detected" info toast instead of "Update failed" error toast when artifacts aren't ready yet
+
 ## 0.4.1 (2026-02-08)
 
 ### Improvements
