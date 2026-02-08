@@ -12,3 +12,9 @@ export interface UpdateDownloadProgress {
 }
 
 export type UpdateStatus = 'idle' | 'checking' | 'available' | 'downloading' | 'ready' | 'error';
+
+/**
+ * Sentinel error string sent when electron-updater gets a 404 on latest.yml.
+ * This typically means the CI release pipeline is still building artifacts.
+ */
+export const UPDATE_ERROR_RELEASE_PENDING = 'RELEASE_PENDING';

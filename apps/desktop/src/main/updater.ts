@@ -1,6 +1,6 @@
 import { BrowserWindow } from 'electron';
 import { autoUpdater } from 'electron-updater';
-import { createLogger } from '@omniscribe/shared';
+import { createLogger, UPDATE_ERROR_RELEASE_PENDING } from '@omniscribe/shared';
 import type { UpdateInfo as ElectronUpdateInfo } from 'electron-updater';
 import type { ProgressInfo } from 'electron-updater';
 
@@ -77,8 +77,20 @@ export function initializeAutoUpdater(mainWindow: BrowserWindow, isDev: boolean)
   });
 
   autoUpdater.on('error', (error: Error) => {
-    logger.error('Auto-updater error:', error.message);
-    mainWindow.webContents.send('updater:error', error.message);
+    // Detect 404 on latest.yml — means the CI release pipeline is still building
+    const isReleasePending =
+      error.message.includes('Cannot find latest.yml') ||
+      (error.message.includes('latest.yml') && error.message.includes('404'));
+
+    if (isReleasePending) {
+      logger.warn(
+        'Release artifacts not yet available (latest.yml 404) — build may still be in progress'
+      );
+      mainWindow.webContents.send('updater:error', UPDATE_ERROR_RELEASE_PENDING);
+    } else {
+      logger.error('Auto-updater error:', error.message);
+      mainWindow.webContents.send('updater:error', error.message);
+    }
   });
 
   // Initial check after a short delay to let the app finish loading
