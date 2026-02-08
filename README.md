@@ -59,6 +59,10 @@ Omniscribe is a desktop application for managing multiple AI coding assistant se
 | ---------------------- | ---------------------------------------------------------------------------------------------------------------- |
 | **Multi-Session Grid** | Run up to 12 AI sessions in parallel with GPU-accelerated terminal views                                         |
 | **Real-Time Status**   | Track session states: idle, working, planning, needs_input, finished                                             |
+| **Session History**    | Browse, search, and filter past Claude Code sessions with branch filtering and sort controls                     |
+| **Resume & Fork**      | Resume any previous session or fork it into a new conversation branch                                            |
+| **Continue Last**      | One-click button to continue the most recent Claude Code conversation                                            |
+| **Auto-Resume**        | Optionally restore active sessions automatically when Omniscribe restarts                                        |
 | **Drag & Drop**        | Rearrange terminals by dragging; resizable panels with drag dividers                                             |
 | **Terminal Search**    | Ctrl+Shift+F search bar with regex and case-sensitive modes                                                      |
 | **12 Terminal Themes** | tokyonight, dracula, nord, monokai, gruvbox, catppuccin, and more                                                |
@@ -69,6 +73,7 @@ Omniscribe is a desktop application for managing multiple AI coding assistant se
 | **Quick Actions**      | AI-powered shortcuts for git workflows (commit, push, pull, resolve conflicts) and development tasks             |
 | **Git Worktrees**      | Isolate each session in its own git worktree for parallel development                                            |
 | **MCP Integration**    | Configure Model Context Protocol servers per session                                                             |
+| **Hooks Integration**  | Automatic Claude Code hooks for instant session detection via SessionStart/SessionEnd events                     |
 | **Project Tabs**       | Manage multiple projects with persistent recent history                                                          |
 | **Cross-Platform**     | Native support for Windows, macOS, and Linux                                                                     |
 
