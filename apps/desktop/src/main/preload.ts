@@ -42,6 +42,7 @@ export interface ElectronAPI {
     checkCli: (tool: string) => Promise<boolean>;
     isValidProject: (projectPath: string) => Promise<{ valid: boolean; reason?: string }>;
     openLogsFolder: () => Promise<void>;
+    clipboardWrite: (text: string) => Promise<void>;
   };
   claude: {
     getStatus: () => Promise<ClaudeCliStatus>;
@@ -104,6 +105,7 @@ const electronAPI: ElectronAPI = {
     isValidProject: (projectPath: string) =>
       ipcRenderer.invoke('app:is-valid-project', projectPath),
     openLogsFolder: () => ipcRenderer.invoke('app:open-logs-folder') as Promise<void>,
+    clipboardWrite: (text: string) => ipcRenderer.invoke('app:clipboard-write', text),
   },
   claude: {
     getStatus: () => ipcRenderer.invoke('claude:get-status') as Promise<ClaudeCliStatus>,
