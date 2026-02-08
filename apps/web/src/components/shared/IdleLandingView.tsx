@@ -3,6 +3,7 @@ import { twMerge } from 'tailwind-merge';
 import { BrainCircuit, Plus } from 'lucide-react';
 import { useMemo } from 'react';
 import { getGreeting } from '@/lib/date-utils';
+import { Button } from '@/components/ui/button';
 
 interface IdleLandingViewProps {
   onAddSession: () => void;
@@ -72,26 +73,12 @@ export function IdleLandingView({
         </p>
 
         {/* Add session button - opens modal as primary action */}
-        <button
-          onClick={handlePrimaryCTA}
-          className={clsx(
-            'w-16 h-16 rounded-full',
-            'bg-gradient-to-br from-primary to-brand-600',
-            'flex items-center justify-center',
-            'shadow-lg shadow-primary/25',
-            'hover:shadow-xl hover:shadow-primary/30',
-            'hover:scale-105 active:scale-95',
-            'transition-all duration-200',
-            'group'
-          )}
-          aria-label="Set up sessions"
-        >
+        <Button onClick={handlePrimaryCTA} type="button" size={'icon'} aria-label="Set up sessions">
           <Plus
-            size={32}
             className="text-white group-hover:rotate-90 transition-transform duration-200"
             strokeWidth={2}
           />
-        </button>
+        </Button>
 
         {/* Keyboard shortcut hint */}
         <p className="mt-6 text-xs text-muted-foreground">
