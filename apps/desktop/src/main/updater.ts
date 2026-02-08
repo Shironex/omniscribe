@@ -120,15 +120,17 @@ export function initializeAutoUpdater(mainWindow: BrowserWindow, isDev: boolean)
   });
 
   autoUpdater.on('error', (error: Error) => {
-    // Detect 404 on latest.yml or beta.yml — means the CI release pipeline is still building
-    const ymlFile = currentChannel === 'beta' ? 'beta.yml' : 'latest.yml';
+    // Detect 404 on any update yml file (latest.yml, beta.yml, alpha.yml, etc.)
+    // We check both filenames to handle race conditions when the channel changes
+    // mid-check, and also when stable checks hit a beta-only release tag.
     const isReleasePending =
-      error.message.includes(`Cannot find ${ymlFile}`) ||
-      (error.message.includes(ymlFile) && error.message.includes('404'));
+      error.message.includes('Cannot find latest.yml') ||
+      error.message.includes('Cannot find beta.yml') ||
+      (error.message.includes('.yml') && error.message.includes('404'));
 
     if (isReleasePending) {
       logger.warn(
-        `Release artifacts not yet available (${ymlFile} 404) — build may still be in progress`
+        'Release artifacts not yet available (.yml 404) — build may still be in progress'
       );
       mainWindow.webContents.send('updater:error', UPDATE_ERROR_RELEASE_PENDING);
     } else {
