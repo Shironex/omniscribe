@@ -24,7 +24,7 @@ export function GridPresetCard({ count, selected, disabled, onClick }: GridPrese
         'cursor-pointer',
         disabled && 'opacity-40 cursor-not-allowed',
         selected
-          ? 'border-[var(--status-success)] shadow-[0_0_8px_rgba(34,197,94,0.25)] bg-[var(--status-success)]/5'
+          ? 'border-primary shadow-[0_0_8px_var(--primary)] bg-primary/5'
           : 'border-border hover:border-muted-foreground bg-card/30 hover:bg-card/50'
       )}
     >
@@ -38,7 +38,7 @@ export function GridPresetCard({ count, selected, disabled, onClick }: GridPrese
                 className={clsx(
                   'flex-1 rounded-[3px] border',
                   selected
-                    ? 'bg-[var(--status-success)]/30 border-[var(--status-success)]/50'
+                    ? 'bg-primary/30 border-primary/50'
                     : 'bg-muted-foreground/15 border-muted-foreground/20'
                 )}
               />

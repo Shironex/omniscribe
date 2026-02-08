@@ -1,8 +1,6 @@
 import { useCallback, useMemo, useEffect, useState } from 'react';
 import {
-  ProjectTabs,
   TopBar,
-  BottomBar,
   TerminalGrid,
   IdleLandingView,
   WelcomeView,
@@ -150,15 +148,25 @@ function App() {
       data-testid="app-ready"
       className="h-screen w-screen bg-background text-foreground flex flex-col overflow-hidden"
     >
-      <ProjectTabs
+      <TopBar
         tabs={tabs}
         activeTabId={activeTabId}
         onSelectTab={handleSelectTab}
         onCloseTab={handleCloseTab}
         onNewTab={handleNewTab}
+        currentBranch={currentBranch}
+        statusCounts={statusCounts}
+        onAddSlot={handleAddSession}
+        onOpenLaunchModal={handleOpenLaunchModal}
+        hasActiveProject={!!activeProjectPath}
+        sessionCount={terminalSessions.length}
+        preLaunchSlotCount={preLaunchSlots.length}
+        onStopAll={handleStopAll}
+        onLaunch={handleLaunch}
+        canLaunch={canLaunch}
+        isLaunching={isLaunching}
+        hasActiveSessions={hasActiveSessions}
       />
-
-      <TopBar currentBranch={currentBranch} statusCounts={statusCounts} />
 
       <main className="flex-1 flex overflow-hidden bg-background">
         {activeProjectPath ? (
@@ -195,14 +203,6 @@ function App() {
           />
         )}
       </main>
-
-      <BottomBar
-        onStopAll={handleStopAll}
-        onLaunch={handleLaunch}
-        canLaunch={canLaunch}
-        isLaunching={isLaunching}
-        hasActiveSessions={hasActiveSessions}
-      />
 
       <SettingsModal />
 

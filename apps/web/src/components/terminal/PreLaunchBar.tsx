@@ -176,7 +176,7 @@ export function PreLaunchBar({
           'transition-colors',
           isLaunching
             ? 'bg-border text-muted-foreground cursor-not-allowed opacity-60'
-            : 'bg-[var(--status-success)] hover:brightness-110 text-white'
+            : 'bg-primary hover:brightness-110 text-primary-foreground'
         )}
         title={shortcutKey ? `Press ${shortcutKey} to launch` : undefined}
       >

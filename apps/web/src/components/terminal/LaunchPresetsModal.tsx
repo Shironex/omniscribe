@@ -263,7 +263,7 @@ export function LaunchPresetsModal({
               'px-4 py-2 rounded-md text-sm font-medium',
               'transition-colors',
               selectedCount !== null
-                ? 'bg-[var(--status-success)] hover:brightness-110 text-white'
+                ? 'bg-primary hover:brightness-110 text-primary-foreground'
                 : 'bg-border text-muted-foreground cursor-not-allowed'
             )}
           >
