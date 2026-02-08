@@ -79,14 +79,19 @@ Omniscribe is a desktop application for managing multiple AI coding assistant se
 
 ## Keyboard Shortcuts
 
-| Shortcut             | Action                           |
-| -------------------- | -------------------------------- |
-| `N`                  | Add new session slot             |
-| `Shift + N`          | Open launch presets modal        |
-| `L`                  | Launch all pending sessions      |
-| `1-9`, `0`, `-`, `=` | Launch individual session (1-12) |
-| `Ctrl/Cmd + K`       | Stop all running sessions        |
-| `Ctrl + Shift + F`   | Open terminal search bar         |
+| Shortcut               | Action                           |
+| ---------------------- | -------------------------------- |
+| `N`                    | Add new session slot             |
+| `Shift + N`            | Open launch presets modal        |
+| `L`                    | Launch all pending sessions      |
+| `1-9`, `0`, `-`, `=`   | Launch individual session (1-12) |
+| `Ctrl/Cmd + K`         | Stop all running sessions        |
+| `Ctrl/Cmd + ,`         | Toggle settings                  |
+| `Ctrl/Cmd + Shift + H` | Toggle session history panel     |
+| `Ctrl/Cmd + W`         | Close current project tab        |
+| `Ctrl/Cmd + 1-9`       | Switch project tab by index      |
+| `Ctrl/Cmd + L`         | Clear focused terminal           |
+| `Ctrl + Shift + F`     | Open terminal search bar         |
 
 ## Requirements
 

@@ -21,7 +21,7 @@ import {
   useDefaultAiMode,
 } from '@/hooks';
 import { useUpdateToast } from '@/hooks/useUpdateToast';
-import { useTerminalStore, useWorkspaceStore } from '@/stores';
+import { useTerminalStore, useWorkspaceStore, useSettingsStore } from '@/stores';
 import { resumeSession } from '@/lib/session';
 import { toast } from 'sonner';
 
@@ -132,6 +132,34 @@ function App() {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const handleToggleHistory = useCallback(() => setIsHistoryOpen(prev => !prev), []);
 
+  // Toggle settings modal
+  const handleToggleSettings = useCallback(() => {
+    const { isOpen, openSettings, closeSettings } = useSettingsStore.getState();
+    if (isOpen) {
+      closeSettings();
+    } else {
+      openSettings();
+    }
+  }, []);
+
+  // Close current tab
+  const handleCloseCurrentTab = useCallback(() => {
+    if (activeTabId) {
+      handleCloseTab(activeTabId);
+    }
+  }, [activeTabId, handleCloseTab]);
+
+  // Switch tab by index
+  const handleSelectTabByIndex = useCallback(
+    (index: number) => {
+      const { tabs: currentTabs } = useWorkspaceStore.getState();
+      if (index >= 0 && index < currentTabs.length) {
+        handleSelectTab(currentTabs[index].id);
+      }
+    },
+    [handleSelectTab]
+  );
+
   // Default AI mode for modal
   const { defaultAiMode, claudeAvailable } = useDefaultAiMode();
 
@@ -173,6 +201,10 @@ function App() {
     handleLaunch,
     handleLaunchSlot,
     handleStopAll,
+    handleToggleSettings,
+    handleToggleHistory,
+    handleCloseCurrentTab,
+    handleSelectTabByIndex,
   });
 
   return (

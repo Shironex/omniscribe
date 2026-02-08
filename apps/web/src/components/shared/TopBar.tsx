@@ -84,6 +84,9 @@ export function TopBar({
 
   const canAddMore = hasActiveProject && sessionCount + preLaunchSlotCount < MAX_SESSIONS;
   const stopShortcut = isMac ? '⌘ K' : 'Ctrl+K';
+  const settingsShortcut = isMac ? '⌘ ,' : 'Ctrl+,';
+  const historyShortcut = isMac ? '⌘ ⇧ H' : 'Ctrl+Shift+H';
+  const closeTabShortcut = isMac ? '⌘ W' : 'Ctrl+W';
 
   return (
     <div
@@ -137,7 +140,12 @@ export function TopBar({
                   <X size={14} />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent side="bottom">Close tab</TooltipContent>
+              <TooltipContent side="bottom">
+                Close tab
+                <kbd className="ml-1.5 px-1 py-0.5 text-[10px] bg-white/10 rounded">
+                  {closeTabShortcut}
+                </kbd>
+              </TooltipContent>
             </Tooltip>
           </div>
         ))}
@@ -198,7 +206,12 @@ export function TopBar({
                 <History size={15} />
               </Button>
             </TooltipTrigger>
-            <TooltipContent side="bottom">Session history</TooltipContent>
+            <TooltipContent side="bottom">
+              Session history
+              <kbd className="ml-1.5 px-1 py-0.5 text-[10px] bg-white/10 rounded">
+                {historyShortcut}
+              </kbd>
+            </TooltipContent>
           </Tooltip>
         )}
 
@@ -215,7 +228,12 @@ export function TopBar({
               <Settings size={15} />
             </Button>
           </TooltipTrigger>
-          <TooltipContent side="bottom">Settings</TooltipContent>
+          <TooltipContent side="bottom">
+            Settings
+            <kbd className="ml-1.5 px-1 py-0.5 text-[10px] bg-white/10 rounded">
+              {settingsShortcut}
+            </kbd>
+          </TooltipContent>
         </Tooltip>
 
         {/* Set Up Sessions */}
