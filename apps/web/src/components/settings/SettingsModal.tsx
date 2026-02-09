@@ -87,7 +87,7 @@ export function SettingsModal() {
           'bg-background rounded-2xl shadow-2xl',
           'border border-border',
           'flex flex-col overflow-hidden',
-          'animate-in'
+          'animate-fade-in'
         )}
         role="dialog"
         aria-modal="true"

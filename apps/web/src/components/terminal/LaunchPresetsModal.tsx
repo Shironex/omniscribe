@@ -105,7 +105,7 @@ export function LaunchPresetsModal({
           'bg-background rounded-2xl shadow-2xl',
           'border border-border',
           'flex flex-col',
-          'animate-in'
+          'animate-fade-in'
         )}
         role="dialog"
         aria-modal="true"

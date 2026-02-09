@@ -335,7 +335,7 @@
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
-@utility animate-in {
+@utility animate-fade-in {
   animation: fadeIn 0.2s ease-out;
 }
 @utility truncate-2 {
