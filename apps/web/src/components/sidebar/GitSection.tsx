@@ -68,7 +68,7 @@ export function GitSection({ className }: GitSectionProps) {
       {/* Branch info */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 min-w-0 flex-1">
-          <GitBranch size={14} className="text-muted-foreground flex-shrink-0" />
+          <GitBranch size={14} className="text-muted-foreground shrink-0" />
           {isLoading ? (
             <span className="text-xs text-muted-foreground animate-pulse">Loading...</span>
           ) : error ? (
@@ -89,7 +89,7 @@ export function GitSection({ className }: GitSectionProps) {
           onClick={handleRefresh}
           disabled={isLoading || !activeTab?.projectPath}
           className={clsx(
-            'p-1 rounded transition-colors flex-shrink-0',
+            'p-1 rounded transition-colors shrink-0',
             'hover:bg-muted',
             'disabled:opacity-50 disabled:cursor-not-allowed'
           )}
@@ -124,7 +124,7 @@ export function GitSection({ className }: GitSectionProps) {
       {/* Last commit */}
       {currentBranch?.lastCommitMessage && (
         <div className="flex items-start gap-2 pl-5">
-          <GitCommit size={12} className="text-muted-foreground flex-shrink-0 mt-0.5" />
+          <GitCommit size={12} className="text-muted-foreground shrink-0 mt-0.5" />
           <span className="text-xs text-muted-foreground line-clamp-2">
             {currentBranch.lastCommitMessage}
           </span>

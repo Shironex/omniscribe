@@ -89,7 +89,7 @@ export function WelcomeView({
             <div
               className={clsx(
                 'w-20 h-20 rounded-full',
-                'bg-gradient-to-br from-primary/20 to-brand-600/20',
+                'bg-linear-to-br from-primary/20 to-brand-600/20',
                 'flex items-center justify-center'
               )}
             >
@@ -161,7 +161,7 @@ export function WelcomeView({
           onClick={onOpenProject}
           className={clsx(
             'gap-3 px-6 py-3 rounded-xl',
-            'bg-gradient-to-r from-primary to-brand-600',
+            'bg-linear-to-r from-primary to-brand-600',
             'text-white font-medium',
             'shadow-lg shadow-primary/25',
             'hover:shadow-xl hover:shadow-primary/30',

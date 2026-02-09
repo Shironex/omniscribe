@@ -28,7 +28,7 @@ export function PreLaunchSection({
   if (preLaunchSlots.length === 0) return null;
 
   return (
-    <div className="flex-shrink-0 p-2 pt-0 space-y-2">
+    <div className="shrink-0 p-2 pt-0 space-y-2">
       {preLaunchSlots.map((slot, index) => (
         <PreLaunchBar
           key={slot.id}

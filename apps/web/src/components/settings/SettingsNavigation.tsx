@@ -26,10 +26,10 @@ function NavButton({
         'group w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ease-out text-left relative overflow-hidden',
         isActive
           ? [
-              'bg-gradient-to-r from-primary/15 via-primary/10 to-brand-600/5',
+              'bg-linear-to-r from-primary/15 via-primary/10 to-brand-600/5',
               'text-foreground',
               'border border-primary/25',
-              'shadow-sm shadow-primary/5',
+              'shadow-xs shadow-primary/5',
             ]
           : [
               'text-muted-foreground hover:text-foreground',
@@ -41,7 +41,7 @@ function NavButton({
     >
       {/* Active indicator bar */}
       {isActive && (
-        <div className="absolute inset-y-0 left-0 w-0.5 bg-gradient-to-b from-primary via-primary to-brand-600 rounded-r-full" />
+        <div className="absolute inset-y-0 left-0 w-0.5 bg-linear-to-b from-primary via-primary to-brand-600 rounded-r-full" />
       )}
       <Icon
         size={16}
