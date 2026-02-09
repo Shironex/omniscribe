@@ -103,15 +103,17 @@ describe('GitBaseService', () => {
       );
     });
 
-    it('should return stdout/stderr on non-zero exit codes', async () => {
+    it('should return stdout/stderr on non-fatal exit codes (1-127)', async () => {
       const error = new Error('exit code 1') as Error & {
         stdout?: string;
         stderr?: string;
         killed?: boolean;
+        code?: number;
       };
       error.stdout = 'partial output';
       error.stderr = 'error message';
       error.killed = false;
+      error.code = 1;
       mockExecFile.mockRejectedValue(error);
 
       const result = await service.execGit('/repo', ['diff']);
@@ -122,12 +124,48 @@ describe('GitBaseService', () => {
       });
     });
 
+    it('should throw on fatal exit codes (>= 128)', async () => {
+      const error = new Error('fatal: invalid reference') as Error & {
+        stdout?: string;
+        stderr?: string;
+        killed?: boolean;
+        code?: number;
+      };
+      error.stdout = '';
+      error.stderr = 'fatal: invalid reference: nonexistent-branch';
+      error.killed = false;
+      error.code = 128;
+      mockExecFile.mockRejectedValue(error);
+
+      await expect(
+        service.execGit('/repo', ['worktree', 'add', '/path', 'nonexistent'])
+      ).rejects.toThrow('Git command failed: fatal: invalid reference');
+    });
+
     it('should throw when exec fails without stdout/stderr', async () => {
       const error = new Error('ENOENT: command not found');
       mockExecFile.mockRejectedValue(error);
 
       await expect(service.execGit('/repo', ['status'])).rejects.toThrow(
         'Git command failed: ENOENT: command not found'
+      );
+    });
+
+    it('should throw when exit code is a signal string (not a number)', async () => {
+      const error = new Error('process terminated') as Error & {
+        stdout?: string;
+        stderr?: string;
+        killed?: boolean;
+        code?: string | number;
+      };
+      error.stdout = '';
+      error.stderr = '';
+      error.killed = false;
+      error.code = 'SIGTERM' as unknown as number;
+      mockExecFile.mockRejectedValue(error);
+
+      await expect(service.execGit('/repo', ['fetch'])).rejects.toThrow(
+        'Git command failed: process terminated'
       );
     });
 

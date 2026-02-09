@@ -9,7 +9,7 @@ import { useWorkspaceStore, selectActiveTab } from '@/stores/useWorkspaceStore';
 import { useGitStore, selectBranches, selectCurrentBranch } from '@/stores/useGitStore';
 import { useTerminalStore } from '@/stores/useTerminalStore';
 import { useSettingsStore } from '@/stores/useSettingsStore';
-import { createSession, removeSession } from '@/lib/session';
+import { createSession, removeSession, resumeSession } from '@/lib/session';
 import { killTerminal } from '@/lib/terminal';
 import { mapAiModeToBackend, mapAiModeToUI } from '@/lib/aiMode';
 
@@ -116,6 +116,8 @@ export function ConnectedTerminalGrid({ className }: ConnectedTerminalGridProps)
       terminalSessionId: session.terminalSessionId,
       worktreePath: session.worktreePath,
       skipPermissions: session.skipPermissions,
+      claudeSessionId: session.claudeSessionId,
+      isResumed: session.isResumed,
     }));
 
     // Apply custom ordering if available
@@ -239,6 +241,31 @@ export function ConnectedTerminalGrid({ className }: ConnectedTerminalGridProps)
     [sessions]
   );
 
+  // Resume a crashed/errored session
+  const handleResume = useCallback(
+    async (sessionId: string) => {
+      const session = sessions.find(s => s.id === sessionId);
+      if (!session?.claudeSessionId || !activeProjectPath) return;
+      try {
+        logger.info('Resuming session', sessionId, session.claudeSessionId);
+        const resumed = await resumeSession(
+          session.claudeSessionId,
+          activeProjectPath,
+          session.branch
+        );
+        if (resumed.terminalSessionId !== undefined) {
+          updateSession(resumed.id, { terminalSessionId: resumed.terminalSessionId });
+        }
+        toast.success('Session resumed successfully');
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : 'Failed to resume session';
+        logger.error('Resume failed:', error);
+        toast.error(msg);
+      }
+    },
+    [sessions, activeProjectPath, updateSession]
+  );
+
   // Handle session close from terminal
   const handleSessionClose = useCallback((_sessionId: string, _exitCode: number) => {
     // Session will be removed by the socket event handler
@@ -273,6 +300,7 @@ export function ConnectedTerminalGrid({ className }: ConnectedTerminalGridProps)
       onUpdateSlot={handleUpdateSlot}
       onLaunch={handleLaunch}
       onKill={handleKill}
+      onResume={handleResume}
       onSessionClose={handleSessionClose}
       onReorderSessions={handleReorderSessions}
       className={className}

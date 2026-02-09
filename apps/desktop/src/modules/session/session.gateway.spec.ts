@@ -7,6 +7,7 @@ import { TerminalGateway } from '../terminal/terminal.gateway';
 import { WorktreeService } from '../git/worktree.service';
 import { GitService } from '../git/git.service';
 import { WorkspaceService } from '../workspace/workspace.service';
+import { ClaudeSessionReaderService } from './claude-session-reader.service';
 import type { SessionStatus } from '@omniscribe/shared';
 import { MAX_CONCURRENT_SESSIONS } from '@omniscribe/shared';
 
@@ -91,6 +92,13 @@ const mockGitService = {
 
 const mockWorkspaceService = {
   getPreferences: jest.fn(),
+  getActiveSessionsSnapshot: jest.fn().mockReturnValue([]),
+};
+
+const mockClaudeSessionReader = {
+  readSessionsIndex: jest.fn().mockResolvedValue([]),
+  findNewSession: jest.fn().mockResolvedValue(null),
+  watchSessionsIndex: jest.fn().mockReturnValue(() => {}),
 };
 
 // ---------------------------------------------------------------------------
@@ -112,6 +120,7 @@ describe('SessionGateway', () => {
         { provide: WorktreeService, useValue: mockWorktreeService },
         { provide: GitService, useValue: mockGitService },
         { provide: WorkspaceService, useValue: mockWorkspaceService },
+        { provide: ClaudeSessionReaderService, useValue: mockClaudeSessionReader },
       ],
     }).compile();
 
@@ -616,6 +625,228 @@ describe('SessionGateway', () => {
       gateway.onSessionRemoved(payload);
 
       expect(server.emit).toHaveBeenCalledWith('session:removed', payload);
+    });
+  });
+
+  // ========================================================================
+  // handleFork
+  // ========================================================================
+
+  describe('handleFork', () => {
+    const basePayload = {
+      claudeSessionId: 'claude-abc-12345678',
+      projectPath: '/project',
+    };
+
+    beforeEach(() => {
+      const session = createMockSession({ forkSessionId: 'claude-abc-12345678' });
+      mockSessionService.create.mockReturnValue(session);
+      mockSessionService.get.mockReturnValue(session);
+      mockWorkspaceService.getPreferences.mockReturnValue({
+        worktree: { mode: 'never', location: 'project', autoCleanup: false },
+      });
+      mockSessionService.launchSession.mockResolvedValue({
+        success: true,
+        terminalSessionId: 1,
+      });
+      mockSessionService.getRunningSessions.mockReturnValue([]);
+    });
+
+    it('should create a forked session', async () => {
+      const result = await gateway.handleFork(basePayload, client);
+
+      expect(mockSessionService.create).toHaveBeenCalledWith('claude', '/project', {
+        name: 'Fork: claude-a',
+        skipPermissions: undefined,
+        forkSessionId: 'claude-abc-12345678',
+      });
+      expect(result.session).toBeDefined();
+      expect(result.error).toBeUndefined();
+    });
+
+    it('should reject when at concurrency limit', async () => {
+      const runningSessions = Array.from({ length: MAX_CONCURRENT_SESSIONS }, (_, i) =>
+        createMockSession({ id: `session-${i}`, terminalSessionId: i })
+      );
+      mockSessionService.getRunningSessions.mockReturnValue(runningSessions);
+      mockSessionService.getIdleSessions.mockReturnValue([]);
+
+      const result = await gateway.handleFork(basePayload, client);
+
+      expect(result.error).toContain('Session limit reached');
+      expect(mockSessionService.create).not.toHaveBeenCalled();
+    });
+
+    it('should use custom name when provided', async () => {
+      await gateway.handleFork({ ...basePayload, name: 'My Fork' }, client);
+
+      expect(mockSessionService.create).toHaveBeenCalledWith(
+        'claude',
+        '/project',
+        expect.objectContaining({ name: 'My Fork' })
+      );
+    });
+  });
+
+  // ========================================================================
+  // handleContinueLast
+  // ========================================================================
+
+  describe('handleContinueLast', () => {
+    const basePayload = {
+      projectPath: '/project',
+    };
+
+    beforeEach(() => {
+      const session = createMockSession({ continueLastSession: true });
+      mockSessionService.create.mockReturnValue(session);
+      mockSessionService.get.mockReturnValue(session);
+      mockWorkspaceService.getPreferences.mockReturnValue({
+        worktree: { mode: 'never', location: 'project', autoCleanup: false },
+      });
+      mockSessionService.launchSession.mockResolvedValue({
+        success: true,
+        terminalSessionId: 1,
+      });
+      mockSessionService.getRunningSessions.mockReturnValue([]);
+    });
+
+    it('should create a continue-last session', async () => {
+      const result = await gateway.handleContinueLast(basePayload, client);
+
+      expect(mockSessionService.create).toHaveBeenCalledWith('claude', '/project', {
+        name: 'Continue Last',
+        skipPermissions: undefined,
+        continueLastSession: true,
+      });
+      expect(result.session).toBeDefined();
+      expect(result.error).toBeUndefined();
+    });
+
+    it('should reject when at concurrency limit', async () => {
+      const runningSessions = Array.from({ length: MAX_CONCURRENT_SESSIONS }, (_, i) =>
+        createMockSession({ id: `session-${i}`, terminalSessionId: i })
+      );
+      mockSessionService.getRunningSessions.mockReturnValue(runningSessions);
+      mockSessionService.getIdleSessions.mockReturnValue([]);
+
+      const result = await gateway.handleContinueLast(basePayload, client);
+
+      expect(result.error).toContain('Session limit reached');
+    });
+
+    it('should use custom name when provided', async () => {
+      await gateway.handleContinueLast({ ...basePayload, name: 'My Continue' }, client);
+
+      expect(mockSessionService.create).toHaveBeenCalledWith(
+        'claude',
+        '/project',
+        expect.objectContaining({ name: 'My Continue' })
+      );
+    });
+
+    it('should return error when launch fails', async () => {
+      mockSessionService.launchSession.mockResolvedValue({
+        success: false,
+        error: 'CLI not found',
+      });
+
+      const result = await gateway.handleContinueLast(basePayload, client);
+
+      expect(result).toEqual({ error: 'CLI not found' });
+    });
+  });
+
+  // ========================================================================
+  // handleGetRestoreSnapshot
+  // ========================================================================
+
+  describe('handleGetRestoreSnapshot', () => {
+    it('should return snapshot with autoResume disabled by default', () => {
+      mockWorkspaceService.getPreferences.mockReturnValue({});
+
+      const result = gateway.handleGetRestoreSnapshot();
+
+      expect(result.autoResumeEnabled).toBe(false);
+      expect(result.sessions).toEqual([]);
+    });
+
+    it('should return snapshot with autoResume enabled when configured', () => {
+      mockWorkspaceService.getPreferences.mockReturnValue({
+        session: { defaultMode: 'claude', autoResumeOnRestart: true },
+      });
+      mockWorkspaceService.getActiveSessionsSnapshot.mockReturnValue([
+        {
+          claudeSessionId: 'claude-123',
+          projectPath: '/project',
+          name: 'Session 1',
+        },
+      ]);
+
+      const result = gateway.handleGetRestoreSnapshot();
+
+      expect(result.autoResumeEnabled).toBe(true);
+      expect(result.sessions).toHaveLength(1);
+      expect(result.sessions[0].claudeSessionId).toBe('claude-123');
+    });
+  });
+
+  // ========================================================================
+  // handleGetHistory
+  // ========================================================================
+
+  describe('handleGetHistory', () => {
+    it('should return session history for a project', async () => {
+      mockClaudeSessionReader.readSessionsIndex.mockResolvedValue([
+        {
+          sessionId: 'abc-123',
+          fullPath: '/path/to/abc-123.jsonl',
+          fileMtime: Date.now(),
+          firstPrompt: 'Help with tests',
+          summary: '',
+          messageCount: 0,
+          created: '2024-01-01T00:00:00Z',
+          modified: '2024-01-01T00:00:00Z',
+          gitBranch: 'main',
+          projectPath: '/project',
+          isSidechain: false,
+        },
+      ]);
+
+      const result = await gateway.handleGetHistory({ projectPath: '/project' }, client);
+
+      expect(result.sessions).toHaveLength(1);
+      expect(result.sessions[0].sessionId).toBe('abc-123');
+      expect(result.error).toBeUndefined();
+    });
+
+    it('should return error when read fails', async () => {
+      mockClaudeSessionReader.readSessionsIndex.mockRejectedValue(new Error('File not found'));
+
+      const result = await gateway.handleGetHistory({ projectPath: '/project' }, client);
+
+      expect(result.sessions).toEqual([]);
+      expect(result.error).toBe('File not found');
+    });
+  });
+
+  // ========================================================================
+  // onSessionHookEnd
+  // ========================================================================
+
+  describe('onSessionHookEnd', () => {
+    it('should broadcast session:hook-ended when session_id present', () => {
+      gateway.onSessionHookEnd({ session_id: 'abc-123' });
+
+      expect(server.emit).toHaveBeenCalledWith('session:hook-ended', {
+        claudeSessionId: 'abc-123',
+      });
+    });
+
+    it('should not broadcast when session_id is missing', () => {
+      gateway.onSessionHookEnd({});
+
+      expect(server.emit).not.toHaveBeenCalledWith('session:hook-ended', expect.anything());
     });
   });
 });

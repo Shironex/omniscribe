@@ -30,8 +30,9 @@ import { CORS_CONFIG } from '../shared/cors.config';
 const MAX_INPUT_SIZE = 1_048_576; // 1MB
 
 // Backpressure constants
-const HIGH_WATER_MARK = 16; // Pause PTY after this many undelivered packets
-const PAUSE_SAFETY_TIMEOUT_MS = 10_000; // Force-resume after 10s to prevent deadlock
+const HIGH_WATER_MARK = 128; // Pause PTY after this many undelivered packets
+const LOW_WATER_MARK = 16; // Resume PTY only when pending drops below this (hysteresis)
+const PAUSE_SAFETY_TIMEOUT_MS = 5_000; // Force-resume after 5s to prevent deadlock
 
 interface TerminalOutputEvent {
   sessionId: number;
@@ -107,9 +108,17 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
       // one renderer process connecting via one socket. Therefore, when this
       // client's write buffer drains, it is safe to resume all paused terminals
       // unconditionally -- they all belong to this single client.
+      // Use hysteresis: only resume when pending counter is below LOW_WATER_MARK
+      // to prevent rapid pause/resume oscillation.
       for (const sessionId of this.pausedTerminals) {
-        this.pendingWrites.set(sessionId, 0);
-        this.resumeTerminal(sessionId);
+        const pending = this.pendingWrites.get(sessionId) ?? 0;
+        // Drain reduces counter by half (exponential decay) rather than resetting to 0.
+        // This prevents immediate re-trigger after resume.
+        const reduced = Math.floor(pending / 2);
+        this.pendingWrites.set(sessionId, reduced);
+        if (reduced < LOW_WATER_MARK) {
+          this.resumeTerminal(sessionId);
+        }
       }
     });
   }

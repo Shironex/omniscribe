@@ -1,3 +1,4 @@
+import React from 'react';
 import { clsx } from 'clsx';
 import { TerminalView } from './TerminalView';
 import { TerminalErrorBoundary } from './TerminalErrorBoundary';
@@ -21,10 +22,11 @@ interface TerminalCardProps {
   onKill: () => void;
   onSessionClose?: (exitCode: number) => void;
   onQuickAction?: (actionId: string) => void;
+  onResume?: (sessionId: string) => void;
   dragHandleProps?: TerminalDragHandleProps;
 }
 
-export function TerminalCard({
+export const TerminalCard = React.memo(function TerminalCard({
   session,
   quickActions,
   isFocused,
@@ -32,6 +34,7 @@ export function TerminalCard({
   onKill,
   onSessionClose,
   onQuickAction,
+  onResume,
   dragHandleProps,
 }: TerminalCardProps) {
   return (
@@ -51,6 +54,7 @@ export function TerminalCard({
         quickActions={quickActions}
         onClose={onKill}
         onQuickAction={onQuickAction}
+        onResume={onResume ? () => onResume(session.id) : undefined}
         dragHandleProps={dragHandleProps}
       />
       <div className="relative flex-1 min-h-0">
@@ -71,4 +75,4 @@ export function TerminalCard({
       </div>
     </div>
   );
-}
+});

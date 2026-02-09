@@ -40,6 +40,7 @@ interface TerminalGridProps {
   onSessionClose?: (sessionId: string, exitCode: number) => void;
   onQuickAction?: (sessionId: string, actionId: string) => void;
   onOpenLaunchModal?: () => void;
+  onResume?: (sessionId: string) => void;
   onReorderSessions?: (activeId: string, overId: string) => void;
   className?: string;
 }
@@ -60,6 +61,7 @@ export function TerminalGrid({
   onKill,
   onSessionClose,
   onQuickAction,
+  onResume,
   onOpenLaunchModal,
   onReorderSessions,
   className,
@@ -108,6 +110,7 @@ export function TerminalGrid({
           onSessionClose ? exitCode => onSessionClose(session.id, exitCode) : undefined
         }
         onQuickAction={onQuickAction ? actionId => onQuickAction(session.id, actionId) : undefined}
+        onResume={onResume}
       />
     </SortableTerminalWrapper>
   );

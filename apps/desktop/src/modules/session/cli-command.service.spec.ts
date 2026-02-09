@@ -381,6 +381,104 @@ describe('CliCommandService', () => {
   });
 
   // =========================================================
+  // Resume, fork, and continue flags
+  // =========================================================
+
+  describe('getCliConfig resume/fork/continue flags', () => {
+    beforeEach(() => {
+      mockedExecFileSync.mockReturnValue('/usr/local/bin/claude\n');
+      mockedExistsSync.mockReturnValue(false);
+    });
+
+    it('should include --resume flag when resumeSessionId is set', () => {
+      const session: CliSessionContext = { resumeSessionId: 'abc-123' };
+      const config = service.getCliConfig('claude', session);
+
+      expect(config.args).toContain('--resume');
+      expect(config.args).toContain('abc-123');
+      const resumeIdx = config.args.indexOf('--resume');
+      expect(config.args[resumeIdx + 1]).toBe('abc-123');
+    });
+
+    it('should include --resume and --fork-session flags when forkSessionId is set', () => {
+      const session: CliSessionContext = { forkSessionId: 'fork-456' };
+      const config = service.getCliConfig('claude', session);
+
+      expect(config.args).toContain('--resume');
+      expect(config.args).toContain('fork-456');
+      expect(config.args).toContain('--fork-session');
+      const resumeIdx = config.args.indexOf('--resume');
+      expect(config.args[resumeIdx + 1]).toBe('fork-456');
+    });
+
+    it('should include --continue flag when continueLastSession is set', () => {
+      const session: CliSessionContext = { continueLastSession: true };
+      const config = service.getCliConfig('claude', session);
+
+      expect(config.args).toContain('--continue');
+      // --resume and --fork-session should NOT be present
+      expect(config.args).not.toContain('--resume');
+      expect(config.args).not.toContain('--fork-session');
+    });
+
+    it('should skip system prompt when resuming', () => {
+      const session: CliSessionContext = {
+        resumeSessionId: 'abc-123',
+        systemPrompt: 'Be concise.',
+      };
+      const config = service.getCliConfig('claude', session);
+
+      expect(config.args).not.toContain('--system-prompt');
+      expect(config.args).not.toContain('--append-system-prompt');
+    });
+
+    it('should skip system prompt when forking', () => {
+      const session: CliSessionContext = {
+        forkSessionId: 'fork-456',
+        systemPrompt: 'Be concise.',
+      };
+      const config = service.getCliConfig('claude', session);
+
+      expect(config.args).not.toContain('--system-prompt');
+      expect(config.args).not.toContain('--append-system-prompt');
+    });
+
+    it('should skip system prompt when continuing', () => {
+      const session: CliSessionContext = {
+        continueLastSession: true,
+        systemPrompt: 'Be concise.',
+      };
+      const config = service.getCliConfig('claude', session);
+
+      expect(config.args).not.toContain('--system-prompt');
+      expect(config.args).not.toContain('--append-system-prompt');
+    });
+
+    it('should prioritize --continue over --resume (mutually exclusive)', () => {
+      const session: CliSessionContext = {
+        continueLastSession: true,
+        resumeSessionId: 'abc-123',
+      };
+      const config = service.getCliConfig('claude', session);
+
+      expect(config.args).toContain('--continue');
+      expect(config.args).not.toContain('--resume');
+    });
+
+    it('should include --dangerously-skip-permissions before other flags', () => {
+      const session: CliSessionContext = {
+        skipPermissions: true,
+        forkSessionId: 'fork-456',
+      };
+      const config = service.getCliConfig('claude', session);
+
+      const skipIdx = config.args.indexOf('--dangerously-skip-permissions');
+      const resumeIdx = config.args.indexOf('--resume');
+      expect(skipIdx).toBeLessThan(resumeIdx);
+    });
+  });
+
+  // =========================================================
   // Default case in getCliConfig
   // =========================================================
 

@@ -133,3 +133,43 @@ export interface UpdateSessionOptions {
   temperature?: number;
   mcpServers?: string[];
 }
+
+// ============================================
+// Claude Code Session Tracking Types
+// ============================================
+
+/** Entry from Claude Code's sessions-index.json */
+export interface ClaudeSessionEntry {
+  sessionId: string;
+  fullPath: string;
+  fileMtime: number;
+  firstPrompt: string;
+  summary: string;
+  messageCount: number;
+  created: string;
+  modified: string;
+  gitBranch: string;
+  projectPath: string;
+  isSidechain: boolean;
+}
+
+/** Claude Code's sessions-index.json format */
+export interface ClaudeSessionsIndex {
+  version: number;
+  entries: ClaudeSessionEntry[];
+  originalPath?: string;
+}
+
+/** Omniscribe's persisted session history entry */
+export interface SessionHistoryEntry {
+  omniscribeSessionId: string;
+  claudeSessionId: string;
+  projectPath: string;
+  name: string;
+  lastStatus: string;
+  createdAt: string;
+  lastActiveAt: string;
+  branch?: string;
+  exitCode?: number;
+  summary?: string;
+}

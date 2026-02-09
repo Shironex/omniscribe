@@ -5,6 +5,8 @@ import {
   ProjectTabDTO,
   UserPreferences,
   WorkspaceStateResponse,
+  SessionHistoryEntry,
+  ActiveSessionSnapshot,
   DEFAULT_WORKTREE_SETTINGS,
   DEFAULT_SESSION_SETTINGS,
 } from '@omniscribe/shared';
@@ -20,6 +22,8 @@ interface StoreSchema {
   activeTabId: string | null;
   quickActions: QuickAction[];
   preferences: UserPreferences;
+  sessionHistory: SessionHistoryEntry[];
+  activeSessionsSnapshot: ActiveSessionSnapshot[];
   [key: string]: unknown;
 }
 
@@ -189,6 +193,8 @@ export class WorkspaceService implements OnModuleInit {
         activeTabId: null,
         quickActions: DEFAULT_QUICK_ACTIONS,
         preferences: DEFAULT_PREFERENCES,
+        sessionHistory: [],
+        activeSessionsSnapshot: [],
       },
     });
   }
@@ -436,6 +442,94 @@ export class WorkspaceService implements OnModuleInit {
     const preferences = this.getPreferences();
     delete preferences[key];
     this.store.set('preferences', preferences);
+  }
+
+  // ============================================
+  // Session History Management
+  // ============================================
+
+  /** Maximum number of session history entries to retain */
+  private static readonly MAX_SESSION_HISTORY = 200;
+
+  /**
+   * Add a session history entry.
+   * Prunes oldest entries when exceeding MAX_SESSION_HISTORY.
+   */
+  addSessionHistory(entry: SessionHistoryEntry): void {
+    const history = this.store.get('sessionHistory', []);
+
+    // Avoid duplicates (same claudeSessionId)
+    const filtered = history.filter(h => h.claudeSessionId !== entry.claudeSessionId);
+
+    filtered.unshift(entry); // Newest first
+
+    // Prune to max entries
+    if (filtered.length > WorkspaceService.MAX_SESSION_HISTORY) {
+      filtered.length = WorkspaceService.MAX_SESSION_HISTORY;
+    }
+
+    this.store.set('sessionHistory', filtered);
+    this.logger.debug(
+      `Added session history entry for ${entry.claudeSessionId} (total: ${filtered.length})`
+    );
+  }
+
+  /**
+   * Get session history entries, optionally filtered by project path.
+   */
+  getSessionHistory(projectPath?: string): SessionHistoryEntry[] {
+    const history = this.store.get('sessionHistory', []);
+
+    if (projectPath) {
+      const normalizedPath = projectPath.replace(/\\/g, '/');
+      return history.filter(h => h.projectPath.replace(/\\/g, '/') === normalizedPath);
+    }
+
+    return history;
+  }
+
+  /**
+   * Update an existing session history entry by Claude session ID.
+   * Merges the provided partial updates into the existing entry.
+   */
+  updateSessionHistory(claudeSessionId: string, updates: Partial<SessionHistoryEntry>): void {
+    const history = this.store.get('sessionHistory', []);
+    const index = history.findIndex(h => h.claudeSessionId === claudeSessionId);
+
+    if (index === -1) {
+      this.logger.debug(`No session history entry found for ${claudeSessionId}`);
+      return;
+    }
+
+    history[index] = { ...history[index], ...updates };
+    this.store.set('sessionHistory', history);
+    this.logger.debug(`Updated session history entry for ${claudeSessionId}`);
+  }
+
+  // ============================================
+  // Active Sessions Snapshot (Auto-Resume)
+  // ============================================
+
+  /**
+   * Save a snapshot of currently active sessions for auto-resume on restart.
+   */
+  saveActiveSessionsSnapshot(sessions: ActiveSessionSnapshot[]): void {
+    this.store.set('activeSessionsSnapshot', sessions);
+    this.logger.debug(`Saved active sessions snapshot (${sessions.length} sessions)`);
+  }
+
+  /**
+   * Get the saved active sessions snapshot.
+   */
+  getActiveSessionsSnapshot(): ActiveSessionSnapshot[] {
+    return this.store.get('activeSessionsSnapshot', []);
+  }
+
+  /**
+   * Clear the active sessions snapshot (called after restore).
+   */
+  clearActiveSessionsSnapshot(): void {
+    this.store.set('activeSessionsSnapshot', []);
   }
 
   // ============================================
