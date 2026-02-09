@@ -11,7 +11,8 @@ import {
 import { type ComponentType } from 'react';
 import { StatusDot } from '@/components/shared/StatusLegend';
 import { ClaudeIcon } from '@/components/shared/ClaudeIcon';
-import type { AIMode, TerminalSession, GitBranchInfo } from './TerminalHeader';
+import type { AiMode } from '@omniscribe/shared';
+import type { TerminalSession, GitBranchInfo } from './TerminalHeader';
 
 interface AIModeConfigItem {
   icon: ComponentType<{ size?: string | number; className?: string }>;
@@ -19,7 +20,7 @@ interface AIModeConfigItem {
   color: string;
 }
 
-export const aiModeConfig: Record<AIMode, AIModeConfigItem> = {
+export const aiModeConfig: Record<AiMode, AIModeConfigItem> = {
   claude: { icon: ClaudeIcon, label: 'Claude', color: 'text-orange-400' },
   plain: { icon: Terminal, label: 'Plain', color: 'text-muted-foreground' },
 };

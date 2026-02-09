@@ -33,11 +33,6 @@ export interface FrontendSessionConfig extends ExtendedSessionConfig {
 }
 
 /**
- * @deprecated Use FrontendSessionConfig instead. This alias is provided for backward compatibility.
- */
-export type { FrontendSessionConfig as ExtendedSessionConfig };
-
-/**
  * Session store state (extends common socket state)
  */
 interface SessionState extends SocketStoreState {

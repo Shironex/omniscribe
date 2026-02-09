@@ -12,9 +12,6 @@ import type { QuickActionItem } from './TerminalCard';
 import type { SessionStatus } from '@/components/shared/StatusLegend';
 import type { AiMode } from '@omniscribe/shared';
 
-/** @deprecated Use AiMode from @omniscribe/shared. Kept for backward compatibility. */
-export type AIMode = AiMode;
-
 export interface GitBranchInfo {
   name: string;
   ahead?: number;
@@ -24,7 +21,7 @@ export interface GitBranchInfo {
 export interface TerminalSession {
   id: string;
   sessionNumber: number;
-  aiMode: AIMode;
+  aiMode: AiMode;
   status: SessionStatus;
   branch?: string;
   statusMessage?: string;

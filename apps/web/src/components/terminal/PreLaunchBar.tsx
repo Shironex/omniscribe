@@ -9,12 +9,9 @@ import { getPrelaunchShortcutForIndex } from '@/lib/prelaunch-shortcuts';
 import { Button } from '@/components/ui/button';
 import type { AiMode } from '@omniscribe/shared';
 
-/** @deprecated Use AiMode from @omniscribe/shared. Kept for backward compatibility. */
-export type AIMode = AiMode;
-
 export interface PreLaunchSlot {
   id: string;
-  aiMode: AIMode;
+  aiMode: AiMode;
   branch: string;
   shortcutKey: string;
 }
@@ -34,7 +31,7 @@ interface PreLaunchBarProps {
 }
 
 interface AIModeOption {
-  value: AIMode;
+  value: AiMode;
   label: string;
   icon: ComponentType<{ size?: string | number; className?: string }>;
   color: string;

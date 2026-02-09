@@ -268,5 +268,5 @@ export function TerminalGrid({
 }
 
 // Re-export types for convenience
-export type { TerminalSession, AIMode } from './TerminalHeader';
-export type { PreLaunchSlot, AIMode as PreLaunchAIMode } from './PreLaunchBar';
+export type { TerminalSession } from './TerminalHeader';
+export type { PreLaunchSlot } from './PreLaunchBar';
