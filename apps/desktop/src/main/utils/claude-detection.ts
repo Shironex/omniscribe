@@ -83,9 +83,42 @@ export async function getClaudeCliVersion(cliPath: string): Promise<string | und
 }
 
 /**
+ * Check for OAuth account in Claude config (~/.claude/.claude.json)
+ * On macOS, Claude CLI stores tokens in the Keychain rather than credential files,
+ * but the config always contains oauthAccount when the user is signed in.
+ */
+function checkClaudeConfigAuth(): boolean {
+  const configPath = joinPaths(getClaudeConfigDir(), '.claude.json');
+
+  if (!existsSync(configPath)) {
+    return false;
+  }
+
+  try {
+    const content = readFileSync(configPath, 'utf-8');
+    const config: unknown = JSON.parse(content);
+
+    if (typeof config !== 'object' || config === null) {
+      return false;
+    }
+
+    const cfg = config as Record<string, unknown>;
+    const oauthAccount = cfg['oauthAccount'] as Record<string, unknown> | undefined;
+
+    return (
+      typeof oauthAccount?.['accountUuid'] === 'string' && oauthAccount['accountUuid'].length > 0
+    );
+  } catch (error) {
+    logger.debug('Failed to read Claude config for auth check:', error);
+    return false;
+  }
+}
+
+/**
  * Check Claude CLI authentication status
  */
 export async function checkClaudeAuth(): Promise<{ authenticated: boolean }> {
+  // Check credential files (works on Windows where tokens are stored as files)
   const credentialPaths = getClaudeCredentialPaths();
 
   for (const credPath of credentialPaths) {
@@ -118,6 +151,12 @@ export async function checkClaudeAuth(): Promise<{ authenticated: boolean }> {
     } catch (error) {
       logger.debug(`Failed to read credentials from ${credPath}:`, error);
     }
+  }
+
+  // Fallback: check oauthAccount in config file
+  // On macOS, tokens are stored in Keychain, but the config still tracks the signed-in account
+  if (checkClaudeConfigAuth()) {
+    return { authenticated: true };
   }
 
   return { authenticated: false };
