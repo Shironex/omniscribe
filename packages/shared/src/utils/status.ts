@@ -4,7 +4,14 @@ import type { SessionStatus } from '../types/session';
  * UI status for display purposes
  * Maps the various backend/MCP statuses to simplified UI states
  */
-export type UISessionStatus = 'idle' | 'starting' | 'working' | 'planning' | 'needsInput' | 'error';
+export type UISessionStatus =
+  | 'idle'
+  | 'starting'
+  | 'working'
+  | 'planning'
+  | 'needsInput'
+  | 'done'
+  | 'error';
 
 /**
  * Maps backend session status (including MCP values) to UI session status
@@ -18,7 +25,6 @@ export function mapSessionStatus(backendStatus: SessionStatus | string): UISessi
     // Idle states
     case 'idle':
     case 'disconnected':
-    case 'finished': // MCP: task complete
       return 'idle';
 
     // Starting/connecting
@@ -40,6 +46,10 @@ export function mapSessionStatus(backendStatus: SessionStatus | string): UISessi
     case 'paused':
     case 'needs_input': // MCP: waiting for user input
       return 'needsInput';
+
+    // Finished states
+    case 'finished': // MCP: task complete
+      return 'done';
 
     // Error state
     case 'error':

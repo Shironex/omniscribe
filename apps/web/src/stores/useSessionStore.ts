@@ -1,12 +1,16 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import {
-  SessionConfig,
   SessionStatus,
   HealthLevel,
   MAX_CONCURRENT_SESSIONS,
   createLogger,
-  ClaudeSessionIdCapturedEvent,
+  SessionEvents,
+  TerminalEvents,
+  ZombieEvents,
+  type ExtendedSessionConfig,
+  type SessionStatusUpdate,
+  type ClaudeSessionIdCapturedEvent,
 } from '@omniscribe/shared';
 import { toast } from 'sonner';
 import { socket } from '@/lib/socket';
@@ -21,43 +25,24 @@ import {
 } from './utils';
 
 /**
- * Extended session config matching the backend
+ * Frontend session config with UI-specific fields
  */
-export interface ExtendedSessionConfig extends SessionConfig {
-  branch?: string;
-  worktreePath?: string;
-  projectPath: string;
-  status: SessionStatus;
-  statusMessage?: string;
-  needsInputPrompt?: boolean;
-  /** Terminal PTY session ID - set after session is launched */
-  terminalSessionId?: number;
+export interface FrontendSessionConfig extends ExtendedSessionConfig {
   /** Health level from periodic health checks */
   health?: HealthLevel;
-  /** Whether session was launched with skip-permissions mode */
-  skipPermissions?: boolean;
-  /** Claude Code session ID (from sessions-index.json) */
-  claudeSessionId?: string;
-  /** Whether this session was resumed from a previous Claude Code session */
-  isResumed?: boolean;
 }
 
 /**
- * Session status update payload
+ * @deprecated Use FrontendSessionConfig instead. This alias is provided for backward compatibility.
  */
-interface SessionStatusUpdate {
-  sessionId: string;
-  status: SessionStatus;
-  message?: string;
-  needsInputPrompt?: boolean;
-}
+export type { FrontendSessionConfig as ExtendedSessionConfig };
 
 /**
  * Session store state (extends common socket state)
  */
 interface SessionState extends SocketStoreState {
   /** All sessions */
-  sessions: ExtendedSessionConfig[];
+  sessions: FrontendSessionConfig[];
   /** Pending status updates for race condition handling */
   pendingStatusUpdates: Map<string, SessionStatusUpdate[]>;
   /** Set of terminal session IDs currently under backpressure */
@@ -69,11 +54,11 @@ interface SessionState extends SocketStoreState {
  */
 interface SessionActions extends SocketStoreActions {
   /** Add a new session */
-  addSession: (session: ExtendedSessionConfig) => void;
+  addSession: (session: FrontendSessionConfig) => void;
   /** Remove a session by ID */
   removeSession: (sessionId: string) => void;
   /** Update an existing session */
-  updateSession: (sessionId: string, updates: Partial<ExtendedSessionConfig>) => void;
+  updateSession: (sessionId: string, updates: Partial<FrontendSessionConfig>) => void;
   /** Update session status */
   updateStatus: (
     sessionId: string,
@@ -82,7 +67,7 @@ interface SessionActions extends SocketStoreActions {
     needsInputPrompt?: boolean
   ) => void;
   /** Set sessions list (bulk update) */
-  setSessions: (sessions: ExtendedSessionConfig[]) => void;
+  setSessions: (sessions: FrontendSessionConfig[]) => void;
   /** Initialize socket listeners */
   initListeners: () => void;
   /** Clean up socket listeners */
@@ -115,18 +100,18 @@ export const useSessionStore = create<SessionStore>()(
         {
           listeners: [
             {
-              event: 'session:created',
+              event: SessionEvents.CREATED,
               handler: (data, get) => {
-                const session = data as ExtendedSessionConfig;
-                logger.debug('session:created', session.id);
+                const session = data as FrontendSessionConfig;
+                logger.debug(SessionEvents.CREATED, session.id);
                 get().addSession(session);
               },
             },
             {
-              event: 'session:status',
+              event: SessionEvents.STATUS,
               handler: (data, get) => {
                 const update = data as SessionStatusUpdate;
-                logger.debug('session:status', update.sessionId, update.status);
+                logger.debug(SessionEvents.STATUS, update.sessionId, update.status);
                 get().updateStatus(
                   update.sessionId,
                   update.status,
@@ -136,35 +121,35 @@ export const useSessionStore = create<SessionStore>()(
               },
             },
             {
-              event: 'session:removed',
+              event: SessionEvents.REMOVED,
               handler: (data, get) => {
                 const payload = data as { sessionId: string };
-                logger.debug('session:removed', payload.sessionId);
+                logger.debug(SessionEvents.REMOVED, payload.sessionId);
                 get().removeSession(payload.sessionId);
               },
             },
             {
-              event: 'terminal:backpressure',
+              event: TerminalEvents.BACKPRESSURE,
               handler: (data, get) => {
                 const payload = data as { sessionId: number; paused: boolean };
-                logger.debug('terminal:backpressure', payload.sessionId, payload.paused);
+                logger.debug(TerminalEvents.BACKPRESSURE, payload.sessionId, payload.paused);
                 get().setBackpressure(payload.sessionId, payload.paused);
               },
             },
             {
-              event: 'session:health',
+              event: SessionEvents.HEALTH,
               handler: (data, get) => {
                 const payload = data as { sessionId: string; health: HealthLevel; reason?: string };
-                logger.debug('session:health', payload.sessionId, payload.health);
+                logger.debug(SessionEvents.HEALTH, payload.sessionId, payload.health);
                 get().updateSession(payload.sessionId, { health: payload.health });
               },
             },
             {
-              event: 'session:claude-id-captured',
+              event: SessionEvents.CLAUDE_ID_CAPTURED,
               handler: (data, get) => {
                 const payload = data as ClaudeSessionIdCapturedEvent;
                 logger.debug(
-                  'session:claude-id-captured',
+                  SessionEvents.CLAUDE_ID_CAPTURED,
                   payload.sessionId,
                   payload.claudeSessionId
                 );
@@ -174,10 +159,10 @@ export const useSessionStore = create<SessionStore>()(
               },
             },
             {
-              event: 'zombie:cleanup',
+              event: ZombieEvents.CLEANUP,
               handler: data => {
                 const payload = data as { sessionId: string; sessionName: string; reason: string };
-                logger.warn('zombie:cleanup', payload.sessionId, payload.reason);
+                logger.warn(ZombieEvents.CLEANUP, payload.sessionId, payload.reason);
                 const sessionName =
                   typeof payload.sessionName === 'string'
                     ? payload.sessionName
@@ -192,7 +177,7 @@ export const useSessionStore = create<SessionStore>()(
           onConnect: get => {
             // Request fresh session list on reconnect
             logger.info('Refreshing session list on reconnect');
-            socket.emit('session:list', {}, (sessions: ExtendedSessionConfig[]) => {
+            socket.emit(SessionEvents.LIST, {}, (sessions: FrontendSessionConfig[]) => {
               if (Array.isArray(sessions)) {
                 get().setSessions(sessions);
                 // Rejoin terminal rooms for all sessions with active terminals
@@ -200,7 +185,7 @@ export const useSessionStore = create<SessionStore>()(
                 for (const session of sessions) {
                   if (session.terminalSessionId !== undefined) {
                     logger.debug('Rejoining terminal room', session.terminalSessionId);
-                    socket.emit('terminal:join', { sessionId: session.terminalSessionId });
+                    socket.emit(TerminalEvents.JOIN, { sessionId: session.terminalSessionId });
                   }
                 }
               }

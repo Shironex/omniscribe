@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef } from 'react';
-import { createLogger } from '@omniscribe/shared';
+import { createLogger, TerminalEvents } from '@omniscribe/shared';
 import type { Terminal } from '@xterm/xterm';
 import type { FitAddon } from '@xterm/addon-fit';
 import { Loader2, XCircle } from 'lucide-react';
@@ -74,7 +74,7 @@ export const TerminalView: React.FC<TerminalViewProps> = React.memo(
     const isBackpressured = useSessionStore(state => state.backpressured.has(sessionId));
 
     const handleCancelOutput = useCallback(() => {
-      socket.emit('terminal:cancel', { sessionId });
+      socket.emit(TerminalEvents.CANCEL, { sessionId });
     }, [sessionId]);
 
     useTerminalInitialization(

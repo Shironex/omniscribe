@@ -3,11 +3,12 @@ import {
   AiMode,
   UpdateSessionOptions,
   createLogger,
+  SessionEvents,
   ResumeSessionPayload,
   ForkSessionPayload,
   ContinueLastSessionPayload,
 } from '@omniscribe/shared';
-import { ExtendedSessionConfig } from '@/stores/useSessionStore';
+import type { FrontendSessionConfig } from '@/stores/useSessionStore';
 import { emitAsync, emitWithErrorHandling, emitWithSuccessHandling } from './socketHelpers';
 
 const logger = createLogger('SessionAPI');
@@ -27,7 +28,7 @@ interface CreateSessionOptions {
  * Response type for session creation (includes limit response fields)
  */
 interface CreateSessionResponse {
-  session?: ExtendedSessionConfig;
+  session?: FrontendSessionConfig;
   error?: string;
   idleSessions?: string[];
 }
@@ -36,7 +37,7 @@ interface CreateSessionResponse {
  * Response type for session update
  */
 interface SessionResponse {
-  session?: ExtendedSessionConfig;
+  session?: FrontendSessionConfig;
   error?: string;
 }
 
@@ -50,14 +51,14 @@ export async function createSession(
   projectPath: string,
   branch?: string,
   options?: CreateSessionOptions
-): Promise<ExtendedSessionConfig> {
+): Promise<FrontendSessionConfig> {
   logger.info('Creating session', mode, projectPath, branch);
 
   // Use emitAsync directly to handle the limit response with idleSessions
   const response = await emitAsync<
     { mode: AiMode; projectPath: string; branch?: string } & CreateSessionOptions,
     CreateSessionResponse
-  >('session:create', {
+  >(SessionEvents.CREATE, {
     mode,
     projectPath,
     branch,
@@ -88,12 +89,12 @@ export async function createSession(
 export async function updateSession(
   sessionId: string,
   updates: UpdateSessionOptions
-): Promise<ExtendedSessionConfig> {
+): Promise<FrontendSessionConfig> {
   logger.debug('Updating session', sessionId);
   const response = await emitWithErrorHandling<
     { sessionId: string; updates: UpdateSessionOptions },
     SessionResponse
-  >('session:update', {
+  >(SessionEvents.UPDATE, {
     sessionId,
     updates,
   });
@@ -111,17 +112,25 @@ export async function updateSession(
  */
 export async function removeSession(sessionId: string): Promise<void> {
   logger.info('Removing session', sessionId);
-  return emitWithSuccessHandling('session:remove', { sessionId }, {}, 'Failed to remove session');
+  return emitWithSuccessHandling(
+    SessionEvents.REMOVE,
+    { sessionId },
+    {},
+    'Failed to remove session'
+  );
 }
 
 /**
  * List sessions
  */
-export async function listSessions(projectPath?: string): Promise<ExtendedSessionConfig[]> {
+export async function listSessions(projectPath?: string): Promise<FrontendSessionConfig[]> {
   logger.debug('Listing sessions', projectPath);
-  return emitWithErrorHandling<{ projectPath?: string }, ExtendedSessionConfig[]>('session:list', {
-    projectPath,
-  });
+  return emitWithErrorHandling<{ projectPath?: string }, FrontendSessionConfig[]>(
+    SessionEvents.LIST,
+    {
+      projectPath,
+    }
+  );
 }
 
 /**
@@ -132,14 +141,17 @@ export async function resumeSession(
   projectPath: string,
   branch?: string,
   name?: string
-): Promise<ExtendedSessionConfig> {
+): Promise<FrontendSessionConfig> {
   logger.info('Resuming Claude session', claudeSessionId, projectPath);
-  const response = await emitAsync<ResumeSessionPayload, CreateSessionResponse>('session:resume', {
-    claudeSessionId,
-    projectPath,
-    branch,
-    name,
-  });
+  const response = await emitAsync<ResumeSessionPayload, CreateSessionResponse>(
+    SessionEvents.RESUME,
+    {
+      claudeSessionId,
+      projectPath,
+      branch,
+      name,
+    }
+  );
 
   if (response.error) {
     logger.warn('Session resume rejected:', response.error);
@@ -160,9 +172,9 @@ export async function forkSession(
   projectPath: string,
   branch?: string,
   name?: string
-): Promise<ExtendedSessionConfig> {
+): Promise<FrontendSessionConfig> {
   logger.info('Forking Claude session', claudeSessionId, projectPath);
-  const response = await emitAsync<ForkSessionPayload, CreateSessionResponse>('session:fork', {
+  const response = await emitAsync<ForkSessionPayload, CreateSessionResponse>(SessionEvents.FORK, {
     claudeSessionId,
     projectPath,
     branch,
@@ -187,10 +199,10 @@ export async function continueLastSession(
   projectPath: string,
   branch?: string,
   name?: string
-): Promise<ExtendedSessionConfig> {
+): Promise<FrontendSessionConfig> {
   logger.info('Continuing last Claude session', projectPath);
   const response = await emitAsync<ContinueLastSessionPayload, CreateSessionResponse>(
-    'session:continue-last',
+    SessionEvents.CONTINUE_LAST,
     { projectPath, branch, name }
   );
 
@@ -210,7 +222,7 @@ export async function continueLastSession(
  * Should be called once when the app initializes
  */
 export function initSessionListeners(
-  onCreated: (session: ExtendedSessionConfig) => void,
+  onCreated: (session: FrontendSessionConfig) => void,
   onStatus: (update: {
     sessionId: string;
     status: string;
@@ -219,14 +231,14 @@ export function initSessionListeners(
   }) => void,
   onRemoved: (payload: { sessionId: string }) => void
 ): () => void {
-  socket.on('session:created', onCreated);
-  socket.on('session:status', onStatus);
-  socket.on('session:removed', onRemoved);
+  socket.on(SessionEvents.CREATED, onCreated);
+  socket.on(SessionEvents.STATUS, onStatus);
+  socket.on(SessionEvents.REMOVED, onRemoved);
 
   // Return cleanup function
   return () => {
-    socket.off('session:created', onCreated);
-    socket.off('session:status', onStatus);
-    socket.off('session:removed', onRemoved);
+    socket.off(SessionEvents.CREATED, onCreated);
+    socket.off(SessionEvents.STATUS, onStatus);
+    socket.off(SessionEvents.REMOVED, onRemoved);
   };
 }

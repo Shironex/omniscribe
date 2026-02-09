@@ -12,7 +12,7 @@ import { WsThrottlerGuard } from '../shared/ws-throttler.guard';
 import { Server, Socket } from 'socket.io';
 import { OnEvent } from '@nestjs/event-emitter';
 import * as crypto from 'crypto';
-import { SessionService, ExtendedSessionConfig, SessionStatusUpdate } from './session.service';
+import { SessionService, BackendSessionConfig } from './session.service';
 import { TerminalGateway } from '../terminal/terminal.gateway';
 import { WorktreeService } from '../git/worktree.service';
 import { GitService } from '../git/git.service';
@@ -23,6 +23,7 @@ import {
   SessionRemovePayload,
   SessionListPayload,
   SessionRemoveResponse,
+  SessionStatusUpdate,
   ClaudeSessionHistoryPayload,
   ClaudeSessionHistoryResponse,
   ClaudeSessionIdCapturedEvent,
@@ -36,8 +37,11 @@ import {
   SessionSettings,
   DEFAULT_SESSION_SETTINGS,
   MAX_CONCURRENT_SESSIONS,
+  SessionEvents,
+  ZombieEvents,
   createLogger,
 } from '@omniscribe/shared';
+import { InternalSessionEvents, InternalZombieEvents } from '../shared/events';
 import { ClaudeSessionReaderService } from './claude-session-reader.service';
 import { CORS_CONFIG } from '../shared/cors.config';
 
@@ -68,7 +72,7 @@ interface UpdateSessionPayload {
  * When limit is hit, includes names of idle sessions the user could close.
  */
 interface CreateSessionResponse {
-  session?: ExtendedSessionConfig;
+  session?: BackendSessionConfig;
   error?: string;
   idleSessions?: string[];
 }
@@ -77,7 +81,7 @@ interface CreateSessionResponse {
  * Response for session update - either the session or an error
  */
 interface UpdateSessionResponse {
-  session?: ExtendedSessionConfig;
+  session?: BackendSessionConfig;
   error?: string;
 }
 
@@ -110,7 +114,7 @@ export class SessionGateway implements OnGatewayInit {
    * Handle session creation request
    */
   @SkipThrottle()
-  @SubscribeMessage('session:create')
+  @SubscribeMessage(SessionEvents.CREATE)
   async handleCreate(
     @MessageBody() payload: CreateSessionPayload,
     @ConnectedSocket() client: Socket
@@ -226,7 +230,7 @@ export class SessionGateway implements OnGatewayInit {
    * Handle session update request
    */
   @SkipThrottle()
-  @SubscribeMessage('session:update')
+  @SubscribeMessage(SessionEvents.UPDATE)
   handleUpdate(
     @MessageBody() payload: UpdateSessionPayload,
     @ConnectedSocket() _client: Socket
@@ -265,7 +269,7 @@ export class SessionGateway implements OnGatewayInit {
     session.lastActiveAt = new Date();
 
     // Emit status update for the change
-    this.server.emit('session:status', {
+    this.server.emit(SessionEvents.STATUS, {
       sessionId: session.id,
       status: session.status,
       message: 'Session updated',
@@ -278,7 +282,7 @@ export class SessionGateway implements OnGatewayInit {
    * Handle session removal request
    */
   @SkipThrottle()
-  @SubscribeMessage('session:remove')
+  @SubscribeMessage(SessionEvents.REMOVE)
   async handleRemove(
     @MessageBody() payload: SessionRemovePayload,
     @ConnectedSocket() _client: Socket
@@ -296,11 +300,11 @@ export class SessionGateway implements OnGatewayInit {
    * Handle session list request
    */
   @SkipThrottle()
-  @SubscribeMessage('session:list')
+  @SubscribeMessage(SessionEvents.LIST)
   handleList(
     @MessageBody() payload: SessionListPayload,
     @ConnectedSocket() _client: Socket
-  ): ExtendedSessionConfig[] {
+  ): BackendSessionConfig[] {
     if (payload.projectPath) {
       return this.sessionService.getForProject(payload.projectPath);
     }
@@ -311,52 +315,52 @@ export class SessionGateway implements OnGatewayInit {
   /**
    * Broadcast session created event
    */
-  @OnEvent('session.created')
-  onSessionCreated(session: ExtendedSessionConfig): void {
-    this.server.emit('session:created', session);
+  @OnEvent(InternalSessionEvents.CREATED)
+  onSessionCreated(session: BackendSessionConfig): void {
+    this.server.emit(SessionEvents.CREATED, session);
   }
 
   /**
    * Broadcast session status event
    */
-  @OnEvent('session.status')
+  @OnEvent(InternalSessionEvents.STATUS)
   onSessionStatus(update: SessionStatusUpdate): void {
-    this.server.emit('session:status', update);
+    this.server.emit(SessionEvents.STATUS, update);
   }
 
   /**
    * Broadcast session removed event
    */
-  @OnEvent('session.removed')
+  @OnEvent(InternalSessionEvents.REMOVED)
   onSessionRemoved(payload: { sessionId: string }): void {
-    this.server.emit('session:removed', payload);
+    this.server.emit(SessionEvents.REMOVED, payload);
   }
 
   /**
    * Broadcast session health event (from HealthService)
    */
-  @OnEvent('session.health')
+  @OnEvent(InternalSessionEvents.HEALTH)
   onSessionHealth(payload: { sessionId: string; health: string; reason?: string }): void {
-    this.server.emit('session:health', payload);
+    this.server.emit(SessionEvents.HEALTH, payload);
   }
 
   /**
    * Broadcast zombie cleanup event (from HealthService)
    */
-  @OnEvent('zombie.cleanup')
+  @OnEvent(InternalZombieEvents.CLEANUP)
   onZombieCleanup(payload: { sessionId: string; sessionName: string; reason: string }): void {
-    this.server.emit('zombie:cleanup', payload);
+    this.server.emit(ZombieEvents.CLEANUP, payload);
   }
 
   /**
    * Handle session end hook events from HookManagerService.
    * Broadcasts to frontend so it can update UI immediately.
    */
-  @OnEvent('session.hook.end')
+  @OnEvent(InternalSessionEvents.HOOK_END)
   onSessionHookEnd(payload: { session_id?: string; [key: string]: unknown }): void {
     if (payload.session_id) {
       const hookEndedPayload: SessionHookEndedPayload = { claudeSessionId: payload.session_id };
-      this.server.emit('session:hook-ended', hookEndedPayload);
+      this.server.emit(SessionEvents.HOOK_ENDED, hookEndedPayload);
       this.logger.debug(`Session hook end broadcast for ${payload.session_id}`);
     }
   }
@@ -365,9 +369,9 @@ export class SessionGateway implements OnGatewayInit {
    * Broadcast Claude session ID captured event.
    * Fired by SessionService.pollForClaudeSessionId when a new Claude session is detected.
    */
-  @OnEvent('session.claude-id-captured')
+  @OnEvent(InternalSessionEvents.CLAUDE_ID_CAPTURED)
   onClaudeSessionIdCaptured(payload: ClaudeSessionIdCapturedEvent): void {
-    this.server.emit('session:claude-id-captured', payload);
+    this.server.emit(SessionEvents.CLAUDE_ID_CAPTURED, payload);
     this.logger.log(
       `Claude session ID captured: ${payload.claudeSessionId} for session ${payload.sessionId}`
     );
@@ -378,7 +382,7 @@ export class SessionGateway implements OnGatewayInit {
    * Reads the sessions-index.json from Claude Code's data directory.
    */
   @SkipThrottle()
-  @SubscribeMessage('session:history')
+  @SubscribeMessage(SessionEvents.HISTORY)
   async handleGetHistory(
     @MessageBody() payload: ClaudeSessionHistoryPayload,
     @ConnectedSocket() _client: Socket
@@ -399,7 +403,7 @@ export class SessionGateway implements OnGatewayInit {
    * the CLI to be spawned with --resume <sessionId>.
    */
   @SkipThrottle()
-  @SubscribeMessage('session:resume')
+  @SubscribeMessage(SessionEvents.RESUME)
   async handleResume(
     @MessageBody() payload: ResumeSessionPayload,
     @ConnectedSocket() client: Socket
@@ -420,7 +424,7 @@ export class SessionGateway implements OnGatewayInit {
    * Creates a conversation branch from an existing session's history using --resume + --fork-session.
    */
   @SkipThrottle()
-  @SubscribeMessage('session:fork')
+  @SubscribeMessage(SessionEvents.FORK)
   async handleFork(
     @MessageBody() payload: ForkSessionPayload,
     @ConnectedSocket() client: Socket
@@ -441,7 +445,7 @@ export class SessionGateway implements OnGatewayInit {
    * Uses `claude --continue` which resumes the latest session in the project directory.
    */
   @SkipThrottle()
-  @SubscribeMessage('session:continue-last')
+  @SubscribeMessage(SessionEvents.CONTINUE_LAST)
   async handleContinueLast(
     @MessageBody() payload: ContinueLastSessionPayload,
     @ConnectedSocket() client: Socket
@@ -553,7 +557,7 @@ export class SessionGateway implements OnGatewayInit {
    * Returns saved active sessions snapshot and the autoResume preference.
    */
   @SkipThrottle()
-  @SubscribeMessage('session:get-restore-snapshot')
+  @SubscribeMessage(SessionEvents.GET_RESTORE_SNAPSHOT)
   handleGetRestoreSnapshot(): RestoreSnapshotResponse {
     const preferences = this.workspaceService.getPreferences();
     const sessionSettings: SessionSettings = preferences.session ?? DEFAULT_SESSION_SETTINGS;

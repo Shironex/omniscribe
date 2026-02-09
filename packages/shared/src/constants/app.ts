@@ -5,6 +5,9 @@
  * Use these instead of hardcoding values throughout the codebase.
  */
 
+import type { UserPreferences } from '../types/project-tab';
+import { DEFAULT_WORKTREE_SETTINGS, DEFAULT_SESSION_SETTINGS } from '../types/settings';
+
 // =============================================================================
 // App Identity
 // =============================================================================
@@ -108,3 +111,31 @@ export const LOG_CLEANUP_INTERVAL_MS = 60 * 60 * 1000;
 
 /** Maximum concurrent running sessions (matches terminal grid capacity) */
 export const MAX_CONCURRENT_SESSIONS = 12;
+
+// =============================================================================
+// MCP Status States
+// =============================================================================
+
+/** Valid session status states for MCP status reporting */
+export const SESSION_STATUS_STATES = [
+  'idle',
+  'working',
+  'planning',
+  'needs_input',
+  'finished',
+  'error',
+] as const;
+
+/** Valid task statuses for MCP task reporting */
+export const TASK_STATUSES = ['pending', 'in_progress', 'completed'] as const;
+
+// =============================================================================
+// Default Preferences
+// =============================================================================
+
+/** Default user preferences */
+export const DEFAULT_PREFERENCES: UserPreferences = {
+  theme: 'dark',
+  worktree: DEFAULT_WORKTREE_SETTINGS,
+  session: DEFAULT_SESSION_SETTINGS,
+};

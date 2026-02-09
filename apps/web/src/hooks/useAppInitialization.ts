@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { createLogger, type RestoreSnapshotResponse } from '@omniscribe/shared';
+import { createLogger, SessionEvents, type RestoreSnapshotResponse } from '@omniscribe/shared';
 import { useSessionStore } from '@/stores/useSessionStore';
 import { useWorkspaceStore } from '@/stores/useWorkspaceStore';
 import { useGitStore } from '@/stores/useGitStore';
@@ -38,7 +38,7 @@ async function autoResumeOnRestart(): Promise<void> {
   try {
     const response = await new Promise<RestoreSnapshotResponse>((resolve, reject) => {
       const timeout = setTimeout(() => reject(new Error('Timeout')), 5000);
-      socket.emit('session:get-restore-snapshot', {}, (res: RestoreSnapshotResponse) => {
+      socket.emit(SessionEvents.GET_RESTORE_SNAPSHOT, {}, (res: RestoreSnapshotResponse) => {
         clearTimeout(timeout);
         resolve(res);
       });

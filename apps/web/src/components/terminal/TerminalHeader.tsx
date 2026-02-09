@@ -10,7 +10,10 @@ import { TaskListPopover } from './TaskListPopover';
 import type { TerminalDragHandleProps } from './SortableTerminalWrapper';
 import type { QuickActionItem } from './TerminalCard';
 import type { SessionStatus } from '@/components/shared/StatusLegend';
-export type AIMode = 'claude' | 'plain';
+import type { AiMode } from '@omniscribe/shared';
+
+/** @deprecated Use AiMode from @omniscribe/shared. Kept for backward compatibility. */
+export type AIMode = AiMode;
 
 export interface GitBranchInfo {
   name: string;

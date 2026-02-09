@@ -7,8 +7,10 @@ import { BranchAutocomplete } from '@/components/shared/BranchAutocomplete';
 import { ClaudeIcon } from '@/components/shared/ClaudeIcon';
 import { getPrelaunchShortcutForIndex } from '@/lib/prelaunch-shortcuts';
 import { Button } from '@/components/ui/button';
+import type { AiMode } from '@omniscribe/shared';
 
-export type AIMode = 'claude' | 'plain';
+/** @deprecated Use AiMode from @omniscribe/shared. Kept for backward compatibility. */
+export type AIMode = AiMode;
 
 export interface PreLaunchSlot {
   id: string;

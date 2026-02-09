@@ -1,6 +1,13 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
-import { McpServerConfig, McpServerState, McpServerStatus, createLogger } from '@omniscribe/shared';
+import {
+  McpServerConfig,
+  McpServerState,
+  McpServerStatus,
+  createLogger,
+  McpEvents,
+  type McpInternalStatusResponse,
+} from '@omniscribe/shared';
 import { socket } from '@/lib/socket';
 
 const logger = createLogger('McpStore');
@@ -37,14 +44,6 @@ interface McpServerStateUpdate {
 }
 
 /**
- * Internal MCP server info
- */
-interface InternalMcpInfo {
-  available: boolean;
-  path: string | null;
-}
-
-/**
  * MCP store state (extends common socket state)
  */
 interface McpState extends SocketStoreState {
@@ -55,7 +54,7 @@ interface McpState extends SocketStoreState {
   /** Whether server discovery is in progress */
   isDiscovering: boolean;
   /** Internal MCP server info */
-  internalMcp: InternalMcpInfo;
+  internalMcp: McpInternalStatusResponse;
 }
 
 /**
@@ -149,7 +148,7 @@ export const useMcpStore = create<McpStore>()(
           logger.info('Discovering servers', projectPath);
           set({ isDiscovering: true, error: null }, undefined, 'mcp/discoverServersStart');
           socket.emit(
-            'mcp:discover',
+            McpEvents.DISCOVER,
             { projectPath },
             (response: { servers: McpServerConfig[]; error?: string }) => {
               if (response.error) {
@@ -229,7 +228,7 @@ export const useMcpStore = create<McpStore>()(
         },
 
         fetchInternalMcpStatus: () => {
-          socket.emit('mcp:get-internal-status', {}, (response: InternalMcpInfo) => {
+          socket.emit(McpEvents.GET_INTERNAL_STATUS, {}, (response: McpInternalStatusResponse) => {
             set({ internalMcp: response }, undefined, 'mcp/fetchInternalMcpStatus');
           });
         },

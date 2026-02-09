@@ -6,7 +6,7 @@ import {
   useSessionStore,
   selectRunningSessionCount,
   selectIsAtSessionLimit,
-  ExtendedSessionConfig,
+  type FrontendSessionConfig,
 } from '@/stores';
 import { useWorkspaceStore, selectActiveTab } from '@/stores';
 import { StatusDot, SessionStatus as UISessionStatus } from '@/components/shared/StatusLegend';
@@ -16,7 +16,7 @@ import { mapSessionStatus, MAX_CONCURRENT_SESSIONS } from '@omniscribe/shared';
  * Get the display status for a session, incorporating health level overrides.
  * Health overrides take priority: failed -> error (red), degraded -> needsInput (yellow).
  */
-function getSessionDisplayStatus(session: ExtendedSessionConfig): UISessionStatus {
+function getSessionDisplayStatus(session: FrontendSessionConfig): UISessionStatus {
   if (session.health === 'failed') return 'error';
   if (session.health === 'degraded') return 'needsInput';
   return mapSessionStatus(session.status);
@@ -25,7 +25,7 @@ function getSessionDisplayStatus(session: ExtendedSessionConfig): UISessionStatu
 /**
  * Get a tooltip describing the session's health state.
  */
-function getHealthTooltip(session: ExtendedSessionConfig): string {
+function getHealthTooltip(session: FrontendSessionConfig): string {
   if (session.health === 'failed') return 'Failed: terminal process lost';
   if (session.health === 'degraded') return 'Degraded: no output for 5+ minutes';
   return 'Healthy';

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
-import { createLogger } from '@omniscribe/shared';
+import { createLogger, DEFAULT_PREFERENCES, WorkspaceEvents } from '@omniscribe/shared';
 import { socket } from '@/lib/socket';
 
 const logger = createLogger('WorkspaceStore');
@@ -16,7 +16,6 @@ import type {
   PreferencesResponse,
   WorkspaceStateResponse,
 } from '@omniscribe/shared';
-import { DEFAULT_WORKTREE_SETTINGS, DEFAULT_SESSION_SETTINGS } from '@omniscribe/shared';
 import { useSettingsStore } from './useSettingsStore';
 import {
   SocketStoreState,
@@ -111,15 +110,6 @@ function convertBackendTab(dto: ProjectTabDTO): ProjectTab {
 }
 
 /**
- * Default preferences
- */
-const DEFAULT_PREFERENCES: UserPreferences = {
-  theme: 'dark',
-  worktree: DEFAULT_WORKTREE_SETTINGS,
-  session: DEFAULT_SESSION_SETTINGS,
-};
-
-/**
  * Workspace store using Zustand with WebSocket-based persistence
  */
 export const useWorkspaceStore = create<WorkspaceStore>()(
@@ -133,7 +123,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
         createSocketListeners<WorkspaceStore>(get, set, 'workspace', {
           listeners: [
             {
-              event: 'workspace:tabs-updated',
+              event: WorkspaceEvents.TABS_UPDATED,
               handler: (data, get) => {
                 const update = data as TabsUpdatedEvent;
                 const tabs = update.tabs.map(convertBackendTab);
@@ -141,7 +131,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
               },
             },
             {
-              event: 'workspace:preferences-updated',
+              event: WorkspaceEvents.PREFERENCES_UPDATED,
               handler: (data, get) => {
                 const update = data as PreferencesUpdatedEvent;
                 get().setPreferences(update.preferences);
@@ -190,7 +180,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
           if (existingTab) {
             // Focus existing tab via backend
             socket.emit(
-              'workspace:select-tab',
+              WorkspaceEvents.SELECT_TAB,
               { tabId: existingTab.id },
               (response: TabsResponse) => {
                 if (response.success) {
@@ -215,7 +205,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
           const currentTheme = useSettingsStore.getState().theme;
 
           socket.emit(
-            'workspace:add-tab',
+            WorkspaceEvents.ADD_TAB,
             { id: tabId, projectPath, name: tabName, theme: currentTheme },
             (response: TabsResponse) => {
               if (response.success) {
@@ -234,7 +224,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
 
         closeTab: (tabId: string) => {
           logger.debug('closeTab', tabId);
-          socket.emit('workspace:remove-tab', { tabId }, (response: TabsResponse) => {
+          socket.emit(WorkspaceEvents.REMOVE_TAB, { tabId }, (response: TabsResponse) => {
             if (response.success) {
               set(
                 {
@@ -255,7 +245,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
           // This ensures activeTab computed value is accurate before socket response
           set({ activeTabId: tabId }, undefined, 'workspace/selectTabOptimistic');
 
-          socket.emit('workspace:select-tab', { tabId }, (response: TabsResponse) => {
+          socket.emit(WorkspaceEvents.SELECT_TAB, { tabId }, (response: TabsResponse) => {
             if (response.success) {
               set(
                 {
@@ -275,7 +265,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
 
         updateTabTheme: (tabId: string, theme: Theme) => {
           socket.emit(
-            'workspace:update-tab-theme',
+            WorkspaceEvents.UPDATE_TAB_THEME,
             { tabId, theme },
             (response: TabsOnlyResponse) => {
               if (response.success) {
@@ -348,7 +338,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
 
           set({ isLoading: true }, undefined, 'workspace/restoreStateStart');
 
-          socket.emit('workspace:get-state', {}, (response: WorkspaceStateResponse) => {
+          socket.emit(WorkspaceEvents.GET_STATE, {}, (response: WorkspaceStateResponse) => {
             if (response) {
               const tabs = (response.tabs ?? []).map(convertBackendTab);
               // Clear session IDs on restore - they'll be re-associated
@@ -384,7 +374,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
 
         updatePreference: (key: string, value: unknown) => {
           socket.emit(
-            'workspace:update-preference',
+            WorkspaceEvents.UPDATE_PREFERENCE,
             { key, value },
             (response: PreferencesResponse) => {
               if (response.success) {

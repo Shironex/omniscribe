@@ -12,6 +12,7 @@ import {
   SessionTasksUpdate,
   createLogger,
 } from '@omniscribe/shared';
+import { InternalSessionEvents } from '../shared/events';
 import { McpSessionRegistryService } from './services/mcp-session-registry.service';
 
 /**
@@ -247,7 +248,7 @@ export class McpStatusServerService implements OnModuleInit, OnModuleDestroy {
 
     this.logger.debug(`EMITTING: session=${payload.sessionId} status=${payload.state}`);
 
-    this.eventEmitter.emit('session.status', event);
+    this.eventEmitter.emit(InternalSessionEvents.STATUS, event);
 
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ accepted: true }));
@@ -284,7 +285,7 @@ export class McpStatusServerService implements OnModuleInit, OnModuleDestroy {
       tasks: payload.tasks ?? [],
     };
 
-    this.eventEmitter.emit('session.tasks', event);
+    this.eventEmitter.emit(InternalSessionEvents.TASKS, event);
 
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ accepted: true }));

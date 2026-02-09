@@ -173,3 +173,40 @@ export interface SessionHistoryEntry {
   exitCode?: number;
   summary?: string;
 }
+
+/**
+ * Extended session config with runtime state.
+ * Base shared type used by both backend and frontend.
+ * Each app may extend this with app-specific fields.
+ */
+export interface ExtendedSessionConfig extends SessionConfig {
+  /** Git branch assigned to this session */
+  branch?: string;
+  /** Git worktree path if using worktrees */
+  worktreePath?: string;
+  /** Project path for grouping sessions */
+  projectPath: string;
+  /** Current status of the session */
+  status: SessionStatus;
+  /** Status message for display */
+  statusMessage?: string;
+  /** Whether the session needs user input */
+  needsInputPrompt?: boolean;
+  /** Whether session was launched with skip-permissions mode */
+  skipPermissions?: boolean;
+  /** Terminal session ID if launched */
+  terminalSessionId?: number;
+  /** Claude Code session UUID captured after launch */
+  claudeSessionId?: string;
+  /** Whether this session was resumed from a previous Claude session */
+  isResumed?: boolean;
+}
+
+/**
+ * Result of launching a session
+ */
+export interface LaunchSessionResult {
+  success: boolean;
+  terminalSessionId?: number;
+  error?: string;
+}

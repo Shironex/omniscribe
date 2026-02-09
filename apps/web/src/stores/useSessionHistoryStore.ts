@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
+import { SessionEvents } from '@omniscribe/shared';
 import type { ClaudeSessionEntry, ClaudeSessionHistoryResponse } from '@omniscribe/shared';
 import { socket } from '@/lib/socket';
 import {
@@ -95,7 +96,7 @@ export const useSessionHistoryStore = create<SessionHistoryStore>()(
           }, 15_000);
 
           socket.emit(
-            'session:history',
+            SessionEvents.HISTORY,
             { projectPath },
             (response: ClaudeSessionHistoryResponse) => {
               clearTimeout(timeout);
