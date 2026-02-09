@@ -75,7 +75,7 @@ export function SettingsModal() {
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-xs"
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
         onClick={closeSettings}
         data-testid="settings-modal-backdrop"
       />
@@ -87,7 +87,7 @@ export function SettingsModal() {
           'bg-background rounded-2xl shadow-2xl',
           'border border-border',
           'flex flex-col overflow-hidden',
-          'animate-fade-in'
+          'animate-in'
         )}
         role="dialog"
         aria-modal="true"

@@ -110,7 +110,7 @@ export function QuickActionsSection({ className, onActionExecute }: QuickActions
               'w-full flex items-center gap-2 px-2 py-1.5 rounded',
               'text-left transition-colors',
               'hover:bg-muted',
-              'focus:outline-hidden focus:ring-1 focus:ring-primary',
+              'focus:outline-none focus:ring-1 focus:ring-primary',
               'group'
             )}
             title={action.description ?? action.title}
@@ -118,7 +118,7 @@ export function QuickActionsSection({ className, onActionExecute }: QuickActions
             <Icon
               size={14}
               className={clsx(
-                'shrink-0 transition-colors',
+                'flex-shrink-0 transition-colors',
                 'text-muted-foreground',
                 'group-hover:' + categoryColor.replace('text-', '')
               )}
@@ -132,7 +132,7 @@ export function QuickActionsSection({ className, onActionExecute }: QuickActions
               </div>
             </div>
             {action.shortcut && (
-              <span className="text-xs text-muted-foreground font-mono shrink-0 opacity-60 group-hover:opacity-100 transition-opacity">
+              <span className="text-xs text-muted-foreground font-mono flex-shrink-0 opacity-60 group-hover:opacity-100 transition-opacity">
                 {action.shortcut}
               </span>
             )}
