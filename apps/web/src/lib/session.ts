@@ -1,4 +1,3 @@
-import { socket } from './socket';
 import {
   AiMode,
   UpdateSessionOptions,
@@ -215,30 +214,4 @@ export async function continueLastSession(
     throw new Error('No session returned from server');
   }
   return response.session;
-}
-
-/**
- * Initialize session socket listeners
- * Should be called once when the app initializes
- */
-export function initSessionListeners(
-  onCreated: (session: FrontendSessionConfig) => void,
-  onStatus: (update: {
-    sessionId: string;
-    status: string;
-    message?: string;
-    needsInputPrompt?: boolean;
-  }) => void,
-  onRemoved: (payload: { sessionId: string }) => void
-): () => void {
-  socket.on(SessionEvents.CREATED, onCreated);
-  socket.on(SessionEvents.STATUS, onStatus);
-  socket.on(SessionEvents.REMOVED, onRemoved);
-
-  // Return cleanup function
-  return () => {
-    socket.off(SessionEvents.CREATED, onCreated);
-    socket.off(SessionEvents.STATUS, onStatus);
-    socket.off(SessionEvents.REMOVED, onRemoved);
-  };
 }

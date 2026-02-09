@@ -1,4 +1,4 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import Store from 'electron-store';
 import {
   QuickAction,
@@ -8,6 +8,7 @@ import {
   SessionHistoryEntry,
   ActiveSessionSnapshot,
   DEFAULT_PREFERENCES,
+  createLogger,
 } from '@omniscribe/shared';
 
 // Re-export WorkspaceStateResponse as WorkspaceState for backward compatibility
@@ -175,7 +176,7 @@ const DEFAULT_QUICK_ACTIONS: QuickAction[] = [
  */
 @Injectable()
 export class WorkspaceService implements OnModuleInit {
-  private readonly logger = new Logger(WorkspaceService.name);
+  private readonly logger = createLogger('WorkspaceService');
   private store: Store<StoreSchema>;
 
   constructor() {
