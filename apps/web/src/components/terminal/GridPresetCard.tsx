@@ -24,11 +24,11 @@ export function GridPresetCard({ count, selected, disabled, onClick }: GridPrese
         'transition-all duration-200',
         selected
           ? 'border-primary shadow-[0_0_8px_var(--primary)] bg-primary/5'
-          : 'border-border bg-card/30 hover:bg-card/50 hover:border-primary/50'
+          : 'bg-card/30 hover:bg-card/50'
       )}
     >
       {/* Mini grid preview */}
-      <div className="flex flex-col gap-1 w-full aspect-4/3">
+      <div className="flex flex-col gap-1 w-full aspect-[4/3]">
         {layout.rows.map((row, rowIndex) => (
           <div key={rowIndex} className="flex gap-1 flex-1">
             {row.map(cellIndex => (

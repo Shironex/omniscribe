@@ -34,7 +34,7 @@ export function IntegrationsSection() {
         <div
           className={clsx(
             'w-10 h-10 rounded-xl flex items-center justify-center',
-            'bg-linear-to-br from-orange-500/20 to-orange-600/10',
+            'bg-gradient-to-br from-orange-500/20 to-orange-600/10',
             'ring-1 ring-orange-500/20'
           )}
         >

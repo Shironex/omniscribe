@@ -47,7 +47,7 @@ export function AppearanceSection() {
         <div
           className={clsx(
             'w-10 h-10 rounded-xl flex items-center justify-center',
-            'bg-linear-to-br from-primary/20 to-brand-600/10',
+            'bg-gradient-to-br from-primary/20 to-brand-600/10',
             'ring-1'
           )}
           style={
@@ -75,7 +75,7 @@ export function AppearanceSection() {
             className={clsx(
               'flex-1 rounded-md px-4 py-2 text-sm font-medium transition-all duration-200',
               activeTab === 'dark'
-                ? 'bg-card shadow-xs text-foreground'
+                ? 'bg-card shadow-sm text-foreground'
                 : 'text-muted-foreground hover:text-foreground'
             )}
           >
@@ -86,7 +86,7 @@ export function AppearanceSection() {
             className={clsx(
               'flex-1 rounded-md px-4 py-2 text-sm font-medium transition-all duration-200',
               activeTab === 'light'
-                ? 'bg-card shadow-xs text-foreground'
+                ? 'bg-card shadow-sm text-foreground'
                 : 'text-muted-foreground hover:text-foreground'
             )}
           >

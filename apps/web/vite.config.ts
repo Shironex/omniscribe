@@ -1,6 +1,5 @@
 import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
-import tailwindcss from '@tailwindcss/vite';
 import { resolve } from 'path';
 import { DARK_THEMES } from '../../packages/shared/src/types/settings';
 
@@ -18,7 +17,7 @@ function themeInjectionPlugin(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [tailwindcss(), react(), themeInjectionPlugin()],
+  plugins: [react(), themeInjectionPlugin()],
   base: './', // Use relative paths for Electron compatibility
   resolve: {
     alias: {

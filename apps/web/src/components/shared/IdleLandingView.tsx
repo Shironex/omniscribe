@@ -58,7 +58,7 @@ export function IdleLandingView({
           <div
             className={clsx(
               'w-24 h-24 rounded-full',
-              'bg-linear-to-br from-primary/20 to-brand-600/20',
+              'bg-gradient-to-br from-primary/20 to-brand-600/20',
               'flex items-center justify-center'
             )}
           >

@@ -41,7 +41,7 @@ export function UsageCard({
     <div
       className={clsx(
         'rounded-xl border bg-card/50 p-4 transition-opacity',
-        isPrimary ? 'border-border shadow-xs' : 'border-border/60',
+        isPrimary ? 'border-border shadow-sm' : 'border-border/60',
         (stale || !isValidPercentage) && 'opacity-50'
       )}
     >
