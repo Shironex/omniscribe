@@ -133,7 +133,7 @@ export function BranchSelector({
                   'w-full pl-8 pr-3 py-1.5 rounded',
                   'bg-card border border-border',
                   'text-sm text-foreground placeholder:text-muted-foreground',
-                  'focus:outline-none focus:border-primary'
+                  'focus:outline-hidden focus:border-primary'
                 )}
               />
             </div>

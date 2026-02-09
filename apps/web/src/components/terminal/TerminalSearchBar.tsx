@@ -66,7 +66,7 @@ export const TerminalSearchBar: React.FC<TerminalSearchBarProps> = ({
         value={query}
         onChange={e => setQuery(e.target.value)}
         placeholder="Find..."
-        className="bg-transparent text-foreground text-sm w-40 outline-none placeholder:text-muted-foreground"
+        className="bg-transparent text-foreground text-sm w-40 outline-hidden placeholder:text-muted-foreground"
       />
 
       <button
