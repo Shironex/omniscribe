@@ -30,6 +30,7 @@ import {
   McpEvents,
   SessionEvents,
   createLogger,
+  extractErrorMessage,
 } from '@omniscribe/shared';
 import { InternalSessionEvents } from '../shared/events';
 import { McpStatusServerService, SessionStatusEvent } from './mcp-status-server.service';
@@ -102,7 +103,7 @@ export class McpGateway implements OnGatewayInit {
       this.logger.error('Error discovering servers:', error);
       return {
         servers: [],
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: extractErrorMessage(error, 'Unknown error'),
       };
     }
   }
@@ -135,7 +136,7 @@ export class McpGateway implements OnGatewayInit {
       this.logger.error('Error setting enabled servers:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: extractErrorMessage(error, 'Unknown error'),
       };
     }
   }
@@ -166,7 +167,7 @@ export class McpGateway implements OnGatewayInit {
       this.logger.error('Error writing config:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: extractErrorMessage(error, 'Unknown error'),
       };
     }
   }
@@ -221,7 +222,7 @@ export class McpGateway implements OnGatewayInit {
       return { success };
     } catch (error) {
       this.logger.error('Error removing config:', error);
-      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      return { success: false, error: extractErrorMessage(error, 'Unknown error') };
     }
   }
 

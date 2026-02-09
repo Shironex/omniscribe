@@ -9,6 +9,7 @@ import {
   ActiveSessionSnapshot,
   DEFAULT_PREFERENCES,
   createLogger,
+  normalizePath,
 } from '@omniscribe/shared';
 
 // Re-export WorkspaceStateResponse as WorkspaceState for backward compatibility
@@ -283,7 +284,7 @@ export class WorkspaceService implements OnModuleInit {
     const tabs = this.getTabs();
     // Check if project is already open
     const existingIndex = tabs.findIndex(
-      t => t.projectPath.replace(/\\/g, '/') === tab.projectPath.replace(/\\/g, '/')
+      t => normalizePath(t.projectPath) === normalizePath(tab.projectPath)
     );
 
     if (existingIndex !== -1) {
@@ -475,8 +476,8 @@ export class WorkspaceService implements OnModuleInit {
     const history = this.store.get('sessionHistory', []);
 
     if (projectPath) {
-      const normalizedPath = projectPath.replace(/\\/g, '/');
-      return history.filter(h => h.projectPath.replace(/\\/g, '/') === normalizedPath);
+      const normalizedPath = normalizePath(projectPath);
+      return history.filter(h => normalizePath(h.projectPath) === normalizedPath);
     }
 
     return history;

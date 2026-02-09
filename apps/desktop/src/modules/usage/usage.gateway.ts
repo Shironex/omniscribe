@@ -10,7 +10,7 @@ import { SkipThrottle } from '@nestjs/throttler';
 import { Server, Socket } from 'socket.io';
 import { WsThrottlerGuard } from '../shared/ws-throttler.guard';
 import { UsageService } from './usage.service';
-import { UsageEvents, createLogger } from '@omniscribe/shared';
+import { UsageEvents, createLogger, extractErrorMessage } from '@omniscribe/shared';
 import type { UsageFetchPayload, UsageFetchResponse, ClaudeCliStatus } from '@omniscribe/shared';
 import { CORS_CONFIG } from '../shared/cors.config';
 
@@ -77,7 +77,7 @@ export class UsageGateway {
       const status = await this.usageService.getStatus(payload?.refresh);
       return { status };
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = extractErrorMessage(error);
       const platform = process.platform;
       const arch = process.arch;
       return {

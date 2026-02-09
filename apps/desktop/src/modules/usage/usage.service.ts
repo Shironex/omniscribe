@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import * as pty from 'node-pty';
 import * as os from 'os';
-import { createLogger } from '@omniscribe/shared';
+import { createLogger, extractErrorMessage } from '@omniscribe/shared';
 import type { ClaudeUsage, UsageError, ClaudeCliStatus } from '@omniscribe/shared';
 import { getClaudeCliStatus } from '../../main/utils/claude-detection';
 
@@ -66,7 +66,7 @@ export class UsageService {
       const usage = this.parseUsageOutput(output);
       return { usage };
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = extractErrorMessage(error);
       this.logger.error(`Failed to fetch usage: ${message}`);
 
       // Determine error type
@@ -126,7 +126,7 @@ export class UsageService {
       try {
         ptyProcess = pty.spawn(shell, args, ptyOptions);
       } catch (spawnError) {
-        const errorMessage = spawnError instanceof Error ? spawnError.message : String(spawnError);
+        const errorMessage = extractErrorMessage(spawnError);
         this.logger.error(`Failed to spawn PTY: ${errorMessage}`);
         reject(new Error(`Unable to access terminal: ${errorMessage}`));
         return;

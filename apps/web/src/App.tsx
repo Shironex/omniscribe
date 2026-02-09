@@ -23,6 +23,7 @@ import {
 import { useUpdateToast } from '@/hooks/useUpdateToast';
 import { useTerminalStore, useWorkspaceStore, useSettingsStore } from '@/stores';
 import { resumeSession } from '@/lib/session';
+import { extractErrorMessage } from '@omniscribe/shared';
 import { toast } from 'sonner';
 
 function App() {
@@ -181,7 +182,7 @@ function App() {
         }
         toast.success('Session resumed');
       } catch (error) {
-        const msg = error instanceof Error ? error.message : 'Failed to resume';
+        const msg = extractErrorMessage(error, 'Failed to resume');
         toast.error(msg);
       }
     },

@@ -10,6 +10,7 @@ import {
   WORKTREES_DIR,
   APP_NAME_LOWER,
   createLogger,
+  normalizePath,
 } from '@omniscribe/shared';
 import { GitBaseService } from './git-base.service';
 
@@ -313,12 +314,12 @@ export class WorktreeService {
    */
   async cleanupAll(projectPath: string): Promise<void> {
     const worktrees = await this.list(projectPath);
-    const projectWorktreeDir = path.join(projectPath, PROJECT_WORKTREE_DIR).replace(/\\/g, '/');
+    const projectWorktreeDir = normalizePath(path.join(projectPath, PROJECT_WORKTREE_DIR));
 
     for (const worktree of worktrees) {
       // Normalize path separators for cross-platform comparison
-      const normalizedPath = worktree.path.replace(/\\/g, '/');
-      const normalizedCentralDir = CENTRAL_DIR.replace(/\\/g, '/');
+      const normalizedPath = normalizePath(worktree.path);
+      const normalizedCentralDir = normalizePath(CENTRAL_DIR);
 
       // Only clean up worktrees managed by Omniscribe (in .worktrees/ or central dir)
       const isProjectWorktree = normalizedPath.startsWith(projectWorktreeDir);

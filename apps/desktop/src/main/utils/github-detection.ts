@@ -1,7 +1,7 @@
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import type { GhCliStatus, GhCliAuthStatus } from '@omniscribe/shared';
-import { createLogger } from '@omniscribe/shared';
+import { createLogger, extractErrorMessage } from '@omniscribe/shared';
 import { joinPaths, getHomeDir, isWindows, isMac, isLinux } from './path';
 import { findCliInPath, findCliInLocalPaths, type CliDetectionResult } from './cli-detection';
 
@@ -101,7 +101,7 @@ export async function checkGhAuth(cliPath: string): Promise<GhCliAuthStatus> {
 
     return { authenticated: false };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorMessage = extractErrorMessage(error);
 
     if (
       errorMessage.includes('not logged in') ||

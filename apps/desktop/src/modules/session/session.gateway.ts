@@ -40,6 +40,7 @@ import {
   SessionEvents,
   ZombieEvents,
   createLogger,
+  extractErrorMessage,
 } from '@omniscribe/shared';
 import { InternalSessionEvents, InternalZombieEvents } from '../shared/events';
 import { ClaudeSessionReaderService } from './claude-session-reader.service';
@@ -119,111 +120,19 @@ export class SessionGateway implements OnGatewayInit {
     @MessageBody() payload: CreateSessionPayload,
     @ConnectedSocket() client: Socket
   ): Promise<CreateSessionResponse> {
-    // Check concurrency limit before creating session
-    const runningSessions = this.sessionService.getRunningSessions();
-    if (runningSessions.length >= MAX_CONCURRENT_SESSIONS) {
-      const idleSessions = this.sessionService.getIdleSessions();
-      const idleNames = idleSessions.map(s => s.name);
-      this.logger.warn(
-        `[handleCreate] Session limit reached: ${runningSessions.length}/${MAX_CONCURRENT_SESSIONS} running`
-      );
-      return {
-        error: `Session limit reached (${runningSessions.length}/${MAX_CONCURRENT_SESSIONS}). Close a session to start a new one.`,
-        idleSessions: idleNames,
-      };
-    }
-
-    // Get settings from workspace preferences
-    const preferences = this.workspaceService.getPreferences();
-    const worktreeSettings: WorktreeSettings = preferences.worktree ?? DEFAULT_WORKTREE_SETTINGS;
-    const sessionSettings: SessionSettings = preferences.session ?? DEFAULT_SESSION_SETTINGS;
-
-    // Determine skip-permissions flag (only for AI sessions)
-    const skipPermissions =
-      payload.mode !== 'plain' && sessionSettings.skipPermissions ? true : undefined;
-
-    const session = this.sessionService.create(payload.mode, payload.projectPath, {
-      name: payload.name,
-      workingDirectory: payload.workingDirectory,
-      model: payload.model,
-      systemPrompt: payload.systemPrompt,
-      mcpServers: payload.mcpServers,
-      skipPermissions,
-    });
-
-    // Determine the working directory based on worktree mode
-    let worktreePath: string | null = null;
-
-    try {
-      if (worktreeSettings.mode !== 'never') {
-        const branch = payload.branch;
-
-        if (worktreeSettings.mode === 'always') {
-          // Always create a new worktree with unique suffix for full isolation
-          const uniqueSuffix = crypto.randomUUID().slice(0, 8);
-          const branchName =
-            branch ?? (await this.gitService.getCurrentBranch(payload.projectPath));
-          const isolatedBranch = `${branchName}-${uniqueSuffix}`;
-          worktreePath = await this.worktreeService.prepare(
-            payload.projectPath,
-            isolatedBranch,
-            worktreeSettings.location
-          );
-          this.logger.log(`Created isolated worktree at ${worktreePath} for session ${session.id}`);
-        } else if (worktreeSettings.mode === 'branch' && branch) {
-          // Create worktree only when selecting a non-current branch
-          const currentBranch = await this.gitService.getCurrentBranch(payload.projectPath);
-          if (branch !== currentBranch) {
-            worktreePath = await this.worktreeService.prepare(
-              payload.projectPath,
-              branch,
-              worktreeSettings.location
-            );
-            this.logger.log(`Created branch worktree at ${worktreePath} for session ${session.id}`);
-          }
-        }
-      }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      this.logger.warn(`Failed to create worktree for session ${session.id}: ${errorMessage}`);
-      // Continue without worktree - fall back to main project directory
-    }
-
-    // Assign branch and worktree path to session
-    if (payload.branch) {
-      this.sessionService.assignBranch(session.id, payload.branch, worktreePath ?? undefined);
-    } else if (worktreePath) {
-      // If we have a worktree but no explicit branch, use the current branch
-      const currentBranch = await this.gitService.getCurrentBranch(payload.projectPath);
-      this.sessionService.assignBranch(session.id, currentBranch, worktreePath);
-    }
-
-    // Launch the terminal session to spawn the PTY
-    const workingDir = worktreePath ?? session.workingDirectory;
-    const launchResult = await this.sessionService.launchSession(
-      session.id,
-      payload.projectPath,
-      workingDir,
-      payload.mode
+    return this.launchSessionWithWorktree(
+      client,
+      { projectPath: payload.projectPath, branch: payload.branch, name: payload.name },
+      payload.mode,
+      {
+        name: payload.name,
+        workingDirectory: payload.workingDirectory,
+        model: payload.model,
+        systemPrompt: payload.systemPrompt,
+        mcpServers: payload.mcpServers,
+      },
+      'new'
     );
-
-    if (!launchResult.success) {
-      return { error: launchResult.error ?? 'Failed to launch session' };
-    }
-
-    // Join the client to the terminal room so they receive terminal output
-    // Also register the client as owner so they can send input
-    if (launchResult.terminalSessionId !== undefined) {
-      client.join(`terminal:${launchResult.terminalSessionId}`);
-      // Register client ownership in TerminalGateway so terminal:input works
-      this.terminalGateway.registerClientSession(client.id, launchResult.terminalSessionId);
-      this.logger.log(
-        `Client ${client.id} joined terminal room terminal:${launchResult.terminalSessionId}`
-      );
-    }
-
-    // Return the updated session with terminalSessionId populated
-    return { session: this.sessionService.get(session.id) ?? session };
   }
 
   /**
@@ -391,7 +300,7 @@ export class SessionGateway implements OnGatewayInit {
       const sessions = await this.claudeSessionReader.readSessionsIndex(payload.projectPath);
       return { sessions };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage = extractErrorMessage(error);
       this.logger.error(`Failed to fetch session history: ${errorMessage}`);
       return { sessions: [], error: errorMessage };
     }
@@ -411,6 +320,7 @@ export class SessionGateway implements OnGatewayInit {
     return this.launchSessionWithWorktree(
       client,
       { projectPath: payload.projectPath, branch: payload.branch, name: payload.name },
+      'claude',
       {
         name: payload.name ?? `Resumed: ${payload.claudeSessionId.slice(0, 8)}`,
         resumeSessionId: payload.claudeSessionId,
@@ -432,6 +342,7 @@ export class SessionGateway implements OnGatewayInit {
     return this.launchSessionWithWorktree(
       client,
       { projectPath: payload.projectPath, branch: payload.branch, name: payload.name },
+      'claude',
       {
         name: payload.name ?? `Fork: ${payload.claudeSessionId.slice(0, 8)}`,
         forkSessionId: payload.claudeSessionId,
@@ -453,6 +364,7 @@ export class SessionGateway implements OnGatewayInit {
     return this.launchSessionWithWorktree(
       client,
       { projectPath: payload.projectPath, branch: payload.branch, name: payload.name },
+      'claude',
       {
         name: payload.name ?? 'Continue Last',
         continueLastSession: true,
@@ -462,12 +374,13 @@ export class SessionGateway implements OnGatewayInit {
   }
 
   /**
-   * Shared helper for resume/fork/continue-last session launch.
+   * Shared helper for all session launches (new, resume, fork, continue-last).
    * Handles concurrency check, preferences, worktree setup, launch, and terminal room join.
    */
   private async launchSessionWithWorktree(
     client: Socket,
     payload: { projectPath: string; branch?: string; name?: string },
+    mode: AiMode,
     createOptions: Parameters<SessionService['create']>[2],
     errorPrefix: string
   ): Promise<CreateSessionResponse> {
@@ -475,6 +388,9 @@ export class SessionGateway implements OnGatewayInit {
     const runningSessions = this.sessionService.getRunningSessions();
     if (runningSessions.length >= MAX_CONCURRENT_SESSIONS) {
       const idleSessions = this.sessionService.getIdleSessions();
+      this.logger.warn(
+        `[${errorPrefix}] Session limit reached: ${runningSessions.length}/${MAX_CONCURRENT_SESSIONS} running`
+      );
       return {
         error: `Session limit reached (${runningSessions.length}/${MAX_CONCURRENT_SESSIONS}). Close a session to start a new one.`,
         idleSessions: idleSessions.map(s => s.name),
@@ -484,9 +400,9 @@ export class SessionGateway implements OnGatewayInit {
     const preferences = this.workspaceService.getPreferences();
     const worktreeSettings: WorktreeSettings = preferences.worktree ?? DEFAULT_WORKTREE_SETTINGS;
     const sessionSettings: SessionSettings = preferences.session ?? DEFAULT_SESSION_SETTINGS;
-    const skipPermissions = sessionSettings.skipPermissions ? true : undefined;
+    const skipPermissions = mode !== 'plain' && sessionSettings.skipPermissions ? true : undefined;
 
-    const session = this.sessionService.create('claude', payload.projectPath, {
+    const session = this.sessionService.create(mode, payload.projectPath, {
       ...createOptions,
       skipPermissions,
     });
@@ -515,7 +431,7 @@ export class SessionGateway implements OnGatewayInit {
         }
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage = extractErrorMessage(error);
       this.logger.warn(`Failed to create worktree for session ${session.id}: ${errorMessage}`);
     }
 
@@ -533,7 +449,7 @@ export class SessionGateway implements OnGatewayInit {
       session.id,
       payload.projectPath,
       workingDir,
-      'claude'
+      mode
     );
 
     if (!launchResult.success) {

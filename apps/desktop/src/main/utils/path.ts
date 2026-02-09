@@ -1,12 +1,9 @@
 import { join } from 'path';
 import { homedir } from 'os';
+import { normalizePath } from '@omniscribe/shared';
 
-/**
- * Normalize path separators to forward slashes
- */
-export function normalizePath(path: string): string {
-  return path.replace(/\\/g, '/');
-}
+// Re-export for consumers that import from this file
+export { normalizePath };
 
 /**
  * Join paths and normalize to forward slashes

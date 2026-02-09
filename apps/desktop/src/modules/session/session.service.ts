@@ -12,6 +12,7 @@ import {
   LaunchSessionResult,
   SessionStatusUpdate,
   createLogger,
+  extractErrorMessage,
 } from '@omniscribe/shared';
 import { TerminalService } from '../terminal/terminal.service';
 import { McpWriterService, McpDiscoveryService } from '../mcp';
@@ -85,7 +86,7 @@ export class SessionService implements OnModuleDestroy {
       this.workspaceService.saveActiveSessionsSnapshot(snapshots);
       this.logger.info(`Saved active sessions snapshot (${snapshots.length} sessions)`);
     } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
+      const msg = extractErrorMessage(error);
       this.logger.warn(`Failed to save active sessions snapshot: ${msg}`);
     }
   }
@@ -144,7 +145,7 @@ export class SessionService implements OnModuleDestroy {
         `Persisted session history for ${session.id} (claude: ${session.claudeSessionId})`
       );
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage = extractErrorMessage(error);
       this.logger.warn(`Failed to persist session history for ${session.id}: ${errorMessage}`);
     }
   }
@@ -315,7 +316,7 @@ export class SessionService implements OnModuleDestroy {
             `Cleaned up worktree at ${session.worktreePath} for session ${sessionId}`
           );
         } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : String(error);
+          const errorMessage = extractErrorMessage(error);
           this.logger.warn(`Failed to cleanup worktree for session ${sessionId}: ${errorMessage}`);
           // Continue with session removal even if worktree cleanup fails
         }
@@ -444,7 +445,7 @@ export class SessionService implements OnModuleDestroy {
           `Snapshotted ${previousSessionIds.size} existing Claude sessions for ${sessionId}`
         );
       } catch (error) {
-        const msg = error instanceof Error ? error.message : String(error);
+        const msg = extractErrorMessage(error);
         this.logger.warn(`Failed to snapshot Claude sessions for ${sessionId}: ${msg}`);
       }
     }
@@ -530,7 +531,7 @@ export class SessionService implements OnModuleDestroy {
         terminalSessionId,
       };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage = extractErrorMessage(error);
 
       this.logger.error(`Failed to launch session ${sessionId}: ${errorMessage}`);
 
@@ -685,7 +686,7 @@ export class SessionService implements OnModuleDestroy {
           return;
         }
       } catch (error) {
-        const msg = error instanceof Error ? error.message : String(error);
+        const msg = extractErrorMessage(error);
         this.logger.warn(`Poll error for Claude session ID (${sessionId}): ${msg}`);
         // Continue polling despite errors
       }
