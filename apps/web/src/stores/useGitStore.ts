@@ -17,7 +17,7 @@ import {
  */
 interface GitBranchUpdate {
   projectPath: string;
-  branches: BranchInfo[];
+  branches?: BranchInfo[];
   currentBranch: BranchInfo | null;
 }
 
