@@ -17,26 +17,8 @@ import {
  */
 interface GitBranchUpdate {
   projectPath: string;
-  branches: BranchInfo[];
+  branches?: BranchInfo[];
   currentBranch: BranchInfo | null;
-}
-
-/**
- * Git commits update payload from socket
- */
-interface GitCommitsUpdate {
-  projectPath: string;
-  commits: CommitInfo[];
-}
-
-/**
- * Git checkout result payload from socket
- */
-interface GitCheckoutResult {
-  projectPath: string;
-  success: boolean;
-  branch: string;
-  error?: string;
 }
 
 /**
@@ -99,36 +81,16 @@ export const useGitStore = create<GitStore>()(
       const { initListeners, cleanupListeners } = createSocketListeners<GitStore>(get, set, 'git', {
         listeners: [
           {
-            event: 'git:branches:updated',
+            event: GitEvents.BRANCHES,
             handler: (data, get) => {
               const update = data as GitBranchUpdate;
               const currentProjectPath = get().projectPath;
               if (currentProjectPath && update.projectPath === currentProjectPath) {
-                get().setBranches(update.branches);
+                if (update.branches) {
+                  get().setBranches(update.branches);
+                }
                 if (update.currentBranch) {
                   get().setCurrentBranch(update.currentBranch);
-                }
-              }
-            },
-          },
-          {
-            event: 'git:commits:updated',
-            handler: (data, get) => {
-              const update = data as GitCommitsUpdate;
-              const currentProjectPath = get().projectPath;
-              if (currentProjectPath && update.projectPath === currentProjectPath) {
-                get().setCommits(update.commits);
-              }
-            },
-          },
-          {
-            event: 'git:checkout:result',
-            handler: (data, get) => {
-              const result = data as GitCheckoutResult;
-              const currentProjectPath = get().projectPath;
-              if (currentProjectPath && result.projectPath === currentProjectPath) {
-                if (!result.success && result.error) {
-                  get().setError(result.error);
                 }
               }
             },

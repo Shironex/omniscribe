@@ -60,10 +60,6 @@ interface WorkspaceActions extends SocketStoreActions {
   removeSessionFromTab: (tabId: string, sessionId: string) => void;
   /** Clear stale session references (called on rehydrate) */
   clearStaleSessions: (validSessionIds: string[]) => void;
-  /** Get tab by project path */
-  getTabByProjectPath: (projectPath: string) => ProjectTab | undefined;
-  /** Get active tab */
-  getActiveTab: () => ProjectTab | undefined;
   /** Restore workspace state from backend */
   restoreState: () => void;
   /** Update a preference */
@@ -318,16 +314,6 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
             undefined,
             'workspace/clearStaleSessions'
           );
-        },
-
-        getTabByProjectPath: (projectPath: string) => {
-          const normalizedPath = projectPath.replace(/\\/g, '/');
-          return get().tabs.find(tab => tab.projectPath.replace(/\\/g, '/') === normalizedPath);
-        },
-
-        getActiveTab: () => {
-          const state = get();
-          return state.tabs.find(tab => tab.id === state.activeTabId);
         },
 
         restoreState: () => {

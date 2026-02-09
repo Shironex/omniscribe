@@ -4,8 +4,6 @@ export type { TerminalViewProps } from './TerminalView';
 export { TerminalGrid } from './TerminalGrid';
 export type { TerminalSession, PreLaunchSlot } from './TerminalGrid';
 
-export { ConnectedTerminalGrid } from './ConnectedTerminalGrid';
-
 export { TerminalHeader } from './TerminalHeader';
 export type { GitBranchInfo } from './TerminalHeader';
 
