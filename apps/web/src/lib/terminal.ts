@@ -1,19 +1,16 @@
 import { socket, connectSocket } from './socket';
-import { createLogger, type TerminalJoinResponse } from '@omniscribe/shared';
+import {
+  createLogger,
+  TerminalEvents,
+  type TerminalJoinResponse,
+  type TerminalOutputEvent,
+  type TerminalClosedEvent,
+} from '@omniscribe/shared';
 import { PASTE_CHUNK_SIZE, PASTE_CHUNK_DELAY_MS } from './terminal-constants';
 
 const logger = createLogger('TerminalAPI');
 
-export interface TerminalOutputEvent {
-  sessionId: number;
-  data: string;
-}
-
-export interface TerminalClosedEvent {
-  sessionId: number;
-  exitCode: number;
-  signal?: number;
-}
+export type { TerminalOutputEvent, TerminalClosedEvent };
 
 export interface TerminalConnection {
   sessionId: number;
@@ -33,7 +30,7 @@ export async function spawnTerminal(cwd?: string, env?: Record<string, string>):
 
   return new Promise((resolve, reject) => {
     socket.emit(
-      'terminal:spawn',
+      TerminalEvents.SPAWN,
       { cwd, env },
       (response: { sessionId: number } | { error: string }) => {
         if ('error' in response) {
@@ -79,13 +76,13 @@ export function connectTerminal(
   };
 
   logger.debug('Connecting to terminal', sessionId);
-  socket.on('terminal:output', handleOutput);
-  socket.on('terminal:closed', handleClosed);
+  socket.on(TerminalEvents.OUTPUT, handleOutput);
+  socket.on(TerminalEvents.CLOSED, handleClosed);
 
   const cleanup = () => {
     logger.debug('Cleaning up terminal connection', sessionId);
-    socket.off('terminal:output', handleOutput);
-    socket.off('terminal:closed', handleClosed);
+    socket.off(TerminalEvents.OUTPUT, handleOutput);
+    socket.off(TerminalEvents.CLOSED, handleClosed);
   };
 
   return {
@@ -107,7 +104,7 @@ export function writeToTerminal(sessionId: number, data: string): void {
     return;
   }
 
-  socket.emit('terminal:input', { sessionId, data });
+  socket.emit(TerminalEvents.INPUT, { sessionId, data });
 }
 
 /**
@@ -122,13 +119,13 @@ export async function writeToTerminalChunked(sessionId: number, data: string): P
   }
 
   if (data.length <= PASTE_CHUNK_SIZE) {
-    socket.emit('terminal:input', { sessionId, data });
+    socket.emit(TerminalEvents.INPUT, { sessionId, data });
     return;
   }
 
   for (let i = 0; i < data.length; i += PASTE_CHUNK_SIZE) {
     const chunk = data.slice(i, i + PASTE_CHUNK_SIZE);
-    socket.emit('terminal:input', { sessionId, data: chunk });
+    socket.emit(TerminalEvents.INPUT, { sessionId, data: chunk });
 
     if (i + PASTE_CHUNK_SIZE < data.length) {
       await new Promise(resolve => setTimeout(resolve, PASTE_CHUNK_DELAY_MS));
@@ -148,7 +145,7 @@ export function resizeTerminal(sessionId: number, cols: number, rows: number): v
     return;
   }
 
-  socket.emit('terminal:resize', { sessionId, cols, rows });
+  socket.emit(TerminalEvents.RESIZE, { sessionId, cols, rows });
 }
 
 /**
@@ -161,7 +158,7 @@ export function killTerminal(sessionId: number): void {
     return;
   }
 
-  socket.emit('terminal:kill', { sessionId });
+  socket.emit(TerminalEvents.KILL, { sessionId });
 }
 
 /**
@@ -176,7 +173,7 @@ export async function joinTerminal(
 
   logger.debug('Joining terminal', sessionId);
   return new Promise(resolve => {
-    socket.emit('terminal:join', { sessionId }, (response: TerminalJoinResponse) => {
+    socket.emit(TerminalEvents.JOIN, { sessionId }, (response: TerminalJoinResponse) => {
       resolve({ success: response.success, scrollback: response.scrollback });
     });
 

@@ -22,9 +22,13 @@ import {
   TerminalJoinPayload,
   TerminalSpawnResponse,
   TerminalJoinResponse,
+  TerminalOutputEvent,
+  TerminalClosedEvent,
   SuccessResponse,
+  TerminalEvents,
   createLogger,
 } from '@omniscribe/shared';
+import { InternalTerminalEvents } from '../shared/events';
 import { CORS_CONFIG } from '../shared/cors.config';
 
 const MAX_INPUT_SIZE = 1_048_576; // 1MB
@@ -33,17 +37,6 @@ const MAX_INPUT_SIZE = 1_048_576; // 1MB
 const HIGH_WATER_MARK = 128; // Pause PTY after this many undelivered packets
 const LOW_WATER_MARK = 16; // Resume PTY only when pending drops below this (hysteresis)
 const PAUSE_SAFETY_TIMEOUT_MS = 5_000; // Force-resume after 5s to prevent deadlock
-
-interface TerminalOutputEvent {
-  sessionId: number;
-  data: string;
-}
-
-interface TerminalClosedEvent {
-  sessionId: number;
-  exitCode: number;
-  signal?: number;
-}
 
 @UseGuards(WsThrottlerGuard)
 @WebSocketGateway({
@@ -142,7 +135,7 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
     this.connectedClients.delete(client.id);
   }
 
-  @SubscribeMessage('terminal:spawn')
+  @SubscribeMessage(TerminalEvents.SPAWN)
   handleSpawn(
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: TerminalSpawnPayload
@@ -163,7 +156,7 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
   }
 
   @SkipThrottle()
-  @SubscribeMessage('terminal:input')
+  @SubscribeMessage(TerminalEvents.INPUT)
   handleInput(
     @ConnectedSocket() _client: Socket,
     @MessageBody() payload: TerminalInputPayload
@@ -210,7 +203,7 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
   }
 
   @SkipThrottle()
-  @SubscribeMessage('terminal:resize')
+  @SubscribeMessage(TerminalEvents.RESIZE)
   handleResize(
     @ConnectedSocket() _client: Socket,
     @MessageBody() payload: TerminalResizePayload
@@ -229,7 +222,7 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
     }
   }
 
-  @SubscribeMessage('terminal:kill')
+  @SubscribeMessage(TerminalEvents.KILL)
   async handleKill(
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: TerminalKillPayload
@@ -253,7 +246,7 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
   }
 
   @SkipThrottle()
-  @SubscribeMessage('terminal:join')
+  @SubscribeMessage(TerminalEvents.JOIN)
   handleJoin(
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: TerminalJoinPayload
@@ -278,7 +271,7 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
     return { success: false, error: `Terminal session ${sessionId} not found` };
   }
 
-  @OnEvent('terminal.output')
+  @OnEvent(InternalTerminalEvents.OUTPUT)
   handleTerminalOutput(event: TerminalOutputEvent): void {
     const room = `terminal:${event.sessionId}`;
     const payload = {
@@ -288,14 +281,14 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
 
     // Prefer using the server if available
     if (this.server) {
-      this.server.to(room).emit('terminal:output', payload);
+      this.server.to(room).emit(TerminalEvents.OUTPUT, payload);
     } else {
       // Fallback: emit directly to clients that own this session
       for (const [clientId, sessions] of this.clientSessions.entries()) {
         if (sessions.has(event.sessionId)) {
           const client = this.connectedClients.get(clientId);
           if (client) {
-            client.emit('terminal:output', payload);
+            client.emit(TerminalEvents.OUTPUT, payload);
           }
         }
       }
@@ -311,7 +304,7 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
     }
   }
 
-  @OnEvent('terminal.closed')
+  @OnEvent(InternalTerminalEvents.CLOSED)
   handleTerminalClosed(event: TerminalClosedEvent): void {
     const room = `terminal:${event.sessionId}`;
     const payload = {
@@ -325,7 +318,7 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
 
     // Prefer using the server if available
     if (this.server) {
-      this.server.to(room).emit('terminal:closed', payload);
+      this.server.to(room).emit(TerminalEvents.CLOSED, payload);
       return;
     }
 
@@ -334,7 +327,7 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
       if (sessions.has(event.sessionId)) {
         const client = this.connectedClients.get(clientId);
         if (client) {
-          client.emit('terminal:closed', payload);
+          client.emit(TerminalEvents.CLOSED, payload);
         }
       }
     }
@@ -343,7 +336,7 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
   /**
    * Handle cancel output request (sends SIGINT to terminal process)
    */
-  @SubscribeMessage('terminal:cancel')
+  @SubscribeMessage(TerminalEvents.CANCEL)
   handleCancel(
     @ConnectedSocket() _client: Socket,
     @MessageBody() payload: { sessionId: number }
@@ -380,7 +373,7 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
     // Emit backpressure event to the room
     const room = `terminal:${sessionId}`;
     if (this.server) {
-      this.server.to(room).emit('terminal:backpressure', { sessionId, paused: true });
+      this.server.to(room).emit(TerminalEvents.BACKPRESSURE, { sessionId, paused: true });
     }
 
     // Safety timeout: force-resume after 10s to prevent deadlock
@@ -416,7 +409,7 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
     // Emit backpressure cleared event to the room
     const room = `terminal:${sessionId}`;
     if (this.server) {
-      this.server.to(room).emit('terminal:backpressure', { sessionId, paused: false });
+      this.server.to(room).emit(TerminalEvents.BACKPRESSURE, { sessionId, paused: false });
     }
   }
 

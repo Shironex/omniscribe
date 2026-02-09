@@ -10,7 +10,7 @@ import { SkipThrottle } from '@nestjs/throttler';
 import { Server, Socket } from 'socket.io';
 import { WsThrottlerGuard } from '../shared/ws-throttler.guard';
 import { UsageService } from './usage.service';
-import { createLogger } from '@omniscribe/shared';
+import { UsageEvents, createLogger } from '@omniscribe/shared';
 import type { UsageFetchPayload, UsageFetchResponse, ClaudeCliStatus } from '@omniscribe/shared';
 import { CORS_CONFIG } from '../shared/cors.config';
 
@@ -33,7 +33,7 @@ export class UsageGateway {
    * Fetches Claude CLI usage data and returns it
    */
   @SkipThrottle()
-  @SubscribeMessage('usage:fetch')
+  @SubscribeMessage(UsageEvents.FETCH)
   async handleFetch(
     @ConnectedSocket() _client: Socket,
     @MessageBody() payload: UsageFetchPayload
@@ -68,7 +68,7 @@ export class UsageGateway {
    * Handle claude:status request - get Claude CLI status
    */
   @SkipThrottle()
-  @SubscribeMessage('claude:status')
+  @SubscribeMessage(UsageEvents.CLAUDE_STATUS)
   async handleStatus(
     @ConnectedSocket() _client: Socket,
     @MessageBody() payload?: { refresh?: boolean }

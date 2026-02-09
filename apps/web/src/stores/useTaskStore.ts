@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
-import { createLogger } from '@omniscribe/shared';
+import { createLogger, SessionEvents } from '@omniscribe/shared';
 import type { TaskItem, SessionTasksUpdate, SessionRemovePayload } from '@omniscribe/shared';
 import {
   SocketStoreState,
@@ -57,18 +57,18 @@ export const useTaskStore = create<TaskStore>()(
         {
           listeners: [
             {
-              event: 'session:tasks',
+              event: SessionEvents.TASKS,
               handler: (data, get) => {
                 const update = data as SessionTasksUpdate;
-                logger.debug('session:tasks', update.sessionId, update.tasks.length);
+                logger.debug(SessionEvents.TASKS, update.sessionId, update.tasks.length);
                 get().setTasks(update.sessionId, update.tasks);
               },
             },
             {
-              event: 'session:removed',
+              event: SessionEvents.REMOVED,
               handler: (data, get) => {
                 const { sessionId } = data as SessionRemovePayload;
-                logger.debug('session:removed — clearing tasks', sessionId);
+                logger.debug(SessionEvents.REMOVED, '-- clearing tasks', sessionId);
                 get().clearTasks(sessionId);
               },
             },

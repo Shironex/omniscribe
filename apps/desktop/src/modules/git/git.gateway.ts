@@ -39,6 +39,8 @@ import {
   GithubIssuesResponse,
   GithubGetIssuePayload,
   GithubIssueResponse,
+  GitEvents,
+  GithubEvents,
   createLogger,
 } from '@omniscribe/shared';
 import { CORS_CONFIG } from '../shared/cors.config';
@@ -84,7 +86,7 @@ export class GitGateway {
   ) {}
 
   @SkipThrottle()
-  @SubscribeMessage('git:branches')
+  @SubscribeMessage(GitEvents.BRANCHES)
   async handleBranches(
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: GitBranchesPayload
@@ -125,7 +127,7 @@ export class GitGateway {
   }
 
   @SkipThrottle()
-  @SubscribeMessage('git:commits')
+  @SubscribeMessage(GitEvents.COMMITS)
   async handleCommits(
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: GitCommitsPayload
@@ -159,7 +161,7 @@ export class GitGateway {
     }
   }
 
-  @SubscribeMessage('git:checkout')
+  @SubscribeMessage(GitEvents.CHECKOUT)
   async handleCheckout(
     @ConnectedSocket() _client: Socket,
     @MessageBody() payload: GitCheckoutPayload
@@ -178,7 +180,7 @@ export class GitGateway {
       const currentBranch = await this.gitService.getCurrentBranch(projectPath);
 
       // Notify all clients watching this project
-      this.server.to(`git:${projectPath}`).emit('git:branches', {
+      this.server.to(`git:${projectPath}`).emit(GitEvents.BRANCHES, {
         projectPath,
         currentBranch,
       });
@@ -198,7 +200,7 @@ export class GitGateway {
     }
   }
 
-  @SubscribeMessage('git:create-branch')
+  @SubscribeMessage(GitEvents.CREATE_BRANCH)
   async handleCreateBranch(
     @ConnectedSocket() _client: Socket,
     @MessageBody() payload: GitCreateBranchPayload
@@ -220,7 +222,7 @@ export class GitGateway {
       const newBranch = branches.find(b => b.name === name);
 
       // Notify all clients watching this project
-      this.server.to(`git:${projectPath}`).emit('git:branches', {
+      this.server.to(`git:${projectPath}`).emit(GitEvents.BRANCHES, {
         projectPath,
         branches,
         currentBranch: name,
@@ -242,7 +244,7 @@ export class GitGateway {
   }
 
   @SkipThrottle()
-  @SubscribeMessage('git:current-branch')
+  @SubscribeMessage(GitEvents.CURRENT_BRANCH)
   async handleCurrentBranch(
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: GitCurrentBranchPayload
@@ -277,7 +279,7 @@ export class GitGateway {
   }
 
   @SkipThrottle()
-  @SubscribeMessage('git:worktrees')
+  @SubscribeMessage(GitEvents.WORKTREES)
   async handleWorktrees(
     @ConnectedSocket() _client: Socket,
     @MessageBody() payload: GitWorktreesPayload
@@ -308,7 +310,7 @@ export class GitGateway {
     }
   }
 
-  @SubscribeMessage('git:worktree:cleanup')
+  @SubscribeMessage(GitEvents.WORKTREE_CLEANUP)
   async handleWorktreeCleanup(
     @ConnectedSocket() _client: Socket,
     @MessageBody() payload: GitWorktreeCleanupPayload
@@ -344,7 +346,7 @@ export class GitGateway {
   // ============================================
 
   @SkipThrottle()
-  @SubscribeMessage('github:status')
+  @SubscribeMessage(GithubEvents.STATUS)
   async handleGithubStatus(
     @ConnectedSocket() _client: Socket,
     @MessageBody() payload: GithubStatusPayload
@@ -376,7 +378,7 @@ export class GitGateway {
   }
 
   @SkipThrottle()
-  @SubscribeMessage('github:repo-info')
+  @SubscribeMessage(GithubEvents.REPO_INFO)
   async handleGithubRepoInfo(
     @ConnectedSocket() _client: Socket,
     @MessageBody() payload: GithubProjectPayload
@@ -408,7 +410,7 @@ export class GitGateway {
   }
 
   @SkipThrottle()
-  @SubscribeMessage('github:prs')
+  @SubscribeMessage(GithubEvents.PRS)
   async handleGithubPRs(
     @ConnectedSocket() _client: Socket,
     @MessageBody() payload: GithubListPRsPayload
@@ -440,7 +442,7 @@ export class GitGateway {
   }
 
   @SkipThrottle()
-  @SubscribeMessage('github:pr')
+  @SubscribeMessage(GithubEvents.PR)
   async handleGithubPR(
     @ConnectedSocket() _client: Socket,
     @MessageBody() payload: GithubGetPRPayload
@@ -471,7 +473,7 @@ export class GitGateway {
     }
   }
 
-  @SubscribeMessage('github:create-pr')
+  @SubscribeMessage(GithubEvents.CREATE_PR)
   async handleGithubCreatePR(
     @ConnectedSocket() _client: Socket,
     @MessageBody() payload: GithubCreatePRPayload
@@ -510,7 +512,7 @@ export class GitGateway {
   }
 
   @SkipThrottle()
-  @SubscribeMessage('github:issues')
+  @SubscribeMessage(GithubEvents.ISSUES)
   async handleGithubIssues(
     @ConnectedSocket() _client: Socket,
     @MessageBody() payload: GithubListIssuesPayload
@@ -546,7 +548,7 @@ export class GitGateway {
   }
 
   @SkipThrottle()
-  @SubscribeMessage('github:issue')
+  @SubscribeMessage(GithubEvents.ISSUE)
   async handleGithubIssue(
     @ConnectedSocket() _client: Socket,
     @MessageBody() payload: GithubGetIssuePayload

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import type { ClaudeUsage, UsageStatus, UsageError } from '@omniscribe/shared';
-import { createLogger } from '@omniscribe/shared';
+import { createLogger, UsageEvents } from '@omniscribe/shared';
 import { socket } from '@/lib/socket';
 import { emitAsync } from '@/lib/socketHelpers';
 
@@ -90,7 +90,7 @@ export const useUsageStore = create<UsageStore>()(
           const response = await emitAsync<
             { workingDir: string },
             { usage?: ClaudeUsage; error?: UsageError; message?: string }
-          >('usage:fetch', { workingDir: dir }, { timeout: 60000 });
+          >(UsageEvents.FETCH, { workingDir: dir }, { timeout: 60000 });
 
           if (response.error) {
             logger.warn('Usage fetch error:', response.error, response.message);

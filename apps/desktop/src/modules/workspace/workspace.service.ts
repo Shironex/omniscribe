@@ -7,8 +7,7 @@ import {
   WorkspaceStateResponse,
   SessionHistoryEntry,
   ActiveSessionSnapshot,
-  DEFAULT_WORKTREE_SETTINGS,
-  DEFAULT_SESSION_SETTINGS,
+  DEFAULT_PREFERENCES,
 } from '@omniscribe/shared';
 
 // Re-export WorkspaceStateResponse as WorkspaceState for backward compatibility
@@ -170,12 +169,6 @@ const DEFAULT_QUICK_ACTIONS: QuickAction[] = [
     },
   },
 ];
-
-const DEFAULT_PREFERENCES: UserPreferences = {
-  theme: 'dark',
-  worktree: DEFAULT_WORKTREE_SETTINGS,
-  session: DEFAULT_SESSION_SETTINGS,
-};
 
 /**
  * Workspace service for managing persistent workspace state

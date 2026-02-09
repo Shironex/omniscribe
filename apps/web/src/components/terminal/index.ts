@@ -2,7 +2,7 @@ export { TerminalView } from './TerminalView';
 export type { TerminalViewProps } from './TerminalView';
 
 export { TerminalGrid } from './TerminalGrid';
-export type { TerminalSession, AIMode, PreLaunchSlot } from './TerminalGrid';
+export type { TerminalSession, PreLaunchSlot } from './TerminalGrid';
 
 export { ConnectedTerminalGrid } from './ConnectedTerminalGrid';
 

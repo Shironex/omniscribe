@@ -27,8 +27,11 @@ import {
   McpInternalStatusResponse,
   McpStatusServerInfoResponse,
   SessionTasksUpdate,
+  McpEvents,
+  SessionEvents,
   createLogger,
 } from '@omniscribe/shared';
+import { InternalSessionEvents } from '../shared/events';
 import { McpStatusServerService, SessionStatusEvent } from './mcp-status-server.service';
 import {
   McpDiscoveryService,
@@ -75,7 +78,7 @@ export class McpGateway implements OnGatewayInit {
   /**
    * Handle MCP server discovery request
    */
-  @SubscribeMessage('mcp:discover')
+  @SubscribeMessage(McpEvents.DISCOVER)
   async handleDiscover(
     @MessageBody() payload: McpDiscoverPayload,
     @ConnectedSocket() _client: Socket
@@ -107,7 +110,7 @@ export class McpGateway implements OnGatewayInit {
   /**
    * Handle setting enabled servers for a session
    */
-  @SubscribeMessage('mcp:set-enabled')
+  @SubscribeMessage(McpEvents.SET_ENABLED)
   handleSetEnabled(
     @MessageBody() payload: McpSetEnabledPayload,
     @ConnectedSocket() _client: Socket
@@ -121,7 +124,7 @@ export class McpGateway implements OnGatewayInit {
       );
 
       // Broadcast the change to all clients
-      this.server.emit('mcp:enabled-changed', {
+      this.server.emit(McpEvents.ENABLED_CHANGED, {
         projectPath: payload.projectPath,
         sessionId: payload.sessionId,
         serverIds: payload.serverIds,
@@ -140,7 +143,7 @@ export class McpGateway implements OnGatewayInit {
   /**
    * Handle writing MCP config for a session
    */
-  @SubscribeMessage('mcp:write-config')
+  @SubscribeMessage(McpEvents.WRITE_CONFIG)
   async handleWriteConfig(
     @MessageBody() payload: McpWriteConfigPayload,
     @ConnectedSocket() _client: Socket
@@ -172,7 +175,7 @@ export class McpGateway implements OnGatewayInit {
    * Handle getting enabled servers for a session
    */
   @SkipThrottle()
-  @SubscribeMessage('mcp:get-enabled')
+  @SubscribeMessage(McpEvents.GET_ENABLED)
   handleGetEnabled(
     @MessageBody() payload: McpGetEnabledPayload,
     @ConnectedSocket() _client: Socket
@@ -188,7 +191,7 @@ export class McpGateway implements OnGatewayInit {
    * Handle getting cached servers for a project
    */
   @SkipThrottle()
-  @SubscribeMessage('mcp:get-servers')
+  @SubscribeMessage(McpEvents.GET_SERVERS)
   handleGetServers(
     @MessageBody() payload: McpGetServersPayload,
     @ConnectedSocket() _client: Socket
@@ -200,7 +203,7 @@ export class McpGateway implements OnGatewayInit {
   /**
    * Handle removing config when session ends
    */
-  @SubscribeMessage('mcp:remove-config')
+  @SubscribeMessage(McpEvents.REMOVE_CONFIG)
   async handleRemoveConfig(
     @MessageBody() payload: McpRemoveConfigPayload,
     @ConnectedSocket() _client: Socket
@@ -226,7 +229,7 @@ export class McpGateway implements OnGatewayInit {
    * Get internal MCP server status
    */
   @SkipThrottle()
-  @SubscribeMessage('mcp:get-internal-status')
+  @SubscribeMessage(McpEvents.GET_INTERNAL_STATUS)
   handleGetInternalStatus(): McpInternalStatusResponse {
     return this.writerService.getInternalMcpInfo();
   }
@@ -235,7 +238,7 @@ export class McpGateway implements OnGatewayInit {
    * Get status server info
    */
   @SkipThrottle()
-  @SubscribeMessage('mcp:get-status-server-info')
+  @SubscribeMessage(McpEvents.GET_STATUS_SERVER_INFO)
   handleGetStatusServerInfo(): McpStatusServerInfoResponse {
     return {
       running: this.statusServer.isRunning(),
@@ -248,9 +251,9 @@ export class McpGateway implements OnGatewayInit {
   /**
    * Broadcast session status events from the HTTP status server
    */
-  @OnEvent('session.status')
+  @OnEvent(InternalSessionEvents.STATUS)
   onSessionStatus(event: SessionStatusEvent): void {
-    this.server.emit('session:status', {
+    this.server.emit(SessionEvents.STATUS, {
       sessionId: event.sessionId,
       status: event.status,
       message: event.message,
@@ -261,9 +264,9 @@ export class McpGateway implements OnGatewayInit {
   /**
    * Broadcast session tasks events from the HTTP status server
    */
-  @OnEvent('session.tasks')
+  @OnEvent(InternalSessionEvents.TASKS)
   onSessionTasks(event: SessionTasksUpdate): void {
-    this.server.emit('session:tasks', {
+    this.server.emit(SessionEvents.TASKS, {
       sessionId: event.sessionId,
       tasks: event.tasks,
     });

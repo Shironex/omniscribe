@@ -10,7 +10,7 @@ import { TaskListPopover } from './TaskListPopover';
 import type { TerminalDragHandleProps } from './SortableTerminalWrapper';
 import type { QuickActionItem } from './TerminalCard';
 import type { SessionStatus } from '@/components/shared/StatusLegend';
-export type AIMode = 'claude' | 'plain';
+import type { AiMode } from '@omniscribe/shared';
 
 export interface GitBranchInfo {
   name: string;
@@ -21,7 +21,7 @@ export interface GitBranchInfo {
 export interface TerminalSession {
   id: string;
   sessionNumber: number;
-  aiMode: AIMode;
+  aiMode: AiMode;
   status: SessionStatus;
   branch?: string;
   statusMessage?: string;

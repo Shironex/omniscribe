@@ -4,6 +4,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import { createLogger } from '@omniscribe/shared';
+import { InternalSessionEvents } from '../shared/events';
 
 /**
  * Hook event data parsed from the JSON file written by the hook script
@@ -239,10 +240,10 @@ export class HookManagerService implements OnModuleDestroy {
       await fs.promises.unlink(filePath).catch(() => {});
 
       if (data.event === 'SessionStart' || data.event === 'session_start') {
-        this.eventEmitter.emit('session.hook.start', data);
+        this.eventEmitter.emit(InternalSessionEvents.HOOK_START, data);
         this.logger.debug('Hook event: SessionStart', data.session_id);
       } else if (data.event === 'SessionEnd' || data.event === 'session_end') {
-        this.eventEmitter.emit('session.hook.end', data);
+        this.eventEmitter.emit(InternalSessionEvents.HOOK_END, data);
         this.logger.debug('Hook event: SessionEnd', data.session_id);
       } else {
         // Generic hook event

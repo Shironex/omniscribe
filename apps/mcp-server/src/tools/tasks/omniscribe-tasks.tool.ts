@@ -6,13 +6,10 @@
 import { z } from 'zod';
 import type { Tool, ToolDependencies, ToolMetadata, ToolResponse } from '../types.js';
 import type { OmniscribeHttpClient } from '../../http/index.js';
-import type { TaskItem } from '@omniscribe/shared';
-
-const TASK_STATUSES = ['pending', 'in_progress', 'completed'] as const;
-type TaskStatusLiteral = (typeof TASK_STATUSES)[number];
+import { TASK_STATUSES, type TaskItem, type TaskStatus } from '@omniscribe/shared';
 
 interface OmniscribeTasksInput {
-  tasks: Array<{ id: string; subject: string; status: TaskStatusLiteral }>;
+  tasks: Array<{ id: string; subject: string; status: TaskStatus }>;
 }
 
 export class OmniscribeTasksTool implements Tool<OmniscribeTasksInput> {

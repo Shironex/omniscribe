@@ -1,6 +1,6 @@
 import { useCallback, useRef, useEffect } from 'react';
 import { createLogger } from '@omniscribe/shared';
-import type { ExtendedSessionConfig } from '@/stores/useSessionStore';
+import type { FrontendSessionConfig } from '@/stores/useSessionStore';
 import { removeSession } from '@/lib/session';
 import { killTerminal } from '@/lib/terminal';
 
@@ -18,7 +18,7 @@ interface UseSessionLifecycleReturn {
  * Handles stop all and kill session functionality.
  */
 export function useSessionLifecycle(
-  activeProjectSessions: ExtendedSessionConfig[]
+  activeProjectSessions: FrontendSessionConfig[]
 ): UseSessionLifecycleReturn {
   // Use a ref to always access the latest sessions, avoiding stale closure issues
   const sessionsRef = useRef(activeProjectSessions);

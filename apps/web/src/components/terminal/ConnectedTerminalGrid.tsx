@@ -11,7 +11,6 @@ import { useTerminalStore } from '@/stores/useTerminalStore';
 import { useSettingsStore } from '@/stores/useSettingsStore';
 import { createSession, removeSession, resumeSession } from '@/lib/session';
 import { killTerminal } from '@/lib/terminal';
-import { mapAiModeToBackend, mapAiModeToUI } from '@/lib/aiMode';
 
 import { getNextAvailablePrelaunchShortcut } from '@/lib/prelaunch-shortcuts';
 import type { TerminalSession } from './TerminalHeader';
@@ -109,7 +108,7 @@ export function ConnectedTerminalGrid({ className }: ConnectedTerminalGridProps)
     const mapped = activeProjectSessions.map((session, index) => ({
       id: session.id,
       sessionNumber: index + 1,
-      aiMode: mapAiModeToUI(session.aiMode),
+      aiMode: session.aiMode,
       status: mapSessionStatus(session.status),
       branch: session.branch,
       statusMessage: session.statusMessage,
@@ -204,8 +203,7 @@ export function ConnectedTerminalGrid({ className }: ConnectedTerminalGridProps)
       try {
         logger.info('Launching session for slot', slotId);
         // Create the session via socket
-        const backendAiMode = mapAiModeToBackend(slot.aiMode);
-        const session = await createSession(backendAiMode, activeProjectPath, slot.branch);
+        const session = await createSession(slot.aiMode, activeProjectPath, slot.branch);
 
         // The session:created event arrives before terminalSessionId is set,
         // so we update the store with the complete session from the response

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
-import { BranchInfo, CommitInfo, createLogger } from '@omniscribe/shared';
+import { BranchInfo, CommitInfo, createLogger, GitEvents } from '@omniscribe/shared';
 import { socket } from '@/lib/socket';
 
 const logger = createLogger('GitStore');
@@ -164,7 +164,7 @@ export const useGitStore = create<GitStore>()(
           logger.debug('fetchBranches', projectPath);
           set({ isLoading: true, error: null, projectPath }, undefined, 'git/fetchBranchesStart');
           socket.emit(
-            'git:branches',
+            GitEvents.BRANCHES,
             { projectPath },
             (response: {
               branches: BranchInfo[];
@@ -229,7 +229,7 @@ export const useGitStore = create<GitStore>()(
             'git/fetchCurrentBranchStart'
           );
           socket.emit(
-            'git:current-branch',
+            GitEvents.CURRENT_BRANCH,
             { projectPath },
             (response: { currentBranch: string; error?: string }) => {
               // Backend returns { currentBranch: string, error? } - no success field, no BranchInfo
@@ -259,7 +259,7 @@ export const useGitStore = create<GitStore>()(
           logger.info('Checking out', branchName, 'in', projectPath);
           set({ isLoading: true, error: null }, undefined, 'git/checkoutStart');
           socket.emit(
-            'git:checkout',
+            GitEvents.CHECKOUT,
             { projectPath, branch: branchName },
             (response: { success: boolean; currentBranch?: string; error?: string }) => {
               // Backend returns { success, currentBranch?, error? }
@@ -285,7 +285,7 @@ export const useGitStore = create<GitStore>()(
           logger.debug('fetchCommits', projectPath, 'limit:', limit);
           set({ isLoading: true, error: null, projectPath }, undefined, 'git/fetchCommitsStart');
           socket.emit(
-            'git:commits',
+            GitEvents.COMMITS,
             { projectPath, limit },
             (response: { commits: CommitInfo[]; error?: string }) => {
               // Backend returns { commits, error? } - no success field

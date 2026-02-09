@@ -328,6 +328,17 @@ export interface SessionListPayload {
   projectPath?: string;
 }
 
+/**
+ * Session status update event payload.
+ * Emitted when a session's status changes.
+ */
+export interface SessionStatusUpdate {
+  sessionId: string;
+  status: import('./session').SessionStatus;
+  message?: string;
+  needsInputPrompt?: boolean;
+}
+
 // ============================================
 // Session Responses
 // ============================================
@@ -489,6 +500,23 @@ export interface QuickActionsResponse extends SuccessResponse {
 // ============================================
 // Terminal Events
 // ============================================
+
+/**
+ * Event emitted when terminal produces output data
+ */
+export interface TerminalOutputEvent {
+  sessionId: number;
+  data: string;
+}
+
+/**
+ * Event emitted when a terminal process exits
+ */
+export interface TerminalClosedEvent {
+  sessionId: number;
+  exitCode: number;
+  signal?: number;
+}
 
 /**
  * Event emitted when a terminal enters or exits backpressure state.

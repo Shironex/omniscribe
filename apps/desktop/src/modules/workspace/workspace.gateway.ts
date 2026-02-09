@@ -29,8 +29,11 @@ import {
   TabsOnlyResponse,
   PreferencesResponse,
   QuickActionsResponse,
+  WorkspaceEvents,
+  QuickActionEvents,
   createLogger,
 } from '@omniscribe/shared';
+import { InternalQuickActionEvents } from '../shared/events';
 import { QuickActionService, QuickActionResult } from './quick-action.service';
 import { WorkspaceService, WorkspaceState } from './workspace.service';
 import { CORS_CONFIG } from '../shared/cors.config';
@@ -79,7 +82,7 @@ export class WorkspaceGateway implements OnGatewayInit {
   /**
    * Handle quick action execution request
    */
-  @SubscribeMessage('quickaction:execute')
+  @SubscribeMessage(QuickActionEvents.EXECUTE)
   async handleExecuteQuickAction(
     @MessageBody() payload: ExecuteQuickActionPayload,
     @ConnectedSocket() client: Socket
@@ -93,7 +96,7 @@ export class WorkspaceGateway implements OnGatewayInit {
     );
 
     // Emit result to the client
-    client.emit('quickaction:result', {
+    client.emit(QuickActionEvents.RESULT, {
       actionId: payload.action.id,
       handler: payload.action.handler,
       ...result,
@@ -106,7 +109,7 @@ export class WorkspaceGateway implements OnGatewayInit {
    * Handle get quick actions request
    */
   @SkipThrottle()
-  @SubscribeMessage('quickaction:list')
+  @SubscribeMessage(QuickActionEvents.LIST)
   handleGetQuickActions(
     @MessageBody() payload: GetQuickActionsPayload,
     @ConnectedSocket() _client: Socket
@@ -129,7 +132,7 @@ export class WorkspaceGateway implements OnGatewayInit {
   /**
    * Handle update quick actions request
    */
-  @SubscribeMessage('quickaction:update')
+  @SubscribeMessage(QuickActionEvents.UPDATE)
   handleUpdateQuickActions(
     @MessageBody() payload: UpdateQuickActionsPayload,
     @ConnectedSocket() _client: Socket
@@ -137,7 +140,7 @@ export class WorkspaceGateway implements OnGatewayInit {
     this.workspaceService.setQuickActions(payload.actions);
 
     // Broadcast update to all clients
-    this.server.emit('quickaction:updated', {
+    this.server.emit(QuickActionEvents.UPDATED, {
       actions: payload.actions,
     });
 
@@ -147,14 +150,14 @@ export class WorkspaceGateway implements OnGatewayInit {
   /**
    * Handle reset quick actions to defaults request
    */
-  @SubscribeMessage('quickaction:reset')
+  @SubscribeMessage(QuickActionEvents.RESET)
   handleResetQuickActions(@ConnectedSocket() _client: Socket): QuickActionsResponse {
     this.workspaceService.resetQuickActionsToDefaults();
 
     const actions = this.workspaceService.getQuickActions();
 
     // Broadcast update to all clients
-    this.server.emit('quickaction:updated', {
+    this.server.emit(QuickActionEvents.UPDATED, {
       actions,
     });
 
@@ -164,17 +167,17 @@ export class WorkspaceGateway implements OnGatewayInit {
   /**
    * Broadcast quick action executed event
    */
-  @OnEvent('quickaction.executed')
+  @OnEvent(InternalQuickActionEvents.EXECUTED)
   onQuickActionExecuted(event: QuickActionExecutedEvent): void {
-    this.server.emit('quickaction:executed', event);
+    this.server.emit(QuickActionEvents.EXECUTED, event);
   }
 
   /**
    * Broadcast AI prompt event from quick action
    */
-  @OnEvent('quickaction.ai.prompt')
+  @OnEvent(InternalQuickActionEvents.AI_PROMPT)
   onAiPrompt(event: AiPromptEvent): void {
-    this.server.emit('quickaction:ai:prompt', event);
+    this.server.emit(QuickActionEvents.AI_PROMPT, event);
   }
 
   // ============================================
@@ -185,7 +188,7 @@ export class WorkspaceGateway implements OnGatewayInit {
    * Handle get workspace state request - returns saved state on app start
    */
   @SkipThrottle()
-  @SubscribeMessage('workspace:get-state')
+  @SubscribeMessage(WorkspaceEvents.GET_STATE)
   handleGetWorkspaceState(@ConnectedSocket() _client: Socket): WorkspaceState {
     this.logger.debug('Getting workspace state');
     return this.workspaceService.getWorkspaceState();
@@ -195,7 +198,7 @@ export class WorkspaceGateway implements OnGatewayInit {
    * Handle save workspace state request
    */
   @SkipThrottle()
-  @SubscribeMessage('workspace:save-state')
+  @SubscribeMessage(WorkspaceEvents.SAVE_STATE)
   handleSaveWorkspaceState(
     @MessageBody() payload: SaveStatePayload,
     @ConnectedSocket() _client: Socket
@@ -209,7 +212,7 @@ export class WorkspaceGateway implements OnGatewayInit {
    * Handle add tab request
    */
   @SkipThrottle()
-  @SubscribeMessage('workspace:add-tab')
+  @SubscribeMessage(WorkspaceEvents.ADD_TAB)
   handleAddTab(
     @MessageBody() payload: AddTabPayload,
     @ConnectedSocket() client: Socket
@@ -230,7 +233,7 @@ export class WorkspaceGateway implements OnGatewayInit {
     const activeTabId = this.workspaceService.getActiveTabId() || payload.id;
 
     // Broadcast tab update to all other clients
-    client.broadcast.emit('workspace:tabs-updated', {
+    client.broadcast.emit(WorkspaceEvents.TABS_UPDATED, {
       tabs,
       activeTabId,
     });
@@ -241,7 +244,7 @@ export class WorkspaceGateway implements OnGatewayInit {
   /**
    * Handle update tab theme request
    */
-  @SubscribeMessage('workspace:update-tab-theme')
+  @SubscribeMessage(WorkspaceEvents.UPDATE_TAB_THEME)
   handleUpdateTabTheme(
     @MessageBody() payload: UpdateTabThemePayload,
     @ConnectedSocket() client: Socket
@@ -251,7 +254,7 @@ export class WorkspaceGateway implements OnGatewayInit {
     const tabs = this.workspaceService.updateTabTheme(payload.tabId, payload.theme);
 
     // Broadcast tab update to all other clients
-    client.broadcast.emit('workspace:tabs-updated', {
+    client.broadcast.emit(WorkspaceEvents.TABS_UPDATED, {
       tabs,
       activeTabId: this.workspaceService.getActiveTabId(),
     });
@@ -263,7 +266,7 @@ export class WorkspaceGateway implements OnGatewayInit {
    * Handle remove tab request
    */
   @SkipThrottle()
-  @SubscribeMessage('workspace:remove-tab')
+  @SubscribeMessage(WorkspaceEvents.REMOVE_TAB)
   handleRemoveTab(
     @MessageBody() payload: RemoveTabPayload,
     @ConnectedSocket() client: Socket
@@ -273,7 +276,7 @@ export class WorkspaceGateway implements OnGatewayInit {
     const result = this.workspaceService.removeTab(payload.tabId);
 
     // Broadcast tab update to all other clients
-    client.broadcast.emit('workspace:tabs-updated', {
+    client.broadcast.emit(WorkspaceEvents.TABS_UPDATED, {
       tabs: result.tabs,
       activeTabId: result.activeTabId,
     });
@@ -285,7 +288,7 @@ export class WorkspaceGateway implements OnGatewayInit {
    * Handle select tab request
    */
   @SkipThrottle()
-  @SubscribeMessage('workspace:select-tab')
+  @SubscribeMessage(WorkspaceEvents.SELECT_TAB)
   handleSelectTab(
     @MessageBody() payload: SelectTabPayload,
     @ConnectedSocket() client: Socket
@@ -295,7 +298,7 @@ export class WorkspaceGateway implements OnGatewayInit {
     const tabs = this.workspaceService.selectTab(payload.tabId);
 
     // Broadcast tab update to all other clients
-    client.broadcast.emit('workspace:tabs-updated', {
+    client.broadcast.emit(WorkspaceEvents.TABS_UPDATED, {
       tabs,
       activeTabId: payload.tabId,
     });
@@ -307,7 +310,7 @@ export class WorkspaceGateway implements OnGatewayInit {
    * Handle update preferences request
    */
   @SkipThrottle()
-  @SubscribeMessage('workspace:update-preference')
+  @SubscribeMessage(WorkspaceEvents.UPDATE_PREFERENCE)
   handleUpdatePreference(
     @MessageBody() payload: UpdatePreferencePayload,
     @ConnectedSocket() client: Socket
@@ -317,7 +320,7 @@ export class WorkspaceGateway implements OnGatewayInit {
     const preferences = this.workspaceService.setPreference(payload.key, payload.value);
 
     // Broadcast preference update to all other clients
-    client.broadcast.emit('workspace:preferences-updated', {
+    client.broadcast.emit(WorkspaceEvents.PREFERENCES_UPDATED, {
       preferences,
     });
 
@@ -328,7 +331,7 @@ export class WorkspaceGateway implements OnGatewayInit {
    * Handle get preferences request
    */
   @SkipThrottle()
-  @SubscribeMessage('workspace:get-preferences')
+  @SubscribeMessage(WorkspaceEvents.GET_PREFERENCES)
   handleGetPreferences(@ConnectedSocket() _client: Socket): UserPreferences {
     return this.workspaceService.getPreferences();
   }

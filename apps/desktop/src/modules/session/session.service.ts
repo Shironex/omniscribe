@@ -1,7 +1,6 @@
 import { Injectable, Inject, forwardRef, OnModuleDestroy } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
-  SessionConfig,
   SessionStatus,
   SessionHistoryEntry,
   ActiveSessionSnapshot,
@@ -9,6 +8,9 @@ import {
   CreateSessionOptions,
   WorktreeSettings,
   DEFAULT_WORKTREE_SETTINGS,
+  ExtendedSessionConfig,
+  LaunchSessionResult,
+  SessionStatusUpdate,
   createLogger,
 } from '@omniscribe/shared';
 import { TerminalService } from '../terminal/terminal.service';
@@ -18,33 +20,14 @@ import { WorkspaceService } from '../workspace/workspace.service';
 import { CliCommandService } from './cli-command.service';
 import { ClaudeSessionReaderService } from './claude-session-reader.service';
 import { HookManagerService } from './hook-manager.service';
+import { InternalSessionEvents, InternalTerminalEvents } from '../shared/events';
 
 /**
- * Extended session config with branch information
+ * Backend-specific extension with fields not shared with frontend
  */
-export interface ExtendedSessionConfig extends SessionConfig {
-  /** Git branch assigned to this session */
-  branch?: string;
-  /** Git worktree path if using worktrees */
-  worktreePath?: string;
-  /** Project path for grouping sessions */
-  projectPath: string;
-  /** Current status of the session */
-  status: SessionStatus;
-  /** Status message for display */
-  statusMessage?: string;
-  /** Whether the session needs user input */
-  needsInputPrompt?: boolean;
-  /** Whether session was launched with skip-permissions mode */
-  skipPermissions?: boolean;
-  /** Terminal session ID if launched */
-  terminalSessionId?: number;
+export interface BackendSessionConfig extends ExtendedSessionConfig {
   /** Timestamp of last terminal output (for health checks) */
   lastOutputAt?: Date;
-  /** Claude Code session UUID captured after launch */
-  claudeSessionId?: string;
-  /** Whether this session was resumed from a previous Claude session */
-  isResumed?: boolean;
   /** Claude Code session UUID to resume (used during launch) */
   resumeSessionId?: string;
   /** Claude Code session UUID to fork (used during launch) */
@@ -53,29 +36,10 @@ export interface ExtendedSessionConfig extends SessionConfig {
   continueLastSession?: boolean;
 }
 
-/**
- * Result of launching a session
- */
-export interface LaunchSessionResult {
-  success: boolean;
-  terminalSessionId?: number;
-  error?: string;
-}
-
-/**
- * Session status update payload
- */
-export interface SessionStatusUpdate {
-  sessionId: string;
-  status: SessionStatus;
-  message?: string;
-  needsInputPrompt?: boolean;
-}
-
 @Injectable()
 export class SessionService implements OnModuleDestroy {
   private readonly logger = createLogger('SessionService');
-  private sessions = new Map<string, ExtendedSessionConfig>();
+  private sessions = new Map<string, BackendSessionConfig>();
   private sessionCounter = 0;
 
   constructor(
@@ -91,12 +55,15 @@ export class SessionService implements OnModuleDestroy {
     private readonly hookManager: HookManagerService
   ) {
     // Listen for terminal close events to update session status
-    this.eventEmitter.on('terminal.closed', this.handleTerminalClosed.bind(this));
+    this.eventEmitter.on(InternalTerminalEvents.CLOSED, this.handleTerminalClosed.bind(this));
 
     // Listen for terminal output to track last output time (for health checks)
-    this.eventEmitter.on('terminal.output', (event: { sessionId: number; data: string }) => {
-      this.updateLastOutput(event.sessionId);
-    });
+    this.eventEmitter.on(
+      InternalTerminalEvents.OUTPUT,
+      (event: { sessionId: number; data: string }) => {
+        this.updateLastOutput(event.sessionId);
+      }
+    );
   }
 
   /**
@@ -158,7 +125,7 @@ export class SessionService implements OnModuleDestroy {
    * Persist a session's history entry to the workspace store.
    * Called when a terminal closes and a Claude session ID was captured.
    */
-  private persistSessionHistory(session: ExtendedSessionConfig, exitCode: number): void {
+  private persistSessionHistory(session: BackendSessionConfig, exitCode: number): void {
     try {
       const entry: SessionHistoryEntry = {
         omniscribeSessionId: session.id,
@@ -194,12 +161,12 @@ export class SessionService implements OnModuleDestroy {
       forkSessionId?: string;
       continueLastSession?: boolean;
     }
-  ): ExtendedSessionConfig {
+  ): BackendSessionConfig {
     const id = `session-${++this.sessionCounter}-${Date.now()}`;
     const now = new Date();
     const isResumed = !!options?.resumeSessionId;
 
-    const session: ExtendedSessionConfig = {
+    const session: BackendSessionConfig = {
       id,
       name: options?.name ?? `Session ${this.sessionCounter}`,
       workingDirectory: options?.workingDirectory ?? projectPath,
@@ -234,7 +201,7 @@ export class SessionService implements OnModuleDestroy {
     }
     this.logger.info(`Created session ${id} (mode: ${mode}, project: ${projectPath}${detail})`);
 
-    this.eventEmitter.emit('session.created', session);
+    this.eventEmitter.emit(InternalSessionEvents.CREATED, session);
 
     return session;
   }
@@ -247,7 +214,7 @@ export class SessionService implements OnModuleDestroy {
     status: SessionStatus,
     message?: string,
     needsInputPrompt?: boolean
-  ): ExtendedSessionConfig | undefined {
+  ): BackendSessionConfig | undefined {
     const session = this.sessions.get(sessionId);
 
     if (!session) {
@@ -269,7 +236,7 @@ export class SessionService implements OnModuleDestroy {
       needsInputPrompt,
     };
 
-    this.eventEmitter.emit('session.status', statusUpdate);
+    this.eventEmitter.emit(InternalSessionEvents.STATUS, statusUpdate);
 
     return session;
   }
@@ -296,7 +263,7 @@ export class SessionService implements OnModuleDestroy {
     sessionId: string,
     branch: string,
     worktreePath?: string
-  ): ExtendedSessionConfig | undefined {
+  ): BackendSessionConfig | undefined {
     const session = this.sessions.get(sessionId);
 
     if (!session) {
@@ -308,7 +275,7 @@ export class SessionService implements OnModuleDestroy {
     session.lastActiveAt = new Date();
 
     // Emit status update to notify about branch assignment
-    this.eventEmitter.emit('session.status', {
+    this.eventEmitter.emit(InternalSessionEvents.STATUS, {
       sessionId,
       status: session.status,
       message: `Branch assigned: ${branch}`,
@@ -361,7 +328,7 @@ export class SessionService implements OnModuleDestroy {
 
     this.sessions.delete(sessionId);
 
-    this.eventEmitter.emit('session.removed', { sessionId });
+    this.eventEmitter.emit(InternalSessionEvents.REMOVED, { sessionId });
 
     return true;
   }
@@ -369,14 +336,14 @@ export class SessionService implements OnModuleDestroy {
   /**
    * Get a session by ID
    */
-  get(sessionId: string): ExtendedSessionConfig | undefined {
+  get(sessionId: string): BackendSessionConfig | undefined {
     return this.sessions.get(sessionId);
   }
 
   /**
    * Get all sessions
    */
-  getAll(): ExtendedSessionConfig[] {
+  getAll(): BackendSessionConfig[] {
     return Array.from(this.sessions.values());
   }
 
@@ -384,7 +351,7 @@ export class SessionService implements OnModuleDestroy {
    * Get all sessions that have an active terminal (running sessions).
    * Done/Error sessions without terminals are NOT counted.
    */
-  getRunningSessions(): ExtendedSessionConfig[] {
+  getRunningSessions(): BackendSessionConfig[] {
     return Array.from(this.sessions.values()).filter(
       session =>
         session.terminalSessionId !== undefined &&
@@ -396,7 +363,7 @@ export class SessionService implements OnModuleDestroy {
    * Get idle sessions that could be closed to free slots.
    * A session is "idle" if it has an active terminal but status is 'idle' or 'needs_input'.
    */
-  getIdleSessions(): ExtendedSessionConfig[] {
+  getIdleSessions(): BackendSessionConfig[] {
     return this.getRunningSessions().filter(
       session => session.status === 'idle' || session.status === 'needs_input'
     );
@@ -405,7 +372,7 @@ export class SessionService implements OnModuleDestroy {
   /**
    * Get sessions for a specific project
    */
-  getForProject(projectPath: string): ExtendedSessionConfig[] {
+  getForProject(projectPath: string): BackendSessionConfig[] {
     return Array.from(this.sessions.values()).filter(
       session => session.projectPath === projectPath
     );
@@ -710,7 +677,7 @@ export class SessionService implements OnModuleDestroy {
           this.logger.info(`Captured Claude session ID for ${sessionId}: ${newSession.sessionId}`);
 
           // Emit event so the gateway can broadcast to frontend
-          this.eventEmitter.emit('session.claude-id-captured', {
+          this.eventEmitter.emit(InternalSessionEvents.CLAUDE_ID_CAPTURED, {
             sessionId,
             claudeSessionId: newSession.sessionId,
           });

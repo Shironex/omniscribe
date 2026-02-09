@@ -1,20 +1,19 @@
 import { useState, useCallback, useMemo } from 'react';
 import { createLogger } from '@omniscribe/shared';
-import { useSessionStore, type ExtendedSessionConfig } from '@/stores/useSessionStore';
+import { useSessionStore, type FrontendSessionConfig } from '@/stores/useSessionStore';
 
 const logger = createLogger('ProjectSessions');
 import type { StatusCounts } from '@/components';
 import type { TerminalSession, PreLaunchSlot } from '@/components/terminal/TerminalGrid';
 import { mapSessionStatus } from '@omniscribe/shared';
-import { mapAiModeToUI } from '@/lib/aiMode';
 
 interface UseProjectSessionsReturn {
   /** All sessions from store */
-  sessions: ExtendedSessionConfig[];
+  sessions: FrontendSessionConfig[];
   /** Terminal sessions formatted for TerminalGrid */
   terminalSessions: TerminalSession[];
   /** Sessions filtered for the active project */
-  activeProjectSessions: ExtendedSessionConfig[];
+  activeProjectSessions: FrontendSessionConfig[];
   /** Whether there are any active sessions */
   hasActiveSessions: boolean;
   /** Status counts for the active project */
@@ -26,7 +25,7 @@ interface UseProjectSessionsReturn {
   /** Handler for session close */
   handleSessionClose: (sessionId: string, exitCode: number) => Promise<void>;
   /** Update session function from store */
-  updateSession: (sessionId: string, updates: Partial<ExtendedSessionConfig>) => void;
+  updateSession: (sessionId: string, updates: Partial<FrontendSessionConfig>) => void;
 }
 
 /**
@@ -55,7 +54,7 @@ export function useProjectSessions(
     return activeProjectSessions.map((session, index) => ({
       id: session.id,
       sessionNumber: index + 1,
-      aiMode: mapAiModeToUI(session.aiMode),
+      aiMode: session.aiMode,
       status: mapSessionStatus(session.status),
       branch: session.branch,
       statusMessage: session.statusMessage,

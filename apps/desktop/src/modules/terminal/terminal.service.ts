@@ -3,6 +3,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import * as pty from 'node-pty';
 import * as os from 'os';
 import { TERM_PROGRAM, createLogger } from '@omniscribe/shared';
+import { InternalTerminalEvents } from '../shared/events';
 
 // Performance constants
 const OUTPUT_THROTTLE_MS = 16; // ~1 frame at 60fps
@@ -324,7 +325,7 @@ export class TerminalService implements OnModuleDestroy {
       this.logger.log(`[onExit] Session ${sessionId} exited (code=${exitCode}, signal=${signal})`);
 
       this.cleanup(sessionId);
-      this.eventEmitter.emit('terminal.closed', {
+      this.eventEmitter.emit(InternalTerminalEvents.CLOSED, {
         sessionId,
         externalId: session.externalId,
         exitCode,
@@ -569,7 +570,7 @@ export class TerminalService implements OnModuleDestroy {
         const chunk = session.outputBuffer.slice(0, OUTPUT_BATCH_SIZE);
         session.outputBuffer = session.outputBuffer.slice(OUTPUT_BATCH_SIZE);
 
-        this.eventEmitter.emit('terminal.output', {
+        this.eventEmitter.emit(InternalTerminalEvents.OUTPUT, {
           sessionId,
           data: chunk,
         });
@@ -582,7 +583,7 @@ export class TerminalService implements OnModuleDestroy {
       }
 
       // Small enough to send all at once
-      this.eventEmitter.emit('terminal.output', {
+      this.eventEmitter.emit(InternalTerminalEvents.OUTPUT, {
         sessionId,
         data: session.outputBuffer,
       });
@@ -611,7 +612,7 @@ export class TerminalService implements OnModuleDestroy {
         clearTimeout(session.flushTimer);
         // Flush any remaining output before cleanup
         if (session.outputBuffer.length > 0) {
-          this.eventEmitter.emit('terminal.output', {
+          this.eventEmitter.emit(InternalTerminalEvents.OUTPUT, {
             sessionId,
             data: session.outputBuffer,
           });

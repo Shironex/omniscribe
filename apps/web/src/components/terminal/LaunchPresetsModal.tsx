@@ -7,7 +7,7 @@ import { BranchAutocomplete } from '@/components/shared/BranchAutocomplete';
 import { ClaudeIcon } from '@/components/shared/ClaudeIcon';
 import { useClickOutside } from '@/hooks/useClickOutside';
 import { GridPresetCard } from './GridPresetCard';
-import type { AIMode } from './PreLaunchBar';
+import type { AiMode } from '@omniscribe/shared';
 import type { Branch } from '@/components/shared/BranchSelector';
 
 const GRID_PRESETS = [1, 2, 3, 4, 6, 8, 9, 12] as const;
@@ -18,9 +18,9 @@ interface LaunchPresetsModalProps {
   branches: Branch[];
   claudeAvailable: boolean;
   currentBranch: string;
-  defaultAiMode: AIMode;
+  defaultAiMode: AiMode;
   existingSessionCount: number;
-  onCreateSessions: (count: number, aiMode: AIMode, branch: string) => void;
+  onCreateSessions: (count: number, aiMode: AiMode, branch: string) => void;
 }
 
 export function LaunchPresetsModal({
@@ -34,7 +34,7 @@ export function LaunchPresetsModal({
   onCreateSessions,
 }: LaunchPresetsModalProps) {
   const [selectedCount, setSelectedCount] = useState<number | null>(null);
-  const [aiMode, setAiMode] = useState<AIMode>(defaultAiMode);
+  const [aiMode, setAiMode] = useState<AiMode>(defaultAiMode);
   const [branch, setBranch] = useState(currentBranch);
   const [isAIModeOpen, setIsAIModeOpen] = useState(false);
 

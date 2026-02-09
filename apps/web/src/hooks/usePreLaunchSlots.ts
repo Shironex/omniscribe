@@ -3,7 +3,7 @@ import { toast } from 'sonner';
 import { createLogger } from '@omniscribe/shared';
 import type { PreLaunchSlot } from '@/components/terminal/TerminalGrid';
 import { createSession } from '@/lib/session';
-import { mapAiModeToBackend } from '@/lib/aiMode';
+
 import { useTerminalStore, useSessionStore, selectRunningSessionCount } from '@/stores';
 import { useDefaultAiMode } from './useDefaultAiMode';
 import {
@@ -157,8 +157,7 @@ export function usePreLaunchSlots(
       try {
         logger.info('Launching slot', slotId, slot.aiMode);
         // Create the session via socket (map UI aiMode to backend AiMode)
-        const backendAiMode = mapAiModeToBackend(slot.aiMode);
-        const session = await createSession(backendAiMode, activeProjectPath, slot.branch);
+        const session = await createSession(slot.aiMode, activeProjectPath, slot.branch);
 
         logger.info('Session created', session.id);
         // The session:created event arrives before terminalSessionId is set,
