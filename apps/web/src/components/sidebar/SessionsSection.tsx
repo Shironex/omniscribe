@@ -127,14 +127,14 @@ export function SessionsSection({ className, onSessionClick, onNewSession }: Ses
                 'w-full flex items-center gap-2 px-2 py-1.5 rounded',
                 'text-left transition-colors',
                 'hover:bg-muted',
-                'focus:outline-none focus:ring-1 focus:ring-primary'
+                'focus:outline-hidden focus:ring-1 focus:ring-primary'
               )}
             >
               <StatusDot
                 status={getSessionDisplayStatus(session)}
                 title={getHealthTooltip(session)}
               />
-              <Terminal size={12} className="text-muted-foreground flex-shrink-0" />
+              <Terminal size={12} className="text-muted-foreground shrink-0" />
               <div className="min-w-0 flex-1">
                 <div className="text-xs text-foreground-secondary truncate">{session.name}</div>
                 {session.statusMessage && (
@@ -144,7 +144,7 @@ export function SessionsSection({ className, onSessionClick, onNewSession }: Ses
                 )}
               </div>
               {session.needsInputPrompt && (
-                <span className="text-yellow-500 text-xs flex-shrink-0" title="Needs input">
+                <span className="text-yellow-500 text-xs shrink-0" title="Needs input">
                   !
                 </span>
               )}

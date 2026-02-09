@@ -18,10 +18,10 @@ export function SplashScreen() {
   return (
     <div
       className={cn(
-        'fixed inset-0 z-[9999] flex flex-col items-center justify-center',
+        'fixed inset-0 z-9999 flex flex-col items-center justify-center',
         isDarkTheme
-          ? 'bg-gradient-to-br from-[#0a0a0f] via-[#0a0a0f] to-[#1a1a2e]'
-          : 'bg-gradient-to-br from-[#fafafa] via-[#ffffff] to-[#f0f0ff]'
+          ? 'bg-linear-to-br from-[#0a0a0f] via-[#0a0a0f] to-[#1a1a2e]'
+          : 'bg-linear-to-br from-[#fafafa] via-[#ffffff] to-[#f0f0ff]'
       )}
       style={{
         opacity: isDismissing ? 0 : 1,
