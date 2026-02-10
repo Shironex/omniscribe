@@ -4,6 +4,7 @@ import * as os from 'os';
 import { createLogger } from '@omniscribe/shared';
 import type { ClaudeUsage, UsageError, ClaudeCliStatus } from '@omniscribe/shared';
 import { getClaudeCliStatus } from '../../main/utils/claude-detection';
+import { buildSafeEnv } from '../../common';
 
 /** Cache TTL for status checks (5 minutes) */
 const STATUS_CACHE_TTL_MS = 5 * 60 * 1000;
@@ -110,7 +111,7 @@ export class UsageService {
         rows: 30,
         cwd: workingDir,
         env: {
-          ...this.getCleanEnv(),
+          ...buildSafeEnv(),
           TERM: 'xterm-256color',
         },
       };
@@ -274,19 +275,6 @@ export class UsageService {
         }
       });
     });
-  }
-
-  /**
-   * Get clean environment variables
-   */
-  private getCleanEnv(): Record<string, string> {
-    const cleanEnv: Record<string, string> = {};
-    for (const [key, value] of Object.entries(process.env)) {
-      if (value !== undefined) {
-        cleanEnv[key] = value;
-      }
-    }
-    return cleanEnv;
   }
 
   /**

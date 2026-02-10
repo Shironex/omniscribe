@@ -5,6 +5,9 @@
  */
 export type AiMode = 'claude' | 'plain';
 
+/** Runtime-validated AI mode values */
+export const AI_MODES: readonly AiMode[] = ['claude', 'plain'] as const;
+
 /**
  * Health level for session health monitoring.
  * - healthy: Terminal responsive, PID alive, output recent
@@ -31,6 +34,36 @@ export type SessionStatus =
   | 'planning'
   | 'needs_input'
   | 'finished';
+
+/**
+ * Valid session status transitions.
+ * Used by SessionService.updateStatus() to warn on unexpected transitions.
+ * Deliberately permissive: MCP status values can freely transition among themselves,
+ * and 'error'/'idle' are reachable from any state.
+ */
+export const VALID_STATUS_TRANSITIONS: Record<SessionStatus, readonly SessionStatus[]> = {
+  idle: ['connecting', 'thinking', 'working', 'planning', 'needs_input', 'error'],
+  connecting: ['idle', 'error'],
+  active: [
+    'idle',
+    'thinking',
+    'working',
+    'planning',
+    'needs_input',
+    'error',
+    'finished',
+    'disconnected',
+  ],
+  thinking: ['idle', 'working', 'executing', 'needs_input', 'error', 'finished'],
+  executing: ['idle', 'thinking', 'working', 'needs_input', 'error', 'finished'],
+  working: ['idle', 'thinking', 'planning', 'needs_input', 'error', 'finished'],
+  planning: ['idle', 'working', 'thinking', 'needs_input', 'error', 'finished'],
+  needs_input: ['idle', 'working', 'thinking', 'planning', 'error', 'finished'],
+  paused: ['idle', 'active', 'error'],
+  error: ['idle', 'connecting', 'error'],
+  disconnected: ['idle', 'error'],
+  finished: ['idle', 'error'],
+};
 
 /**
  * Session configuration

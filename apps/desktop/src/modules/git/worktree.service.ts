@@ -234,7 +234,11 @@ export class WorktreeService {
     // Remove the worktree
     try {
       await this.gitBase.execGit(projectPath, ['worktree', 'remove', worktreePath, '--force']);
-    } catch {
+    } catch (error) {
+      this.logger.warn(
+        `git worktree remove failed for ${worktreePath}, attempting manual cleanup:`,
+        error
+      );
       // If git worktree remove fails, try manual cleanup
       try {
         await fs.rm(worktreePath, { recursive: true, force: true });

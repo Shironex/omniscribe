@@ -1,6 +1,5 @@
 import { app, BrowserWindow } from 'electron';
 import { autoUpdater } from 'electron-updater';
-import Store from 'electron-store';
 import * as semver from 'semver';
 import {
   createLogger,
@@ -10,9 +9,10 @@ import {
 import type { UpdateChannel } from '@omniscribe/shared';
 import type { UpdateInfo as ElectronUpdateInfo } from 'electron-updater';
 import type { ProgressInfo } from 'electron-updater';
+import { getConfigStore } from './config-store';
 
 const logger = createLogger('AutoUpdater');
-const store = new Store();
+const store = getConfigStore();
 
 let updaterEnabled = false;
 let currentChannel: UpdateChannel = DEFAULT_UPDATE_CHANNEL;

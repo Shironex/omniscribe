@@ -8,6 +8,7 @@ import {
   DEFAULT_WORKTREE_SETTINGS,
   DEFAULT_SESSION_SETTINGS,
 } from '@omniscribe/shared';
+import { createSafeStore } from '../../main/config-store';
 
 // Re-export WorkspaceStateResponse as WorkspaceState for backward compatibility
 export type WorkspaceState = WorkspaceStateResponse;
@@ -182,7 +183,7 @@ export class WorkspaceService implements OnModuleInit {
   private store: Store<StoreSchema>;
 
   constructor() {
-    this.store = new Store<StoreSchema>({
+    this.store = createSafeStore<StoreSchema>({
       name: 'workspace',
       defaults: {
         tabs: [],

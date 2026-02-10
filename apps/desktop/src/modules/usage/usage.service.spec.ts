@@ -986,7 +986,7 @@ describe('UsageService', () => {
       );
     });
 
-    it('should include process.env variables in PTY env (filtering undefined)', async () => {
+    it('should use buildSafeEnv for PTY env (allowlist only, no NODE_ENV leak)', async () => {
       const fakePty = createFakePty();
       mockPtySpawn.mockReturnValue(fakePty);
 
@@ -996,10 +996,12 @@ describe('UsageService', () => {
       fakePty.emitExit(0);
 
       const ptyOptions = mockPtySpawn.mock.calls[0][2];
-      // Should have inherited env vars
+      // Should have env vars from allowlist
       expect(ptyOptions.env).toBeDefined();
-      // NODE_ENV should be inherited from process.env (set to 'test' by setup)
-      expect(ptyOptions.env.NODE_ENV).toBe('test');
+      // TERM is explicitly set in the env
+      expect(ptyOptions.env.TERM).toBe('xterm-256color');
+      // NODE_ENV should NOT be forwarded (not on allowlist)
+      expect(ptyOptions.env.NODE_ENV).toBeUndefined();
     });
   });
 

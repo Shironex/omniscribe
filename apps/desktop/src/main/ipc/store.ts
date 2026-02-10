@@ -1,8 +1,8 @@
 import { ipcMain } from 'electron';
-import Store from 'electron-store';
 import { createLogger } from '@omniscribe/shared';
+import { getConfigStore } from '../config-store';
 
-const store = new Store();
+const store = getConfigStore();
 const logger = createLogger('IPC:Store');
 
 /**

@@ -1,18 +1,14 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { McpDiscoveryService } from './mcp-discovery.service';
 
-// Mock fs module
-jest.mock('fs', () => ({
-  existsSync: jest.fn(),
-  promises: {
-    readFile: jest.fn(),
-  },
+// Mock fs/promises module
+jest.mock('fs/promises', () => ({
+  readFile: jest.fn(),
 }));
 
-import * as fs from 'fs';
+import * as fs from 'fs/promises';
 
-const existsSyncMock = fs.existsSync as jest.Mock;
-const readFileMock = fs.promises.readFile as jest.Mock;
+const readFileMock = fs.readFile as jest.Mock;
 
 describe('McpDiscoveryService', () => {
   let service: McpDiscoveryService;
@@ -24,13 +20,14 @@ describe('McpDiscoveryService', () => {
 
     service = module.get<McpDiscoveryService>(McpDiscoveryService);
 
-    existsSyncMock.mockReset();
     readFileMock.mockReset();
   });
 
   describe('discoverServers', () => {
     it('should return empty array when no config files exist', async () => {
-      existsSyncMock.mockReturnValue(false);
+      const enoent = new Error('ENOENT') as NodeJS.ErrnoException;
+      enoent.code = 'ENOENT';
+      readFileMock.mockRejectedValue(enoent);
 
       const servers = await service.discoverServers('/project');
 
@@ -48,8 +45,14 @@ describe('McpDiscoveryService', () => {
         },
       };
 
-      existsSyncMock.mockImplementation((p: string) => p.endsWith('.mcp.json'));
-      readFileMock.mockResolvedValue(JSON.stringify(config));
+      readFileMock.mockImplementation((p: string) => {
+        if (p.endsWith('.mcp.json') && !p.includes('.mcp/')) {
+          return Promise.resolve(JSON.stringify(config));
+        }
+        const err = new Error('ENOENT') as NodeJS.ErrnoException;
+        err.code = 'ENOENT';
+        return Promise.reject(err);
+      });
 
       const servers = await service.discoverServers('/project');
 
@@ -80,20 +83,12 @@ describe('McpDiscoveryService', () => {
         },
       };
 
-      // .mcp.json and mcp.json both exist
-      existsSyncMock.mockImplementation(
-        (p: string) => p.endsWith('.mcp.json') || (p.endsWith('mcp.json') && !p.includes('.'))
-      );
-
       // Return different configs for different file reads
       let callCount = 0;
       readFileMock.mockImplementation(() => {
         callCount++;
         return Promise.resolve(JSON.stringify(callCount === 1 ? config1 : config2));
       });
-
-      // Both .mcp.json and mcp.json exist
-      existsSyncMock.mockReturnValue(true);
 
       const servers = await service.discoverServers('/project');
 
@@ -108,7 +103,6 @@ describe('McpDiscoveryService', () => {
       };
 
       // All three config files exist with the same server
-      existsSyncMock.mockReturnValue(true);
       readFileMock.mockResolvedValue(JSON.stringify(config));
 
       const servers = await service.discoverServers('/project');
@@ -119,7 +113,6 @@ describe('McpDiscoveryService', () => {
     });
 
     it('should handle JSON parse errors gracefully', async () => {
-      existsSyncMock.mockReturnValue(true);
       readFileMock.mockResolvedValue('not valid json {{{');
 
       const servers = await service.discoverServers('/project');
@@ -128,7 +121,6 @@ describe('McpDiscoveryService', () => {
     });
 
     it('should handle file read errors gracefully', async () => {
-      existsSyncMock.mockReturnValue(true);
       readFileMock.mockRejectedValue(new Error('EACCES: permission denied'));
 
       const servers = await service.discoverServers('/project');
@@ -155,8 +147,14 @@ describe('McpDiscoveryService', () => {
         },
       };
 
-      existsSyncMock.mockImplementation((p: string) => p.endsWith('.mcp.json'));
-      readFileMock.mockResolvedValue(JSON.stringify(config));
+      readFileMock.mockImplementation((p: string) => {
+        if (p.endsWith('.mcp.json') && !p.includes('.mcp/')) {
+          return Promise.resolve(JSON.stringify(config));
+        }
+        const err = new Error('ENOENT') as NodeJS.ErrnoException;
+        err.code = 'ENOENT';
+        return Promise.reject(err);
+      });
 
       const servers = await service.discoverServers('/project');
 
@@ -174,8 +172,14 @@ describe('McpDiscoveryService', () => {
         },
       };
 
-      existsSyncMock.mockImplementation((p: string) => p.endsWith('.mcp.json'));
-      readFileMock.mockResolvedValue(JSON.stringify(config));
+      readFileMock.mockImplementation((p: string) => {
+        if (p.endsWith('.mcp.json') && !p.includes('.mcp/')) {
+          return Promise.resolve(JSON.stringify(config));
+        }
+        const err = new Error('ENOENT') as NodeJS.ErrnoException;
+        err.code = 'ENOENT';
+        return Promise.reject(err);
+      });
 
       const servers = await service.discoverServers('/project');
 

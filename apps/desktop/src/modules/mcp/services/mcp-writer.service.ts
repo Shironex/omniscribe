@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnModuleDestroy } from '@nestjs/common';
 import { McpServerConfig, MCP_SERVER_NAME, createLogger } from '@omniscribe/shared';
 import { Mutex } from 'async-mutex';
 import * as fs from 'fs';
@@ -29,7 +29,7 @@ interface McpWrittenServerEntry {
  * - All discovered external MCP servers from the project
  */
 @Injectable()
-export class McpWriterService {
+export class McpWriterService implements OnModuleDestroy {
   private readonly logger = createLogger('McpWriterService');
   private readonly fileLocks = new Map<string, Mutex>();
 
@@ -52,6 +52,10 @@ export class McpWriterService {
     private readonly sessionRegistry: McpSessionRegistryService,
     private readonly statusServer: McpStatusServerService
   ) {}
+
+  onModuleDestroy(): void {
+    this.fileLocks.clear();
+  }
 
   /**
    * Generate a SHA256 hash of the project path (first 12 characters)
@@ -181,7 +185,7 @@ export class McpWriterService {
     const configPath = path.join(workingDir, '.mcp.json');
     const mutex = this.getMutex(configPath);
 
-    return mutex.runExclusive(async () => {
+    const result = await mutex.runExclusive(async () => {
       try {
         if (!fs.existsSync(configPath)) {
           return false;
@@ -217,6 +221,13 @@ export class McpWriterService {
 
       return false;
     });
+
+    // Clean up mutex entry if no longer in use
+    if (!mutex.isLocked()) {
+      this.fileLocks.delete(configPath);
+    }
+
+    return result;
   }
 
   /**

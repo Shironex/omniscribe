@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { McpServerConfig, createLogger } from '@omniscribe/shared';
-import * as fs from 'fs';
+import * as fs from 'fs/promises';
 import * as path from 'path';
 
 /**
@@ -60,15 +60,21 @@ export class McpDiscoveryService {
       const configPath = path.join(projectPath, configFile);
 
       try {
-        if (fs.existsSync(configPath)) {
-          const content = await fs.promises.readFile(configPath, 'utf-8');
-          const config = JSON.parse(content) as McpConfigFile;
-          const parsedServers = this.parseConfig(config);
-          servers.push(...parsedServers);
+        const content = await fs.readFile(configPath, 'utf-8');
+        const config = JSON.parse(content) as McpConfigFile;
+        const parsedServers = this.parseConfig(config);
+        servers.push(...parsedServers);
 
-          this.logger.log(`Discovered ${parsedServers.length} servers from ${configPath}`);
+        this.logger.log(`Discovered ${parsedServers.length} servers from ${configPath}`);
+      } catch (error: unknown) {
+        // ENOENT is expected -- config file simply doesn't exist
+        if (
+          error instanceof Error &&
+          'code' in error &&
+          (error as NodeJS.ErrnoException).code === 'ENOENT'
+        ) {
+          continue;
         }
-      } catch (error) {
         this.logger.error(`Error reading ${configPath}:`, error);
       }
     }

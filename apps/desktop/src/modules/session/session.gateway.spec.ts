@@ -70,6 +70,7 @@ const mockSessionService = {
   getAll: jest.fn(),
   getForProject: jest.fn(),
   remove: jest.fn(),
+  update: jest.fn(),
   assignBranch: jest.fn(),
   launchSession: jest.fn(),
   getRunningSessions: jest.fn().mockReturnValue([]),
@@ -426,6 +427,25 @@ describe('SessionGateway', () => {
       expect(result.error).toContain('Session limit reached');
       expect(result.idleSessions).toEqual([]);
     });
+
+    it('should reject invalid mode', async () => {
+      mockSessionService.getRunningSessions.mockReturnValue([]);
+
+      const result = await gateway.handleCreate(
+        { mode: 'invalid' as any, projectPath: '/project' },
+        client
+      );
+      expect(result.error).toContain('Invalid mode');
+      expect(mockSessionService.create).not.toHaveBeenCalled();
+    });
+
+    it('should reject missing projectPath', async () => {
+      mockSessionService.getRunningSessions.mockReturnValue([]);
+
+      const result = await gateway.handleCreate({ mode: 'claude', projectPath: '' }, client);
+      expect(result.error).toContain('projectPath');
+      expect(mockSessionService.create).not.toHaveBeenCalled();
+    });
   });
 
   // ========================================================================
@@ -433,50 +453,11 @@ describe('SessionGateway', () => {
   // ========================================================================
 
   describe('handleUpdate', () => {
-    it('should apply all update fields and emit status', () => {
-      const session = createMockSession();
-      mockSessionService.get.mockReturnValue(session);
+    it('should delegate to sessionService.update and return session', () => {
+      const session = createMockSession({ name: 'Updated' });
+      mockSessionService.update.mockReturnValue(session);
 
       const result = gateway.handleUpdate(
-        {
-          sessionId: 'session-1-1700000000000',
-          updates: {
-            name: 'Renamed',
-            aiMode: 'plain',
-            model: 'sonnet',
-            systemPrompt: 'Be verbose',
-            maxTokens: 4096,
-            temperature: 0.7,
-            mcpServers: ['srv-a', 'srv-b'],
-          },
-        },
-        client
-      );
-
-      expect(session.name).toBe('Renamed');
-      expect(session.aiMode).toBe('plain');
-      expect(session.model).toBe('sonnet');
-      expect(session.systemPrompt).toBe('Be verbose');
-      expect(session.maxTokens).toBe(4096);
-      expect(session.temperature).toBe(0.7);
-      expect(session.mcpServers).toEqual(['srv-a', 'srv-b']);
-      expect(session.lastActiveAt).toBeInstanceOf(Date);
-
-      expect(server.emit).toHaveBeenCalledWith('session:status', {
-        sessionId: 'session-1-1700000000000',
-        status: 'idle',
-        message: 'Session updated',
-      });
-
-      expect(result.session).toBe(session);
-      expect(result.error).toBeUndefined();
-    });
-
-    it('should apply partial updates', () => {
-      const session = createMockSession({ name: 'Original' });
-      mockSessionService.get.mockReturnValue(session);
-
-      gateway.handleUpdate(
         {
           sessionId: 'session-1-1700000000000',
           updates: { name: 'Updated' },
@@ -484,13 +465,15 @@ describe('SessionGateway', () => {
         client
       );
 
-      expect(session.name).toBe('Updated');
-      // Other fields should remain unchanged
-      expect(session.aiMode).toBe('claude');
+      expect(mockSessionService.update).toHaveBeenCalledWith('session-1-1700000000000', {
+        name: 'Updated',
+      });
+      expect(result.session).toBe(session);
+      expect(result.error).toBeUndefined();
     });
 
     it('should return error for non-existent session', () => {
-      mockSessionService.get.mockReturnValue(undefined);
+      mockSessionService.update.mockReturnValue(undefined);
 
       const result = gateway.handleUpdate(
         {

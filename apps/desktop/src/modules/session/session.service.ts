@@ -5,6 +5,8 @@ import {
   SessionStatus,
   AiMode,
   CreateSessionOptions,
+  UpdateSessionOptions,
+  VALID_STATUS_TRANSITIONS,
   WorktreeSettings,
   DEFAULT_WORKTREE_SETTINGS,
   createLogger,
@@ -161,6 +163,15 @@ export class SessionService {
     this.logger.debug(
       `Updating status for session ${sessionId}: ${status}${message ? ` (${message})` : ''}`
     );
+
+    // State machine validation (warn-and-apply)
+    const validTransitions = VALID_STATUS_TRANSITIONS[session.status];
+    if (validTransitions && !validTransitions.includes(status)) {
+      this.logger.warn(
+        `Unexpected status transition for session ${sessionId}: ${session.status} -> ${status}`
+      );
+    }
+
     session.status = status;
     session.statusMessage = message;
     session.needsInputPrompt = needsInputPrompt;
@@ -174,6 +185,53 @@ export class SessionService {
     };
 
     this.eventEmitter.emit('session.status', statusUpdate);
+
+    return session;
+  }
+
+  /**
+   * Update session configuration fields
+   * @param sessionId The session ID to update
+   * @param updates Partial updates to apply
+   * @returns Updated session or undefined if not found
+   */
+  update(sessionId: string, updates: UpdateSessionOptions): ExtendedSessionConfig | undefined {
+    const session = this.sessions.get(sessionId);
+
+    if (!session) {
+      return undefined;
+    }
+
+    if (updates.name !== undefined) {
+      session.name = updates.name;
+    }
+    if (updates.aiMode !== undefined) {
+      session.aiMode = updates.aiMode;
+    }
+    if (updates.model !== undefined) {
+      session.model = updates.model;
+    }
+    if (updates.systemPrompt !== undefined) {
+      session.systemPrompt = updates.systemPrompt;
+    }
+    if (updates.maxTokens !== undefined) {
+      session.maxTokens = updates.maxTokens;
+    }
+    if (updates.temperature !== undefined) {
+      session.temperature = updates.temperature;
+    }
+    if (updates.mcpServers !== undefined) {
+      session.mcpServers = updates.mcpServers;
+    }
+
+    session.lastActiveAt = new Date();
+
+    // Emit status update through the standard event path
+    this.eventEmitter.emit('session.status', {
+      sessionId,
+      status: session.status,
+      message: 'Session updated',
+    });
 
     return session;
   }

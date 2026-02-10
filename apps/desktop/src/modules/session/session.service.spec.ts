@@ -165,6 +165,85 @@ describe('SessionService', () => {
 
       expect(updated?.lastActiveAt.getTime()).toBeGreaterThanOrEqual(originalTime.getTime());
     });
+
+    it('should allow valid transitions', () => {
+      const session = service.create('claude', '/project');
+      // idle -> connecting is valid
+      const updated = service.updateStatus(session.id, 'connecting', 'Connecting...');
+      expect(updated?.status).toBe('connecting');
+    });
+
+    it('should warn but still apply unexpected transitions', () => {
+      const session = service.create('claude', '/project');
+      // idle -> finished is not in valid transitions
+      const updated = service.updateStatus(session.id, 'finished', 'Done');
+      // Should still apply (warn-and-apply approach)
+      expect(updated?.status).toBe('finished');
+    });
+  });
+
+  describe('update', () => {
+    it('should update all fields when provided', () => {
+      const session = service.create('claude', '/project');
+
+      const updated = service.update(session.id, {
+        name: 'Renamed',
+        aiMode: 'plain',
+        model: 'sonnet',
+        systemPrompt: 'Be verbose',
+        maxTokens: 4096,
+        temperature: 0.7,
+        mcpServers: ['srv-a'],
+      });
+
+      expect(updated?.name).toBe('Renamed');
+      expect(updated?.aiMode).toBe('plain');
+      expect(updated?.model).toBe('sonnet');
+      expect(updated?.systemPrompt).toBe('Be verbose');
+      expect(updated?.maxTokens).toBe(4096);
+      expect(updated?.temperature).toBe(0.7);
+      expect(updated?.mcpServers).toEqual(['srv-a']);
+    });
+
+    it('should apply partial updates without affecting other fields', () => {
+      const session = service.create('claude', '/project', { name: 'Original' });
+
+      service.update(session.id, { name: 'Updated' });
+
+      expect(service.get(session.id)?.name).toBe('Updated');
+      expect(service.get(session.id)?.aiMode).toBe('claude');
+    });
+
+    it('should emit session.status event', () => {
+      const session = service.create('claude', '/project');
+      eventEmitter.emit.mockClear();
+
+      service.update(session.id, { name: 'Test' });
+
+      expect(eventEmitter.emit).toHaveBeenCalledWith(
+        'session.status',
+        expect.objectContaining({
+          sessionId: session.id,
+          message: 'Session updated',
+        })
+      );
+    });
+
+    it('should return undefined for non-existent session', () => {
+      const result = service.update('nonexistent', { name: 'Test' });
+      expect(result).toBeUndefined();
+    });
+
+    it('should update lastActiveAt', () => {
+      const session = service.create('claude', '/project');
+      const before = session.lastActiveAt;
+
+      service.update(session.id, { name: 'Test' });
+
+      expect(service.get(session.id)?.lastActiveAt.getTime()).toBeGreaterThanOrEqual(
+        before.getTime()
+      );
+    });
   });
 
   describe('assignBranch', () => {

@@ -19,6 +19,7 @@ import { GitService } from '../git/git.service';
 import { WorkspaceService } from '../workspace/workspace.service';
 import {
   AiMode,
+  AI_MODES,
   UpdateSessionOptions,
   SessionRemovePayload,
   SessionListPayload,
@@ -97,6 +98,31 @@ export class SessionGateway implements OnGatewayInit {
   }
 
   /**
+   * Validate a string field from a payload
+   * @returns Error message if invalid, null if valid
+   */
+  private validateStringField(
+    value: unknown,
+    name: string,
+    maxLen: number,
+    required = false
+  ): string | null {
+    if (value === undefined || value === null) {
+      return required ? `${name} is required` : null;
+    }
+    if (typeof value !== 'string') {
+      return `${name} must be a string`;
+    }
+    if (required && value.length === 0) {
+      return `${name} must not be empty`;
+    }
+    if (value.length > maxLen) {
+      return `${name} exceeds maximum length of ${maxLen}`;
+    }
+    return null;
+  }
+
+  /**
    * Handle session creation request
    */
   @SkipThrottle()
@@ -118,6 +144,26 @@ export class SessionGateway implements OnGatewayInit {
         idleSessions: idleNames,
       };
     }
+
+    // Input validation
+    if (!AI_MODES.includes(payload.mode)) {
+      return { error: `Invalid mode: ${payload.mode}. Must be one of: ${AI_MODES.join(', ')}` };
+    }
+
+    const pathError = this.validateStringField(payload.projectPath, 'projectPath', 1000, true);
+    if (pathError) return { error: pathError };
+
+    const nameError = this.validateStringField(payload.name, 'name', 200);
+    if (nameError) return { error: nameError };
+
+    const modelError = this.validateStringField(payload.model, 'model', 200);
+    if (modelError) return { error: modelError };
+
+    const promptError = this.validateStringField(payload.systemPrompt, 'systemPrompt', 50000);
+    if (promptError) return { error: promptError };
+
+    const branchError = this.validateStringField(payload.branch, 'branch', 500);
+    if (branchError) return { error: branchError };
 
     // Get settings from workspace preferences
     const preferences = this.workspaceService.getPreferences();
@@ -221,45 +267,11 @@ export class SessionGateway implements OnGatewayInit {
     @MessageBody() payload: UpdateSessionPayload,
     @ConnectedSocket() _client: Socket
   ): UpdateSessionResponse {
-    const session = this.sessionService.get(payload.sessionId);
+    const session = this.sessionService.update(payload.sessionId, payload.updates);
 
     if (!session) {
       return { error: `Session not found: ${payload.sessionId}` };
     }
-
-    // Apply updates to session
-    const updates = payload.updates;
-
-    if (updates.name !== undefined) {
-      session.name = updates.name;
-    }
-    if (updates.aiMode !== undefined) {
-      session.aiMode = updates.aiMode;
-    }
-    if (updates.model !== undefined) {
-      session.model = updates.model;
-    }
-    if (updates.systemPrompt !== undefined) {
-      session.systemPrompt = updates.systemPrompt;
-    }
-    if (updates.maxTokens !== undefined) {
-      session.maxTokens = updates.maxTokens;
-    }
-    if (updates.temperature !== undefined) {
-      session.temperature = updates.temperature;
-    }
-    if (updates.mcpServers !== undefined) {
-      session.mcpServers = updates.mcpServers;
-    }
-
-    session.lastActiveAt = new Date();
-
-    // Emit status update for the change
-    this.server.emit('session:status', {
-      sessionId: session.id,
-      status: session.status,
-      message: 'Session updated',
-    });
 
     return { session };
   }
