@@ -60,6 +60,50 @@ All notable changes to this project will be documented in this file.
 - **"Run in Terminal" broken on Windows** — `spawn('powershell', ...)` with `detached: true` ran as a hidden background process; fixed by using `cmd.exe /c start powershell` to open a visible console window
 - **No feedback on copy/run actions** — Added toast notifications for success and error states on both the Copy and Run in Terminal buttons
 
+## 0.5.0-beta.4 (2026-02-08)
+
+### Bug Fixes
+
+- **Proper CLI auth detection** — Replaced process-spawning detection (`spawn`, `execSync`) with credential file reading (`~/.claude/.credentials.json`) for reliable authentication state (#49)
+
+### Internal
+
+- Refactored `UsageService` to delegate CLI detection to shared `getClaudeCliStatus()` utility
+- Removed `isAvailable()` method and `checkAuth()` in favor of the unified detection function
+- Updated all usage gateway and service tests to mock the new utility
+
+## 0.5.0-beta.3 (2026-02-08)
+
+### Bug Fixes
+
+- **Fixed raw error dump on update check** — The "release pending" detection now catches any `.yml` 404 regardless of the current channel, fixing a race condition where switching channels mid-check would show the raw HTTP error instead of the friendly "release is being prepared" message
+
+## 0.5.0-beta.2 (2026-02-08)
+
+### Improvements
+
+- **Usage tooltip** — Claude usage button in TopBar now shows "Claude usage: X% (5h window)" on hover; tooltip auto-hides when popover is open
+- **README** — Added Beta Releases section with opt-in/opt-out instructions
+- **CI fix** — Explicitly set electron-builder publish channel for GitHub provider to generate correct `beta.yml` files
+
+## 0.5.0-beta.1 (2026-02-08)
+
+### Features
+
+- **Beta update channel** — Switch between Stable and Beta update channels at runtime in Settings > General > Updates; preference persists across restarts
+- **Unified TopBar** — Merged ProjectTabs, TopBar, and BottomBar into a single header, reclaiming +32px of terminal space; icon-only action buttons with tooltip hints on hover
+- **Pre-release CI support** — Beta builds generate `beta.yml` for auto-update; pre-release GitHub Releases skip version sync to master
+
+### Improvements
+
+- Consolidated raw `<button>` elements to shadcn `Button` component across 7 files (net -90 lines)
+- Theme-aware colors: replaced hardcoded status green with `primary`/`destructive` tokens
+- Global TooltipProvider with 300ms delay for consistent hover hints
+- Downgrade-aware messaging when switching from beta to stable channel
+- Contextual error text when no beta release is available
+- Channel label shown in update toast notifications
+- `bump-version.sh` accepts full SemVer 2.0.0 pre-release suffixes (`-beta.1`, `-rc.1`)
+
 ## 0.5.0 (2026-02-08)
 
 ### Features
