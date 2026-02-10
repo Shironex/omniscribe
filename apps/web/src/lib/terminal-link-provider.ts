@@ -1,4 +1,5 @@
 import type { ILinkProvider, ILink, Terminal, IBufferCellPosition } from '@xterm/xterm';
+import { normalizePath } from '@omniscribe/shared';
 
 // Matches file paths with optional line:col
 // Unix: /path/to/file.ts:123:45, ./relative.ts:10
@@ -55,7 +56,7 @@ export class FilePathLinkProvider implements ILinkProvider {
           const col = parts[3] ? parseInt(parts[3], 10) : undefined;
 
           // Build VS Code URI
-          let uri = `vscode://file/${filePath.replace(/\\/g, '/')}`;
+          let uri = `vscode://file/${normalizePath(filePath)}`;
           if (line !== undefined) {
             uri += `:${line}`;
             if (col !== undefined) {

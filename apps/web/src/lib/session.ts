@@ -13,6 +13,24 @@ import { emitAsync, emitWithErrorHandling, emitWithSuccessHandling } from './soc
 const logger = createLogger('SessionAPI');
 
 /**
+ * Validate a session response and return the session, or throw on error.
+ */
+function handleSessionResponse(
+  response: CreateSessionResponse,
+  operationName: string
+): FrontendSessionConfig {
+  if (response.error) {
+    logger.warn(`Session ${operationName} rejected:`, response.error);
+    throw new Error(response.error);
+  }
+  if (!response.session) {
+    logger.error('No session returned from server');
+    throw new Error('No session returned from server');
+  }
+  return response.session;
+}
+
+/**
  * Create session options
  */
 interface CreateSessionOptions {
@@ -152,15 +170,7 @@ export async function resumeSession(
     }
   );
 
-  if (response.error) {
-    logger.warn('Session resume rejected:', response.error);
-    throw new Error(response.error);
-  }
-  if (!response.session) {
-    logger.error('No session returned from server');
-    throw new Error('No session returned from server');
-  }
-  return response.session;
+  return handleSessionResponse(response, 'resume');
 }
 
 /**
@@ -180,15 +190,7 @@ export async function forkSession(
     name,
   });
 
-  if (response.error) {
-    logger.warn('Session fork rejected:', response.error);
-    throw new Error(response.error);
-  }
-  if (!response.session) {
-    logger.error('No session returned from server');
-    throw new Error('No session returned from server');
-  }
-  return response.session;
+  return handleSessionResponse(response, 'fork');
 }
 
 /**
@@ -205,13 +207,5 @@ export async function continueLastSession(
     { projectPath, branch, name }
   );
 
-  if (response.error) {
-    logger.warn('Continue last session rejected:', response.error);
-    throw new Error(response.error);
-  }
-  if (!response.session) {
-    logger.error('No session returned from server');
-    throw new Error('No session returned from server');
-  }
-  return response.session;
+  return handleSessionResponse(response, 'continue last');
 }

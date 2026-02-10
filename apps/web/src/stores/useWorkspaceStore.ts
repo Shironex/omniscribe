@@ -1,6 +1,11 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
-import { createLogger, DEFAULT_PREFERENCES, WorkspaceEvents } from '@omniscribe/shared';
+import {
+  createLogger,
+  DEFAULT_PREFERENCES,
+  WorkspaceEvents,
+  normalizePath,
+} from '@omniscribe/shared';
 import { socket } from '@/lib/socket';
 
 const logger = createLogger('WorkspaceStore');
@@ -90,7 +95,7 @@ function generateTabId(): string {
  * Extract project name from path
  */
 function extractProjectName(projectPath: string): string {
-  const parts = projectPath.replace(/\\/g, '/').split('/');
+  const parts = normalizePath(projectPath).split('/');
   return parts[parts.length - 1] || projectPath;
 }
 
@@ -166,11 +171,11 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
         openProject: (projectPath: string, name?: string) => {
           logger.info('Opening project', projectPath);
           const state = get();
-          const normalizedPath = projectPath.replace(/\\/g, '/');
+          const normalizedPath = normalizePath(projectPath);
 
           // Check if project is already open
           const existingTab = state.tabs.find(
-            tab => tab.projectPath.replace(/\\/g, '/') === normalizedPath
+            tab => normalizePath(tab.projectPath) === normalizedPath
           );
 
           if (existingTab) {
@@ -400,8 +405,8 @@ export const selectActiveTab = (state: WorkspaceStore) =>
  * Select tab by project path
  */
 export const selectTabByProjectPath = (projectPath: string) => (state: WorkspaceStore) => {
-  const normalizedPath = projectPath.replace(/\\/g, '/');
-  return state.tabs.find(tab => tab.projectPath.replace(/\\/g, '/') === normalizedPath);
+  const normalizedPath = normalizePath(projectPath);
+  return state.tabs.find(tab => normalizePath(tab.projectPath) === normalizedPath);
 };
 
 /**

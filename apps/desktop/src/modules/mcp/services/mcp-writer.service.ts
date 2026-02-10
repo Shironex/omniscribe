@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { McpServerConfig, MCP_SERVER_NAME, createLogger } from '@omniscribe/shared';
+import { McpServerConfig, MCP_SERVER_NAME, createLogger, normalizePath } from '@omniscribe/shared';
 import { Mutex } from 'async-mutex';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -59,7 +59,7 @@ export class McpWriterService {
    * @returns 12-character hex hash
    */
   generateProjectHash(projectPath: string): string {
-    const normalized = path.normalize(projectPath).replace(/\\/g, '/').toLowerCase();
+    const normalized = normalizePath(path.normalize(projectPath)).toLowerCase();
     const hash = crypto.createHash('sha256').update(normalized).digest('hex');
     return hash.substring(0, 12);
   }

@@ -6,6 +6,7 @@ import {
   ClaudeSessionEntry,
   ClaudeSessionsIndex,
   createLogger,
+  extractErrorMessage,
   getClaudeSessionsDir,
   getSessionsIndexPath,
 } from '@omniscribe/shared';
@@ -71,7 +72,7 @@ export class ClaudeSessionReaderService implements OnModuleDestroy {
         }
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage = extractErrorMessage(error);
       this.logger.warn(`Failed to read sessions index: ${errorMessage}`);
     }
 
@@ -82,7 +83,7 @@ export class ClaudeSessionReaderService implements OnModuleDestroy {
     try {
       scannedEntries = await this.scanJsonlFiles(sessionsDir, indexedIds, projectPath);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage = extractErrorMessage(error);
       this.logger.warn(`Failed to scan .jsonl files: ${errorMessage}`);
     }
 
@@ -127,7 +128,7 @@ export class ClaudeSessionReaderService implements OnModuleDestroy {
           const entries = await this.readSessionsIndex(projectPath);
           callback(entries);
         } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : String(error);
+          const errorMessage = extractErrorMessage(error);
           this.logger.error(`Watcher callback error for ${projectPath}: ${errorMessage}`);
         }
       }, DEBOUNCE_MS);
@@ -168,7 +169,7 @@ export class ClaudeSessionReaderService implements OnModuleDestroy {
         this.logger.debug(`Stopped watching sessions index for ${projectPath}`);
       };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage = extractErrorMessage(error);
       this.logger.error(`Failed to set up watcher for ${projectPath}: ${errorMessage}`);
       return () => {};
     }
@@ -344,7 +345,7 @@ export class ClaudeSessionReaderService implements OnModuleDestroy {
         isSidechain,
       };
     } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
+      const msg = extractErrorMessage(error);
       this.logger.debug(`Failed to extract entry from ${filename}: ${msg}`);
       return null;
     }
@@ -403,7 +404,7 @@ export class ClaudeSessionReaderService implements OnModuleDestroy {
 
       return parsed;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage = extractErrorMessage(error);
       this.logger.warn(`Failed to parse sessions index at ${filePath}: ${errorMessage}`);
       return null;
     }

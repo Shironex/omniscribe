@@ -43,47 +43,39 @@ interface TerminalActions {
 
 type TerminalStore = TerminalState & TerminalActions;
 
+const COMMON_DEFAULTS = {
+  fontWeight: 400,
+  lineHeight: 1.2,
+  letterSpacing: 0,
+  cursorStyle: 'block' as CursorStyle,
+  cursorBlink: true,
+  scrollback: 10000,
+  terminalThemeName: 'tokyonight' as TerminalThemeName,
+};
+
 function getDefaultSettings(): Omit<
   TerminalState,
   'focusedSessionId' | 'addSlotRequestCounter' | 'sessionOrder'
 > {
   if (IS_WINDOWS) {
     return {
+      ...COMMON_DEFAULTS,
       fontSize: 14,
       fontFamily: ['Cascadia Code', 'Consolas', 'Courier New', 'monospace'],
-      fontWeight: 400,
-      lineHeight: 1.2,
-      letterSpacing: 0,
-      cursorStyle: 'block',
-      cursorBlink: true,
-      scrollback: 10000,
-      terminalThemeName: 'tokyonight',
     };
   }
   if (IS_MAC) {
     return {
+      ...COMMON_DEFAULTS,
       fontSize: 13,
       fontFamily: ['SF Mono', 'Menlo', 'Monaco', 'monospace'],
-      fontWeight: 400,
-      lineHeight: 1.2,
-      letterSpacing: 0,
-      cursorStyle: 'block',
-      cursorBlink: true,
-      scrollback: 10000,
-      terminalThemeName: 'tokyonight',
     };
   }
   // Linux
   return {
+    ...COMMON_DEFAULTS,
     fontSize: 13,
     fontFamily: ['Ubuntu Mono', 'DejaVu Sans Mono', 'monospace'],
-    fontWeight: 400,
-    lineHeight: 1.2,
-    letterSpacing: 0,
-    cursorStyle: 'block',
-    cursorBlink: true,
-    scrollback: 10000,
-    terminalThemeName: 'tokyonight',
   };
 }
 

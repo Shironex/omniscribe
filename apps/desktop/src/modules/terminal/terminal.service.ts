@@ -2,7 +2,7 @@ import { Injectable, OnModuleDestroy } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import * as pty from 'node-pty';
 import * as os from 'os';
-import { TERM_PROGRAM, createLogger } from '@omniscribe/shared';
+import { TERM_PROGRAM, createLogger, normalizePath } from '@omniscribe/shared';
 import { InternalTerminalEvents } from '../shared/events';
 
 // Performance constants
@@ -190,7 +190,7 @@ export class TerminalService implements OnModuleDestroy {
    */
   private getShellArgs(shell: string): string[] {
     const shellName =
-      shell.toLowerCase().replace(/\\/g, '/').split('/').pop()?.replace('.exe', '') || '';
+      normalizePath(shell.toLowerCase()).split('/').pop()?.replace('.exe', '') || '';
 
     // PowerShell and cmd don't need --login
     if (shellName === 'powershell' || shellName === 'pwsh' || shellName === 'cmd') {

@@ -3,7 +3,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import { createLogger } from '@omniscribe/shared';
+import { createLogger, extractErrorMessage, normalizePath } from '@omniscribe/shared';
 import { InternalSessionEvents } from '../shared/events';
 
 /**
@@ -101,7 +101,7 @@ export class HookManagerService implements OnModuleDestroy {
       }
 
       // Build hook command
-      const hookCommand = `node "${scriptPath.replace(/\\/g, '/')}"`;
+      const hookCommand = `node "${normalizePath(scriptPath)}"`;
 
       const omniscribeHook: ClaudeHookEntry = {
         type: 'command',
@@ -133,7 +133,7 @@ export class HookManagerService implements OnModuleDestroy {
       await fs.promises.writeFile(settingsPath, JSON.stringify(settings, null, 2), 'utf-8');
       this.logger.info(`Hooks registered in ${settingsPath}`);
     } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
+      const msg = extractErrorMessage(error);
       this.logger.warn(`Failed to register hooks for ${projectPath}: ${msg}`);
     }
   }
@@ -155,9 +155,9 @@ export class HookManagerService implements OnModuleDestroy {
 
       if (!settings.hooks) return;
 
-      const scriptPath = path
-        .join(projectPath, '.claude', 'hooks', 'omniscribe-notify.js')
-        .replace(/\\/g, '/');
+      const scriptPath = normalizePath(
+        path.join(projectPath, '.claude', 'hooks', 'omniscribe-notify.js')
+      );
       const hookCommand = `node "${scriptPath}"`;
 
       let changed = false;
@@ -180,7 +180,7 @@ export class HookManagerService implements OnModuleDestroy {
         this.logger.info(`Hooks unregistered from ${settingsPath}`);
       }
     } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
+      const msg = extractErrorMessage(error);
       this.logger.warn(`Failed to unregister hooks for ${projectPath}: ${msg}`);
     }
   }
@@ -208,7 +208,7 @@ export class HookManagerService implements OnModuleDestroy {
 
       this.logger.info(`Watching for hook events in ${this.hookDir}`);
     } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
+      const msg = extractErrorMessage(error);
       this.logger.warn(`Failed to start watching hook directory: ${msg}`);
     }
   }
@@ -250,7 +250,7 @@ export class HookManagerService implements OnModuleDestroy {
         this.logger.debug('Hook event (unknown type):', data);
       }
     } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
+      const msg = extractErrorMessage(error);
       this.logger.warn(`Failed to process hook file ${filePath}: ${msg}`);
     }
   }
