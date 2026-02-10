@@ -4,6 +4,7 @@ import {
   SubscribeMessage,
   MessageBody,
   ConnectedSocket,
+  OnGatewayInit,
 } from '@nestjs/websockets';
 import { UseGuards } from '@nestjs/common';
 import { SkipThrottle } from '@nestjs/throttler';
@@ -20,13 +21,17 @@ import { CORS_CONFIG } from '../shared/cors.config';
 @WebSocketGateway({
   cors: CORS_CONFIG,
 })
-export class UsageGateway {
+export class UsageGateway implements OnGatewayInit {
   @WebSocketServer()
   server!: Server;
 
   private readonly logger = createLogger('UsageGateway');
 
   constructor(private readonly usageService: UsageService) {}
+
+  afterInit(): void {
+    this.logger.log('Initialized');
+  }
 
   /**
    * Handle usage:fetch request from client
@@ -65,7 +70,7 @@ export class UsageGateway {
   }
 
   /**
-   * Handle claude:status request - get Claude CLI status
+   * Handle usage:claude-status request - get Claude CLI status
    */
   @SkipThrottle()
   @SubscribeMessage(UsageEvents.CLAUDE_STATUS)

@@ -205,6 +205,7 @@ export function SessionHistoryPanel({
             onClick={() => projectPath && fetchHistory(projectPath)}
             className="p-1 rounded hover:bg-muted-foreground/10 text-muted-foreground hover:text-foreground-secondary transition-colors"
             title="Refresh"
+            aria-label="Refresh session history"
           >
             <RefreshCw size={13} />
           </button>
@@ -213,6 +214,7 @@ export function SessionHistoryPanel({
             onClick={onClose}
             className="p-1 rounded hover:bg-muted-foreground/10 text-muted-foreground hover:text-foreground-secondary transition-colors"
             title="Close"
+            aria-label="Close session history panel"
           >
             <X size={14} />
           </button>
@@ -246,6 +248,7 @@ export function SessionHistoryPanel({
             value={searchText}
             onChange={e => setSearchText(e.target.value)}
             className="w-full pl-6 pr-2 py-1 text-xs bg-card border border-border rounded text-foreground-secondary placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+            aria-label="Search sessions"
           />
         </div>
 
@@ -255,6 +258,7 @@ export function SessionHistoryPanel({
             value={selectedBranch}
             onChange={e => setSelectedBranch(e.target.value)}
             className="flex-1 text-2xs bg-card border border-border rounded px-1.5 py-0.5 text-foreground-secondary focus:outline-none focus:ring-1 focus:ring-ring"
+            aria-label="Filter by branch"
           >
             <option value="">All branches</option>
             {uniqueBranches.map(b => (
@@ -268,6 +272,9 @@ export function SessionHistoryPanel({
             onClick={() => setSortNewestFirst(prev => !prev)}
             className="p-1 rounded hover:bg-muted-foreground/10 text-muted-foreground hover:text-foreground-secondary transition-colors"
             title={sortNewestFirst ? 'Showing newest first' : 'Showing oldest first'}
+            aria-label={
+              sortNewestFirst ? 'Sort: showing newest first' : 'Sort: showing oldest first'
+            }
           >
             <ArrowUpDown size={12} />
           </button>
@@ -320,16 +327,18 @@ export function SessionHistoryPanel({
                 <button
                   type="button"
                   onClick={() => handleFork(entry)}
-                  className="p-1 rounded opacity-0 group-hover:opacity-100 text-blue-400 hover:bg-blue-500/10 transition-all"
+                  className="p-1 rounded opacity-0 group-hover:opacity-100 focus:opacity-100 text-blue-400 hover:bg-blue-500/10 transition-all"
                   title="Fork this session"
+                  aria-label="Fork this session"
                 >
                   <GitFork size={13} />
                 </button>
                 <button
                   type="button"
                   onClick={() => handleResume(entry)}
-                  className="p-1 rounded opacity-0 group-hover:opacity-100 text-emerald-400 hover:bg-emerald-500/10 transition-all"
+                  className="p-1 rounded opacity-0 group-hover:opacity-100 focus:opacity-100 text-emerald-400 hover:bg-emerald-500/10 transition-all"
                   title="Resume this session"
+                  aria-label="Resume this session"
                 >
                   <RotateCcw size={13} />
                 </button>

@@ -14,13 +14,13 @@ import { OnEvent } from '@nestjs/event-emitter';
 import * as crypto from 'crypto';
 import * as path from 'path';
 import { SessionService, BackendSessionConfig } from './session.service';
-import { TerminalGateway } from '../terminal/terminal.gateway';
-import { WorktreeService } from '../git/worktree.service';
-import { GitService } from '../git/git.service';
-import { WorkspaceService } from '../workspace/workspace.service';
+import { TerminalGateway } from '../terminal';
+import { WorktreeService, GitService } from '../git';
+import { WorkspaceService } from '../workspace';
 import {
   AiMode,
-  UpdateSessionOptions,
+  CreateSessionPayload,
+  UpdateSessionPayload,
   SessionRemovePayload,
   SessionListPayload,
   SessionRemoveResponse,
@@ -51,28 +51,6 @@ import {
 import { InternalSessionEvents, InternalZombieEvents } from '../shared/events';
 import { ClaudeSessionReaderService } from './claude-session-reader.service';
 import { CORS_CONFIG } from '../shared/cors.config';
-
-/**
- * Payload for creating a session
- */
-interface CreateSessionPayload {
-  mode: AiMode;
-  projectPath: string;
-  branch?: string;
-  name?: string;
-  workingDirectory?: string;
-  model?: string;
-  systemPrompt?: string;
-  mcpServers?: string[];
-}
-
-/**
- * Payload for updating a session
- */
-interface UpdateSessionPayload {
-  sessionId: string;
-  updates: UpdateSessionOptions;
-}
 
 /**
  * Response for session creation - either the session or an error.

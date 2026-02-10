@@ -99,7 +99,7 @@ describe('UsageGateway (integration)', () => {
   it('should handle claude:status and return CLI status', async () => {
     const response = await emitWithAck<{ status: any; error?: string }>(
       client,
-      'claude:status',
+      'usage:claude-status',
       {}
     );
 
@@ -111,7 +111,7 @@ describe('UsageGateway (integration)', () => {
   });
 
   it('should handle claude:status with refresh flag', async () => {
-    const response = await emitWithAck<{ status: any }>(client, 'claude:status', {
+    const response = await emitWithAck<{ status: any }>(client, 'usage:claude-status', {
       refresh: true,
     });
 

@@ -2,9 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { QuickAction, createLogger, extractErrorMessage } from '@omniscribe/shared';
 import { InternalQuickActionEvents } from '../shared/events';
-import { TerminalService } from '../terminal/terminal.service';
-import { GitService } from '../git/git.service';
-import { SessionService } from '../session/session.service';
+import { TerminalService } from '../terminal';
+import { GitService } from '../git';
+import { SessionService } from '../session';
 
 /**
  * Result of a quick action execution

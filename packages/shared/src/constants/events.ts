@@ -126,7 +126,7 @@ export const QuickActionEvents = {
   // Server -> Client (broadcasts)
   UPDATED: 'quickaction:updated',
   EXECUTED: 'quickaction:executed',
-  AI_PROMPT: 'quickaction:ai:prompt',
+  AI_PROMPT: 'quickaction:prompt',
   RESULT: 'quickaction:result',
 } as const;
 
@@ -135,7 +135,7 @@ export const QuickActionEvents = {
 // ============================================
 export const UsageEvents = {
   FETCH: 'usage:fetch',
-  CLAUDE_STATUS: 'claude:status',
+  CLAUDE_STATUS: 'usage:claude-status',
 } as const;
 
 // ============================================

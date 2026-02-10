@@ -614,7 +614,7 @@ describe('WorkspaceGateway', () => {
 
       gateway.onAiPrompt(event);
 
-      expect(mockServer.emit).toHaveBeenCalledWith('quickaction:ai:prompt', event);
+      expect(mockServer.emit).toHaveBeenCalledWith('quickaction:prompt', event);
     });
 
     it('should handle events without optional projectPath', () => {
@@ -626,7 +626,7 @@ describe('WorkspaceGateway', () => {
 
       gateway.onAiPrompt(event as any);
 
-      expect(mockServer.emit).toHaveBeenCalledWith('quickaction:ai:prompt', event);
+      expect(mockServer.emit).toHaveBeenCalledWith('quickaction:prompt', event);
     });
   });
 });

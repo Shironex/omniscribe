@@ -72,7 +72,7 @@ export function ReconnectionOverlay() {
       <span className="text-sm text-destructive">Connection lost</span>
       <button
         type="button"
-        className="text-xs text-primary hover:underline cursor-pointer"
+        className="text-xs text-primary hover:underline cursor-pointer rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         onClick={retryConnection}
       >
         Retry

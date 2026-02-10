@@ -2,8 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { Interval } from '@nestjs/schedule';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { HealthLevel, createLogger } from '@omniscribe/shared';
-import { TerminalService } from '../terminal/terminal.service';
-import { SessionService, BackendSessionConfig } from '../session/session.service';
+import { TerminalService } from '../terminal';
+import { SessionService, BackendSessionConfig } from '../session';
 import { InternalSessionEvents, InternalZombieEvents } from '../shared/events';
 
 /** How often to run health checks (2 minutes) */
