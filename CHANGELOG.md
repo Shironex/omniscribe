@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.6.0-beta.3 (2026-02-10)
+
+### Bug Fixes
+
+- **Shell PATH resolution** — Spawned sessions now inherit the user's full shell PATH on macOS/Linux, fixing missing dev tools like `node`, `git`, `claude` in terminal sessions (#97)
+- **MCP status not updating UI** — Fixed MCP status updates not propagating to the frontend; status server now routes through SessionService via internal event to keep backend state in sync before broadcasting
+- **MCP config race condition** — Plain terminal sessions no longer write `.mcp.json`, preventing them from overwriting Claude session IDs and breaking MCP communication
+- **Hooks integration broken** — Fixed hook event field name from `event` to `hook_event_name` to match Claude Code's actual format
+- **Session state transitions** — Added `needs_input` and `finished` as valid transitions from `idle` status, fixing rejected MCP status updates
+- **Backpressure too aggressive** — Increased backpressure thresholds (HIGH_WATER_MARK 128→512, LOW_WATER_MARK 16→64, safety timeout 5s→10s) to prevent premature pausing during Claude Code output bursts
+- **Backpressure overlay flicker** — Replaced flickering backpressure bar with a debounced theme-aware overlay
+- **E2E test label matching** — Accept both "Claude" and "Plain AI" mode labels in e2e tests
+
+### Code Quality
+
+- **Test coverage expansion** — Added component smoke tests, store tests, hook tests, and lib utility tests across the frontend
+- **Test infrastructure** — Fixed test failures and worker process leaks
+- **Dead code cleanup** — Removed unused types, deprecated aliases, and code inconsistencies from shared package
+- **Documentation** — Updated CLAUDE.md with accurate patterns and missing documentation
+
 ## 0.6.0-beta.2 (2026-02-10)
 
 ### Features
