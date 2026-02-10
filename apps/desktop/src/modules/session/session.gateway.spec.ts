@@ -485,6 +485,36 @@ describe('SessionGateway', () => {
 
       expect(result).toEqual({ error: 'Session not found: nonexistent' });
     });
+
+    it('should reject missing sessionId', () => {
+      const result = gateway.handleUpdate(
+        { sessionId: '' as any, updates: { name: 'Test' } },
+        client
+      );
+      expect(result.error).toContain('sessionId is required');
+    });
+
+    it('should reject invalid aiMode in updates', () => {
+      const result = gateway.handleUpdate(
+        {
+          sessionId: 'session-1-1700000000000',
+          updates: { aiMode: 'invalid' as any },
+        },
+        client
+      );
+      expect(result.error).toContain('Invalid aiMode');
+    });
+
+    it('should reject overlong name in updates', () => {
+      const result = gateway.handleUpdate(
+        {
+          sessionId: 'session-1-1700000000000',
+          updates: { name: 'x'.repeat(201) },
+        },
+        client
+      );
+      expect(result.error).toContain('name');
+    });
   });
 
   // ========================================================================

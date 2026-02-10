@@ -43,7 +43,7 @@ export type SessionStatus =
  */
 export const VALID_STATUS_TRANSITIONS: Record<SessionStatus, readonly SessionStatus[]> = {
   idle: ['connecting', 'thinking', 'working', 'planning', 'needs_input', 'error'],
-  connecting: ['idle', 'error'],
+  connecting: ['active', 'idle', 'error'],
   active: [
     'idle',
     'thinking',

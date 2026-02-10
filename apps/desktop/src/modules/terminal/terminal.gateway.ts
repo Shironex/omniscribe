@@ -81,7 +81,7 @@ export class TerminalGateway
    * Validate that sessionId is a valid terminal session identifier
    */
   private isValidSessionId(sessionId: unknown): sessionId is number {
-    return typeof sessionId === 'number' && Number.isInteger(sessionId) && sessionId >= 0;
+    return typeof sessionId === 'number' && Number.isInteger(sessionId) && sessionId > 0;
   }
 
   afterInit(): void {

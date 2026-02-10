@@ -147,7 +147,8 @@ export class SessionGateway implements OnGatewayInit {
 
     // Input validation
     if (!AI_MODES.includes(payload.mode)) {
-      return { error: `Invalid mode: ${payload.mode}. Must be one of: ${AI_MODES.join(', ')}` };
+      const safeMode = String(payload.mode).slice(0, 50);
+      return { error: `Invalid mode: ${safeMode}. Must be one of: ${AI_MODES.join(', ')}` };
     }
 
     const pathError = this.validateStringField(payload.projectPath, 'projectPath', 1000, true);
@@ -171,6 +172,15 @@ export class SessionGateway implements OnGatewayInit {
       1000
     );
     if (workDirError) return { error: workDirError };
+
+    if (payload.mcpServers !== undefined) {
+      if (!Array.isArray(payload.mcpServers) || payload.mcpServers.length > 50) {
+        return { error: 'mcpServers must be an array with at most 50 entries' };
+      }
+      if (payload.mcpServers.some((s: unknown) => typeof s !== 'string' || s.length > 500)) {
+        return { error: 'Each mcpServers entry must be a string (max 500 chars)' };
+      }
+    }
 
     // Get settings from workspace preferences
     const preferences = this.workspaceService.getPreferences();
@@ -274,6 +284,43 @@ export class SessionGateway implements OnGatewayInit {
     @MessageBody() payload: UpdateSessionPayload,
     @ConnectedSocket() _client: Socket
   ): UpdateSessionResponse {
+    // Validate sessionId
+    if (!payload.sessionId || typeof payload.sessionId !== 'string') {
+      return { error: 'sessionId is required' };
+    }
+
+    // Validate update fields
+    if (payload.updates) {
+      const nameError = this.validateStringField(payload.updates.name, 'name', 200);
+      if (nameError) return { error: nameError };
+
+      const modelError = this.validateStringField(payload.updates.model, 'model', 200);
+      if (modelError) return { error: modelError };
+
+      const promptError = this.validateStringField(
+        payload.updates.systemPrompt,
+        'systemPrompt',
+        50000
+      );
+      if (promptError) return { error: promptError };
+
+      if (payload.updates.aiMode !== undefined && !AI_MODES.includes(payload.updates.aiMode)) {
+        const safeMode = String(payload.updates.aiMode).slice(0, 50);
+        return { error: `Invalid aiMode: ${safeMode}. Must be one of: ${AI_MODES.join(', ')}` };
+      }
+
+      if (payload.updates.mcpServers !== undefined) {
+        if (!Array.isArray(payload.updates.mcpServers) || payload.updates.mcpServers.length > 50) {
+          return { error: 'mcpServers must be an array with at most 50 entries' };
+        }
+        if (
+          payload.updates.mcpServers.some((s: unknown) => typeof s !== 'string' || s.length > 500)
+        ) {
+          return { error: 'Each mcpServers entry must be a string (max 500 chars)' };
+        }
+      }
+    }
+
     const session = this.sessionService.update(payload.sessionId, payload.updates);
 
     if (!session) {

@@ -665,6 +665,15 @@ describe('TerminalGateway', () => {
 
       expect(result).toEqual({ success: false });
     });
+
+    it('handleKill should reject sessionId 0 (IDs start at 1)', async () => {
+      const client = createMockSocket('c1');
+
+      const result = await gateway.handleKill(client, { sessionId: 0 });
+
+      expect(result).toEqual({ success: false, error: 'Invalid sessionId' });
+      expect(terminalService.kill).not.toHaveBeenCalled();
+    });
   });
 
   // =========================================================================

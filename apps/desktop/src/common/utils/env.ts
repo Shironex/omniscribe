@@ -91,6 +91,7 @@ const ENV_ALLOWLIST: string[] = [
 ];
 
 // Patterns that must NEVER be passed to spawned processes, even if somehow in the allowlist.
+// Intentionally blocks all matching vars including caller-supplied ones (e.g. GITHUB_TOKEN via extra).
 const ENV_BLOCKLIST_PATTERNS: RegExp[] = [
   /^ELECTRON_/i,
   /^NODE_OPTIONS$/i,
