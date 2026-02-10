@@ -2,6 +2,33 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.6.0-beta.2 (2026-02-10)
+
+### Features
+
+- **Tailwind CSS v4 migration** — Migrated frontend from Tailwind CSS v3 to v4 with updated theme configuration
+- **Keyboard shortcuts** — Added missing shortcuts for settings, history, tabs, and terminal clear
+
+### Bug Fixes
+
+- **Terminal freezing** — Fixed backpressure oscillation that caused terminal UI lag and freezes
+- **Worktree creation failures** — Fixed `execGit` silently swallowing fatal git errors
+- **Claude CLI auth on macOS** — Detect authentication via config file fallback
+- **Git event mismatch** — Fixed event naming between frontend and backend, removed dead code
+- **Frontend performance** — Improved React patterns and socket reliability
+- **Backend safety** — Hardened input validation and resource management
+- **Predefined slot hover border** — Added missing hover border to predefined session slot cards
+
+### Refactoring
+
+- **Shared package extraction** — Extracted types, constants, and event names to shared package; removed deprecated aliases
+- **DRY deduplication** — Eliminated code duplication across backend and frontend
+
+### Code Quality
+
+- **Pattern consistency & WCAG accessibility** — Aligned gateway lifecycle, event naming, imports, and fixed accessibility issues
+- **Comprehensive test coverage** — Added tests for backend, frontend, and shared package; formatted shared Jest config
+
 ## 0.5.1 (2026-02-08)
 
 ### Bug Fixes
