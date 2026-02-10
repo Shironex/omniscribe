@@ -4,6 +4,7 @@ import { TerminalView } from './TerminalView';
 import { TerminalErrorBoundary } from './TerminalErrorBoundary';
 import { TerminalHeader } from './TerminalHeader';
 import { ReconnectionOverlay } from './ReconnectionOverlay';
+import { BackpressureOverlay } from './BackpressureOverlay';
 import type { TerminalSession } from './TerminalHeader';
 import type { TerminalDragHandleProps } from './SortableTerminalWrapper';
 
@@ -84,6 +85,9 @@ export const TerminalCard = React.memo(function TerminalCard({
           </div>
         )}
         <ReconnectionOverlay />
+        {session.terminalSessionId !== undefined && (
+          <BackpressureOverlay terminalSessionId={session.terminalSessionId} />
+        )}
       </div>
     </div>
   );
