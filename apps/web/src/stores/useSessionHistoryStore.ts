@@ -133,9 +133,7 @@ export const useSessionHistoryStore = create<SessionHistoryStore>()(
         removeResumable: (sessionId: string) => {
           set(
             state => {
-              const rest = Object.fromEntries(
-                Object.entries(state.resumableSessions).filter(([key]) => key !== sessionId)
-              );
+              const { [sessionId]: _removed, ...rest } = state.resumableSessions;
               return { resumableSessions: rest };
             },
             undefined,

@@ -7,6 +7,8 @@ import {
   createLogger,
   McpEvents,
   type McpInternalStatusResponse,
+  type McpDiscoverPayload,
+  type McpDiscoverResponse,
 } from '@omniscribe/shared';
 import { socket } from '@/lib/socket';
 import { emitAsync } from '@/lib/socketHelpers';
@@ -150,10 +152,10 @@ export const useMcpStore = create<McpStore>()(
           logger.info('Discovering servers', projectPath);
           set({ isDiscovering: true, error: null }, undefined, 'mcp/discoverServersStart');
           try {
-            const response = await emitAsync<
-              { projectPath?: string },
-              { servers: McpServerConfig[]; error?: string }
-            >(McpEvents.DISCOVER, { projectPath });
+            const response = await emitAsync<McpDiscoverPayload, McpDiscoverResponse>(
+              McpEvents.DISCOVER,
+              { projectPath }
+            );
 
             if (response.error) {
               logger.error('Discovery failed:', response.error);

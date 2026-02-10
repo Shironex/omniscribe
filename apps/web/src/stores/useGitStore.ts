@@ -1,6 +1,18 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
-import { BranchInfo, CommitInfo, createLogger, GitEvents } from '@omniscribe/shared';
+import { createLogger, GitEvents } from '@omniscribe/shared';
+import type {
+  BranchInfo,
+  CommitInfo,
+  GitBranchesPayload,
+  GitBranchesResponse,
+  GitCurrentBranchPayload,
+  GitCurrentBranchResponse,
+  GitCheckoutPayload,
+  GitCheckoutResponse,
+  GitCommitsPayload,
+  GitCommitsResponse,
+} from '@omniscribe/shared';
 import { emitAsync } from '@/lib/socketHelpers';
 
 const logger = createLogger('GitStore');
@@ -126,10 +138,10 @@ export const useGitStore = create<GitStore>()(
           logger.debug('fetchBranches', projectPath);
           set({ isLoading: true, error: null, projectPath }, undefined, 'git/fetchBranchesStart');
           try {
-            const response = await emitAsync<
-              { projectPath: string },
-              { branches: BranchInfo[]; currentBranch: string | BranchInfo; error?: string }
-            >(GitEvents.BRANCHES, { projectPath });
+            const response = await emitAsync<GitBranchesPayload, GitBranchesResponse>(
+              GitEvents.BRANCHES,
+              { projectPath }
+            );
 
             if (response.error) {
               logger.error('fetchBranches error:', response.error);
@@ -181,10 +193,10 @@ export const useGitStore = create<GitStore>()(
             'git/fetchCurrentBranchStart'
           );
           try {
-            const response = await emitAsync<
-              { projectPath: string },
-              { currentBranch: string; error?: string }
-            >(GitEvents.CURRENT_BRANCH, { projectPath });
+            const response = await emitAsync<GitCurrentBranchPayload, GitCurrentBranchResponse>(
+              GitEvents.CURRENT_BRANCH,
+              { projectPath }
+            );
 
             if (response.error) {
               logger.error('fetchCurrentBranch error:', response.error);
@@ -214,10 +226,10 @@ export const useGitStore = create<GitStore>()(
           logger.info('Checking out', branchName, 'in', projectPath);
           set({ isLoading: true, error: null }, undefined, 'git/checkoutStart');
           try {
-            const response = await emitAsync<
-              { projectPath: string; branch: string },
-              { success: boolean; currentBranch?: string; error?: string }
-            >(GitEvents.CHECKOUT, { projectPath, branch: branchName });
+            const response = await emitAsync<GitCheckoutPayload, GitCheckoutResponse>(
+              GitEvents.CHECKOUT,
+              { projectPath, branch: branchName }
+            );
 
             if (response.error || !response.success) {
               logger.error('Checkout error:', response.error ?? 'Failed to checkout branch');
@@ -242,10 +254,10 @@ export const useGitStore = create<GitStore>()(
           logger.debug('fetchCommits', projectPath, 'limit:', limit);
           set({ isLoading: true, error: null, projectPath }, undefined, 'git/fetchCommitsStart');
           try {
-            const response = await emitAsync<
-              { projectPath: string; limit: number },
-              { commits: CommitInfo[]; error?: string }
-            >(GitEvents.COMMITS, { projectPath, limit });
+            const response = await emitAsync<GitCommitsPayload, GitCommitsResponse>(
+              GitEvents.COMMITS,
+              { projectPath, limit }
+            );
 
             if (response.error) {
               logger.error('fetchCommits error:', response.error);

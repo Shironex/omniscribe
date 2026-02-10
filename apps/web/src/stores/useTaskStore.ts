@@ -102,9 +102,7 @@ export const useTaskStore = create<TaskStore>()(
         clearTasks: (sessionId: string) => {
           set(
             state => {
-              const rest = Object.fromEntries(
-                Object.entries(state.tasksBySession).filter(([key]) => key !== sessionId)
-              );
+              const { [sessionId]: _removed, ...rest } = state.tasksBySession;
               return { tasksBySession: rest };
             },
             undefined,

@@ -231,9 +231,7 @@ export const useSessionStore = create<SessionStore>()(
           logger.debug('removeSession', sessionId);
           set(
             state => {
-              const restPending = Object.fromEntries(
-                Object.entries(state.pendingStatusUpdates).filter(([key]) => key !== sessionId)
-              );
+              const { [sessionId]: _pending, ...restPending } = state.pendingStatusUpdates;
               return {
                 sessions: state.sessions.filter(s => s.id !== sessionId),
                 pendingStatusUpdates: restPending,
@@ -321,9 +319,7 @@ export const useSessionStore = create<SessionStore>()(
           // Clear pending updates for this session
           set(
             state => {
-              const rest = Object.fromEntries(
-                Object.entries(state.pendingStatusUpdates).filter(([key]) => key !== sessionId)
-              );
+              const { [sessionId]: _cleared, ...rest } = state.pendingStatusUpdates;
               return { pendingStatusUpdates: rest };
             },
             undefined,
@@ -339,12 +335,8 @@ export const useSessionStore = create<SessionStore>()(
                   backpressured: { ...state.backpressured, [terminalSessionId]: true as const },
                 };
               }
-              const rest = Object.fromEntries(
-                Object.entries(state.backpressured).filter(
-                  ([key]) => key !== String(terminalSessionId)
-                )
-              ) as Record<number, true>;
-              return { backpressured: rest };
+              const { [terminalSessionId]: _removed, ...rest } = state.backpressured;
+              return { backpressured: rest as Record<number, true> };
             },
             undefined,
             'session/setBackpressure'

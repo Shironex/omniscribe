@@ -66,9 +66,8 @@ function App() {
     handleSessionClose,
   } = useProjectSessions(activeProjectPath, preLaunchSlots);
 
-  // Stable store actions for handleResume (no need for a second hook call)
+  // Stable store action for handleResume (no need for a second hook call)
   const updateSession = useSessionStore(state => state.updateSession);
-  const sessions = useSessionStore(state => state.sessions);
 
   const sessionOrder = useTerminalStore(state => state.sessionOrder);
   const setSessionOrder = useTerminalStore(state => state.setSessionOrder);
@@ -169,7 +168,7 @@ function App() {
   // Resume session handler
   const handleResume = useCallback(
     async (sessionId: string) => {
-      const session = sessions.find(s => s.id === sessionId);
+      const session = useSessionStore.getState().sessions.find(s => s.id === sessionId);
       if (!session?.claudeSessionId || !activeProjectPath) return;
       try {
         const resumed = await resumeSession(
@@ -188,7 +187,7 @@ function App() {
         toast.error(msg);
       }
     },
-    [sessions, updateSession, activeProjectPath]
+    [updateSession, activeProjectPath]
   );
 
   useAppKeyboardShortcuts({

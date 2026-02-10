@@ -136,8 +136,9 @@ export const useUsageStore = create<UsageStore>()(
       },
 
       startPolling: () => {
-        // Already polling
+        // Already polling — ensure state is synced (handles devtools time-travel)
         if (pollingIntervalId) {
+          set({ pollingEnabled: true }, undefined, 'usage/startPolling');
           return;
         }
 

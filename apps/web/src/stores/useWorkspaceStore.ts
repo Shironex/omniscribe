@@ -7,6 +7,7 @@ import {
   normalizePath,
 } from '@omniscribe/shared';
 import { socket } from '@/lib/socket';
+import { emitAsync } from '@/lib/socketHelpers';
 
 const logger = createLogger('WorkspaceStore');
 import type {
@@ -66,7 +67,7 @@ interface WorkspaceActions extends SocketStoreActions {
   /** Clear stale session references (called on rehydrate) */
   clearStaleSessions: (validSessionIds: string[]) => void;
   /** Restore workspace state from backend */
-  restoreState: () => void;
+  restoreState: () => Promise<void>;
   /** Update a preference */
   updatePreference: (key: string, value: unknown) => void;
   /** Set tabs (internal) */
@@ -321,24 +322,21 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
           );
         },
 
-        restoreState: () => {
+        restoreState: async () => {
           const state = get();
-          if (state.isRestored) {
-            return; // Already restored
+          if (state.isRestored || state.isLoading) {
+            return; // Already restored or in progress
           }
 
           set({ isLoading: true }, undefined, 'workspace/restoreStateStart');
 
-          const timeout = setTimeout(() => {
-            set(
-              { isLoading: false, isRestored: true, error: 'Restore timed out' },
-              undefined,
-              'workspace/restoreStateTimeout'
+          try {
+            const response = await emitAsync<object, WorkspaceStateResponse>(
+              WorkspaceEvents.GET_STATE,
+              {},
+              { timeout: 10_000 }
             );
-          }, 10_000);
 
-          socket.emit(WorkspaceEvents.GET_STATE, {}, (response: WorkspaceStateResponse) => {
-            clearTimeout(timeout);
             if (response) {
               const tabs = (response.tabs ?? []).map(convertBackendTab);
               // Clear session IDs on restore - they'll be re-associated
@@ -369,7 +367,14 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
                 'workspace/restoreStateEmpty'
               );
             }
-          });
+          } catch (err) {
+            const message = err instanceof Error ? err.message : 'Restore timed out';
+            set(
+              { isLoading: false, isRestored: true, error: message },
+              undefined,
+              'workspace/restoreStateError'
+            );
+          }
         },
 
         updatePreference: (key: string, value: unknown) => {
