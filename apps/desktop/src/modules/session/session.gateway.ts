@@ -165,6 +165,13 @@ export class SessionGateway implements OnGatewayInit {
     const branchError = this.validateStringField(payload.branch, 'branch', 500);
     if (branchError) return { error: branchError };
 
+    const workDirError = this.validateStringField(
+      payload.workingDirectory,
+      'workingDirectory',
+      1000
+    );
+    if (workDirError) return { error: workDirError };
+
     // Get settings from workspace preferences
     const preferences = this.workspaceService.getPreferences();
     const worktreeSettings: WorktreeSettings = preferences.worktree ?? DEFAULT_WORKTREE_SETTINGS;

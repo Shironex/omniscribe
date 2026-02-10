@@ -222,11 +222,6 @@ export class McpWriterService implements OnModuleDestroy {
       return false;
     });
 
-    // Clean up mutex entry if no longer in use
-    if (!mutex.isLocked()) {
-      this.fileLocks.delete(configPath);
-    }
-
     return result;
   }
 
