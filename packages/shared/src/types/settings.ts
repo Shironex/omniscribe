@@ -54,22 +54,6 @@ export type Theme =
   | 'solarizedlight';
 
 /**
- * MCP Server Configuration
- */
-export interface MCPServerConfig {
-  id: string;
-  name: string;
-  description?: string;
-  type?: 'stdio' | 'sse' | 'http';
-  command?: string;
-  args?: string[];
-  env?: Record<string, string>;
-  url?: string;
-  headers?: Record<string, string>;
-  enabled?: boolean;
-}
-
-/**
  * Claude CLI Status
  */
 export interface ClaudeCliStatus {
@@ -122,37 +106,6 @@ export interface ClaudeInstallCommand {
   command: string;
   description: string;
 }
-
-/**
- * Global Settings - User preferences stored globally
- */
-export interface GlobalSettings {
-  /** Settings schema version */
-  version: number;
-  /** Selected theme */
-  theme: Theme;
-  /** Sans-serif font family */
-  fontFamilySans?: string;
-  /** Monospace font family */
-  fontFamilyMono?: string;
-  /** Terminal font family */
-  terminalFontFamily?: string;
-  /** MCP server configurations */
-  mcpServers: MCPServerConfig[];
-  /** Custom Claude CLI spawn command */
-  claudeSpawnCommand?: string;
-  /** Custom Claude CLI path */
-  claudeCliPath?: string;
-}
-
-/**
- * Default settings values
- */
-export const DEFAULT_SETTINGS: GlobalSettings = {
-  version: 1,
-  theme: 'dark',
-  mcpServers: [],
-};
 
 /**
  * Settings section IDs for navigation

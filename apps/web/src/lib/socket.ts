@@ -18,12 +18,9 @@ export const socket: Socket = io(SOCKET_URL, {
 
 let isConnecting = false;
 
-const CONNECTION_TIMEOUT_MS = 30_000;
-
 interface PendingCaller {
   resolve: () => void;
   reject: (error: Error) => void;
-  timer: ReturnType<typeof setTimeout>;
 }
 
 let pendingCallers: PendingCaller[] = [];
@@ -32,7 +29,6 @@ function resolvePendingCallers(): void {
   const callers = pendingCallers;
   pendingCallers = [];
   for (const caller of callers) {
-    clearTimeout(caller.timer);
     caller.resolve();
   }
 }
@@ -41,7 +37,6 @@ function rejectPendingCallers(error: Error): void {
   const callers = pendingCallers;
   pendingCallers = [];
   for (const caller of callers) {
-    clearTimeout(caller.timer);
     caller.reject(error);
   }
 }
@@ -54,16 +49,7 @@ export function connectSocket(): Promise<void> {
     }
 
     if (isConnecting) {
-      // Queue this caller with a timeout
-      const timer = setTimeout(() => {
-        const idx = pendingCallers.findIndex(c => c.timer === timer);
-        if (idx !== -1) {
-          pendingCallers.splice(idx, 1);
-        }
-        reject(new Error('Socket connection timed out'));
-      }, CONNECTION_TIMEOUT_MS);
-
-      pendingCallers.push({ resolve, reject, timer });
+      pendingCallers.push({ resolve, reject });
       return;
     }
 
@@ -128,11 +114,9 @@ socket.on('reconnect_failed', () => {
 
 export default socket;
 
-// Expose socket instance on window for E2E testing.
+// Expose socket instance on window for E2E testing (dev builds only).
 // Allows Playwright to trigger disconnect/reconnect scenarios and open projects.
-// This is a desktop Electron app -- window globals are already accessible
-// via devtools, so exposing the socket adds no meaningful attack surface.
-if (typeof window !== 'undefined') {
+if (typeof window !== 'undefined' && import.meta.env.DEV) {
   (window as unknown as Record<string, unknown>).__testSocket = socket;
 }
 

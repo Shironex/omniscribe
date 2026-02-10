@@ -2,19 +2,20 @@ import { mapSessionStatus, type UISessionStatus } from './status';
 import type { SessionStatus } from '../types/session';
 
 describe('mapSessionStatus', () => {
-  const cases: [SessionStatus, UISessionStatus][] = [
+  const cases: [SessionStatus | string, UISessionStatus][] = [
     ['idle', 'idle'],
     ['disconnected', 'idle'],
     ['connecting', 'starting'],
-    ['active', 'working'],
-    ['executing', 'working'],
     ['thinking', 'working'],
     ['working', 'working'],
     ['planning', 'planning'],
-    ['paused', 'needsInput'],
     ['needs_input', 'needsInput'],
     ['finished', 'done'],
     ['error', 'error'],
+    // Legacy statuses (no longer in SessionStatus type, but still handled for backward compat)
+    ['active', 'working'],
+    ['executing', 'working'],
+    ['paused', 'needsInput'],
   ];
 
   it.each(cases)('maps "%s" to "%s"', (input, expected) => {

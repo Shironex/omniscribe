@@ -32,8 +32,8 @@ export function mapSessionStatus(backendStatus: SessionStatus | string): UISessi
       return 'starting';
 
     // Active/working states
-    case 'active':
-    case 'executing':
+    case 'active': // Legacy: kept for backward compat with older MCP reports
+    case 'executing': // Legacy: kept for backward compat with older MCP reports
     case 'thinking':
     case 'working': // MCP: actively processing
       return 'working';
@@ -43,7 +43,7 @@ export function mapSessionStatus(backendStatus: SessionStatus | string): UISessi
       return 'planning';
 
     // Needs input states
-    case 'paused':
+    case 'paused': // Legacy: kept for backward compat with older MCP reports
     case 'needs_input': // MCP: waiting for user input
       return 'needsInput';
 

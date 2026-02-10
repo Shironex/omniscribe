@@ -371,6 +371,7 @@ describe('HealthService', () => {
     });
 
     it('should also check other WORKING_STATUSES like executing, active, thinking', () => {
+      // 'executing' and 'active' are legacy statuses kept for backward compat
       for (const status of ['executing', 'active', 'thinking'] as const) {
         eventEmitter.emit.mockClear();
         const sixMinutesAgo = new Date(Date.now() - 6 * 60 * 1000);

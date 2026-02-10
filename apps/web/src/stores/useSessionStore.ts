@@ -16,6 +16,15 @@ import { toast } from 'sonner';
 import { socket } from '@/lib/socket';
 
 const logger = createLogger('SessionStore');
+
+/** Convert date fields from ISO strings (JSON serialization) to Date objects */
+function convertBackendSession(session: FrontendSessionConfig): FrontendSessionConfig {
+  return {
+    ...session,
+    createdAt: new Date(session.createdAt),
+    lastActiveAt: new Date(session.lastActiveAt),
+  };
+}
 import {
   SocketStoreState,
   SocketStoreActions,
@@ -98,7 +107,7 @@ export const useSessionStore = create<SessionStore>()(
             {
               event: SessionEvents.CREATED,
               handler: (data, get) => {
-                const session = data as FrontendSessionConfig;
+                const session = convertBackendSession(data as FrontendSessionConfig);
                 logger.debug(SessionEvents.CREATED, session.id);
                 get().addSession(session);
               },
@@ -175,7 +184,7 @@ export const useSessionStore = create<SessionStore>()(
             logger.info('Refreshing session list on reconnect');
             socket.emit(SessionEvents.LIST, {}, (sessions: FrontendSessionConfig[]) => {
               if (Array.isArray(sessions)) {
-                get().setSessions(sessions);
+                get().setSessions(sessions.map(convertBackendSession));
                 // Rejoin terminal rooms for all sessions with active terminals
                 // so output resumes after reconnection when CSR fails
                 for (const session of sessions) {

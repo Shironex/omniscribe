@@ -20,10 +20,7 @@ export type HealthLevel = 'healthy' | 'degraded' | 'failed';
 export type SessionStatus =
   | 'idle'
   | 'connecting'
-  | 'active'
   | 'thinking'
-  | 'executing'
-  | 'paused'
   | 'error'
   | 'disconnected'
   // MCP status values
@@ -51,12 +48,6 @@ export interface SessionConfig {
   /** Model identifier (e.g., 'claude-3-opus', 'gpt-4') */
   model?: string;
 
-  /** API key for the AI provider */
-  apiKey?: string;
-
-  /** Custom API endpoint */
-  apiEndpoint?: string;
-
   /** System prompt override */
   systemPrompt?: string;
 
@@ -71,12 +62,6 @@ export interface SessionConfig {
 
   /** Last activity timestamp */
   lastActiveAt: Date;
-
-  /** Auto-save interval in milliseconds */
-  autoSaveInterval?: number;
-
-  /** Enable MCP server connections */
-  mcpEnabled?: boolean;
 
   /** MCP server configurations for this session */
   mcpServers?: string[];
@@ -95,18 +80,8 @@ export interface SessionState {
   /** Error message if status is 'error' */
   errorMessage?: string;
 
-  /** Token usage for current session */
-  tokenUsage: {
-    input: number;
-    output: number;
-    total: number;
-  };
-
   /** Conversation history length */
   messageCount: number;
-
-  /** Active tool calls */
-  activeTools: string[];
 }
 
 /**

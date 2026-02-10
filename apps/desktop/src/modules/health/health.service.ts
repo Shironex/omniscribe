@@ -15,10 +15,10 @@ const OUTPUT_STALE_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
 /** Threshold for error state before marking as zombie */
 const ERROR_STATE_THRESHOLD_MS = 2 * 60 * 1000; // 2 minutes
 
-/** Statuses that indicate the session should be producing output */
+/** Statuses that indicate the session should be producing output (includes legacy values for backward compat) */
 const WORKING_STATUSES = new Set(['working', 'executing', 'active', 'thinking']);
 
-/** Statuses that indicate the session is idle/waiting (no output expected) */
+/** Statuses that indicate the session is idle/waiting — no output expected (includes legacy values for backward compat) */
 const IDLE_STATUSES = new Set(['idle', 'needs_input', 'paused']);
 
 @Injectable()

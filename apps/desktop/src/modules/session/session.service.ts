@@ -75,8 +75,6 @@ const VALID_TRANSITIONS: Record<SessionStatus, Set<SessionStatus>> = {
     'finished',
     'disconnected',
   ]),
-  executing: new Set(['idle', 'working', 'error', 'finished', 'disconnected']),
-  active: new Set(['idle', 'working', 'error', 'finished', 'disconnected']),
   needs_input: new Set([
     'idle',
     'working',
@@ -86,7 +84,6 @@ const VALID_TRANSITIONS: Record<SessionStatus, Set<SessionStatus>> = {
     'finished',
     'disconnected',
   ]),
-  paused: new Set(['idle', 'working', 'error', 'disconnected']),
   finished: new Set(['idle', 'error']),
   error: new Set(['idle', 'connecting']),
   disconnected: new Set(['idle', 'error']),
