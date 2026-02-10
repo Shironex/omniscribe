@@ -39,10 +39,6 @@ describe('TerminalGateway', () => {
   let mockServer: Server;
 
   beforeEach(async () => {
-    // Reset static Maps between tests
-    (TerminalGateway as any).clientSessions = new Map();
-    (TerminalGateway as any).connectedClients = new Map();
-
     terminalService = {
       spawn: jest.fn().mockReturnValue(1),
       write: jest.fn(),
@@ -106,7 +102,7 @@ describe('TerminalGateway', () => {
       const client1Reconnect = createMockSocket('c1');
       gateway.handleConnection(client1Reconnect);
 
-      const sessions = (TerminalGateway as any).clientSessions.get('c1') as Set<number>;
+      const sessions = (gateway as any).clientSessions.get('c1') as Set<number>;
       expect(sessions).toBeDefined();
       expect(sessions.has(42)).toBe(true);
     });
@@ -143,7 +139,7 @@ describe('TerminalGateway', () => {
 
       gateway.handleDisconnect(client);
 
-      const sessions = (TerminalGateway as any).clientSessions.get('c1');
+      const sessions = (gateway as any).clientSessions.get('c1');
       expect(sessions).toBeUndefined();
     });
 
@@ -194,7 +190,7 @@ describe('TerminalGateway', () => {
       terminalService.spawn.mockReturnValue(5);
       gateway.handleSpawn(client, { cwd: '/app' });
 
-      const sessions = (TerminalGateway as any).clientSessions.get('c1') as Set<number>;
+      const sessions = (gateway as any).clientSessions.get('c1') as Set<number>;
       expect(sessions.has(5)).toBe(true);
     });
 
@@ -344,8 +340,8 @@ describe('TerminalGateway', () => {
 
       await gateway.handleKill(client1, { sessionId: 5 });
 
-      const sessions1 = (TerminalGateway as any).clientSessions.get('c1') as Set<number>;
-      const sessions2 = (TerminalGateway as any).clientSessions.get('c2') as Set<number>;
+      const sessions1 = (gateway as any).clientSessions.get('c1') as Set<number>;
+      const sessions2 = (gateway as any).clientSessions.get('c2') as Set<number>;
       expect(sessions1.has(5)).toBe(false);
       expect(sessions2.has(5)).toBe(false);
     });
@@ -389,7 +385,7 @@ describe('TerminalGateway', () => {
       expect(client.join).toHaveBeenCalledWith('terminal:10');
       expect(result).toEqual({ success: true, scrollback: undefined });
 
-      const sessions = (TerminalGateway as any).clientSessions.get('c1') as Set<number>;
+      const sessions = (gateway as any).clientSessions.get('c1') as Set<number>;
       expect(sessions.has(10)).toBe(true);
     });
 
@@ -427,7 +423,7 @@ describe('TerminalGateway', () => {
     it('should create a new set if client has no sessions yet', () => {
       gateway.registerClientSession('unknown-client', 42);
 
-      const sessions = (TerminalGateway as any).clientSessions.get('unknown-client') as Set<number>;
+      const sessions = (gateway as any).clientSessions.get('unknown-client') as Set<number>;
       expect(sessions).toBeDefined();
       expect(sessions.has(42)).toBe(true);
     });
@@ -439,7 +435,7 @@ describe('TerminalGateway', () => {
       gateway.registerClientSession('c1', 10);
       gateway.registerClientSession('c1', 20);
 
-      const sessions = (TerminalGateway as any).clientSessions.get('c1') as Set<number>;
+      const sessions = (gateway as any).clientSessions.get('c1') as Set<number>;
       expect(sessions.has(10)).toBe(true);
       expect(sessions.has(20)).toBe(true);
     });

@@ -2,12 +2,10 @@ import type { CLITool } from './cli-detection';
 
 // ---- Mocks ----
 
-const mockExecSync = jest.fn();
 const mockExecAsync = jest.fn();
 const mockExistsSync = jest.fn();
 
 jest.mock('child_process', () => ({
-  execSync: (...args: unknown[]) => mockExecSync(...args),
   exec: jest.fn(),
 }));
 
@@ -62,30 +60,28 @@ describe('cli-detection', () => {
   // ================================================================
   describe('checkCliAvailable', () => {
     it('should return true when tool is available', async () => {
-      mockExecSync.mockReturnValue(Buffer.from('v1.0.0'));
+      mockExecAsync.mockResolvedValue({ stdout: 'v1.0.0', stderr: '' });
 
       const result = await checkCliAvailable('node' as CLITool);
 
       expect(result).toBe(true);
-      expect(mockExecSync).toHaveBeenCalledWith('node --version', { stdio: 'ignore' });
+      expect(mockExecAsync).toHaveBeenCalledWith('node --version');
     });
 
     it('should return false when tool is not available', async () => {
-      mockExecSync.mockImplementation(() => {
-        throw new Error('command not found');
-      });
+      mockExecAsync.mockRejectedValue(new Error('command not found'));
 
       const result = await checkCliAvailable('claude' as CLITool);
 
       expect(result).toBe(false);
     });
 
-    it('should call execSync with the correct tool name', async () => {
-      mockExecSync.mockReturnValue(Buffer.from(''));
+    it('should call execAsync with the correct tool name', async () => {
+      mockExecAsync.mockResolvedValue({ stdout: '', stderr: '' });
 
       await checkCliAvailable('git' as CLITool);
 
-      expect(mockExecSync).toHaveBeenCalledWith('git --version', { stdio: 'ignore' });
+      expect(mockExecAsync).toHaveBeenCalledWith('git --version');
     });
   });
 

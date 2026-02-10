@@ -101,6 +101,7 @@ const VALID_TRANSITIONS: Record<SessionStatus, Set<SessionStatus>> = {
 export class SessionService implements OnModuleDestroy {
   private readonly logger = createLogger('SessionService');
   private sessions = new Map<string, BackendSessionConfig>();
+  private terminalToSession = new Map<number, string>();
   private sessionCounter = 0;
 
   constructor(
@@ -125,6 +126,16 @@ export class SessionService implements OnModuleDestroy {
         this.updateLastOutput(event.sessionId);
       }
     );
+  }
+
+  /**
+   * Clear the terminal reference from a session and remove the reverse lookup entry.
+   */
+  private clearTerminalRef(session: BackendSessionConfig): void {
+    if (session.terminalSessionId !== undefined) {
+      this.terminalToSession.delete(session.terminalSessionId);
+      session.terminalSessionId = undefined;
+    }
   }
 
   /**
@@ -170,7 +181,7 @@ export class SessionService implements OnModuleDestroy {
             : `Session exited with code ${event.exitCode}`;
 
         this.updateStatus(event.externalId, status, message);
-        session.terminalSessionId = undefined;
+        this.clearTerminalRef(session);
 
         // Persist session history if we captured a Claude session ID
         if (session.claudeSessionId) {
@@ -406,11 +417,11 @@ export class SessionService implements OnModuleDestroy {
    * @param terminalSessionId The terminal PTY session ID
    */
   updateLastOutput(terminalSessionId: number): void {
-    // Find the session that owns this terminal
-    for (const session of this.sessions.values()) {
-      if (session.terminalSessionId === terminalSessionId) {
+    const sessionId = this.terminalToSession.get(terminalSessionId);
+    if (sessionId) {
+      const session = this.sessions.get(sessionId);
+      if (session) {
         session.lastOutputAt = new Date();
-        return;
       }
     }
   }
@@ -459,7 +470,7 @@ export class SessionService implements OnModuleDestroy {
       if (this.terminalService.hasSession(session.terminalSessionId)) {
         await this.terminalService.kill(session.terminalSessionId);
       }
-      session.terminalSessionId = undefined;
+      this.clearTerminalRef(session);
     }
 
     // Cleanup worktree if auto-cleanup is enabled
@@ -582,7 +593,7 @@ export class SessionService implements OnModuleDestroy {
         };
       }
       // Terminal no longer exists, clear the reference
-      session.terminalSessionId = undefined;
+      this.clearTerminalRef(session);
     }
 
     // Update status to connecting
@@ -668,6 +679,7 @@ export class SessionService implements OnModuleDestroy {
 
       // Update session with terminal reference
       session.terminalSessionId = terminalSessionId;
+      this.terminalToSession.set(terminalSessionId, session.id);
       session.worktreePath = worktreePath;
       session.lastActiveAt = new Date();
 
@@ -728,7 +740,7 @@ export class SessionService implements OnModuleDestroy {
       this.logger.debug(
         `stopSession: terminal ${terminalId} for session ${sessionId} no longer exists`
       );
-      session.terminalSessionId = undefined;
+      this.clearTerminalRef(session);
       return false;
     }
 
@@ -736,7 +748,7 @@ export class SessionService implements OnModuleDestroy {
 
     await this.terminalService.kill(terminalId);
 
-    session.terminalSessionId = undefined;
+    this.clearTerminalRef(session);
     this.updateStatus(sessionId, 'idle', 'Session stopped');
 
     this.logger.log(`Session ${sessionId} stopped`);

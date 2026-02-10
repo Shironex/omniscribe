@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { execFile, ExecException, execSync } from 'child_process';
+import { execFile, ExecException } from 'child_process';
 import { promisify } from 'util';
 import { existsSync } from 'fs';
 import { homedir } from 'os';
@@ -300,19 +300,6 @@ export class GithubService {
   clearCache(): void {
     this.cachedStatus = null;
     this.cacheTimestamp = 0;
-  }
-
-  /**
-   * Check if gh CLI is available (quick synchronous check)
-   */
-  isAvailable(): boolean {
-    try {
-      const command = process.platform === 'win32' ? 'where gh' : 'which gh';
-      execSync(command, { stdio: 'ignore' });
-      return true;
-    } catch {
-      return false;
-    }
   }
 
   /**

@@ -48,38 +48,15 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
   @WebSocketServer()
   server!: Server;
 
-  // Use static Maps to ensure data persists across potential multiple gateway instances
-  // This is a defensive fix for NestJS DI behavior where module imports can create multiple instances
-  private static clientSessions = new Map<string, Set<number>>();
-  private static connectedClients = new Map<string, Socket>();
+  private clientSessions = new Map<string, Set<number>>();
+  private connectedClients = new Map<string, Socket>();
 
   // Backpressure tracking (per-terminal, independent of each other)
-  private static pendingWritesMap = new Map<number, number>();
-  private static pausedTerminalsSet = new Set<number>();
-  private static pauseTimeoutsMap = new Map<number, NodeJS.Timeout>();
+  private pendingWrites = new Map<number, number>();
+  private pausedTerminals = new Set<number>();
+  private pauseTimeouts = new Map<number, NodeJS.Timeout>();
 
   constructor(private readonly terminalService: TerminalService) {}
-
-  // Getters for the static Maps (for convenience)
-  private get clientSessions(): Map<string, Set<number>> {
-    return TerminalGateway.clientSessions;
-  }
-
-  private get connectedClients(): Map<string, Socket> {
-    return TerminalGateway.connectedClients;
-  }
-
-  private get pendingWrites(): Map<number, number> {
-    return TerminalGateway.pendingWritesMap;
-  }
-
-  private get pausedTerminals(): Set<number> {
-    return TerminalGateway.pausedTerminalsSet;
-  }
-
-  private get pauseTimeouts(): Map<number, NodeJS.Timeout> {
-    return TerminalGateway.pauseTimeoutsMap;
-  }
 
   /**
    * Validate that a sessionId is a positive finite integer.

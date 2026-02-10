@@ -14,14 +14,11 @@ jest.mock('util', () => {
 
 jest.mock('child_process', () => ({
   execFile: jest.fn(),
-  execSync: jest.fn(),
 }));
 
 jest.mock('fs', () => ({
   existsSync: jest.fn().mockReturnValue(false),
 }));
-
-const mockExecSync = require('child_process').execSync as jest.Mock;
 
 const mockExistsSync = require('fs').existsSync as jest.Mock;
 
@@ -37,33 +34,10 @@ describe('GithubService', () => {
 
     service = module.get<GithubService>(GithubService);
     mockExecFileAsync.mockReset();
-    mockExecSync.mockReset();
     mockExistsSync.mockReset().mockReturnValue(false);
 
     // Clear the internal cache between tests
     service.clearCache();
-  });
-
-  // ==================== isAvailable ====================
-
-  describe('isAvailable', () => {
-    it('should return true when gh CLI is found in PATH', () => {
-      mockExecSync.mockReturnValue(Buffer.from('/usr/local/bin/gh'));
-
-      const result = service.isAvailable();
-
-      expect(result).toBe(true);
-    });
-
-    it('should return false when gh CLI is not found', () => {
-      mockExecSync.mockImplementation(() => {
-        throw new Error('not found');
-      });
-
-      const result = service.isAvailable();
-
-      expect(result).toBe(false);
-    });
   });
 
   // ==================== getStatus ====================
@@ -671,36 +645,6 @@ describe('GithubService', () => {
 
     afterEach(() => {
       Object.defineProperty(process, 'platform', { value: originalPlatform });
-    });
-
-    it('should use "where" on Windows for isAvailable', () => {
-      Object.defineProperty(process, 'platform', { value: 'win32' });
-      mockExecSync.mockReturnValue(Buffer.from('C:\\path\\gh.exe'));
-
-      service.isAvailable();
-
-      const command = mockExecSync.mock.calls[0][0];
-      expect(command).toBe('where gh');
-    });
-
-    it('should use "which" on Linux for isAvailable', () => {
-      Object.defineProperty(process, 'platform', { value: 'linux' });
-      mockExecSync.mockReturnValue(Buffer.from('/usr/bin/gh'));
-
-      service.isAvailable();
-
-      const command = mockExecSync.mock.calls[0][0];
-      expect(command).toBe('which gh');
-    });
-
-    it('should use "which" on macOS for isAvailable', () => {
-      Object.defineProperty(process, 'platform', { value: 'darwin' });
-      mockExecSync.mockReturnValue(Buffer.from('/usr/local/bin/gh'));
-
-      service.isAvailable();
-
-      const command = mockExecSync.mock.calls[0][0];
-      expect(command).toBe('which gh');
     });
 
     it('should use "where" on Windows for findCli', async () => {
