@@ -126,10 +126,7 @@ export class SessionGateway implements OnGatewayInit {
     @MessageBody() payload: CreateSessionPayload,
     @ConnectedSocket() client: Socket
   ): Promise<CreateSessionResponse> {
-    // Validate string length limits
-    if (payload.name && payload.name.length > MAX_SESSION_NAME_LENGTH) {
-      return { error: `name exceeds maximum length of ${MAX_SESSION_NAME_LENGTH} characters` };
-    }
+    // Validate string length limits (model/systemPrompt are create-only fields)
     if (payload.model && payload.model.length > MAX_MODEL_LENGTH) {
       return { error: `model exceeds maximum length of ${MAX_MODEL_LENGTH} characters` };
     }
@@ -369,6 +366,11 @@ export class SessionGateway implements OnGatewayInit {
     createOptions: Parameters<SessionService['create']>[2],
     errorPrefix: string
   ): Promise<CreateSessionResponse> {
+    // Validate name (covers all creation paths: new, resume, fork, continue-last)
+    if (payload.name && payload.name.length > MAX_SESSION_NAME_LENGTH) {
+      return { error: `name exceeds maximum length of ${MAX_SESSION_NAME_LENGTH} characters` };
+    }
+
     // Validate mode
     if (!VALID_AI_MODES.includes(mode as (typeof VALID_AI_MODES)[number])) {
       return {

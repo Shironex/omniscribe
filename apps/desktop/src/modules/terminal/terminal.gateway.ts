@@ -374,15 +374,16 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
   handleCancel(
     @ConnectedSocket() _client: Socket,
     @MessageBody() payload: { sessionId: number }
-  ): { success: boolean } {
+  ): SuccessResponse {
     const { sessionId } = payload;
 
     if (!this.isValidSessionId(sessionId)) {
-      return { success: false };
+      this.logger.warn(`[cancel] Invalid sessionId: ${sessionId}`);
+      return { success: false, error: 'Invalid sessionId' };
     }
 
     if (!this.terminalService.hasSession(sessionId)) {
-      return { success: false };
+      return { success: false, error: `Terminal session ${sessionId} not found` };
     }
 
     // Send Ctrl+C (SIGINT) to the process

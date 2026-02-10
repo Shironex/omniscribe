@@ -12,6 +12,9 @@ import {
   ExtendedSessionConfig,
   LaunchSessionResult,
   SessionStatusUpdate,
+  MAX_SESSION_NAME_LENGTH,
+  MAX_MODEL_LENGTH,
+  MAX_SYSTEM_PROMPT_LENGTH,
   createLogger,
   extractErrorMessage,
 } from '@omniscribe/shared';
@@ -311,6 +314,23 @@ export class SessionService implements OnModuleDestroy {
     const session = this.sessions.get(sessionId);
 
     if (!session) {
+      return undefined;
+    }
+
+    // Validate string length limits (same as session creation)
+    if (updates.name !== undefined && updates.name.length > MAX_SESSION_NAME_LENGTH) {
+      this.logger.warn(`[update] name exceeds max length for session ${sessionId}`);
+      return undefined;
+    }
+    if (updates.model !== undefined && updates.model.length > MAX_MODEL_LENGTH) {
+      this.logger.warn(`[update] model exceeds max length for session ${sessionId}`);
+      return undefined;
+    }
+    if (
+      updates.systemPrompt !== undefined &&
+      updates.systemPrompt.length > MAX_SYSTEM_PROMPT_LENGTH
+    ) {
+      this.logger.warn(`[update] systemPrompt exceeds max length for session ${sessionId}`);
       return undefined;
     }
 

@@ -102,6 +102,14 @@ export const ENV_BLOCKLIST_PATTERNS: RegExp[] = [
   /CREDENTIAL/i,
   /API_KEY/i,
   /PRIVATE_KEY/i,
+  // Dynamic linker injection vectors (code execution via shared libraries)
+  /^LD_PRELOAD$/i,
+  /^LD_LIBRARY_PATH$/i,
+  /^DYLD_/i,
+  // Shell startup injection
+  /^BASH_ENV$/i,
+  /^ENV$/i,
+  /^BASH_FUNC_/i,
 ];
 
 /**

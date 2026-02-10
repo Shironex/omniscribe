@@ -196,18 +196,23 @@ export class WorkspaceService implements OnModuleInit {
     } catch (error) {
       this.logger.error('Failed to initialize workspace store, resetting to defaults:', error);
       // Corruption or schema mismatch — clear and retry
-      this.store = new Store<StoreSchema>({
-        name: 'workspace',
-        clearInvalidConfig: true,
-        defaults: {
-          tabs: [],
-          activeTabId: null,
-          quickActions: DEFAULT_QUICK_ACTIONS,
-          preferences: DEFAULT_PREFERENCES,
-          sessionHistory: [],
-          activeSessionsSnapshot: [],
-        },
-      });
+      try {
+        this.store = new Store<StoreSchema>({
+          name: 'workspace',
+          clearInvalidConfig: true,
+          defaults: {
+            tabs: [],
+            activeTabId: null,
+            quickActions: DEFAULT_QUICK_ACTIONS,
+            preferences: DEFAULT_PREFERENCES,
+            sessionHistory: [],
+            activeSessionsSnapshot: [],
+          },
+        });
+      } catch (retryError) {
+        this.logger.error('Failed to initialize workspace store on retry:', retryError);
+        throw retryError;
+      }
     }
   }
 

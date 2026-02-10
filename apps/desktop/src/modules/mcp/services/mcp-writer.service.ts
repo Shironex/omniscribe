@@ -214,12 +214,11 @@ export class McpWriterService implements OnModuleDestroy {
           `Removed omniscribe from ${configPath}, preserved ${Object.keys(mcpServers).length} other servers`
         );
 
+        // Clean up the mutex — omniscribe entry was successfully removed
+        this.fileLocks.delete(configPath);
         return true;
       } catch (error) {
-        this.logger.error('Error removing omniscribe from config:', error);
-      } finally {
-        // Clean up the mutex for this path since the config is removed
-        this.fileLocks.delete(configPath);
+        this.logger.error('Error removing omniscribe entry from config:', error);
       }
 
       return false;
