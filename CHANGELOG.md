@@ -2,6 +2,63 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.6.0 (2026-02-10)
+
+### Features
+
+- **Session History** — Browse, search, and filter past Claude Code sessions with branch filtering and sort controls (newest/oldest)
+- **Resume Sessions** — Resume any previous Claude Code session directly from the history panel or terminal header
+- **Fork Sessions** — Fork an existing session into a new conversation branch using `--fork-session`
+- **Continue Last** — One-click button to continue the most recent Claude Code conversation (`--continue` flag)
+- **Auto-Resume on Restart** _(Experimental)_ — Toggle in Settings > Sessions to automatically restore active sessions when Omniscribe restarts; uses eager snapshot saving for reliability across all shutdown scenarios
+- **Hooks Integration** — Automatic Claude Code `SessionStart`/`SessionEnd` hooks for instant session ID capture (falls back to polling)
+- **Tailwind CSS v4** — Migrated frontend from Tailwind CSS v3 to v4 with updated theme configuration
+- **Keyboard Shortcuts** — Added missing shortcuts for settings (`Ctrl+,`), history (`Ctrl+H`), tabs, and terminal clear
+
+### Bug Fixes
+
+- **Shell PATH resolution** — Spawned sessions now inherit the user's full shell PATH on macOS/Linux, fixing missing dev tools like `node`, `git`, `claude` in terminal sessions (#97)
+- **Terminal freezing** — Fixed backpressure oscillation that caused terminal UI lag and freezes; increased thresholds and replaced flickering bar with debounced theme-aware overlay
+- **MCP status not updating UI** — Fixed MCP status updates not propagating to the frontend; status server now routes through SessionService via internal event
+- **MCP config race condition** — Plain terminal sessions no longer write `.mcp.json`, preventing them from overwriting Claude session IDs
+- **Hooks field name** — Fixed hook event field from `event` to `hook_event_name` to match Claude Code's actual format
+- **Session state transitions** — Added `needs_input` and `finished` as valid transitions from `idle` status
+- **Git error swallowing** — Fixed `execGit` silently swallowing fatal git errors
+- **Git path validation** — Added input validation to Git gateway and worktree cleanup to prevent path traversal
+- **Claude CLI auth on macOS** — Detect authentication via config file fallback when CLI detection fails
+- **Git event mismatch** — Fixed event naming between frontend and backend, removed dead code
+- **Predefined slot hover border** — Added missing hover border to predefined session slot cards
+- **Auto-resume reliability** — Switched from shutdown-time snapshot saving to eager snapshots on every session state change, ensuring recovery even after forced kills (SIGINT/SIGTERM)
+- **E2E test label matching** — Accept both "Claude" and "Plain AI" mode labels in e2e tests
+
+### Performance
+
+- **O(1) session lookup** — Removed static gateway maps in favor of direct SessionService lookups, eliminating duplicate state and O(N) scans (#93)
+- **Remove execSync** — Replaced blocking `execSync` in GithubService with async `execFile`, unblocking the main thread
+- **Frontend performance** — Improved React patterns, memoization, and socket reliability
+
+### Refactoring
+
+- **Shared package extraction** — Extracted types, constants, and event names to shared package; removed deprecated aliases
+- **DRY deduplication** — Eliminated code duplication across backend and frontend
+- **Gateway lifecycle alignment** — Aligned gateway lifecycle, event naming, and imports across all modules
+
+### Dependencies
+
+- Upgrade `react-resizable-panels` from 2.1.9 to 4.6.2
+
+### Code Quality
+
+- **Backend safety** — Hardened input validation and resource management across all gateways
+- **WCAG accessibility** — Fixed accessibility issues across settings and terminal components
+- **Comprehensive test coverage** — Added tests for backend services, frontend stores/hooks/components, and shared package utilities
+- **Test infrastructure** — Fixed test failures, worker process leaks, and shared Jest config
+
+### Stats
+
+- 63 commits across 15+ PRs
+- 214 files changed — +26,037 / −4,028 lines
+
 ## 0.6.0-beta.3 (2026-02-10)
 
 ### Bug Fixes
