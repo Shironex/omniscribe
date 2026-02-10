@@ -71,7 +71,7 @@ export const TerminalView: React.FC<TerminalViewProps> = React.memo(
     );
 
     // Backpressure state
-    const isBackpressured = useSessionStore(state => state.backpressured.has(sessionId));
+    const isBackpressured = useSessionStore(state => !!state.backpressured[sessionId]);
 
     const handleCancelOutput = useCallback(() => {
       socket.emit(TerminalEvents.CANCEL, { sessionId });
@@ -150,10 +150,10 @@ export const TerminalView: React.FC<TerminalViewProps> = React.memo(
 
     const getBorderStyle = (): React.CSSProperties => {
       const borderColors: Record<TerminalStatus, string> = {
-        connecting: '#e0af68',
-        connected: '#9ece6a',
-        disconnected: '#f7768e',
-        error: '#f7768e',
+        connecting: 'var(--color-status-warning)',
+        connected: 'var(--color-status-success)',
+        disconnected: 'var(--color-status-error)',
+        error: 'var(--color-status-error)',
       };
 
       return {

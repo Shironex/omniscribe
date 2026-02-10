@@ -9,6 +9,7 @@ import {
   type McpInternalStatusResponse,
 } from '@omniscribe/shared';
 import { socket } from '@/lib/socket';
+import { emitAsync } from '@/lib/socketHelpers';
 
 const logger = createLogger('McpStore');
 import {
@@ -17,6 +18,7 @@ import {
   initialSocketState,
   createSocketActions,
   createSocketListeners,
+  createMemoizedSelector,
 } from './utils';
 
 /**
@@ -50,7 +52,7 @@ interface McpState extends SocketStoreState {
   /** Discovered MCP servers */
   servers: McpServerConfig[];
   /** Server states (keyed by server ID) */
-  serverStates: Map<string, McpServerState>;
+  serverStates: Record<string, McpServerState>;
   /** Whether server discovery is in progress */
   isDiscovering: boolean;
   /** Internal MCP server info */
@@ -62,7 +64,7 @@ interface McpState extends SocketStoreState {
  */
 interface McpActions extends SocketStoreActions {
   /** Discover available MCP servers */
-  discoverServers: (projectPath?: string) => void;
+  discoverServers: (projectPath?: string) => Promise<void>;
   /** Set servers list */
   setServers: (servers: McpServerConfig[]) => void;
   /** Update server state */
@@ -132,7 +134,7 @@ export const useMcpStore = create<McpStore>()(
         // Initial state (spread common state + custom state)
         ...initialSocketState,
         servers: [],
-        serverStates: new Map(),
+        serverStates: {},
         isDiscovering: false,
         internalMcp: { available: false, path: null },
 
@@ -144,29 +146,34 @@ export const useMcpStore = create<McpStore>()(
         cleanupListeners,
 
         // Custom actions
-        discoverServers: (projectPath?: string) => {
+        discoverServers: async (projectPath?: string) => {
           logger.info('Discovering servers', projectPath);
           set({ isDiscovering: true, error: null }, undefined, 'mcp/discoverServersStart');
-          socket.emit(
-            McpEvents.DISCOVER,
-            { projectPath },
-            (response: { servers: McpServerConfig[]; error?: string }) => {
-              if (response.error) {
-                logger.error('Discovery failed:', response.error);
-                set(
-                  { error: response.error, isDiscovering: false },
-                  undefined,
-                  'mcp/discoverServersError'
-                );
-              } else {
-                set(
-                  { servers: response.servers ?? [], isDiscovering: false, error: null },
-                  undefined,
-                  'mcp/discoverServers'
-                );
-              }
+          try {
+            const response = await emitAsync<
+              { projectPath?: string },
+              { servers: McpServerConfig[]; error?: string }
+            >(McpEvents.DISCOVER, { projectPath });
+
+            if (response.error) {
+              logger.error('Discovery failed:', response.error);
+              set(
+                { error: response.error, isDiscovering: false },
+                undefined,
+                'mcp/discoverServersError'
+              );
+            } else {
+              set(
+                { servers: response.servers ?? [], isDiscovering: false, error: null },
+                undefined,
+                'mcp/discoverServers'
+              );
             }
-          );
+          } catch (err) {
+            const message = err instanceof Error ? err.message : 'Discovery failed';
+            logger.error('Discovery failed:', message);
+            set({ error: message, isDiscovering: false }, undefined, 'mcp/discoverServersError');
+          }
         },
 
         setServers: (servers: McpServerConfig[]) => {
@@ -175,18 +182,16 @@ export const useMcpStore = create<McpStore>()(
 
         updateServerState: (serverId: string, state: McpServerState) => {
           set(
-            currentState => {
-              const newServerStates = new Map(currentState.serverStates);
-              newServerStates.set(serverId, state);
-              return { serverStates: newServerStates };
-            },
+            currentState => ({
+              serverStates: { ...currentState.serverStates, [serverId]: state },
+            }),
             undefined,
             'mcp/updateServerState'
           );
         },
 
         updateServerStatus: (serverId: string, status: McpServerStatus, errorMessage?: string) => {
-          const existingState = get().serverStates.get(serverId);
+          const existingState = get().serverStates[serverId];
           if (!existingState) {
             logger.warn('Status update for unknown server', serverId);
             return;
@@ -194,16 +199,14 @@ export const useMcpStore = create<McpStore>()(
 
           set(
             state => {
-              const newServerStates = new Map(state.serverStates);
-              const current = newServerStates.get(serverId);
-              if (current) {
-                newServerStates.set(serverId, {
-                  ...current,
-                  status,
-                  errorMessage,
-                });
-              }
-              return { serverStates: newServerStates };
+              const current = state.serverStates[serverId];
+              if (!current) return state;
+              return {
+                serverStates: {
+                  ...state.serverStates,
+                  [serverId]: { ...current, status, errorMessage },
+                },
+              };
             },
             undefined,
             'mcp/updateServerStatus'
@@ -218,7 +221,7 @@ export const useMcpStore = create<McpStore>()(
           set(
             {
               servers: [],
-              serverStates: new Map(),
+              serverStates: {},
               isDiscovering: false,
               error: null,
             },
@@ -255,47 +258,47 @@ export const selectServerById = (serverId: string) => (state: McpStore) =>
  * Select server state by ID
  */
 export const selectServerStateById = (serverId: string) => (state: McpStore) =>
-  state.serverStates.get(serverId);
+  state.serverStates[serverId];
 
 /**
  * Select connected servers
  */
-export const selectConnectedServers = (state: McpStore) => {
+export const selectConnectedServers = createMemoizedSelector((state: McpStore) => {
   const connectedServers: McpServerConfig[] = [];
   for (const server of state.servers) {
-    const serverState = state.serverStates.get(server.id);
+    const serverState = state.serverStates[server.id];
     if (serverState?.status === 'connected') {
       connectedServers.push(server);
     }
   }
   return connectedServers;
-};
+});
 
 /**
  * Select all tools from connected servers
  */
-export const selectAllTools = (state: McpStore) => {
+export const selectAllTools = createMemoizedSelector((state: McpStore) => {
   const tools: McpServerState['tools'] = [];
-  for (const serverState of state.serverStates.values()) {
+  for (const serverState of Object.values(state.serverStates)) {
     if (serverState.status === 'connected') {
       tools.push(...serverState.tools);
     }
   }
   return tools;
-};
+});
 
 /**
  * Select all resources from connected servers
  */
-export const selectAllResources = (state: McpStore) => {
+export const selectAllResources = createMemoizedSelector((state: McpStore) => {
   const resources: McpServerState['resources'] = [];
-  for (const serverState of state.serverStates.values()) {
+  for (const serverState of Object.values(state.serverStates)) {
     if (serverState.status === 'connected') {
       resources.push(...serverState.resources);
     }
   }
   return resources;
-};
+});
 
 /**
  * Select discovering state

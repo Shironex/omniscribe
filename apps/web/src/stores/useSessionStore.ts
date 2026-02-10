@@ -22,6 +22,7 @@ import {
   initialSocketState,
   createSocketActions,
   createSocketListeners,
+  createMemoizedSelector,
 } from './utils';
 
 /**
@@ -39,9 +40,9 @@ interface SessionState extends SocketStoreState {
   /** All sessions */
   sessions: FrontendSessionConfig[];
   /** Pending status updates for race condition handling */
-  pendingStatusUpdates: Map<string, SessionStatusUpdate[]>;
-  /** Set of terminal session IDs currently under backpressure */
-  backpressured: Set<number>;
+  pendingStatusUpdates: Record<string, SessionStatusUpdate[]>;
+  /** Terminal session IDs currently under backpressure */
+  backpressured: Record<number, true>;
 }
 
 /**
@@ -193,8 +194,8 @@ export const useSessionStore = create<SessionStore>()(
         // Initial state (spread common state + custom state)
         ...initialSocketState,
         sessions: [],
-        pendingStatusUpdates: new Map(),
-        backpressured: new Set(),
+        pendingStatusUpdates: {},
+        backpressured: {},
 
         // Common socket actions
         ...socketActions,
@@ -229,14 +230,15 @@ export const useSessionStore = create<SessionStore>()(
         removeSession: sessionId => {
           logger.debug('removeSession', sessionId);
           set(
-            state => ({
-              sessions: state.sessions.filter(s => s.id !== sessionId),
-              pendingStatusUpdates: (() => {
-                const newMap = new Map(state.pendingStatusUpdates);
-                newMap.delete(sessionId);
-                return newMap;
-              })(),
-            }),
+            state => {
+              const restPending = Object.fromEntries(
+                Object.entries(state.pendingStatusUpdates).filter(([key]) => key !== sessionId)
+              );
+              return {
+                sessions: state.sessions.filter(s => s.id !== sessionId),
+                pendingStatusUpdates: restPending,
+              };
+            },
             undefined,
             'session/removeSession'
           );
@@ -265,12 +267,13 @@ export const useSessionStore = create<SessionStore>()(
               if (!sessionExists) {
                 // Buffer the status update for later
                 logger.debug('Buffering pending update for unknown session', sessionId);
-                const pending = state.pendingStatusUpdates.get(sessionId) ?? [];
-                const newPending = [...pending, { sessionId, status, message, needsInputPrompt }];
-                const newMap = new Map(state.pendingStatusUpdates);
-                newMap.set(sessionId, newPending);
-
-                return { pendingStatusUpdates: newMap };
+                const pending = state.pendingStatusUpdates[sessionId] ?? [];
+                return {
+                  pendingStatusUpdates: {
+                    ...state.pendingStatusUpdates,
+                    [sessionId]: [...pending, { sessionId, status, message, needsInputPrompt }],
+                  },
+                };
               }
 
               return {
@@ -299,7 +302,7 @@ export const useSessionStore = create<SessionStore>()(
 
         processPendingUpdates: sessionId => {
           const state = get();
-          const pending = state.pendingStatusUpdates.get(sessionId);
+          const pending = state.pendingStatusUpdates[sessionId];
 
           if (!pending || pending.length === 0) {
             return;
@@ -318,9 +321,10 @@ export const useSessionStore = create<SessionStore>()(
           // Clear pending updates for this session
           set(
             state => {
-              const newMap = new Map(state.pendingStatusUpdates);
-              newMap.delete(sessionId);
-              return { pendingStatusUpdates: newMap };
+              const rest = Object.fromEntries(
+                Object.entries(state.pendingStatusUpdates).filter(([key]) => key !== sessionId)
+              );
+              return { pendingStatusUpdates: rest };
             },
             undefined,
             'session/clearPendingUpdates'
@@ -330,13 +334,17 @@ export const useSessionStore = create<SessionStore>()(
         setBackpressure: (terminalSessionId, paused) => {
           set(
             state => {
-              const next = new Set(state.backpressured);
               if (paused) {
-                next.add(terminalSessionId);
-              } else {
-                next.delete(terminalSessionId);
+                return {
+                  backpressured: { ...state.backpressured, [terminalSessionId]: true as const },
+                };
               }
-              return { backpressured: next };
+              const rest = Object.fromEntries(
+                Object.entries(state.backpressured).filter(
+                  ([key]) => key !== String(terminalSessionId)
+                )
+              ) as Record<number, true>;
+              return { backpressured: rest };
             },
             undefined,
             'session/setBackpressure'
@@ -371,8 +379,9 @@ export const selectSessionsByStatus = (status: SessionStatus) => (state: Session
 /**
  * Select active sessions (not idle or disconnected)
  */
-export const selectActiveSessions = () => (state: SessionStore) =>
-  state.sessions.filter(session => session.status !== 'idle' && session.status !== 'disconnected');
+export const selectActiveSessions = createMemoizedSelector((state: SessionStore) =>
+  state.sessions.filter(session => session.status !== 'idle' && session.status !== 'disconnected')
+);
 
 /**
  * Get count of running sessions (those with active terminals).

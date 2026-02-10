@@ -133,9 +133,9 @@ export function useAppInitialization(): void {
         // Fetch internal MCP status on app start (requires active connection)
         fetchInternalMcpStatus();
         // Detect Claude CLI status early so pre-launch slots use the correct default AI mode
-        detectClaudeCliStatus();
+        detectClaudeCliStatus().catch(() => {}); // internal try/catch handles logging
         // Auto-resume sessions from previous run if enabled
-        autoResumeOnRestart();
+        autoResumeOnRestart().catch(() => {}); // internal try/catch handles logging
         // Init updater listeners (IPC-based, not socket)
         cleanupUpdateListeners = initUpdateListeners();
       } catch (error) {

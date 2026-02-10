@@ -329,7 +329,16 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
 
           set({ isLoading: true }, undefined, 'workspace/restoreStateStart');
 
+          const timeout = setTimeout(() => {
+            set(
+              { isLoading: false, isRestored: true, error: 'Restore timed out' },
+              undefined,
+              'workspace/restoreStateTimeout'
+            );
+          }, 10_000);
+
           socket.emit(WorkspaceEvents.GET_STATE, {}, (response: WorkspaceStateResponse) => {
+            clearTimeout(timeout);
             if (response) {
               const tabs = (response.tabs ?? []).map(convertBackendTab);
               // Clear session IDs on restore - they'll be re-associated

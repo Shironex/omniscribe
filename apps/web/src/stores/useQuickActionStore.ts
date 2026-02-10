@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { devtools, persist, createJSONStorage, StateStorage } from 'zustand/middleware';
 import { QuickAction, createLogger } from '@omniscribe/shared';
+import { createMemoizedSelector } from './utils';
 
 const logger = createLogger('QuickActionStore');
 
@@ -291,8 +292,9 @@ export const selectActions = (state: QuickActionStore) => state.actions;
 /**
  * Select enabled actions only
  */
-export const selectEnabledActions = (state: QuickActionStore) =>
-  state.actions.filter(action => action.enabled !== false);
+export const selectEnabledActions = createMemoizedSelector((state: QuickActionStore) =>
+  state.actions.filter(action => action.enabled !== false)
+);
 
 /**
  * Select actions by category

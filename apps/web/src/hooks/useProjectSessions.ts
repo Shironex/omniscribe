@@ -67,8 +67,12 @@ export function useProjectSessions(
   }, [activeProjectSessions]);
 
   // Check if we have any running sessions (sessions with a terminal)
-  const hasActiveSessions = activeProjectSessions.some(
-    s => s.terminalSessionId !== undefined && s.status !== 'disconnected'
+  const hasActiveSessions = useMemo(
+    () =>
+      activeProjectSessions.some(
+        s => s.terminalSessionId !== undefined && s.status !== 'disconnected'
+      ),
+    [activeProjectSessions]
   );
 
   // Compute status counts (mapping backend status to UI status)

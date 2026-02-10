@@ -13,6 +13,9 @@ const USAGE_POLLING_INTERVAL = 15 * 60 * 1000;
 /** Data is considered stale after 2 minutes */
 const STALE_THRESHOLD = 2 * 60 * 1000;
 
+/** Module-level polling interval ID (non-serializable, kept out of reactive state) */
+let pollingIntervalId: ReturnType<typeof setInterval> | null = null;
+
 interface UsageState {
   /** Claude usage data */
   claudeUsage: ClaudeUsage | null;
@@ -28,8 +31,6 @@ interface UsageState {
   workingDir: string | null;
   /** Whether polling is enabled */
   pollingEnabled: boolean;
-  /** Polling interval ID */
-  pollingIntervalId: ReturnType<typeof setInterval> | null;
 }
 
 interface UsageActions {
@@ -62,7 +63,6 @@ export const useUsageStore = create<UsageStore>()(
       lastFetched: null,
       workingDir: null,
       pollingEnabled: false,
-      pollingIntervalId: null,
 
       // Actions
       fetchUsage: async (workingDir?: string) => {
@@ -136,10 +136,8 @@ export const useUsageStore = create<UsageStore>()(
       },
 
       startPolling: () => {
-        const state = get();
-
         // Already polling
-        if (state.pollingIntervalId) {
+        if (pollingIntervalId) {
           return;
         }
 
@@ -151,29 +149,25 @@ export const useUsageStore = create<UsageStore>()(
 
         logger.info('Starting usage polling');
         // Fetch immediately
-        state.fetchUsage();
+        get().fetchUsage();
 
         // Set up interval
-        const intervalId = setInterval(() => {
+        pollingIntervalId = setInterval(() => {
           get().fetchUsage();
         }, USAGE_POLLING_INTERVAL);
 
-        set(
-          { pollingEnabled: true, pollingIntervalId: intervalId },
-          undefined,
-          'usage/startPolling'
-        );
+        set({ pollingEnabled: true }, undefined, 'usage/startPolling');
       },
 
       stopPolling: () => {
         logger.info('Stopping usage polling');
-        const state = get();
 
-        if (state.pollingIntervalId) {
-          clearInterval(state.pollingIntervalId);
+        if (pollingIntervalId) {
+          clearInterval(pollingIntervalId);
+          pollingIntervalId = null;
         }
 
-        set({ pollingEnabled: false, pollingIntervalId: null }, undefined, 'usage/stopPolling');
+        set({ pollingEnabled: false }, undefined, 'usage/stopPolling');
       },
 
       isStale: () => {
@@ -189,11 +183,10 @@ export const useUsageStore = create<UsageStore>()(
       },
 
       clear: () => {
-        const state = get();
-
         // Stop polling if active
-        if (state.pollingIntervalId) {
-          clearInterval(state.pollingIntervalId);
+        if (pollingIntervalId) {
+          clearInterval(pollingIntervalId);
+          pollingIntervalId = null;
         }
 
         set(
@@ -204,7 +197,6 @@ export const useUsageStore = create<UsageStore>()(
             errorMessage: null,
             lastFetched: null,
             pollingEnabled: false,
-            pollingIntervalId: null,
           },
           undefined,
           'usage/clear'

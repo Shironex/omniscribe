@@ -5,6 +5,7 @@ import type { PreLaunchSlot } from '@/components/terminal/TerminalGrid';
 import { createSession } from '@/lib/session';
 
 import { useTerminalStore, useSessionStore, selectRunningSessionCount } from '@/stores';
+import type { FrontendSessionConfig } from '@/stores/useSessionStore';
 import { useDefaultAiMode } from './useDefaultAiMode';
 import {
   getNextAvailablePrelaunchShortcut,
@@ -46,9 +47,10 @@ interface UsePreLaunchSlotsReturn {
  */
 export function usePreLaunchSlots(
   activeProjectPath: string | null,
-  currentBranch: string,
-  updateSession: (sessionId: string, updates: { terminalSessionId?: number }) => void
+  currentBranch: string
 ): UsePreLaunchSlotsReturn {
+  const updateSession: (sessionId: string, updates: Partial<FrontendSessionConfig>) => void =
+    useSessionStore(state => state.updateSession);
   // Pre-launch slots state (sessions waiting to be launched)
   const [preLaunchSlots, setPreLaunchSlots] = useState<PreLaunchSlot[]>([]);
 
@@ -61,6 +63,13 @@ export function usePreLaunchSlots(
   // Listen to add slot requests from other components (e.g., sidebar + button)
   const addSlotRequestCounter = useTerminalStore(state => state.addSlotRequestCounter);
   const prevCounterRef = useRef(addSlotRequestCounter);
+
+  // Ref to always access current slots (avoids stale closures in async callbacks)
+  const preLaunchSlotsRef = useRef(preLaunchSlots);
+  preLaunchSlotsRef.current = preLaunchSlots;
+
+  const launchingSlotIdsRef = useRef(launchingSlotIds);
+  launchingSlotIdsRef.current = launchingSlotIds;
 
   // Can launch if we have a project selected and have pre-launch slots
   const canLaunch = activeProjectPath !== null && preLaunchSlots.length > 0;
@@ -135,7 +144,7 @@ export function usePreLaunchSlots(
     []
   );
 
-  // Launch a single slot handler
+  // Launch a single slot handler (reads from refs to avoid stale closures)
   const handleLaunchSlot = useCallback(
     async (slotId: string) => {
       if (!activeProjectPath) {
@@ -143,11 +152,11 @@ export function usePreLaunchSlots(
         return;
       }
 
-      const slot = preLaunchSlots.find(s => s.id === slotId);
+      const slot = preLaunchSlotsRef.current.find(s => s.id === slotId);
       if (!slot) return;
 
       // Prevent double-launch: skip if this slot is already being launched
-      if (launchingSlotIds.has(slotId)) {
+      if (launchingSlotIdsRef.current.has(slotId)) {
         return;
       }
 
@@ -181,16 +190,17 @@ export function usePreLaunchSlots(
         });
       }
     },
-    [activeProjectPath, preLaunchSlots, launchingSlotIds, updateSession]
+    [activeProjectPath, updateSession]
   );
 
-  // Launch all pre-launch slots
+  // Launch all pre-launch slots (reads from ref to avoid stale closure)
   const handleLaunch = useCallback(async () => {
-    logger.info('Launching all slots:', preLaunchSlots.length);
-    for (const slot of preLaunchSlots) {
+    const slots = preLaunchSlotsRef.current;
+    logger.info('Launching all slots:', slots.length);
+    for (const slot of slots) {
       await handleLaunchSlot(slot.id);
     }
-  }, [preLaunchSlots, handleLaunchSlot]);
+  }, [handleLaunchSlot]);
 
   // Compute if any launch is in progress
   const isLaunching = launchingSlotIds.size > 0;
