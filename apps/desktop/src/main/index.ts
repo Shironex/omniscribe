@@ -10,6 +10,7 @@ import { initializeAutoUpdater } from './updater';
 import { corsOriginCallback } from '../modules/shared/cors.config';
 import { NestLoggerAdapter } from '../modules/shared/nest-logger';
 import { LOCALHOST } from '@omniscribe/shared';
+import { resolveShellPath } from './utils/shell-path';
 
 // Allow E2E tests to isolate userData by setting ELECTRON_USER_DATA_DIR.
 // Must run before app.ready so electron-store and other userData consumers
@@ -59,6 +60,10 @@ async function shutdownNestApp(): Promise<void> {
 }
 
 async function bootstrap(): Promise<void> {
+  // Resolve the user's full shell PATH before any child processes are spawned.
+  // macOS/Linux GUI apps inherit a minimal PATH that's missing dev tools.
+  resolveShellPath();
+
   // Log security posture at startup
   const isPackaged = app.isPackaged;
   logger.info(`[security] App packaged: ${isPackaged}`);
