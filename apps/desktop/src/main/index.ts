@@ -22,6 +22,7 @@ if (process.env.ELECTRON_USER_DATA_DIR) {
 export let mainWindow: BrowserWindow | null = null;
 let nestApp: INestApplication | null = null;
 let isShuttingDown = false;
+let cleanupDone = false;
 
 async function bootstrapNestApp(): Promise<void> {
   try {
@@ -89,6 +90,17 @@ process.on('unhandledRejection', reason => {
   logger.error('Unhandled rejection:', reason);
 });
 
+// Handle SIGINT/SIGTERM (e.g. Ctrl+C in dev) by triggering graceful shutdown
+// so that before-quit fires and onModuleDestroy can save the session snapshot.
+// Guard against duplicate signals (concurrently sends SIGTERM after SIGINT).
+for (const signal of ['SIGINT', 'SIGTERM'] as const) {
+  process.on(signal, () => {
+    if (isShuttingDown) return;
+    logger.info(`Received ${signal}, initiating graceful shutdown...`);
+    app.quit();
+  });
+}
+
 app
   .whenReady()
   .then(bootstrap)
@@ -117,13 +129,15 @@ app.on('activate', async () => {
 app.on('before-quit', event => {
   mainWindow = null;
 
-  // If already shutting down, let the quit proceed
-  if (isShuttingDown) {
-    return;
-  }
+  // Cleanup finished, let the quit proceed
+  if (cleanupDone) return;
 
-  // Prevent quit, do async cleanup, then quit again
+  // Keep preventing quit until cleanup finishes (handles duplicate signals)
   event.preventDefault();
+
+  // Already started cleanup, just keep preventing
+  if (isShuttingDown) return;
+
   isShuttingDown = true;
 
   (async () => {
@@ -136,6 +150,7 @@ app.on('before-quit', event => {
       await shutdownNestApp();
     }
   })().finally(() => {
+    cleanupDone = true;
     app.quit();
   });
 });

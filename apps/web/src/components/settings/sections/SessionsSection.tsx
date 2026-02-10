@@ -1,4 +1,4 @@
-import { Monitor, AlertTriangle, RotateCcw } from 'lucide-react';
+import { Monitor, AlertTriangle, RotateCcw, FlaskConical } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useWorkspaceStore } from '@/stores';
 import type { AiMode, SessionSettings } from '@omniscribe/shared';
@@ -164,7 +164,13 @@ export function SessionsSection() {
 
       {/* Auto-Resume on Restart */}
       <div className="space-y-4">
-        <h3 className="text-sm font-medium text-foreground">Auto-Resume</h3>
+        <div className="flex items-center gap-2">
+          <h3 className="text-sm font-medium text-foreground">Auto-Resume</h3>
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-500/15 text-amber-400 border border-amber-500/20">
+            <FlaskConical className="w-3 h-3" />
+            Experimental
+          </span>
+        </div>
 
         <div className="rounded-xl border border-border/50 bg-card/50 p-4">
           <div className="flex items-center justify-between">

@@ -139,10 +139,18 @@ export class SessionService implements OnModuleDestroy {
   }
 
   /**
-   * On module destroy, snapshot all active sessions with a Claude session ID
-   * so they can be auto-resumed on next startup.
+   * On module destroy, save a final snapshot as a fallback.
    */
   onModuleDestroy(): void {
+    this.refreshActiveSessionsSnapshot('shutdown');
+  }
+
+  /**
+   * Eagerly refresh the active sessions snapshot whenever sessions change.
+   * Called when a Claude session ID is captured, a terminal closes, or a session is removed.
+   * This ensures the snapshot is always up-to-date regardless of how the process exits.
+   */
+  private refreshActiveSessionsSnapshot(reason: string): void {
     try {
       const activeSessions = this.getRunningSessions();
       const snapshots: ActiveSessionSnapshot[] = activeSessions
@@ -155,7 +163,9 @@ export class SessionService implements OnModuleDestroy {
         }));
 
       this.workspaceService.saveActiveSessionsSnapshot(snapshots);
-      this.logger.info(`Saved active sessions snapshot (${snapshots.length} sessions)`);
+      this.logger.debug(
+        `Refreshed active sessions snapshot (${snapshots.length} sessions, reason: ${reason})`
+      );
     } catch (error) {
       const msg = extractErrorMessage(error);
       this.logger.warn(`Failed to save active sessions snapshot: ${msg}`);
@@ -187,6 +197,9 @@ export class SessionService implements OnModuleDestroy {
         if (session.claudeSessionId) {
           this.persistSessionHistory(session, event.exitCode);
         }
+
+        // Session is no longer running — update snapshot
+        this.refreshActiveSessionsSnapshot('terminal-closed');
 
         this.logger.log(`Session ${event.externalId} terminal closed (exit=${event.exitCode})`);
       }
@@ -497,6 +510,9 @@ export class SessionService implements OnModuleDestroy {
     // to keep it there for future sessions
 
     this.sessions.delete(sessionId);
+
+    // Session removed — update snapshot
+    this.refreshActiveSessionsSnapshot('session-removed');
 
     this.eventEmitter.emit(InternalSessionEvents.REMOVED, { sessionId });
 
@@ -854,6 +870,9 @@ export class SessionService implements OnModuleDestroy {
             sessionId,
             claudeSessionId: newSession.sessionId,
           });
+
+          // Session is now resumable — eagerly update the snapshot
+          this.refreshActiveSessionsSnapshot('claude-id-captured');
 
           return;
         }

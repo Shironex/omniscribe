@@ -463,6 +463,11 @@ export class SessionGateway implements OnGatewayInit {
     const autoResumeEnabled = sessionSettings.autoResumeOnRestart ?? false;
     const sessions = this.workspaceService.getActiveSessionsSnapshot();
 
+    // Clear snapshot after reading to prevent stale re-consumption on crash
+    if (sessions.length > 0) {
+      this.workspaceService.clearActiveSessionsSnapshot();
+    }
+
     return {
       sessions,
       autoResumeEnabled,

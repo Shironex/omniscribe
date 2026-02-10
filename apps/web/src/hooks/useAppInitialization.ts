@@ -44,7 +44,12 @@ async function autoResumeOnRestart(): Promise<void> {
       });
     });
 
-    if (!response.autoResumeEnabled || response.sessions.length === 0) {
+    if (!response.autoResumeEnabled) {
+      logger.debug('Auto-resume disabled in preferences, skipping');
+      return;
+    }
+    if (response.sessions.length === 0) {
+      logger.debug('No sessions in restore snapshot, skipping auto-resume');
       return;
     }
 
