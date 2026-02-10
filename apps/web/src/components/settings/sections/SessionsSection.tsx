@@ -58,7 +58,7 @@ export function SessionsSection() {
         <div
           className={clsx(
             'w-10 h-10 rounded-xl flex items-center justify-center',
-            'bg-gradient-to-br from-primary/20 to-brand-600/10',
+            'bg-linear-to-br from-primary/20 to-brand-600/10',
             'ring-1'
           )}
           style={
