@@ -162,6 +162,8 @@ describe('SessionService', () => {
     it('should handle needsInputPrompt', () => {
       const session = service.create('claude', '/project');
 
+      // Transition through a valid path: idle -> working -> needs_input
+      service.updateStatus(session.id, 'working');
       const updated = service.updateStatus(
         session.id,
         'needs_input' as SessionStatus,

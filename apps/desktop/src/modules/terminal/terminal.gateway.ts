@@ -81,6 +81,18 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
     return TerminalGateway.pauseTimeoutsMap;
   }
 
+  /**
+   * Validate that a sessionId is a positive finite integer.
+   */
+  private isValidSessionId(sessionId: unknown): sessionId is number {
+    return (
+      typeof sessionId === 'number' &&
+      Number.isFinite(sessionId) &&
+      Number.isInteger(sessionId) &&
+      sessionId > 0
+    );
+  }
+
   afterInit(): void {
     this.logger.log('Initialized');
   }
@@ -163,6 +175,12 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
   ): void {
     const { sessionId, data } = payload;
 
+    // SessionId validation
+    if (!this.isValidSessionId(sessionId)) {
+      this.logger.warn(`[input] Invalid sessionId: ${sessionId}`);
+      return;
+    }
+
     // Payload validation
     if (typeof data !== 'string') {
       this.logger.warn(`[input] Invalid data type for session ${sessionId}: ${typeof data}`);
@@ -210,6 +228,12 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
   ): void {
     const { sessionId, cols, rows } = payload;
 
+    // SessionId validation
+    if (!this.isValidSessionId(sessionId)) {
+      this.logger.warn(`[resize] Invalid sessionId: ${sessionId}`);
+      return;
+    }
+
     // Payload validation
     if (!Number.isInteger(cols) || !Number.isInteger(rows) || cols <= 0 || rows <= 0) {
       this.logger.warn(`[resize] Invalid dimensions for session ${sessionId}: ${cols}x${rows}`);
@@ -228,6 +252,11 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
     @MessageBody() payload: TerminalKillPayload
   ): Promise<SuccessResponse> {
     const { sessionId } = payload;
+
+    if (!this.isValidSessionId(sessionId)) {
+      this.logger.warn(`[kill] Invalid sessionId: ${sessionId}`);
+      return { success: false, error: 'Invalid sessionId' };
+    }
 
     // Simplified: allow kill if session exists (no ownership check)
     if (this.terminalService.hasSession(sessionId)) {
@@ -252,6 +281,11 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
     @MessageBody() payload: TerminalJoinPayload
   ): TerminalJoinResponse {
     const { sessionId } = payload;
+
+    if (!this.isValidSessionId(sessionId)) {
+      this.logger.warn(`[join] Invalid sessionId: ${sessionId}`);
+      return { success: false, error: 'Invalid sessionId' };
+    }
 
     if (this.terminalService.hasSession(sessionId)) {
       client.join(`terminal:${sessionId}`);
@@ -342,6 +376,10 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
     @MessageBody() payload: { sessionId: number }
   ): { success: boolean } {
     const { sessionId } = payload;
+
+    if (!this.isValidSessionId(sessionId)) {
+      return { success: false };
+    }
 
     if (!this.terminalService.hasSession(sessionId)) {
       return { success: false };
