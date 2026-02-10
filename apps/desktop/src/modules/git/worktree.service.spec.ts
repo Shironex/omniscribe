@@ -350,6 +350,56 @@ describe('WorktreeService', () => {
       // Should not throw
       await expect(service.cleanup('/repo', '/repo/.worktrees/feature')).resolves.toBeUndefined();
     });
+
+    it('should reject worktree paths outside managed directories', async () => {
+      await expect(service.cleanup('/repo', '/tmp/evil')).rejects.toThrow(
+        'Worktree path is outside of managed directories'
+      );
+      expect(mockGitBase.execGit).not.toHaveBeenCalled();
+      expect(mockFs.rm).not.toHaveBeenCalled();
+    });
+
+    it('should reject path traversal attempts', async () => {
+      await expect(
+        service.cleanup('/repo', '/repo/.worktrees/../../../etc/passwd')
+      ).rejects.toThrow('Worktree path is outside of managed directories');
+      expect(mockGitBase.execGit).not.toHaveBeenCalled();
+    });
+
+    it('should reject paths that share a prefix but are not within the managed directory', async () => {
+      // /repo/.worktrees-evil should NOT match /repo/.worktrees/
+      await expect(service.cleanup('/repo', '/repo/.worktrees-evil/branch')).rejects.toThrow(
+        'Worktree path is outside of managed directories'
+      );
+    });
+
+    it('should accept valid project-local worktree paths', async () => {
+      mockGitBase.execGit.mockResolvedValueOnce({ stdout: '', stderr: '' });
+
+      await service.cleanup('/repo', path.join('/repo', '.worktrees', 'feature'));
+
+      expect(mockGitBase.execGit).toHaveBeenCalledWith('/repo', [
+        'worktree',
+        'remove',
+        path.join('/repo', '.worktrees', 'feature'),
+        '--force',
+      ]);
+    });
+
+    it('should accept valid central worktree paths', async () => {
+      // Get a valid central path by using the service's own getWorktreePath
+      const centralPath = service.getWorktreePath('/repo', 'feature', 'central');
+      mockGitBase.execGit.mockResolvedValueOnce({ stdout: '', stderr: '' });
+
+      await service.cleanup('/repo', centralPath);
+
+      expect(mockGitBase.execGit).toHaveBeenCalledWith('/repo', [
+        'worktree',
+        'remove',
+        centralPath,
+        '--force',
+      ]);
+    });
   });
 
   // ==================== list ====================

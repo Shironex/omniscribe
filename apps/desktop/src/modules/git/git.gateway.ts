@@ -8,6 +8,7 @@ import {
 } from '@nestjs/websockets';
 import { UseGuards } from '@nestjs/common';
 import { SkipThrottle } from '@nestjs/throttler';
+import * as path from 'path';
 import { Server, Socket } from 'socket.io';
 import { WsThrottlerGuard } from '../shared/ws-throttler.guard';
 import { GitService } from './git.service';
@@ -44,6 +45,7 @@ import {
   GithubIssueResponse,
   GitEvents,
   GithubEvents,
+  MAX_PATH_LENGTH,
   createLogger,
   extractErrorMessage,
 } from '@omniscribe/shared';
@@ -69,6 +71,23 @@ export class GitGateway implements OnGatewayInit {
     this.logger.log('Initialized');
   }
 
+  /**
+   * Validate that a path is a non-empty absolute string within length limits.
+   * Returns an error message string if invalid, or null if valid.
+   */
+  private validatePath(value: unknown, label = 'projectPath'): string | null {
+    if (!value || typeof value !== 'string') {
+      return `Invalid ${label}: must be a non-empty string`;
+    }
+    if (value.length > MAX_PATH_LENGTH) {
+      return `${label} exceeds maximum length of ${MAX_PATH_LENGTH} characters`;
+    }
+    if (!path.isAbsolute(value)) {
+      return `Invalid ${label}: must be an absolute path`;
+    }
+    return null;
+  }
+
   @SkipThrottle()
   @SubscribeMessage(GitEvents.BRANCHES)
   async handleBranches(
@@ -77,12 +96,13 @@ export class GitGateway implements OnGatewayInit {
   ): Promise<GitBranchesResponse> {
     try {
       const { projectPath } = payload;
+      const pathError = this.validatePath(projectPath);
 
-      if (!projectPath) {
+      if (pathError) {
         return {
           branches: [],
           currentBranch: '',
-          error: 'Project path is required',
+          error: pathError,
         };
       }
 
@@ -118,11 +138,12 @@ export class GitGateway implements OnGatewayInit {
   ): Promise<GitCommitsResponse> {
     try {
       const { projectPath, limit = 50, allBranches = true } = payload;
+      const pathError = this.validatePath(projectPath);
 
-      if (!projectPath) {
+      if (pathError) {
         return {
           commits: [],
-          error: 'Project path is required',
+          error: pathError,
         };
       }
 
@@ -152,11 +173,16 @@ export class GitGateway implements OnGatewayInit {
   ): Promise<GitCheckoutResponse> {
     try {
       const { projectPath, branch } = payload;
+      const pathError = this.validatePath(projectPath);
 
-      if (!projectPath || !branch) {
+      if (pathError) {
+        return { success: false, error: pathError };
+      }
+
+      if (!branch) {
         return {
           success: false,
-          error: 'Project path and branch are required',
+          error: 'Branch is required',
         };
       }
 
@@ -191,11 +217,16 @@ export class GitGateway implements OnGatewayInit {
   ): Promise<GitCreateBranchResponse> {
     try {
       const { projectPath, name, startPoint } = payload;
+      const pathError = this.validatePath(projectPath);
 
-      if (!projectPath || !name) {
+      if (pathError) {
+        return { success: false, error: pathError };
+      }
+
+      if (!name) {
         return {
           success: false,
-          error: 'Project path and branch name are required',
+          error: 'Branch name is required',
         };
       }
 
@@ -235,11 +266,12 @@ export class GitGateway implements OnGatewayInit {
   ): Promise<GitCurrentBranchResponse> {
     try {
       const { projectPath } = payload;
+      const pathError = this.validatePath(projectPath);
 
-      if (!projectPath) {
+      if (pathError) {
         return {
           currentBranch: '',
-          error: 'Project path is required',
+          error: pathError,
         };
       }
 
@@ -270,11 +302,12 @@ export class GitGateway implements OnGatewayInit {
   ): Promise<GitWorktreesResponse> {
     try {
       const { projectPath } = payload;
+      const pathError = this.validatePath(projectPath);
 
-      if (!projectPath) {
+      if (pathError) {
         return {
           worktrees: [],
-          error: 'Project path is required',
+          error: pathError,
         };
       }
 
@@ -301,12 +334,16 @@ export class GitGateway implements OnGatewayInit {
   ): Promise<SuccessResponse> {
     try {
       const { projectPath, worktreePath } = payload;
+      const projectPathError = this.validatePath(projectPath);
 
-      if (!projectPath || !worktreePath) {
-        return {
-          success: false,
-          error: 'Project path and worktree path are required',
-        };
+      if (projectPathError) {
+        return { success: false, error: projectPathError };
+      }
+
+      const worktreePathError = this.validatePath(worktreePath, 'worktreePath');
+
+      if (worktreePathError) {
+        return { success: false, error: worktreePathError };
       }
 
       await this.worktreeService.cleanup(projectPath, worktreePath);
@@ -369,11 +406,12 @@ export class GitGateway implements OnGatewayInit {
   ): Promise<GithubRepoInfoResponse> {
     try {
       const { projectPath } = payload;
+      const pathError = this.validatePath(projectPath);
 
-      if (!projectPath) {
+      if (pathError) {
         return {
           repo: null,
-          error: 'Project path is required',
+          error: pathError,
         };
       }
 
@@ -401,11 +439,12 @@ export class GitGateway implements OnGatewayInit {
   ): Promise<GithubPRsResponse> {
     try {
       const { projectPath, state, limit } = payload;
+      const pathError = this.validatePath(projectPath);
 
-      if (!projectPath) {
+      if (pathError) {
         return {
           pullRequests: [],
-          error: 'Project path is required',
+          error: pathError,
         };
       }
 
@@ -433,11 +472,16 @@ export class GitGateway implements OnGatewayInit {
   ): Promise<GithubPRResponse> {
     try {
       const { projectPath, prNumber } = payload;
+      const pathError = this.validatePath(projectPath);
 
-      if (!projectPath || !prNumber) {
+      if (pathError) {
+        return { pullRequest: null, error: pathError };
+      }
+
+      if (!prNumber) {
         return {
           pullRequest: null,
-          error: 'Project path and PR number are required',
+          error: 'PR number is required',
         };
       }
 
@@ -464,11 +508,16 @@ export class GitGateway implements OnGatewayInit {
   ): Promise<GithubCreatePRResponse> {
     try {
       const { projectPath, title, body, base, head, draft } = payload;
+      const pathError = this.validatePath(projectPath);
 
-      if (!projectPath || !title) {
+      if (pathError) {
+        return { success: false, error: pathError };
+      }
+
+      if (!title) {
         return {
           success: false,
-          error: 'Project path and title are required',
+          error: 'Title is required',
         };
       }
 
@@ -503,11 +552,12 @@ export class GitGateway implements OnGatewayInit {
   ): Promise<GithubIssuesResponse> {
     try {
       const { projectPath, state, limit, labels } = payload;
+      const pathError = this.validatePath(projectPath);
 
-      if (!projectPath) {
+      if (pathError) {
         return {
           issues: [],
-          error: 'Project path is required',
+          error: pathError,
         };
       }
 
@@ -539,11 +589,16 @@ export class GitGateway implements OnGatewayInit {
   ): Promise<GithubIssueResponse> {
     try {
       const { projectPath, issueNumber } = payload;
+      const pathError = this.validatePath(projectPath);
 
-      if (!projectPath || !issueNumber) {
+      if (pathError) {
+        return { issue: null, error: pathError };
+      }
+
+      if (!issueNumber) {
         return {
           issue: null,
-          error: 'Project path and issue number are required',
+          error: 'Issue number is required',
         };
       }
 

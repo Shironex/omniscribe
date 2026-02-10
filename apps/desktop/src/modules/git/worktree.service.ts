@@ -238,9 +238,27 @@ export class WorktreeService {
   }
 
   /**
+   * Validate that a worktree path is within Omniscribe-managed directories.
+   * Prevents arbitrary path deletion via fs.rm().
+   */
+  private validateWorktreePath(projectPath: string, worktreePath: string): void {
+    const resolved = path.resolve(worktreePath);
+    const allowedProjectDir = path.resolve(projectPath, PROJECT_WORKTREE_DIR) + path.sep;
+    const allowedCentralDir = path.resolve(CENTRAL_DIR) + path.sep;
+
+    if (!resolved.startsWith(allowedProjectDir) && !resolved.startsWith(allowedCentralDir)) {
+      throw new Error(
+        'Worktree path is outside of managed directories. ' +
+          'Path must be within the project .worktrees/ directory or the central worktree directory.'
+      );
+    }
+  }
+
+  /**
    * Clean up a worktree
    */
   async cleanup(projectPath: string, worktreePath: string): Promise<void> {
+    this.validateWorktreePath(projectPath, worktreePath);
     this.logger.info(`Cleaning up worktree at ${worktreePath}`);
     // Remove the worktree
     try {
