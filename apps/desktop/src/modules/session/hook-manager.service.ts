@@ -10,7 +10,7 @@ import { InternalSessionEvents } from '../shared/events';
  * Hook event data parsed from the JSON file written by the hook script
  */
 interface HookEventData {
-  event?: string;
+  hook_event_name?: string;
   session_id?: string;
   [key: string]: unknown;
 }
@@ -251,10 +251,10 @@ export class HookManagerService implements OnModuleDestroy {
       // Clean up the file after reading
       await fs.promises.unlink(filePath).catch(() => {});
 
-      if (data.event === 'SessionStart' || data.event === 'session_start') {
+      if (data.hook_event_name === 'SessionStart') {
         this.eventEmitter.emit(InternalSessionEvents.HOOK_START, data);
         this.logger.debug('Hook event: SessionStart', data.session_id);
-      } else if (data.event === 'SessionEnd' || data.event === 'session_end') {
+      } else if (data.hook_event_name === 'SessionEnd') {
         this.eventEmitter.emit(InternalSessionEvents.HOOK_END, data);
         this.logger.debug('Hook event: SessionEnd', data.session_id);
       } else {

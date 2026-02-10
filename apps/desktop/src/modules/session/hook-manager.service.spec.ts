@@ -159,7 +159,6 @@ describe('HookManagerService', () => {
   // ==================================================================
   describe('unregisterHooks', () => {
     it('should remove Omniscribe hooks from settings', async () => {
-      const _hookCommand = expect.stringContaining('omniscribe-notify.js');
       const settings = {
         hooks: {
           SessionStart: [
@@ -371,7 +370,7 @@ describe('HookManagerService', () => {
     it('should process a SessionStart hook file', async () => {
       service.startWatching();
 
-      const hookData = { event: 'SessionStart', session_id: 'abc-123' };
+      const hookData = { hook_event_name: 'SessionStart', session_id: 'abc-123' };
       mockFsPromises.readFile.mockResolvedValueOnce(JSON.stringify(hookData));
 
       watchCallback!('rename', '12345-999.json');
@@ -381,7 +380,7 @@ describe('HookManagerService', () => {
 
       expect(eventEmitter.emit).toHaveBeenCalledWith(
         InternalSessionEvents.HOOK_START,
-        expect.objectContaining({ event: 'SessionStart', session_id: 'abc-123' })
+        expect.objectContaining({ hook_event_name: 'SessionStart', session_id: 'abc-123' })
       );
       // File should be cleaned up
       expect(mockFsPromises.unlink).toHaveBeenCalled();
@@ -390,7 +389,7 @@ describe('HookManagerService', () => {
     it('should process a SessionEnd hook file', async () => {
       service.startWatching();
 
-      const hookData = { event: 'SessionEnd', session_id: 'abc-123' };
+      const hookData = { hook_event_name: 'SessionEnd', session_id: 'abc-123' };
       mockFsPromises.readFile.mockResolvedValueOnce(JSON.stringify(hookData));
 
       watchCallback!('rename', '12345-888.json');
@@ -399,46 +398,14 @@ describe('HookManagerService', () => {
 
       expect(eventEmitter.emit).toHaveBeenCalledWith(
         InternalSessionEvents.HOOK_END,
-        expect.objectContaining({ event: 'SessionEnd', session_id: 'abc-123' })
-      );
-    });
-
-    it('should process session_start lowercase variant', async () => {
-      service.startWatching();
-
-      const hookData = { event: 'session_start', session_id: 'abc-123' };
-      mockFsPromises.readFile.mockResolvedValueOnce(JSON.stringify(hookData));
-
-      watchCallback!('rename', '12345-777.json');
-
-      await jest.advanceTimersByTimeAsync(150);
-
-      expect(eventEmitter.emit).toHaveBeenCalledWith(
-        InternalSessionEvents.HOOK_START,
-        expect.objectContaining({ event: 'session_start' })
-      );
-    });
-
-    it('should process session_end lowercase variant', async () => {
-      service.startWatching();
-
-      const hookData = { event: 'session_end', session_id: 'abc-123' };
-      mockFsPromises.readFile.mockResolvedValueOnce(JSON.stringify(hookData));
-
-      watchCallback!('rename', '12345-666.json');
-
-      await jest.advanceTimersByTimeAsync(150);
-
-      expect(eventEmitter.emit).toHaveBeenCalledWith(
-        InternalSessionEvents.HOOK_END,
-        expect.objectContaining({ event: 'session_end' })
+        expect.objectContaining({ hook_event_name: 'SessionEnd', session_id: 'abc-123' })
       );
     });
 
     it('should not emit for unknown event types', async () => {
       service.startWatching();
 
-      const hookData = { event: 'UnknownEvent', session_id: 'abc-123' };
+      const hookData = { hook_event_name: 'UnknownEvent', session_id: 'abc-123' };
       mockFsPromises.readFile.mockResolvedValueOnce(JSON.stringify(hookData));
 
       watchCallback!('rename', '12345-555.json');
@@ -451,7 +418,7 @@ describe('HookManagerService', () => {
     it('should not process the same file twice', async () => {
       service.startWatching();
 
-      const hookData = { event: 'SessionStart', session_id: 'abc-123' };
+      const hookData = { hook_event_name: 'SessionStart', session_id: 'abc-123' };
       mockFsPromises.readFile.mockResolvedValue(JSON.stringify(hookData));
 
       watchCallback!('rename', 'same-file.json');

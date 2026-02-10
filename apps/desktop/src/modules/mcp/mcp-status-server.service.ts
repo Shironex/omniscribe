@@ -238,17 +238,17 @@ export class McpStatusServerService implements OnModuleInit, OnModuleDestroy {
       return;
     }
 
-    // Emit status event for UI
-    const event: SessionStatusEvent = {
-      sessionId: payload.sessionId,
-      status: payload.state,
-      message: payload.message,
-      needsInputPrompt: payload.needsInputPrompt,
-    };
-
     this.logger.debug(`EMITTING: session=${payload.sessionId} status=${payload.state}`);
 
-    this.eventEmitter.emit(InternalSessionEvents.STATUS, event);
+    // Emit an internal event so SessionService can update backend state.
+    // We use an event (instead of a direct call) to avoid a circular module
+    // dependency between McpModule and SessionModule.
+    this.eventEmitter.emit(InternalSessionEvents.MCP_STATUS_RECEIVED, {
+      sessionId: payload.sessionId,
+      status: payload.state as SessionStatusState,
+      message: payload.message,
+      needsInputPrompt: payload.needsInputPrompt,
+    });
 
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ accepted: true }));

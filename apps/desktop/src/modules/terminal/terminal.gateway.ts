@@ -34,9 +34,9 @@ import { CORS_CONFIG } from '../shared/cors.config';
 const MAX_INPUT_SIZE = 1_048_576; // 1MB
 
 // Backpressure constants
-const HIGH_WATER_MARK = 128; // Pause PTY after this many undelivered packets
-const LOW_WATER_MARK = 16; // Resume PTY only when pending drops below this (hysteresis)
-const PAUSE_SAFETY_TIMEOUT_MS = 5_000; // Force-resume after 5s to prevent deadlock
+const HIGH_WATER_MARK = 512; // Pause PTY after this many undelivered packets
+const LOW_WATER_MARK = 64; // Resume PTY only when pending drops below this (hysteresis)
+const PAUSE_SAFETY_TIMEOUT_MS = 10_000; // Force-resume after 10s to prevent deadlock
 
 @UseGuards(WsThrottlerGuard)
 @WebSocketGateway({

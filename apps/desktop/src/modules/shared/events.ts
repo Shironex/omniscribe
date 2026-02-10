@@ -19,6 +19,9 @@ export const InternalSessionEvents = {
   TASKS: 'session.tasks',
   HOOK_START: 'session.hook.start',
   HOOK_END: 'session.hook.end',
+  /** Emitted by McpStatusServerService when an MCP status HTTP POST arrives.
+   *  SessionService listens and calls updateStatus() to keep backend state in sync. */
+  MCP_STATUS_RECEIVED: 'session.mcp-status-received',
 } as const;
 
 // ============================================

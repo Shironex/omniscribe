@@ -612,67 +612,6 @@ describe('McpGateway', () => {
   });
 
   // ================================================================
-  // onSessionStatus (event handler)
-  // ================================================================
-  describe('onSessionStatus', () => {
-    it('should broadcast session status event to all clients', () => {
-      gateway.onSessionStatus({
-        sessionId: 'session-1',
-        status: 'working' as any,
-        message: 'Processing...',
-        needsInputPrompt: undefined,
-      });
-
-      expect(mockServer.emit).toHaveBeenCalledWith('session:status', {
-        sessionId: 'session-1',
-        status: 'working',
-        message: 'Processing...',
-        needsInputPrompt: undefined,
-      });
-    });
-
-    it('should broadcast session status with needsInputPrompt', () => {
-      gateway.onSessionStatus({
-        sessionId: 'session-2',
-        status: 'needs_input' as any,
-        message: 'Waiting for input',
-        needsInputPrompt: 'Please confirm the file change',
-      });
-
-      expect(mockServer.emit).toHaveBeenCalledWith('session:status', {
-        sessionId: 'session-2',
-        status: 'needs_input',
-        message: 'Waiting for input',
-        needsInputPrompt: 'Please confirm the file change',
-      });
-    });
-
-    it('should broadcast session status without optional fields', () => {
-      gateway.onSessionStatus({
-        sessionId: 'session-3',
-        status: 'idle' as any,
-      } as any);
-
-      expect(mockServer.emit).toHaveBeenCalledWith('session:status', {
-        sessionId: 'session-3',
-        status: 'idle',
-        message: undefined,
-        needsInputPrompt: undefined,
-      });
-    });
-
-    it('should call server.emit exactly once per event', () => {
-      gateway.onSessionStatus({
-        sessionId: 'session-1',
-        status: 'done' as any,
-        message: 'Complete',
-      } as any);
-
-      expect(mockServer.emit).toHaveBeenCalledTimes(1);
-    });
-  });
-
-  // ================================================================
   // onSessionTasks (event handler)
   // ================================================================
   describe('onSessionTasks', () => {

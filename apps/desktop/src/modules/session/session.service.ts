@@ -1,5 +1,5 @@
 import { Injectable, Inject, forwardRef, OnModuleDestroy } from '@nestjs/common';
-import { EventEmitter2 } from '@nestjs/event-emitter';
+import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
 import {
   SessionStatus,
   SessionHistoryEntry,
@@ -46,7 +46,15 @@ export interface BackendSessionConfig extends ExtendedSessionConfig {
  * Maps each status to the set of statuses it can transition to.
  */
 const VALID_TRANSITIONS: Record<SessionStatus, Set<SessionStatus>> = {
-  idle: new Set(['connecting', 'working', 'planning', 'thinking', 'error']),
+  idle: new Set([
+    'connecting',
+    'working',
+    'planning',
+    'thinking',
+    'needs_input',
+    'finished',
+    'error',
+  ]),
   connecting: new Set(['idle', 'error']),
   working: new Set([
     'idle',
@@ -301,6 +309,32 @@ export class SessionService implements OnModuleDestroy {
     this.eventEmitter.emit(InternalSessionEvents.STATUS, statusUpdate);
 
     return session;
+  }
+
+  /**
+   * Handle MCP status updates received by the HTTP status server.
+   * Uses event-based communication to avoid circular dependency between
+   * McpModule and SessionModule.
+   */
+  @OnEvent(InternalSessionEvents.MCP_STATUS_RECEIVED)
+  onMcpStatusReceived(event: {
+    sessionId: string;
+    status: string;
+    message?: string;
+    needsInputPrompt?: string;
+  }): void {
+    const updated = this.updateStatus(
+      event.sessionId,
+      event.status as SessionStatus,
+      event.message,
+      event.needsInputPrompt ? true : undefined
+    );
+
+    if (!updated) {
+      this.logger.debug(
+        `MCP status update not applied for ${event.sessionId} (session not found or invalid transition)`
+      );
+    }
   }
 
   /**
@@ -584,14 +618,18 @@ export class SessionService implements OnModuleDestroy {
         this.hookManager.startWatching();
       }
 
-      // Discover all available MCP servers for this project
-      const allServers = await this.mcpDiscoveryService.discoverServers(projectPath);
-      this.logger.log(`Discovered ${allServers.length} MCP servers for session ${sessionId}`);
+      // Only discover and write MCP config for Claude sessions.
+      // Plain terminals don't use Claude Code and don't read .mcp.json.
+      // Writing for all modes causes a race condition where the plain session
+      // overwrites the Claude session's ID in .mcp.json.
+      if (aiMode === 'claude') {
+        const allServers = await this.mcpDiscoveryService.discoverServers(projectPath);
+        this.logger.log(`Discovered ${allServers.length} MCP servers for session ${sessionId}`);
 
-      // Write MCP config with all discovered servers
-      await this.mcpWriterService.writeConfig(worktreePath, sessionId, projectPath, allServers);
+        await this.mcpWriterService.writeConfig(worktreePath, sessionId, projectPath, allServers);
 
-      this.logger.log(`MCP config written to ${worktreePath}/.mcp.json`);
+        this.logger.log(`MCP config written to ${worktreePath}/.mcp.json`);
+      }
 
       // Get CLI configuration for the AI mode
       const cliConfig = this.cliCommandService.getCliConfig(aiMode, session);
@@ -599,11 +637,9 @@ export class SessionService implements OnModuleDestroy {
       // Generate project hash for MCP status file identification
       const projectHash = this.mcpWriterService.generateProjectHash(projectPath);
 
-      // Build environment variables
-      // IMPORTANT: OMNISCRIBE_SESSION_ID and OMNISCRIBE_PROJECT_HASH are passed here
-      // via shell environment (NOT in .mcp.json) to avoid race conditions when
-      // multiple sessions share the same .mcp.json file. The MCP server inherits
-      // these from the shell process that launched Claude CLI.
+      // Build environment variables for the spawned terminal process.
+      // Note: OMNISCRIBE_SESSION_ID is also written to .mcp.json env for Claude sessions
+      // so the MCP server subprocess can identify which session it belongs to.
       const env: Record<string, string> = {
         OMNISCRIBE_SESSION_ID: sessionId,
         OMNISCRIBE_PROJECT_HASH: projectHash,

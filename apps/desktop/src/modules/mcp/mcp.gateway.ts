@@ -33,7 +33,7 @@ import {
   extractErrorMessage,
 } from '@omniscribe/shared';
 import { InternalSessionEvents } from '../shared/events';
-import { McpStatusServerService, SessionStatusEvent } from './mcp-status-server.service';
+import { McpStatusServerService } from './mcp-status-server.service';
 import {
   McpDiscoveryService,
   McpWriterService,
@@ -247,19 +247,6 @@ export class McpGateway implements OnGatewayInit {
       statusUrl: this.statusServer.getStatusUrl(),
       instanceId: this.statusServer.getInstanceId(),
     };
-  }
-
-  /**
-   * Broadcast session status events from the HTTP status server
-   */
-  @OnEvent(InternalSessionEvents.STATUS)
-  onSessionStatus(event: SessionStatusEvent): void {
-    this.server.emit(SessionEvents.STATUS, {
-      sessionId: event.sessionId,
-      status: event.status,
-      message: event.message,
-      needsInputPrompt: event.needsInputPrompt,
-    });
   }
 
   /**
