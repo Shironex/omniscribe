@@ -4,7 +4,7 @@
 
 import type { ProjectTabDTO, UserPreferences } from './project-tab';
 import type { QuickAction } from './workspace';
-import type { BranchInfo, CommitInfo } from './git';
+import type { BranchInfo, CommitInfo, WorktreeInfo } from './git';
 import type { TaskItem } from './mcp';
 import type { ClaudeSessionEntry } from './session';
 
@@ -88,6 +88,21 @@ export interface GitCurrentBranchPayload {
   projectPath: string;
 }
 
+/**
+ * Payload for listing worktrees
+ */
+export interface GitWorktreesPayload {
+  projectPath: string;
+}
+
+/**
+ * Payload for cleaning up a worktree
+ */
+export interface GitWorktreeCleanupPayload {
+  projectPath: string;
+  worktreePath: string;
+}
+
 // ============================================
 // Git Responses
 // ============================================
@@ -130,6 +145,14 @@ export interface GitCreateBranchResponse extends SuccessResponse {
  */
 export interface GitCurrentBranchResponse {
   currentBranch: string;
+  error?: string;
+}
+
+/**
+ * Response for worktrees list
+ */
+export interface GitWorktreesResponse {
+  worktrees: WorktreeInfo[];
   error?: string;
 }
 
@@ -315,6 +338,28 @@ export interface McpStatusServerInfoResponse {
 // ============================================
 // Session Payloads
 // ============================================
+
+/**
+ * Payload for creating a session
+ */
+export interface CreateSessionPayload {
+  mode: import('./session').AiMode;
+  projectPath: string;
+  branch?: string;
+  name?: string;
+  workingDirectory?: string;
+  model?: string;
+  systemPrompt?: string;
+  mcpServers?: string[];
+}
+
+/**
+ * Payload for updating a session
+ */
+export interface UpdateSessionPayload {
+  sessionId: string;
+  updates: import('./session').UpdateSessionOptions;
+}
 
 /**
  * Payload for removing a session

@@ -4,6 +4,7 @@ import {
   SubscribeMessage,
   MessageBody,
   ConnectedSocket,
+  OnGatewayInit,
 } from '@nestjs/websockets';
 import { UseGuards } from '@nestjs/common';
 import { SkipThrottle } from '@nestjs/throttler';
@@ -18,12 +19,14 @@ import {
   GitCheckoutPayload,
   GitCreateBranchPayload,
   GitCurrentBranchPayload,
+  GitWorktreesPayload,
+  GitWorktreeCleanupPayload,
   GitBranchesResponse,
   GitCommitsResponse,
   GitCheckoutResponse,
   GitCreateBranchResponse,
   GitCurrentBranchResponse,
-  WorktreeInfo,
+  GitWorktreesResponse,
   SuccessResponse,
   GithubStatusPayload,
   GithubStatusResponse,
@@ -46,35 +49,11 @@ import {
 } from '@omniscribe/shared';
 import { CORS_CONFIG } from '../shared/cors.config';
 
-/**
- * Payload for listing worktrees
- */
-interface GitWorktreesPayload {
-  projectPath: string;
-}
-
-/**
- * Payload for cleaning up a worktree
- */
-interface GitWorktreeCleanupPayload {
-  projectPath: string;
-  worktreePath: string;
-}
-
-/**
- * Response for worktrees list
- */
-interface GitWorktreesResponse {
-  worktrees: WorktreeInfo[];
-  error?: string;
-}
-
 @UseGuards(WsThrottlerGuard)
 @WebSocketGateway({
   cors: CORS_CONFIG,
-  namespace: '/',
 })
-export class GitGateway {
+export class GitGateway implements OnGatewayInit {
   private readonly logger = createLogger('GitGateway');
 
   @WebSocketServer()
@@ -85,6 +64,10 @@ export class GitGateway {
     private readonly worktreeService: WorktreeService,
     private readonly githubService: GithubService
   ) {}
+
+  afterInit(): void {
+    this.logger.log('Initialized');
+  }
 
   @SkipThrottle()
   @SubscribeMessage(GitEvents.BRANCHES)

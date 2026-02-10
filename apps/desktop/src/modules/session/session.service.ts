@@ -18,10 +18,10 @@ import {
   createLogger,
   extractErrorMessage,
 } from '@omniscribe/shared';
-import { TerminalService } from '../terminal/terminal.service';
+import { TerminalService } from '../terminal';
 import { McpWriterService, McpDiscoveryService } from '../mcp';
-import { WorktreeService } from '../git/worktree.service';
-import { WorkspaceService } from '../workspace/workspace.service';
+import { WorktreeService } from '../git';
+import { WorkspaceService } from '../workspace';
 import { CliCommandService } from './cli-command.service';
 import { ClaudeSessionReaderService } from './claude-session-reader.service';
 import { HookManagerService } from './hook-manager.service';
