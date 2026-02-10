@@ -18,7 +18,7 @@ interface SessionHistoryState extends SocketStoreState {
   /** Claude Code sessions from sessions-index.json */
   sessions: ClaudeSessionEntry[];
   /** Sessions that can be resumed (crashed with claudeSessionId) */
-  resumableSessions: Map<string, { claudeSessionId: string; sessionName: string }>;
+  resumableSessions: Record<string, { claudeSessionId: string; sessionName: string }>;
 }
 
 /**
@@ -70,7 +70,7 @@ export const useSessionHistoryStore = create<SessionHistoryStore>()(
         // Initial state (spread common state + custom state)
         ...initialSocketState,
         sessions: [],
-        resumableSessions: new Map(),
+        resumableSessions: {},
 
         // Common socket actions
         ...socketActions,
@@ -119,11 +119,12 @@ export const useSessionHistoryStore = create<SessionHistoryStore>()(
 
         addResumable: (sessionId: string, claudeSessionId: string, sessionName: string) => {
           set(
-            state => {
-              const newMap = new Map(state.resumableSessions);
-              newMap.set(sessionId, { claudeSessionId, sessionName });
-              return { resumableSessions: newMap };
-            },
+            state => ({
+              resumableSessions: {
+                ...state.resumableSessions,
+                [sessionId]: { claudeSessionId, sessionName },
+              },
+            }),
             undefined,
             'sessionHistory/addResumable'
           );
@@ -132,9 +133,8 @@ export const useSessionHistoryStore = create<SessionHistoryStore>()(
         removeResumable: (sessionId: string) => {
           set(
             state => {
-              const newMap = new Map(state.resumableSessions);
-              newMap.delete(sessionId);
-              return { resumableSessions: newMap };
+              const { [sessionId]: _removed, ...rest } = state.resumableSessions;
+              return { resumableSessions: rest };
             },
             undefined,
             'sessionHistory/removeResumable'
@@ -142,11 +142,7 @@ export const useSessionHistoryStore = create<SessionHistoryStore>()(
         },
 
         clearHistory: () => {
-          set(
-            { sessions: [], resumableSessions: new Map() },
-            undefined,
-            'sessionHistory/clearHistory'
-          );
+          set({ sessions: [], resumableSessions: {} }, undefined, 'sessionHistory/clearHistory');
         },
       };
     },
@@ -170,4 +166,4 @@ export const selectResumableSessions = (state: SessionHistoryStore) => state.res
  * Select whether a specific session is resumable
  */
 export const selectIsResumable = (sessionId: string) => (state: SessionHistoryStore) =>
-  state.resumableSessions.has(sessionId);
+  sessionId in state.resumableSessions;

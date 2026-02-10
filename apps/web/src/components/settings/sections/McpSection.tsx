@@ -23,7 +23,7 @@ export function McpSection() {
 
   // Count connected servers from serverStates map
   const connectedCount = useMemo(() => {
-    return Array.from(serverStates.values()).filter(state => state.status === 'connected').length;
+    return Object.values(serverStates).filter(state => state.status === 'connected').length;
   }, [serverStates]);
 
   const handleRefresh = useCallback(() => {
@@ -154,7 +154,7 @@ export function McpSection() {
           </p>
           <div className="space-y-2">
             {servers.map(server => {
-              const serverState = serverStates.get(server.id);
+              const serverState = serverStates[server.id];
               const hasActiveState = serverState?.status && serverState.status !== 'disconnected';
               const status = hasActiveState ? serverState.status : 'ready';
               const toolCount = serverState?.tools?.length;

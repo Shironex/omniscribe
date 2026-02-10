@@ -18,10 +18,10 @@ interface TerminalCardProps {
   session: TerminalSession;
   quickActions: QuickActionItem[];
   isFocused: boolean;
-  onFocus: () => void;
-  onKill: () => void;
-  onSessionClose?: (exitCode: number) => void;
-  onQuickAction?: (actionId: string) => void;
+  onFocus: (sessionId: string) => void;
+  onKill: (sessionId: string) => void;
+  onSessionClose?: (sessionId: string, exitCode: number) => void;
+  onQuickAction?: (sessionId: string, actionId: string) => void;
   onResume?: (sessionId: string) => void;
   dragHandleProps?: TerminalDragHandleProps;
 }
@@ -37,6 +37,18 @@ export const TerminalCard = React.memo(function TerminalCard({
   onResume,
   dragHandleProps,
 }: TerminalCardProps) {
+  const handleFocus = React.useCallback(() => onFocus(session.id), [onFocus, session.id]);
+  const handleKill = React.useCallback(() => onKill(session.id), [onKill, session.id]);
+  const handleSessionClose = React.useCallback(
+    (exitCode: number) => onSessionClose?.(session.id, exitCode),
+    [onSessionClose, session.id]
+  );
+  const handleQuickAction = React.useCallback(
+    (actionId: string) => onQuickAction?.(session.id, actionId),
+    [onQuickAction, session.id]
+  );
+  const handleResume = React.useCallback(() => onResume?.(session.id), [onResume, session.id]);
+
   return (
     <div
       data-testid={`session-card-${session.id}`}
@@ -47,14 +59,14 @@ export const TerminalCard = React.memo(function TerminalCard({
         isFocused && 'ring-2 ring-primary',
         'transition-all duration-150'
       )}
-      onClick={onFocus}
+      onClick={handleFocus}
     >
       <TerminalHeader
         session={session}
         quickActions={quickActions}
-        onClose={onKill}
-        onQuickAction={onQuickAction}
-        onResume={onResume ? () => onResume(session.id) : undefined}
+        onClose={handleKill}
+        onQuickAction={onQuickAction ? handleQuickAction : undefined}
+        onResume={onResume ? handleResume : undefined}
         dragHandleProps={dragHandleProps}
       />
       <div className="relative flex-1 min-h-0">
@@ -63,7 +75,7 @@ export const TerminalCard = React.memo(function TerminalCard({
             <TerminalView
               sessionId={session.terminalSessionId}
               isFocused={isFocused}
-              onClose={exitCode => onSessionClose?.(exitCode)}
+              onClose={handleSessionClose}
             />
           </TerminalErrorBoundary>
         ) : (

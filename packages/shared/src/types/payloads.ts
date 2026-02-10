@@ -93,11 +93,13 @@ export interface GitCurrentBranchPayload {
 // ============================================
 
 /**
- * Response for branches query
+ * Response for branches query.
+ * currentBranch may be a string (name only) or a full BranchInfo object
+ * depending on the backend implementation.
  */
 export interface GitBranchesResponse {
   branches: BranchInfo[];
-  currentBranch: string;
+  currentBranch: string | BranchInfo;
   error?: string;
 }
 
@@ -201,7 +203,7 @@ export interface TerminalJoinResponse extends SuccessResponse {
  * Payload for MCP server discovery
  */
 export interface McpDiscoverPayload {
-  projectPath: string;
+  projectPath?: string;
 }
 
 /**

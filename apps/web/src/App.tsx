@@ -21,7 +21,7 @@ import {
   useDefaultAiMode,
 } from '@/hooks';
 import { useUpdateToast } from '@/hooks/useUpdateToast';
-import { useTerminalStore, useWorkspaceStore, useSettingsStore } from '@/stores';
+import { useTerminalStore, useWorkspaceStore, useSettingsStore, useSessionStore } from '@/stores';
 import { resumeSession } from '@/lib/session';
 import { extractErrorMessage } from '@omniscribe/shared';
 import { toast } from 'sonner';
@@ -43,8 +43,6 @@ function App() {
 
   const { branches, currentBranch } = useProjectGit(activeProjectPath);
 
-  const sessionsHookResult = useProjectSessions(activeProjectPath, []);
-
   const {
     preLaunchSlots,
     canLaunch,
@@ -56,7 +54,7 @@ function App() {
     handleUpdateSlot,
     handleLaunchSlot,
     handleLaunch,
-  } = usePreLaunchSlots(activeProjectPath, currentBranch, sessionsHookResult.updateSession);
+  } = usePreLaunchSlots(activeProjectPath, currentBranch);
 
   const {
     terminalSessions,
@@ -67,6 +65,9 @@ function App() {
     handleFocusSession,
     handleSessionClose,
   } = useProjectSessions(activeProjectPath, preLaunchSlots);
+
+  // Stable store action for handleResume (no need for a second hook call)
+  const updateSession = useSessionStore(state => state.updateSession);
 
   const sessionOrder = useTerminalStore(state => state.sessionOrder);
   const setSessionOrder = useTerminalStore(state => state.setSessionOrder);
@@ -167,7 +168,7 @@ function App() {
   // Resume session handler
   const handleResume = useCallback(
     async (sessionId: string) => {
-      const session = sessionsHookResult.sessions.find(s => s.id === sessionId);
+      const session = useSessionStore.getState().sessions.find(s => s.id === sessionId);
       if (!session?.claudeSessionId || !activeProjectPath) return;
       try {
         const resumed = await resumeSession(
@@ -176,7 +177,7 @@ function App() {
           session.branch
         );
         if (resumed.terminalSessionId !== undefined) {
-          sessionsHookResult.updateSession(resumed.id, {
+          updateSession(resumed.id, {
             terminalSessionId: resumed.terminalSessionId,
           });
         }
@@ -186,7 +187,7 @@ function App() {
         toast.error(msg);
       }
     },
-    [sessionsHookResult, activeProjectPath]
+    [updateSession, activeProjectPath]
   );
 
   useAppKeyboardShortcuts({

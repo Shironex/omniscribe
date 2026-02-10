@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { DndContext, DragOverlay, closestCenter } from '@dnd-kit/core';
@@ -87,6 +87,21 @@ export function TerminalGrid({
   const activeSession = activeId ? sessions.find(s => s.id === activeId) : null;
   const { handlePanelResize } = useTerminalPanelResize(dispatchRefitAll);
 
+  // Stable callback refs passed to all TerminalCards (avoids inline arrows per-session)
+  const handleFocusSession = useCallback(
+    (sessionId: string) => onFocusSession(sessionId),
+    [onFocusSession]
+  );
+  const handleKill = useCallback((sessionId: string) => onKill(sessionId), [onKill]);
+  const handleSessionClose = useCallback(
+    (sessionId: string, exitCode: number) => onSessionClose?.(sessionId, exitCode),
+    [onSessionClose]
+  );
+  const handleQuickAction = useCallback(
+    (sessionId: string, actionId: string) => onQuickAction?.(sessionId, actionId),
+    [onQuickAction]
+  );
+
   // Empty state
   if (sessionCount === 0 && preLaunchSlots.length === 0) {
     return (
@@ -104,12 +119,10 @@ export function TerminalGrid({
         session={session}
         quickActions={quickActions}
         isFocused={focusedSessionId === session.id}
-        onFocus={() => onFocusSession(session.id)}
-        onKill={() => onKill(session.id)}
-        onSessionClose={
-          onSessionClose ? exitCode => onSessionClose(session.id, exitCode) : undefined
-        }
-        onQuickAction={onQuickAction ? actionId => onQuickAction(session.id, actionId) : undefined}
+        onFocus={handleFocusSession}
+        onKill={handleKill}
+        onSessionClose={onSessionClose ? handleSessionClose : undefined}
+        onQuickAction={onQuickAction ? handleQuickAction : undefined}
         onResume={onResume}
       />
     </SortableTerminalWrapper>

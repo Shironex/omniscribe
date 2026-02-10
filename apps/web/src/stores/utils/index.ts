@@ -9,3 +9,4 @@ export {
   createSocketActions,
   createSocketListeners,
 } from './createSocketStore';
+export { createMemoizedSelector } from './createMemoizedSelector';
