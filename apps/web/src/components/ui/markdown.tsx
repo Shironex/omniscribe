@@ -36,7 +36,7 @@ export function Markdown({ children, className }: MarkdownProps) {
         // Strong
         '[&_strong]:text-foreground [&_strong]:font-semibold',
         // Links
-        '[&_a]:text-primary [&_a]:no-underline [&_a]:hover:underline',
+        '[&_a]:text-primary [&_a]:no-underline hover:[&_a]:underline',
         className
       )}
     >
