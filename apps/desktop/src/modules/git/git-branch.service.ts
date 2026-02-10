@@ -69,7 +69,7 @@ function cleanGitOutputLine(line: string): string {
  * after splitting on '|'.
  */
 function cleanTrailingQuote(value: string): string {
-  return (value || '').replace(/["']$/g, '');
+  return value.replace(/["']$/g, '');
 }
 
 /**

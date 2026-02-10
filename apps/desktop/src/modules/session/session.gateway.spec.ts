@@ -344,7 +344,7 @@ describe('SessionGateway', () => {
 
       const result = await gateway.handleCreate(basePayload, client);
 
-      expect(result).toEqual({ error: 'Failed to launch session' });
+      expect(result).toEqual({ error: 'Failed to launch new session' });
     });
 
     it('should not join terminal room when terminalSessionId is undefined', async () => {
