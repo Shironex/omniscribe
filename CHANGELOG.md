@@ -29,6 +29,29 @@ All notable changes to this project will be documented in this file.
 - **Pattern consistency & WCAG accessibility** — Aligned gateway lifecycle, event naming, imports, and fixed accessibility issues
 - **Comprehensive test coverage** — Added tests for backend, frontend, and shared package; formatted shared Jest config
 
+## 0.6.0-beta.1 (2026-02-08)
+
+### Features
+
+- **Session History** — Browse, search, and filter past Claude Code sessions with branch filtering and sort controls (newest/oldest)
+- **Resume Sessions** — Resume any previous Claude Code session directly from the history panel or terminal header
+- **Fork Sessions** — Fork an existing session into a new conversation branch using `--fork-session`
+- **Continue Last** — One-click button to continue the most recent Claude Code conversation (`--continue` flag)
+- **Auto-Resume on Restart** — Toggle in Settings > Sessions to automatically restore active sessions when Omniscribe restarts
+- **Hooks Integration** — Automatic Claude Code `SessionStart`/`SessionEnd` hooks for instant session ID capture (falls back to polling)
+
+### Improvements
+
+- Claude session reader service for parsing `sessions-index.json` and `.jsonl` session files
+- Hook manager service that registers/unregisters hooks and watches for hook events via temp directory
+- Shared payload types for resume, fork, continue-last, and session history WebSocket events
+- Gateway refactored to use shared `launchSessionWithWorktree()` helper, eliminating code duplication
+- Session history panel with debounced search, branch dropdown filter, and sort toggle
+- Resumed session indicator with accessibility attributes (`role="status"`, `aria-label`)
+- `type="button"` added to all interactive buttons to prevent unintended form submission
+- `fetchHistory` socket call includes 15-second timeout
+- `autoResumeOnRestart` default added to session settings
+
 ## 0.5.1 (2026-02-08)
 
 ### Bug Fixes
