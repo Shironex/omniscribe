@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnModuleDestroy } from '@nestjs/common';
 import { McpServerConfig, MCP_SERVER_NAME, createLogger, normalizePath } from '@omniscribe/shared';
 import { Mutex } from 'async-mutex';
 import * as fs from 'fs';
@@ -29,9 +29,13 @@ interface McpWrittenServerEntry {
  * - All discovered external MCP servers from the project
  */
 @Injectable()
-export class McpWriterService {
+export class McpWriterService implements OnModuleDestroy {
   private readonly logger = createLogger('McpWriterService');
   private readonly fileLocks = new Map<string, Mutex>();
+
+  onModuleDestroy(): void {
+    this.fileLocks.clear();
+  }
 
   /**
    * Get or create a mutex for the given config file path.
@@ -210,9 +214,11 @@ export class McpWriterService {
           `Removed omniscribe from ${configPath}, preserved ${Object.keys(mcpServers).length} other servers`
         );
 
+        // Clean up the mutex — omniscribe entry was successfully removed
+        this.fileLocks.delete(configPath);
         return true;
       } catch (error) {
-        this.logger.error('Error removing omniscribe from config:', error);
+        this.logger.error('Error removing omniscribe entry from config:', error);
       }
 
       return false;

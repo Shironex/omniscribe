@@ -6,11 +6,15 @@ import {
   ActiveSessionSnapshot,
   AiMode,
   CreateSessionOptions,
+  UpdateSessionOptions,
   WorktreeSettings,
   DEFAULT_WORKTREE_SETTINGS,
   ExtendedSessionConfig,
   LaunchSessionResult,
   SessionStatusUpdate,
+  MAX_SESSION_NAME_LENGTH,
+  MAX_MODEL_LENGTH,
+  MAX_SYSTEM_PROMPT_LENGTH,
   createLogger,
   extractErrorMessage,
 } from '@omniscribe/shared';
@@ -36,6 +40,57 @@ export interface BackendSessionConfig extends ExtendedSessionConfig {
   /** Whether this session continues the most recent Claude session */
   continueLastSession?: boolean;
 }
+
+/**
+ * Valid session status transitions.
+ * Maps each status to the set of statuses it can transition to.
+ */
+const VALID_TRANSITIONS: Record<SessionStatus, Set<SessionStatus>> = {
+  idle: new Set(['connecting', 'working', 'planning', 'thinking', 'error']),
+  connecting: new Set(['idle', 'error']),
+  working: new Set([
+    'idle',
+    'needs_input',
+    'planning',
+    'thinking',
+    'error',
+    'finished',
+    'disconnected',
+  ]),
+  planning: new Set([
+    'idle',
+    'working',
+    'needs_input',
+    'thinking',
+    'error',
+    'finished',
+    'disconnected',
+  ]),
+  thinking: new Set([
+    'idle',
+    'working',
+    'planning',
+    'needs_input',
+    'error',
+    'finished',
+    'disconnected',
+  ]),
+  executing: new Set(['idle', 'working', 'error', 'finished', 'disconnected']),
+  active: new Set(['idle', 'working', 'error', 'finished', 'disconnected']),
+  needs_input: new Set([
+    'idle',
+    'working',
+    'planning',
+    'thinking',
+    'error',
+    'finished',
+    'disconnected',
+  ]),
+  paused: new Set(['idle', 'working', 'error', 'disconnected']),
+  finished: new Set(['idle', 'error']),
+  error: new Set(['idle', 'connecting']),
+  disconnected: new Set(['idle', 'error']),
+};
 
 @Injectable()
 export class SessionService implements OnModuleDestroy {
@@ -222,6 +277,15 @@ export class SessionService implements OnModuleDestroy {
       return undefined;
     }
 
+    // Validate state transition
+    const validTargets = VALID_TRANSITIONS[session.status];
+    if (validTargets && !validTargets.has(status)) {
+      this.logger.warn(
+        `Invalid session status transition for ${sessionId}: ${session.status} -> ${status}`
+      );
+      return undefined;
+    }
+
     this.logger.debug(
       `Updating status for session ${sessionId}: ${status}${message ? ` (${message})` : ''}`
     );
@@ -235,6 +299,69 @@ export class SessionService implements OnModuleDestroy {
       status,
       message,
       needsInputPrompt,
+    };
+
+    this.eventEmitter.emit(InternalSessionEvents.STATUS, statusUpdate);
+
+    return session;
+  }
+
+  /**
+   * Update session metadata (name, model, systemPrompt, etc.)
+   * Emits a status update event so the frontend is notified.
+   */
+  update(sessionId: string, updates: UpdateSessionOptions): BackendSessionConfig | undefined {
+    const session = this.sessions.get(sessionId);
+
+    if (!session) {
+      return undefined;
+    }
+
+    // Validate string length limits (same as session creation)
+    if (updates.name !== undefined && updates.name.length > MAX_SESSION_NAME_LENGTH) {
+      this.logger.warn(`[update] name exceeds max length for session ${sessionId}`);
+      return undefined;
+    }
+    if (updates.model !== undefined && updates.model.length > MAX_MODEL_LENGTH) {
+      this.logger.warn(`[update] model exceeds max length for session ${sessionId}`);
+      return undefined;
+    }
+    if (
+      updates.systemPrompt !== undefined &&
+      updates.systemPrompt.length > MAX_SYSTEM_PROMPT_LENGTH
+    ) {
+      this.logger.warn(`[update] systemPrompt exceeds max length for session ${sessionId}`);
+      return undefined;
+    }
+
+    if (updates.name !== undefined) {
+      session.name = updates.name;
+    }
+    if (updates.aiMode !== undefined) {
+      session.aiMode = updates.aiMode;
+    }
+    if (updates.model !== undefined) {
+      session.model = updates.model;
+    }
+    if (updates.systemPrompt !== undefined) {
+      session.systemPrompt = updates.systemPrompt;
+    }
+    if (updates.maxTokens !== undefined) {
+      session.maxTokens = updates.maxTokens;
+    }
+    if (updates.temperature !== undefined) {
+      session.temperature = updates.temperature;
+    }
+    if (updates.mcpServers !== undefined) {
+      session.mcpServers = updates.mcpServers;
+    }
+
+    session.lastActiveAt = new Date();
+
+    const statusUpdate: SessionStatusUpdate = {
+      sessionId,
+      status: session.status,
+      message: 'Session updated',
     };
 
     this.eventEmitter.emit(InternalSessionEvents.STATUS, statusUpdate);

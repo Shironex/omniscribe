@@ -12,6 +12,7 @@ import { WsThrottlerGuard } from '../shared/ws-throttler.guard';
 import { Server, Socket } from 'socket.io';
 import { OnEvent } from '@nestjs/event-emitter';
 import * as crypto from 'crypto';
+import * as path from 'path';
 import { SessionService, BackendSessionConfig } from './session.service';
 import { TerminalGateway } from '../terminal/terminal.gateway';
 import { WorktreeService } from '../git/worktree.service';
@@ -37,6 +38,11 @@ import {
   SessionSettings,
   DEFAULT_SESSION_SETTINGS,
   MAX_CONCURRENT_SESSIONS,
+  VALID_AI_MODES,
+  MAX_MODEL_LENGTH,
+  MAX_SYSTEM_PROMPT_LENGTH,
+  MAX_SESSION_NAME_LENGTH,
+  MAX_PATH_LENGTH,
   SessionEvents,
   ZombieEvents,
   createLogger,
@@ -120,6 +126,16 @@ export class SessionGateway implements OnGatewayInit {
     @MessageBody() payload: CreateSessionPayload,
     @ConnectedSocket() client: Socket
   ): Promise<CreateSessionResponse> {
+    // Validate string length limits (model/systemPrompt are create-only fields)
+    if (payload.model && payload.model.length > MAX_MODEL_LENGTH) {
+      return { error: `model exceeds maximum length of ${MAX_MODEL_LENGTH} characters` };
+    }
+    if (payload.systemPrompt && payload.systemPrompt.length > MAX_SYSTEM_PROMPT_LENGTH) {
+      return {
+        error: `systemPrompt exceeds maximum length of ${MAX_SYSTEM_PROMPT_LENGTH} characters`,
+      };
+    }
+
     return this.launchSessionWithWorktree(
       client,
       { projectPath: payload.projectPath, branch: payload.branch, name: payload.name },
@@ -144,45 +160,11 @@ export class SessionGateway implements OnGatewayInit {
     @MessageBody() payload: UpdateSessionPayload,
     @ConnectedSocket() _client: Socket
   ): UpdateSessionResponse {
-    const session = this.sessionService.get(payload.sessionId);
+    const session = this.sessionService.update(payload.sessionId, payload.updates);
 
     if (!session) {
       return { error: `Session not found: ${payload.sessionId}` };
     }
-
-    // Apply updates to session
-    const updates = payload.updates;
-
-    if (updates.name !== undefined) {
-      session.name = updates.name;
-    }
-    if (updates.aiMode !== undefined) {
-      session.aiMode = updates.aiMode;
-    }
-    if (updates.model !== undefined) {
-      session.model = updates.model;
-    }
-    if (updates.systemPrompt !== undefined) {
-      session.systemPrompt = updates.systemPrompt;
-    }
-    if (updates.maxTokens !== undefined) {
-      session.maxTokens = updates.maxTokens;
-    }
-    if (updates.temperature !== undefined) {
-      session.temperature = updates.temperature;
-    }
-    if (updates.mcpServers !== undefined) {
-      session.mcpServers = updates.mcpServers;
-    }
-
-    session.lastActiveAt = new Date();
-
-    // Emit status update for the change
-    this.server.emit(SessionEvents.STATUS, {
-      sessionId: session.id,
-      status: session.status,
-      message: 'Session updated',
-    });
 
     return { session };
   }
@@ -384,6 +366,29 @@ export class SessionGateway implements OnGatewayInit {
     createOptions: Parameters<SessionService['create']>[2],
     errorPrefix: string
   ): Promise<CreateSessionResponse> {
+    // Validate name (covers all creation paths: new, resume, fork, continue-last)
+    if (payload.name && payload.name.length > MAX_SESSION_NAME_LENGTH) {
+      return { error: `name exceeds maximum length of ${MAX_SESSION_NAME_LENGTH} characters` };
+    }
+
+    // Validate mode
+    if (!VALID_AI_MODES.includes(mode as (typeof VALID_AI_MODES)[number])) {
+      return {
+        error: `Invalid AI mode: ${String(mode)}. Must be one of: ${VALID_AI_MODES.join(', ')}`,
+      };
+    }
+
+    // Validate projectPath
+    if (!payload.projectPath || typeof payload.projectPath !== 'string') {
+      return { error: 'Invalid projectPath: must be a non-empty string' };
+    }
+    if (payload.projectPath.length > MAX_PATH_LENGTH) {
+      return { error: `projectPath exceeds maximum length of ${MAX_PATH_LENGTH} characters` };
+    }
+    if (!path.isAbsolute(payload.projectPath)) {
+      return { error: 'Invalid projectPath: must be an absolute path' };
+    }
+
     // Check concurrency limit
     const runningSessions = this.sessionService.getRunningSessions();
     if (runningSessions.length >= MAX_CONCURRENT_SESSIONS) {

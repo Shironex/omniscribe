@@ -66,6 +66,7 @@ export class HookManagerService implements OnModuleDestroy {
   private watcher: fs.FSWatcher | null = null;
   private readonly hookDir = path.join(os.tmpdir(), 'omniscribe-hooks');
   private processedFiles = new Set<string>();
+  private static readonly MAX_PROCESSED_FILES = 10_000;
 
   constructor(private readonly eventEmitter: EventEmitter2) {}
 
@@ -200,6 +201,17 @@ export class HookManagerService implements OnModuleDestroy {
         if (eventType !== 'rename' || !filename || !filename.endsWith('.json')) return;
         if (this.processedFiles.has(filename)) return;
         this.processedFiles.add(filename);
+
+        // Prevent unbounded growth — evict oldest entries (Set preserves insertion order)
+        if (this.processedFiles.size > HookManagerService.MAX_PROCESSED_FILES) {
+          const excess = this.processedFiles.size - HookManagerService.MAX_PROCESSED_FILES;
+          let removed = 0;
+          for (const entry of this.processedFiles) {
+            if (removed >= excess) break;
+            this.processedFiles.delete(entry);
+            removed++;
+          }
+        }
 
         // Read and process the hook event file
         const filePath = path.join(this.hookDir, filename);
