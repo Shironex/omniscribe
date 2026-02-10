@@ -25,6 +25,7 @@ describe('TerminalService', () => {
   let eventEmitter: EventEmitter2;
 
   beforeEach(async () => {
+    jest.useFakeTimers();
     mockPtyInstances.length = 0;
 
     eventEmitter = {
@@ -41,8 +42,8 @@ describe('TerminalService', () => {
   });
 
   afterEach(() => {
-    // Clear any timers from output batching
     jest.clearAllTimers();
+    jest.useRealTimers();
   });
 
   describe('spawnCommand', () => {
@@ -90,15 +91,7 @@ describe('TerminalService', () => {
   });
 
   describe('output batching', () => {
-    beforeEach(() => {
-      jest.useFakeTimers();
-    });
-
-    afterEach(() => {
-      jest.useRealTimers();
-    });
-
-    it('should batch output and emit after OUTPUT_THROTTLE_MS (4ms)', () => {
+    it('should batch output and emit after OUTPUT_THROTTLE_MS (16ms)', () => {
       const sessionId = service.spawnCommand('bash', [], '/home');
       const ptyInstance = mockPtyInstances[0];
 
@@ -108,8 +101,8 @@ describe('TerminalService', () => {
       // Not emitted yet (still within batch interval)
       expect(eventEmitter.emit).not.toHaveBeenCalledWith('terminal.output', expect.anything());
 
-      // Advance timers past the 4ms batch interval
-      jest.advanceTimersByTime(10);
+      // Advance timers past the 16ms batch interval
+      jest.advanceTimersByTime(20);
 
       expect(eventEmitter.emit).toHaveBeenCalledWith('terminal.output', {
         sessionId,
@@ -117,30 +110,30 @@ describe('TerminalService', () => {
       });
     });
 
-    it('should chunk large output (>4KB) across multiple flushes', () => {
+    it('should chunk large output (>16KB) across multiple flushes', () => {
       const sessionId = service.spawnCommand('bash', [], '/home');
       const ptyInstance = mockPtyInstances[0];
 
-      // Simulate 8KB of data
-      const bigData = 'x'.repeat(8192);
+      // Simulate 32KB of data
+      const bigData = 'x'.repeat(32768);
       ptyInstance.simulateData(bigData);
 
-      // First flush at 4ms
-      jest.advanceTimersByTime(5);
+      // First flush at 16ms
+      jest.advanceTimersByTime(20);
 
-      // First chunk should be 4096 bytes
+      // First chunk should be 16384 bytes
       expect(eventEmitter.emit).toHaveBeenCalledWith('terminal.output', {
         sessionId,
-        data: 'x'.repeat(4096),
+        data: 'x'.repeat(16384),
       });
 
-      // Second flush at 4ms later
-      jest.advanceTimersByTime(5);
+      // Second flush at 16ms later
+      jest.advanceTimersByTime(20);
 
-      // Second chunk should be remaining 4096 bytes
+      // Second chunk should be remaining 16384 bytes
       expect(eventEmitter.emit).toHaveBeenCalledWith('terminal.output', {
         sessionId,
-        data: 'x'.repeat(4096),
+        data: 'x'.repeat(16384),
       });
     });
 
@@ -166,17 +159,15 @@ describe('TerminalService', () => {
 
   describe('scrollback', () => {
     it('should accumulate scrollback data', () => {
-      jest.useFakeTimers();
       const sessionId = service.spawnCommand('bash', [], '/home');
       const ptyInstance = mockPtyInstances[0];
 
       ptyInstance.simulateData('line1\n');
       ptyInstance.simulateData('line2\n');
-      jest.advanceTimersByTime(10);
+      jest.advanceTimersByTime(20);
 
       const scrollback = service.getScrollback(sessionId);
       expect(scrollback).toBe('line1\nline2\n');
-      jest.useRealTimers();
     });
 
     it('should return null for non-existent session', () => {
@@ -229,11 +220,8 @@ describe('TerminalService', () => {
       service.write(sessionId, largeData);
 
       // Allow entire write chain to complete (15 chunks of 100, each with setImmediate)
-      // Wait for the writeChain promise to resolve
-      const session = (
-        service as unknown as { sessions: Map<number, { writeChain: Promise<void> }> }
-      ).sessions.get(sessionId);
-      await session!.writeChain;
+      // Advance fake timers to flush setImmediate calls between chunks
+      await jest.advanceTimersByTimeAsync(100);
 
       // Should have been called multiple times for chunked writes
       const totalWritten = ptyInstance.write.mock.calls.reduce(
@@ -291,14 +279,13 @@ describe('TerminalService', () => {
     });
 
     it('should preserve output during resize operations', () => {
-      jest.useFakeTimers();
       const sessionId = service.spawnCommand('bash', [], '/home');
       const ptyInstance = mockPtyInstances[0];
 
       // First resize - should NOT suppress output
       service.resize(sessionId, 80, 24);
       ptyInstance.simulateData('after-first-resize');
-      jest.advanceTimersByTime(10);
+      jest.advanceTimersByTime(20);
       expect(eventEmitter.emit).toHaveBeenCalledWith('terminal.output', {
         sessionId,
         data: 'after-first-resize',
@@ -310,7 +297,7 @@ describe('TerminalService', () => {
       // Second resize - output should still be delivered (no data loss)
       service.resize(sessionId, 120, 40);
       ptyInstance.simulateData('during-resize');
-      jest.advanceTimersByTime(10);
+      jest.advanceTimersByTime(20);
       expect(eventEmitter.emit).toHaveBeenCalledWith('terminal.output', {
         sessionId,
         data: 'during-resize',
@@ -318,19 +305,16 @@ describe('TerminalService', () => {
 
       // Subsequent output should continue normally
       ptyInstance.simulateData('after-resize');
-      jest.advanceTimersByTime(10);
+      jest.advanceTimersByTime(20);
       expect(eventEmitter.emit).toHaveBeenCalledWith('terminal.output', {
         sessionId,
         data: 'after-resize',
       });
-
-      jest.useRealTimers();
     });
   });
 
   describe('shutdown guard', () => {
     it('should prevent onData processing during shutdown', async () => {
-      jest.useFakeTimers();
       const sessionId = service.spawnCommand('bash', [], '/home');
       const ptyInstance = mockPtyInstances[0];
 
@@ -354,11 +338,9 @@ describe('TerminalService', () => {
 
       // Verify session cleanup happened
       expect(service.hasSession(sessionId)).toBe(false);
-      jest.useRealTimers();
     });
 
     it('should prevent onExit processing during shutdown', async () => {
-      jest.useFakeTimers();
       service.spawnCommand('bash', [], '/home');
       const ptyInstance = mockPtyInstances[0];
 
@@ -375,8 +357,6 @@ describe('TerminalService', () => {
         (call: [string, unknown]) => call[0] === 'terminal.closed'
       );
       expect(closedCalls.length).toBe(0);
-
-      jest.useRealTimers();
     });
   });
 
@@ -401,7 +381,10 @@ describe('TerminalService', () => {
     it('should remove the session after killing', async () => {
       const sessionId = service.spawnCommand('bash', [], '/home');
 
-      await service.kill(sessionId);
+      const killPromise = service.kill(sessionId);
+      // Advance past the graceful shutdown timeout (3000ms) so kill() resolves
+      jest.advanceTimersByTime(3100);
+      await killPromise;
 
       expect(service.hasSession(sessionId)).toBe(false);
     });
@@ -707,7 +690,6 @@ describe('TerminalService', () => {
       });
 
       it('should send SIGTERM first when killing on Unix', async () => {
-        jest.useFakeTimers();
         const sessionId = unixService.spawnCommand('bash', ['--login'], '/project');
         const ptyInstance = mockPtyInstances[mockPtyInstances.length - 1];
 
@@ -721,7 +703,6 @@ describe('TerminalService', () => {
         jest.advanceTimersByTime(200);
 
         await killPromise;
-        jest.useRealTimers();
       });
     });
   });

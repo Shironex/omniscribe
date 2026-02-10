@@ -3,9 +3,9 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { TerminalModule } from './terminal';
 import { WorkspaceModule } from './workspace';
-import { SessionModule } from './session/session.module';
-import { GitModule } from './git/git.module';
-import { McpModule } from './mcp/mcp.module';
+import { SessionModule } from './session';
+import { GitModule } from './git';
+import { McpModule } from './mcp';
 import { UsageModule } from './usage';
 import { HealthModule } from './health';
 

@@ -334,7 +334,7 @@ describe('McpStatusServerService - Request Handling', () => {
     expect(responseBody.reason).toBe('unknown_session');
   });
 
-  it('should accept valid status update and emit event', async () => {
+  it('should accept valid status update and emit MCP_STATUS_RECEIVED event', async () => {
     sessionRegistry.getProjectPath.mockReturnValue('/project');
 
     await initService();
@@ -355,7 +355,7 @@ describe('McpStatusServerService - Request Handling', () => {
     const responseBody = JSON.parse((res.end as jest.Mock).mock.calls[0][0]);
     expect(responseBody.accepted).toBe(true);
 
-    expect(eventEmitter.emit).toHaveBeenCalledWith('session.status', {
+    expect(eventEmitter.emit).toHaveBeenCalledWith('session.mcp-status-received', {
       sessionId: 'session-1',
       status: 'working',
       message: 'Processing request',
@@ -379,7 +379,7 @@ describe('McpStatusServerService - Request Handling', () => {
 
     simulateRequest('POST', '/status', payload);
 
-    expect(eventEmitter.emit).toHaveBeenCalledWith('session.status', {
+    expect(eventEmitter.emit).toHaveBeenCalledWith('session.mcp-status-received', {
       sessionId: 'session-1',
       status: 'needs_input',
       message: 'Waiting for input',

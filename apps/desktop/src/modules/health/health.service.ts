@@ -2,8 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { Interval } from '@nestjs/schedule';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { HealthLevel, createLogger } from '@omniscribe/shared';
-import { TerminalService } from '../terminal/terminal.service';
-import { SessionService, ExtendedSessionConfig } from '../session/session.service';
+import { TerminalService } from '../terminal';
+import { SessionService, BackendSessionConfig } from '../session';
+import { InternalSessionEvents, InternalZombieEvents } from '../shared/events';
 
 /** How often to run health checks (2 minutes) */
 const HEALTH_CHECK_INTERVAL_MS = 120_000;
@@ -14,10 +15,10 @@ const OUTPUT_STALE_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
 /** Threshold for error state before marking as zombie */
 const ERROR_STATE_THRESHOLD_MS = 2 * 60 * 1000; // 2 minutes
 
-/** Statuses that indicate the session should be producing output */
+/** Statuses that indicate the session should be producing output (includes legacy values for backward compat) */
 const WORKING_STATUSES = new Set(['working', 'executing', 'active', 'thinking']);
 
-/** Statuses that indicate the session is idle/waiting (no output expected) */
+/** Statuses that indicate the session is idle/waiting — no output expected (includes legacy values for backward compat) */
 const IDLE_STATUSES = new Set(['idle', 'needs_input', 'paused']);
 
 @Injectable()
@@ -44,7 +45,7 @@ export class HealthService {
       try {
         const health = this.determineHealth(session);
 
-        this.eventEmitter.emit('session.health', {
+        this.eventEmitter.emit(InternalSessionEvents.HEALTH, {
           sessionId: session.id,
           health: health.level,
           reason: health.reason,
@@ -66,7 +67,7 @@ export class HealthService {
    * - Session status
    * - Backpressure state
    */
-  private determineHealth(session: ExtendedSessionConfig): { level: HealthLevel; reason?: string } {
+  private determineHealth(session: BackendSessionConfig): { level: HealthLevel; reason?: string } {
     const terminalSessionId = session.terminalSessionId!;
 
     // Check if terminal session still exists in the TerminalService map
@@ -132,7 +133,7 @@ export class HealthService {
   /**
    * Clean up a zombie session: kill terminal, mark as error, notify frontend.
    */
-  private cleanupZombie(session: ExtendedSessionConfig): void {
+  private cleanupZombie(session: BackendSessionConfig): void {
     this.logger.warn(`Cleaning up zombie session ${session.id} (${session.name})`);
 
     // Kill the terminal if it still exists in the map
@@ -153,7 +154,7 @@ export class HealthService {
     );
 
     // Emit zombie cleanup event for frontend notification
-    this.eventEmitter.emit('zombie.cleanup', {
+    this.eventEmitter.emit(InternalZombieEvents.CLEANUP, {
       sessionId: session.id,
       sessionName: session.name,
       reason: 'Terminal process terminated unexpectedly',

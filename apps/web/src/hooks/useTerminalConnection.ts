@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback } from 'react';
+import { useRef, useState, useCallback, useEffect } from 'react';
 import { createLogger } from '@omniscribe/shared';
 import type { Terminal } from '@xterm/xterm';
 import { connectTerminal, joinTerminal } from '@/lib/terminal';
@@ -18,6 +18,9 @@ export interface UseTerminalConnectionReturn {
 
 /**
  * Hook that manages terminal connection state and output/close handlers.
+ * Uses requestAnimationFrame buffering to coalesce multiple socket events
+ * into a single xterm.write() per frame, reducing CPU pressure from ~250
+ * writes/sec to ~60 writes/sec.
  */
 export function useTerminalConnection(
   xtermRef: React.MutableRefObject<Terminal | null>,
@@ -27,19 +30,51 @@ export function useTerminalConnection(
   const connectionRef = useRef<ReturnType<typeof connectTerminal> | null>(null);
   const [status, setStatus] = useState<TerminalStatus>('connecting');
 
+  // RAF write buffer: accumulate data from socket events, flush once per frame
+  const writeBufferRef = useRef('');
+  const rafIdRef = useRef<number | null>(null);
+
+  const flushWriteBuffer = useCallback(() => {
+    rafIdRef.current = null;
+    if (isDisposedRef.current || !xtermRef.current || writeBufferRef.current.length === 0) return;
+    try {
+      xtermRef.current.write(writeBufferRef.current);
+    } catch {
+      logger.debug('flushWriteBuffer write failed (terminal may be disposed)');
+    }
+    writeBufferRef.current = '';
+  }, [xtermRef, isDisposedRef]);
+
   const handleOutput = useCallback(
     (data: string) => {
       if (isDisposedRef.current) return;
-      if (xtermRef.current) {
-        try {
-          xtermRef.current.write(data);
-        } catch {
-          logger.debug('handleOutput write failed (terminal may be disposed)');
-        }
+      writeBufferRef.current += data;
+      // Schedule a single flush per animation frame
+      if (rafIdRef.current === null) {
+        rafIdRef.current = requestAnimationFrame(flushWriteBuffer);
       }
     },
-    [xtermRef, isDisposedRef]
+    [isDisposedRef, flushWriteBuffer]
   );
+
+  // Clean up RAF on unmount
+  useEffect(() => {
+    return () => {
+      if (rafIdRef.current !== null) {
+        cancelAnimationFrame(rafIdRef.current);
+        rafIdRef.current = null;
+      }
+      // Flush any remaining data synchronously on cleanup
+      if (writeBufferRef.current.length > 0 && xtermRef.current && !isDisposedRef.current) {
+        try {
+          xtermRef.current.write(writeBufferRef.current);
+        } catch {
+          // Terminal may already be disposed
+        }
+        writeBufferRef.current = '';
+      }
+    };
+  }, [xtermRef, isDisposedRef]);
 
   const handleClose = useCallback(
     (exitCode: number, signal?: number) => {
@@ -61,7 +96,11 @@ export function useTerminalConnection(
         joinTerminal(sessionId)
           .then(({ success, scrollback }) => {
             if (success && scrollback && xtermRef.current && !isDisposedRef.current) {
-              xtermRef.current.write(scrollback);
+              // Use buffered write for scrollback too
+              writeBufferRef.current += scrollback;
+              if (rafIdRef.current === null) {
+                rafIdRef.current = requestAnimationFrame(flushWriteBuffer);
+              }
             }
           })
           .catch(error => {
@@ -69,7 +108,7 @@ export function useTerminalConnection(
           });
       }
     },
-    [handleOutput, handleClose, xtermRef, isDisposedRef]
+    [handleOutput, handleClose, xtermRef, isDisposedRef, flushWriteBuffer]
   );
 
   return {

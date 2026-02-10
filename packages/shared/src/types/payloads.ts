@@ -4,8 +4,9 @@
 
 import type { ProjectTabDTO, UserPreferences } from './project-tab';
 import type { QuickAction } from './workspace';
-import type { BranchInfo, CommitInfo } from './git';
+import type { BranchInfo, CommitInfo, WorktreeInfo } from './git';
 import type { TaskItem } from './mcp';
+import type { ClaudeSessionEntry } from './session';
 
 // ============================================
 // Connection Types
@@ -87,16 +88,33 @@ export interface GitCurrentBranchPayload {
   projectPath: string;
 }
 
+/**
+ * Payload for listing worktrees
+ */
+export interface GitWorktreesPayload {
+  projectPath: string;
+}
+
+/**
+ * Payload for cleaning up a worktree
+ */
+export interface GitWorktreeCleanupPayload {
+  projectPath: string;
+  worktreePath: string;
+}
+
 // ============================================
 // Git Responses
 // ============================================
 
 /**
- * Response for branches query
+ * Response for branches query.
+ * currentBranch may be a string (name only) or a full BranchInfo object
+ * depending on the backend implementation.
  */
 export interface GitBranchesResponse {
   branches: BranchInfo[];
-  currentBranch: string;
+  currentBranch: string | BranchInfo;
   error?: string;
 }
 
@@ -127,6 +145,14 @@ export interface GitCreateBranchResponse extends SuccessResponse {
  */
 export interface GitCurrentBranchResponse {
   currentBranch: string;
+  error?: string;
+}
+
+/**
+ * Response for worktrees list
+ */
+export interface GitWorktreesResponse {
+  worktrees: WorktreeInfo[];
   error?: string;
 }
 
@@ -200,7 +226,7 @@ export interface TerminalJoinResponse extends SuccessResponse {
  * Payload for MCP server discovery
  */
 export interface McpDiscoverPayload {
-  projectPath: string;
+  projectPath?: string;
 }
 
 /**
@@ -314,6 +340,28 @@ export interface McpStatusServerInfoResponse {
 // ============================================
 
 /**
+ * Payload for creating a session
+ */
+export interface CreateSessionPayload {
+  mode: import('./session').AiMode;
+  projectPath: string;
+  branch?: string;
+  name?: string;
+  workingDirectory?: string;
+  model?: string;
+  systemPrompt?: string;
+  mcpServers?: string[];
+}
+
+/**
+ * Payload for updating a session
+ */
+export interface UpdateSessionPayload {
+  sessionId: string;
+  updates: import('./session').UpdateSessionOptions;
+}
+
+/**
  * Payload for removing a session
  */
 export interface SessionRemovePayload {
@@ -325,6 +373,17 @@ export interface SessionRemovePayload {
  */
 export interface SessionListPayload {
   projectPath?: string;
+}
+
+/**
+ * Session status update event payload.
+ * Emitted when a session's status changes.
+ */
+export interface SessionStatusUpdate {
+  sessionId: string;
+  status: import('./session').SessionStatus;
+  message?: string;
+  needsInputPrompt?: boolean;
 }
 
 // ============================================
@@ -488,6 +547,23 @@ export interface QuickActionsResponse extends SuccessResponse {
 // ============================================
 // Terminal Events
 // ============================================
+
+/**
+ * Event emitted when terminal produces output data
+ */
+export interface TerminalOutputEvent {
+  sessionId: number;
+  data: string;
+}
+
+/**
+ * Event emitted when a terminal process exits
+ */
+export interface TerminalClosedEvent {
+  sessionId: number;
+  exitCode: number;
+  signal?: number;
+}
 
 /**
  * Event emitted when a terminal enters or exits backpressure state.
@@ -712,4 +788,87 @@ export interface GithubIssuesResponse {
 export interface GithubIssueResponse {
   issue: import('./github').Issue | null;
   error?: string;
+}
+
+// ============================================
+// Claude Session History Payloads
+// ============================================
+
+/**
+ * Request to fetch Claude Code session history for a project
+ */
+export interface ClaudeSessionHistoryPayload {
+  projectPath: string;
+}
+
+/**
+ * Response with Claude Code session history
+ */
+export interface ClaudeSessionHistoryResponse {
+  sessions: ClaudeSessionEntry[];
+  error?: string;
+}
+
+/**
+ * Request to resume a Claude Code session
+ */
+export interface ResumeSessionPayload {
+  claudeSessionId: string;
+  projectPath: string;
+  name?: string;
+  branch?: string;
+}
+
+/**
+ * Event emitted when a Claude session ID is captured for an Omniscribe session
+ */
+export interface ClaudeSessionIdCapturedEvent {
+  /** Omniscribe session ID */
+  sessionId: string;
+  /** Claude Code session UUID */
+  claudeSessionId: string;
+}
+
+/**
+ * Request to fork a Claude Code session (creates a branch from existing history)
+ */
+export interface ForkSessionPayload {
+  claudeSessionId: string;
+  projectPath: string;
+  name?: string;
+  branch?: string;
+}
+
+/**
+ * Request to continue the most recent Claude Code session in a project
+ */
+export interface ContinueLastSessionPayload {
+  projectPath: string;
+  branch?: string;
+  name?: string;
+}
+
+/**
+ * Request to get the active sessions snapshot for auto-resume on restart
+ */
+export interface RestoreSnapshotResponse {
+  sessions: ActiveSessionSnapshot[];
+  autoResumeEnabled: boolean;
+}
+
+/**
+ * Snapshot of an active session for auto-resume on restart
+ */
+export interface ActiveSessionSnapshot {
+  claudeSessionId: string;
+  projectPath: string;
+  branch?: string;
+  name: string;
+}
+
+/**
+ * Event payload when a Claude Code session hook ends
+ */
+export interface SessionHookEndedPayload {
+  claudeSessionId: string;
 }

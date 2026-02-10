@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import type { ThrottlerRequest } from '@nestjs/throttler';
-import { createLogger, type WsThrottledPayload } from '@omniscribe/shared';
+import { SystemEvents, createLogger, type WsThrottledPayload } from '@omniscribe/shared';
 
 const logger = createLogger('WsThrottlerGuard');
 
@@ -40,7 +40,7 @@ export class WsThrottlerGuard extends ThrottlerGuard {
           event: eventName,
           retryAfter: timeToBlockExpire,
         };
-        client.emit('ws:throttled', payload);
+        client.emit(SystemEvents.THROTTLED, payload);
       } catch {
         // Best-effort — don't let notification failure affect the guard
       }

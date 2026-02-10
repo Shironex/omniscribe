@@ -1,9 +1,9 @@
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { DndContext, DragOverlay, closestCenter } from '@dnd-kit/core';
 import { SortableContext, rectSwappingStrategy } from '@dnd-kit/sortable';
-import { PanelGroup, Panel, PanelResizeHandle } from 'react-resizable-panels';
+import { Group, Panel, Separator } from 'react-resizable-panels';
 import { SortableTerminalWrapper } from './SortableTerminalWrapper';
 import { TerminalCard } from './TerminalCard';
 import type { QuickActionItem } from './TerminalCard';
@@ -40,6 +40,7 @@ interface TerminalGridProps {
   onSessionClose?: (sessionId: string, exitCode: number) => void;
   onQuickAction?: (sessionId: string, actionId: string) => void;
   onOpenLaunchModal?: () => void;
+  onResume?: (sessionId: string) => void;
   onReorderSessions?: (activeId: string, overId: string) => void;
   className?: string;
 }
@@ -60,6 +61,7 @@ export function TerminalGrid({
   onKill,
   onSessionClose,
   onQuickAction,
+  onResume,
   onOpenLaunchModal,
   onReorderSessions,
   className,
@@ -85,6 +87,21 @@ export function TerminalGrid({
   const activeSession = activeId ? sessions.find(s => s.id === activeId) : null;
   const { handlePanelResize } = useTerminalPanelResize(dispatchRefitAll);
 
+  // Stable callback refs passed to all TerminalCards (avoids inline arrows per-session)
+  const handleFocusSession = useCallback(
+    (sessionId: string) => onFocusSession(sessionId),
+    [onFocusSession]
+  );
+  const handleKill = useCallback((sessionId: string) => onKill(sessionId), [onKill]);
+  const handleSessionClose = useCallback(
+    (sessionId: string, exitCode: number) => onSessionClose?.(sessionId, exitCode),
+    [onSessionClose]
+  );
+  const handleQuickAction = useCallback(
+    (sessionId: string, actionId: string) => onQuickAction?.(sessionId, actionId),
+    [onQuickAction]
+  );
+
   // Empty state
   if (sessionCount === 0 && preLaunchSlots.length === 0) {
     return (
@@ -102,12 +119,11 @@ export function TerminalGrid({
         session={session}
         quickActions={quickActions}
         isFocused={focusedSessionId === session.id}
-        onFocus={() => onFocusSession(session.id)}
-        onKill={() => onKill(session.id)}
-        onSessionClose={
-          onSessionClose ? exitCode => onSessionClose(session.id, exitCode) : undefined
-        }
-        onQuickAction={onQuickAction ? actionId => onQuickAction(session.id, actionId) : undefined}
+        onFocus={handleFocusSession}
+        onKill={handleKill}
+        onSessionClose={onSessionClose ? handleSessionClose : undefined}
+        onQuickAction={onQuickAction ? handleQuickAction : undefined}
+        onResume={onResume}
       />
     </SortableTerminalWrapper>
   );
@@ -129,28 +145,27 @@ export function TerminalGrid({
           >
             <SortableContext items={sessionIds} strategy={rectSwappingStrategy}>
               {useRowPrimaryLayout ? (
-                <PanelGroup
-                  direction="vertical"
-                  onLayout={handlePanelResize}
+                <Group
+                  orientation="vertical"
+                  onLayoutChange={handlePanelResize}
                   className="h-full w-full min-h-0 min-w-0"
                 >
                   {layout.rows.map((row, rowIndex) => (
                     <React.Fragment key={`row-${rowIndex}`}>
                       {rowIndex > 0 && (
-                        <PanelResizeHandle className="h-1.5 flex items-center justify-center group">
+                        <Separator className="h-1.5 flex items-center justify-center group">
                           <div className="w-8 h-0.5 bg-border rounded-full group-hover:bg-primary transition-colors" />
-                        </PanelResizeHandle>
+                        </Separator>
                       )}
                       <Panel
                         id={`row-${rowIndex}`}
-                        order={rowIndex}
-                        defaultSize={100 / layout.rows.length}
-                        minSize={15}
+                        defaultSize={`${100 / layout.rows.length}%`}
+                        minSize="15%"
                         className="min-h-0 min-w-0 overflow-hidden"
                       >
-                        <PanelGroup
-                          direction="horizontal"
-                          onLayout={handlePanelResize}
+                        <Group
+                          orientation="horizontal"
+                          onLayoutChange={handlePanelResize}
                           className="h-full w-full min-h-0 min-w-0"
                         >
                           {row.map((sessionIndex, colIndex) => {
@@ -159,15 +174,14 @@ export function TerminalGrid({
                             return (
                               <React.Fragment key={session.id}>
                                 {colIndex > 0 && (
-                                  <PanelResizeHandle className="w-1.5 flex items-center justify-center group">
+                                  <Separator className="w-1.5 flex items-center justify-center group">
                                     <div className="h-8 w-0.5 bg-border rounded-full group-hover:bg-primary transition-colors" />
-                                  </PanelResizeHandle>
+                                  </Separator>
                                 )}
                                 <Panel
                                   id={`cell-${rowIndex}-${colIndex}`}
-                                  order={colIndex}
-                                  defaultSize={100 / row.length}
-                                  minSize={15}
+                                  defaultSize={`${100 / row.length}%`}
+                                  minSize="15%"
                                   className="min-h-0 min-w-0 overflow-hidden"
                                 >
                                   {renderTerminalCard(session)}
@@ -175,34 +189,33 @@ export function TerminalGrid({
                               </React.Fragment>
                             );
                           })}
-                        </PanelGroup>
+                        </Group>
                       </Panel>
                     </React.Fragment>
                   ))}
-                </PanelGroup>
+                </Group>
               ) : (
-                <PanelGroup
-                  direction="horizontal"
-                  onLayout={handlePanelResize}
+                <Group
+                  orientation="horizontal"
+                  onLayoutChange={handlePanelResize}
                   className="h-full w-full min-h-0 min-w-0"
                 >
                   {columns.map((column, columnIndex) => (
                     <React.Fragment key={`column-${columnIndex}`}>
                       {columnIndex > 0 && (
-                        <PanelResizeHandle className="w-1.5 flex items-center justify-center group">
+                        <Separator className="w-1.5 flex items-center justify-center group">
                           <div className="h-8 w-0.5 bg-border rounded-full group-hover:bg-primary transition-colors" />
-                        </PanelResizeHandle>
+                        </Separator>
                       )}
                       <Panel
                         id={`column-${columnIndex}`}
-                        order={columnIndex}
-                        defaultSize={100 / columns.length}
-                        minSize={15}
+                        defaultSize={`${100 / columns.length}%`}
+                        minSize="15%"
                         className="min-h-0 min-w-0 overflow-hidden"
                       >
-                        <PanelGroup
-                          direction="vertical"
-                          onLayout={handlePanelResize}
+                        <Group
+                          orientation="vertical"
+                          onLayoutChange={handlePanelResize}
                           className="h-full w-full min-h-0 min-w-0"
                         >
                           {column.map((sessionIndex, rowIndex) => {
@@ -211,15 +224,14 @@ export function TerminalGrid({
                             return (
                               <React.Fragment key={session.id}>
                                 {rowIndex > 0 && (
-                                  <PanelResizeHandle className="h-1.5 flex items-center justify-center group">
+                                  <Separator className="h-1.5 flex items-center justify-center group">
                                     <div className="w-8 h-0.5 bg-border rounded-full group-hover:bg-primary transition-colors" />
-                                  </PanelResizeHandle>
+                                  </Separator>
                                 )}
                                 <Panel
                                   id={`cell-${columnIndex}-${rowIndex}`}
-                                  order={rowIndex}
-                                  defaultSize={100 / column.length}
-                                  minSize={15}
+                                  defaultSize={`${100 / column.length}%`}
+                                  minSize="15%"
                                   className="min-h-0 min-w-0 overflow-hidden"
                                 >
                                   {renderTerminalCard(session)}
@@ -227,11 +239,11 @@ export function TerminalGrid({
                               </React.Fragment>
                             );
                           })}
-                        </PanelGroup>
+                        </Group>
                       </Panel>
                     </React.Fragment>
                   ))}
-                </PanelGroup>
+                </Group>
               )}
             </SortableContext>
             <DragOverlay dropAnimation={{ duration: 200, easing: 'ease' }}>
@@ -265,5 +277,5 @@ export function TerminalGrid({
 }
 
 // Re-export types for convenience
-export type { TerminalSession, AIMode } from './TerminalHeader';
-export type { PreLaunchSlot, AIMode as PreLaunchAIMode } from './PreLaunchBar';
+export type { TerminalSession } from './TerminalHeader';
+export type { PreLaunchSlot } from './PreLaunchBar';

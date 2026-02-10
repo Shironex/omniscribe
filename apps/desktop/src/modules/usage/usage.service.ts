@@ -1,9 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import * as pty from 'node-pty';
 import * as os from 'os';
-import { createLogger } from '@omniscribe/shared';
+import { createLogger, extractErrorMessage } from '@omniscribe/shared';
 import type { ClaudeUsage, UsageError, ClaudeCliStatus } from '@omniscribe/shared';
 import { getClaudeCliStatus } from '../../main/utils/claude-detection';
+import { buildSafeEnv } from '../shared/env-utils';
 
 /** Cache TTL for status checks (5 minutes) */
 const STATUS_CACHE_TTL_MS = 5 * 60 * 1000;
@@ -66,7 +67,7 @@ export class UsageService {
       const usage = this.parseUsageOutput(output);
       return { usage };
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = extractErrorMessage(error);
       this.logger.error(`Failed to fetch usage: ${message}`);
 
       // Determine error type
@@ -110,7 +111,7 @@ export class UsageService {
         rows: 30,
         cwd: workingDir,
         env: {
-          ...this.getCleanEnv(),
+          ...buildSafeEnv(),
           TERM: 'xterm-256color',
         },
       };
@@ -126,7 +127,7 @@ export class UsageService {
       try {
         ptyProcess = pty.spawn(shell, args, ptyOptions);
       } catch (spawnError) {
-        const errorMessage = spawnError instanceof Error ? spawnError.message : String(spawnError);
+        const errorMessage = extractErrorMessage(spawnError);
         this.logger.error(`Failed to spawn PTY: ${errorMessage}`);
         reject(new Error(`Unable to access terminal: ${errorMessage}`));
         return;
@@ -274,19 +275,6 @@ export class UsageService {
         }
       });
     });
-  }
-
-  /**
-   * Get clean environment variables
-   */
-  private getCleanEnv(): Record<string, string> {
-    const cleanEnv: Record<string, string> = {};
-    for (const [key, value] of Object.entries(process.env)) {
-      if (value !== undefined) {
-        cleanEnv[key] = value;
-      }
-    }
-    return cleanEnv;
   }
 
   /**

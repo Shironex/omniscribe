@@ -22,27 +22,21 @@ import {
   TerminalJoinPayload,
   TerminalSpawnResponse,
   TerminalJoinResponse,
+  TerminalOutputEvent,
+  TerminalClosedEvent,
   SuccessResponse,
+  TerminalEvents,
   createLogger,
 } from '@omniscribe/shared';
+import { InternalTerminalEvents } from '../shared/events';
 import { CORS_CONFIG } from '../shared/cors.config';
 
 const MAX_INPUT_SIZE = 1_048_576; // 1MB
 
 // Backpressure constants
-const HIGH_WATER_MARK = 16; // Pause PTY after this many undelivered packets
+const HIGH_WATER_MARK = 512; // Pause PTY after this many undelivered packets
+const LOW_WATER_MARK = 64; // Resume PTY only when pending drops below this (hysteresis)
 const PAUSE_SAFETY_TIMEOUT_MS = 10_000; // Force-resume after 10s to prevent deadlock
-
-interface TerminalOutputEvent {
-  sessionId: number;
-  data: string;
-}
-
-interface TerminalClosedEvent {
-  sessionId: number;
-  exitCode: number;
-  signal?: number;
-}
 
 @UseGuards(WsThrottlerGuard)
 @WebSocketGateway({
@@ -54,37 +48,26 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
   @WebSocketServer()
   server!: Server;
 
-  // Use static Maps to ensure data persists across potential multiple gateway instances
-  // This is a defensive fix for NestJS DI behavior where module imports can create multiple instances
-  private static clientSessions = new Map<string, Set<number>>();
-  private static connectedClients = new Map<string, Socket>();
+  private clientSessions = new Map<string, Set<number>>();
+  private connectedClients = new Map<string, Socket>();
 
   // Backpressure tracking (per-terminal, independent of each other)
-  private static pendingWritesMap = new Map<number, number>();
-  private static pausedTerminalsSet = new Set<number>();
-  private static pauseTimeoutsMap = new Map<number, NodeJS.Timeout>();
+  private pendingWrites = new Map<number, number>();
+  private pausedTerminals = new Set<number>();
+  private pauseTimeouts = new Map<number, NodeJS.Timeout>();
 
   constructor(private readonly terminalService: TerminalService) {}
 
-  // Getters for the static Maps (for convenience)
-  private get clientSessions(): Map<string, Set<number>> {
-    return TerminalGateway.clientSessions;
-  }
-
-  private get connectedClients(): Map<string, Socket> {
-    return TerminalGateway.connectedClients;
-  }
-
-  private get pendingWrites(): Map<number, number> {
-    return TerminalGateway.pendingWritesMap;
-  }
-
-  private get pausedTerminals(): Set<number> {
-    return TerminalGateway.pausedTerminalsSet;
-  }
-
-  private get pauseTimeouts(): Map<number, NodeJS.Timeout> {
-    return TerminalGateway.pauseTimeoutsMap;
+  /**
+   * Validate that a sessionId is a positive finite integer.
+   */
+  private isValidSessionId(sessionId: unknown): sessionId is number {
+    return (
+      typeof sessionId === 'number' &&
+      Number.isFinite(sessionId) &&
+      Number.isInteger(sessionId) &&
+      sessionId > 0
+    );
   }
 
   afterInit(): void {
@@ -107,9 +90,17 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
       // one renderer process connecting via one socket. Therefore, when this
       // client's write buffer drains, it is safe to resume all paused terminals
       // unconditionally -- they all belong to this single client.
+      // Use hysteresis: only resume when pending counter is below LOW_WATER_MARK
+      // to prevent rapid pause/resume oscillation.
       for (const sessionId of this.pausedTerminals) {
-        this.pendingWrites.set(sessionId, 0);
-        this.resumeTerminal(sessionId);
+        const pending = this.pendingWrites.get(sessionId) ?? 0;
+        // Drain reduces counter by half (exponential decay) rather than resetting to 0.
+        // This prevents immediate re-trigger after resume.
+        const reduced = Math.floor(pending / 2);
+        this.pendingWrites.set(sessionId, reduced);
+        if (reduced < LOW_WATER_MARK) {
+          this.resumeTerminal(sessionId);
+        }
       }
     });
   }
@@ -133,7 +124,7 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
     this.connectedClients.delete(client.id);
   }
 
-  @SubscribeMessage('terminal:spawn')
+  @SubscribeMessage(TerminalEvents.SPAWN)
   handleSpawn(
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: TerminalSpawnPayload
@@ -154,12 +145,18 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
   }
 
   @SkipThrottle()
-  @SubscribeMessage('terminal:input')
+  @SubscribeMessage(TerminalEvents.INPUT)
   handleInput(
     @ConnectedSocket() _client: Socket,
     @MessageBody() payload: TerminalInputPayload
   ): void {
     const { sessionId, data } = payload;
+
+    // SessionId validation
+    if (!this.isValidSessionId(sessionId)) {
+      this.logger.warn(`[input] Invalid sessionId: ${sessionId}`);
+      return;
+    }
 
     // Payload validation
     if (typeof data !== 'string') {
@@ -201,12 +198,18 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
   }
 
   @SkipThrottle()
-  @SubscribeMessage('terminal:resize')
+  @SubscribeMessage(TerminalEvents.RESIZE)
   handleResize(
     @ConnectedSocket() _client: Socket,
     @MessageBody() payload: TerminalResizePayload
   ): void {
     const { sessionId, cols, rows } = payload;
+
+    // SessionId validation
+    if (!this.isValidSessionId(sessionId)) {
+      this.logger.warn(`[resize] Invalid sessionId: ${sessionId}`);
+      return;
+    }
 
     // Payload validation
     if (!Number.isInteger(cols) || !Number.isInteger(rows) || cols <= 0 || rows <= 0) {
@@ -220,12 +223,17 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
     }
   }
 
-  @SubscribeMessage('terminal:kill')
+  @SubscribeMessage(TerminalEvents.KILL)
   async handleKill(
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: TerminalKillPayload
   ): Promise<SuccessResponse> {
     const { sessionId } = payload;
+
+    if (!this.isValidSessionId(sessionId)) {
+      this.logger.warn(`[kill] Invalid sessionId: ${sessionId}`);
+      return { success: false, error: 'Invalid sessionId' };
+    }
 
     // Simplified: allow kill if session exists (no ownership check)
     if (this.terminalService.hasSession(sessionId)) {
@@ -244,12 +252,17 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
   }
 
   @SkipThrottle()
-  @SubscribeMessage('terminal:join')
+  @SubscribeMessage(TerminalEvents.JOIN)
   handleJoin(
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: TerminalJoinPayload
   ): TerminalJoinResponse {
     const { sessionId } = payload;
+
+    if (!this.isValidSessionId(sessionId)) {
+      this.logger.warn(`[join] Invalid sessionId: ${sessionId}`);
+      return { success: false, error: 'Invalid sessionId' };
+    }
 
     if (this.terminalService.hasSession(sessionId)) {
       client.join(`terminal:${sessionId}`);
@@ -269,7 +282,7 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
     return { success: false, error: `Terminal session ${sessionId} not found` };
   }
 
-  @OnEvent('terminal.output')
+  @OnEvent(InternalTerminalEvents.OUTPUT)
   handleTerminalOutput(event: TerminalOutputEvent): void {
     const room = `terminal:${event.sessionId}`;
     const payload = {
@@ -279,14 +292,14 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
 
     // Prefer using the server if available
     if (this.server) {
-      this.server.to(room).emit('terminal:output', payload);
+      this.server.to(room).emit(TerminalEvents.OUTPUT, payload);
     } else {
       // Fallback: emit directly to clients that own this session
       for (const [clientId, sessions] of this.clientSessions.entries()) {
         if (sessions.has(event.sessionId)) {
           const client = this.connectedClients.get(clientId);
           if (client) {
-            client.emit('terminal:output', payload);
+            client.emit(TerminalEvents.OUTPUT, payload);
           }
         }
       }
@@ -302,7 +315,7 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
     }
   }
 
-  @OnEvent('terminal.closed')
+  @OnEvent(InternalTerminalEvents.CLOSED)
   handleTerminalClosed(event: TerminalClosedEvent): void {
     const room = `terminal:${event.sessionId}`;
     const payload = {
@@ -316,7 +329,7 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
 
     // Prefer using the server if available
     if (this.server) {
-      this.server.to(room).emit('terminal:closed', payload);
+      this.server.to(room).emit(TerminalEvents.CLOSED, payload);
       return;
     }
 
@@ -325,7 +338,7 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
       if (sessions.has(event.sessionId)) {
         const client = this.connectedClients.get(clientId);
         if (client) {
-          client.emit('terminal:closed', payload);
+          client.emit(TerminalEvents.CLOSED, payload);
         }
       }
     }
@@ -334,15 +347,20 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
   /**
    * Handle cancel output request (sends SIGINT to terminal process)
    */
-  @SubscribeMessage('terminal:cancel')
+  @SubscribeMessage(TerminalEvents.CANCEL)
   handleCancel(
     @ConnectedSocket() _client: Socket,
     @MessageBody() payload: { sessionId: number }
-  ): { success: boolean } {
+  ): SuccessResponse {
     const { sessionId } = payload;
 
+    if (!this.isValidSessionId(sessionId)) {
+      this.logger.warn(`[cancel] Invalid sessionId: ${sessionId}`);
+      return { success: false, error: 'Invalid sessionId' };
+    }
+
     if (!this.terminalService.hasSession(sessionId)) {
-      return { success: false };
+      return { success: false, error: `Terminal session ${sessionId} not found` };
     }
 
     // Send Ctrl+C (SIGINT) to the process
@@ -371,7 +389,7 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
     // Emit backpressure event to the room
     const room = `terminal:${sessionId}`;
     if (this.server) {
-      this.server.to(room).emit('terminal:backpressure', { sessionId, paused: true });
+      this.server.to(room).emit(TerminalEvents.BACKPRESSURE, { sessionId, paused: true });
     }
 
     // Safety timeout: force-resume after 10s to prevent deadlock
@@ -407,7 +425,7 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
     // Emit backpressure cleared event to the room
     const room = `terminal:${sessionId}`;
     if (this.server) {
-      this.server.to(room).emit('terminal:backpressure', { sessionId, paused: false });
+      this.server.to(room).emit(TerminalEvents.BACKPRESSURE, { sessionId, paused: false });
     }
   }
 

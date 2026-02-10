@@ -2,139 +2,17 @@ import { Injectable, OnModuleDestroy } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import * as pty from 'node-pty';
 import * as os from 'os';
-import { TERM_PROGRAM, createLogger } from '@omniscribe/shared';
+import { TERM_PROGRAM, createLogger, normalizePath } from '@omniscribe/shared';
+import { InternalTerminalEvents } from '../shared/events';
+import { buildSafeEnv } from '../shared/env-utils';
 
 // Performance constants
-const OUTPUT_THROTTLE_MS = 4;
-const OUTPUT_BATCH_SIZE = 4096; // 4KB chunks
+const OUTPUT_THROTTLE_MS = 16; // ~1 frame at 60fps
+const OUTPUT_BATCH_SIZE = 16_384; // 16KB chunks
 const MAX_SCROLLBACK_SIZE = 50_000; // 50KB per terminal
 const MAX_OUTPUT_BUFFER_SIZE = 100_000; // 100KB cap
 const CHUNKED_WRITE_THRESHOLD = 1000;
 const CHUNK_SIZE = 100;
-
-// Environment variable allowlist for spawned terminal processes.
-// Only these variables are forwarded from the host process.env to child terminals.
-const ENV_ALLOWLIST: string[] = [
-  // Shell basics
-  'HOME',
-  'USER',
-  'LOGNAME',
-  'SHELL',
-  'LANG',
-  'LC_ALL',
-  'LC_CTYPE',
-  'LC_MESSAGES',
-  'LC_COLLATE',
-  'LC_MONETARY',
-  'LC_NUMERIC',
-  'LC_TIME',
-  // Path resolution
-  'PATH',
-  // Windows platform
-  'COMSPEC',
-  'SYSTEMROOT',
-  'SYSTEMDRIVE',
-  'WINDIR',
-  'APPDATA',
-  'LOCALAPPDATA',
-  'PROGRAMFILES',
-  'PROGRAMFILES(X86)',
-  'COMMONPROGRAMFILES',
-  'USERPROFILE',
-  // Temp directories
-  'TMPDIR',
-  'TMP',
-  'TEMP',
-  // macOS-specific
-  'COMMAND_MODE',
-  '__CF_USER_TEXT_ENCODING',
-  // Display (Linux/X11/Wayland)
-  'DISPLAY',
-  'WAYLAND_DISPLAY',
-  'XDG_RUNTIME_DIR',
-  'XDG_SESSION_TYPE',
-  'XDG_DATA_DIRS',
-  'XDG_CONFIG_DIRS',
-  'DBUS_SESSION_BUS_ADDRESS',
-  // SSH
-  'SSH_AUTH_SOCK',
-  'SSH_AGENT_PID',
-  // Development tools (version managers, package managers)
-  'NVM_DIR',
-  'NVM_BIN',
-  'NVM_INC',
-  'VOLTA_HOME',
-  'FNM_DIR',
-  'FNM_MULTISHELL_PATH',
-  'PNPM_HOME',
-  'BUN_INSTALL',
-  'GOPATH',
-  'GOROOT',
-  'CARGO_HOME',
-  'RUSTUP_HOME',
-  'PYENV_ROOT',
-  'RBENV_ROOT',
-  'ASDF_DIR',
-  'ASDF_DATA_DIR',
-  'HOMEBREW_PREFIX',
-  'HOMEBREW_CELLAR',
-  'HOMEBREW_REPOSITORY',
-  // Editor
-  'EDITOR',
-  'VISUAL',
-  'TERM',
-  'COLORTERM',
-  // Git
-  'GIT_EXEC_PATH',
-  'GIT_TEMPLATE_DIR',
-  // Proxy
-  'HTTP_PROXY',
-  'HTTPS_PROXY',
-  'NO_PROXY',
-  'ALL_PROXY',
-  'http_proxy',
-  'https_proxy',
-  'no_proxy',
-  'all_proxy',
-];
-
-// Patterns that must NEVER be passed to spawned processes, even if somehow in the allowlist.
-const ENV_BLOCKLIST_PATTERNS: RegExp[] = [
-  /^ELECTRON_/i,
-  /^NODE_OPTIONS$/i,
-  /^NODE_EXTRA_CA_CERTS$/i,
-  /SECRET/i,
-  /PASSWORD/i,
-  /TOKEN/i,
-  /CREDENTIAL/i,
-  /API_KEY/i,
-  /PRIVATE_KEY/i,
-];
-
-/**
- * Build a sanitized environment for spawned terminal processes.
- * Only allowlisted variables from process.env are included, and all variables
- * (including caller-provided extras) are filtered through the blocklist.
- */
-function buildSafeEnv(extra?: Record<string, string>): Record<string, string> {
-  const safeEnv: Record<string, string> = {};
-  for (const key of ENV_ALLOWLIST) {
-    const value = process.env[key];
-    if (value !== undefined && !ENV_BLOCKLIST_PATTERNS.some(p => p.test(key))) {
-      safeEnv[key] = value;
-    }
-  }
-  if (extra) {
-    // Extra env vars from callers (e.g., session-specific vars) are passed through
-    // but still filtered by blocklist
-    for (const [key, value] of Object.entries(extra)) {
-      if (!ENV_BLOCKLIST_PATTERNS.some(p => p.test(key))) {
-        safeEnv[key] = value;
-      }
-    }
-  }
-  return safeEnv;
-}
 
 interface PtySession {
   pty: pty.IPty;
@@ -189,7 +67,7 @@ export class TerminalService implements OnModuleDestroy {
    */
   private getShellArgs(shell: string): string[] {
     const shellName =
-      shell.toLowerCase().replace(/\\/g, '/').split('/').pop()?.replace('.exe', '') || '';
+      normalizePath(shell.toLowerCase()).split('/').pop()?.replace('.exe', '') || '';
 
     // PowerShell and cmd don't need --login
     if (shellName === 'powershell' || shellName === 'pwsh' || shellName === 'cmd') {
@@ -324,7 +202,7 @@ export class TerminalService implements OnModuleDestroy {
       this.logger.log(`[onExit] Session ${sessionId} exited (code=${exitCode}, signal=${signal})`);
 
       this.cleanup(sessionId);
-      this.eventEmitter.emit('terminal.closed', {
+      this.eventEmitter.emit(InternalTerminalEvents.CLOSED, {
         sessionId,
         externalId: session.externalId,
         exitCode,
@@ -524,6 +402,13 @@ export class TerminalService implements OnModuleDestroy {
     session.pty.resume();
     session.paused = false;
     this.logger.debug(`[resume] Resumed PTY for session ${sessionId}`);
+
+    // Restart flush if data accumulated during pause
+    if (session.outputBuffer.length > 0 && !session.flushTimer) {
+      session.flushTimer = setTimeout(() => {
+        this.flushOutput(sessionId);
+      }, OUTPUT_THROTTLE_MS);
+    }
   }
 
   /**
@@ -550,13 +435,19 @@ export class TerminalService implements OnModuleDestroy {
     const session = this.sessions.get(sessionId);
     if (!session) return;
 
+    // Stop flushing while paused — data stays in buffer until resume
+    if (session.paused) {
+      session.flushTimer = null;
+      return;
+    }
+
     if (session.outputBuffer.length > 0) {
       if (session.outputBuffer.length > OUTPUT_BATCH_SIZE) {
         // Send first chunk, reschedule for remainder
         const chunk = session.outputBuffer.slice(0, OUTPUT_BATCH_SIZE);
         session.outputBuffer = session.outputBuffer.slice(OUTPUT_BATCH_SIZE);
 
-        this.eventEmitter.emit('terminal.output', {
+        this.eventEmitter.emit(InternalTerminalEvents.OUTPUT, {
           sessionId,
           data: chunk,
         });
@@ -569,7 +460,7 @@ export class TerminalService implements OnModuleDestroy {
       }
 
       // Small enough to send all at once
-      this.eventEmitter.emit('terminal.output', {
+      this.eventEmitter.emit(InternalTerminalEvents.OUTPUT, {
         sessionId,
         data: session.outputBuffer,
       });
@@ -598,7 +489,7 @@ export class TerminalService implements OnModuleDestroy {
         clearTimeout(session.flushTimer);
         // Flush any remaining output before cleanup
         if (session.outputBuffer.length > 0) {
-          this.eventEmitter.emit('terminal.output', {
+          this.eventEmitter.emit(InternalTerminalEvents.OUTPUT, {
             sessionId,
             data: session.outputBuffer,
           });

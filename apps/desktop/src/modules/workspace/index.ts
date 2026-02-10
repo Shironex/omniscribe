@@ -1,4 +1,4 @@
-export * from './workspace.module';
-export * from './workspace.service';
-export * from './workspace.gateway';
-export * from './quick-action.service';
+export { WorkspaceModule } from './workspace.module';
+export { WorkspaceService, type WorkspaceState } from './workspace.service';
+export { WorkspaceGateway } from './workspace.gateway';
+export { QuickActionService, type QuickActionResult } from './quick-action.service';

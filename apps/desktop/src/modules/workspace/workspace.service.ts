@@ -1,12 +1,15 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import Store from 'electron-store';
 import {
   QuickAction,
   ProjectTabDTO,
   UserPreferences,
   WorkspaceStateResponse,
-  DEFAULT_WORKTREE_SETTINGS,
-  DEFAULT_SESSION_SETTINGS,
+  SessionHistoryEntry,
+  ActiveSessionSnapshot,
+  DEFAULT_PREFERENCES,
+  createLogger,
+  normalizePath,
 } from '@omniscribe/shared';
 
 // Re-export WorkspaceStateResponse as WorkspaceState for backward compatibility
@@ -20,6 +23,8 @@ interface StoreSchema {
   activeTabId: string | null;
   quickActions: QuickAction[];
   preferences: UserPreferences;
+  sessionHistory: SessionHistoryEntry[];
+  activeSessionsSnapshot: ActiveSessionSnapshot[];
   [key: string]: unknown;
 }
 
@@ -167,30 +172,48 @@ const DEFAULT_QUICK_ACTIONS: QuickAction[] = [
   },
 ];
 
-const DEFAULT_PREFERENCES: UserPreferences = {
-  theme: 'dark',
-  worktree: DEFAULT_WORKTREE_SETTINGS,
-  session: DEFAULT_SESSION_SETTINGS,
-};
-
 /**
  * Workspace service for managing persistent workspace state
  */
 @Injectable()
 export class WorkspaceService implements OnModuleInit {
-  private readonly logger = new Logger(WorkspaceService.name);
+  private readonly logger = createLogger('WorkspaceService');
   private store: Store<StoreSchema>;
 
   constructor() {
-    this.store = new Store<StoreSchema>({
-      name: 'workspace',
-      defaults: {
-        tabs: [],
-        activeTabId: null,
-        quickActions: DEFAULT_QUICK_ACTIONS,
-        preferences: DEFAULT_PREFERENCES,
-      },
-    });
+    try {
+      this.store = new Store<StoreSchema>({
+        name: 'workspace',
+        defaults: {
+          tabs: [],
+          activeTabId: null,
+          quickActions: DEFAULT_QUICK_ACTIONS,
+          preferences: DEFAULT_PREFERENCES,
+          sessionHistory: [],
+          activeSessionsSnapshot: [],
+        },
+      });
+    } catch (error) {
+      this.logger.error('Failed to initialize workspace store, resetting to defaults:', error);
+      // Corruption or schema mismatch — clear and retry
+      try {
+        this.store = new Store<StoreSchema>({
+          name: 'workspace',
+          clearInvalidConfig: true,
+          defaults: {
+            tabs: [],
+            activeTabId: null,
+            quickActions: DEFAULT_QUICK_ACTIONS,
+            preferences: DEFAULT_PREFERENCES,
+            sessionHistory: [],
+            activeSessionsSnapshot: [],
+          },
+        });
+      } catch (retryError) {
+        this.logger.error('Failed to initialize workspace store on retry:', retryError);
+        throw retryError;
+      }
+    }
   }
 
   /**
@@ -283,7 +306,7 @@ export class WorkspaceService implements OnModuleInit {
     const tabs = this.getTabs();
     // Check if project is already open
     const existingIndex = tabs.findIndex(
-      t => t.projectPath.replace(/\\/g, '/') === tab.projectPath.replace(/\\/g, '/')
+      t => normalizePath(t.projectPath) === normalizePath(tab.projectPath)
     );
 
     if (existingIndex !== -1) {
@@ -436,6 +459,94 @@ export class WorkspaceService implements OnModuleInit {
     const preferences = this.getPreferences();
     delete preferences[key];
     this.store.set('preferences', preferences);
+  }
+
+  // ============================================
+  // Session History Management
+  // ============================================
+
+  /** Maximum number of session history entries to retain */
+  private static readonly MAX_SESSION_HISTORY = 200;
+
+  /**
+   * Add a session history entry.
+   * Prunes oldest entries when exceeding MAX_SESSION_HISTORY.
+   */
+  addSessionHistory(entry: SessionHistoryEntry): void {
+    const history = this.store.get('sessionHistory', []);
+
+    // Avoid duplicates (same claudeSessionId)
+    const filtered = history.filter(h => h.claudeSessionId !== entry.claudeSessionId);
+
+    filtered.unshift(entry); // Newest first
+
+    // Prune to max entries
+    if (filtered.length > WorkspaceService.MAX_SESSION_HISTORY) {
+      filtered.length = WorkspaceService.MAX_SESSION_HISTORY;
+    }
+
+    this.store.set('sessionHistory', filtered);
+    this.logger.debug(
+      `Added session history entry for ${entry.claudeSessionId} (total: ${filtered.length})`
+    );
+  }
+
+  /**
+   * Get session history entries, optionally filtered by project path.
+   */
+  getSessionHistory(projectPath?: string): SessionHistoryEntry[] {
+    const history = this.store.get('sessionHistory', []);
+
+    if (projectPath) {
+      const normalizedPath = normalizePath(projectPath);
+      return history.filter(h => normalizePath(h.projectPath) === normalizedPath);
+    }
+
+    return history;
+  }
+
+  /**
+   * Update an existing session history entry by Claude session ID.
+   * Merges the provided partial updates into the existing entry.
+   */
+  updateSessionHistory(claudeSessionId: string, updates: Partial<SessionHistoryEntry>): void {
+    const history = this.store.get('sessionHistory', []);
+    const index = history.findIndex(h => h.claudeSessionId === claudeSessionId);
+
+    if (index === -1) {
+      this.logger.debug(`No session history entry found for ${claudeSessionId}`);
+      return;
+    }
+
+    history[index] = { ...history[index], ...updates };
+    this.store.set('sessionHistory', history);
+    this.logger.debug(`Updated session history entry for ${claudeSessionId}`);
+  }
+
+  // ============================================
+  // Active Sessions Snapshot (Auto-Resume)
+  // ============================================
+
+  /**
+   * Save a snapshot of currently active sessions for auto-resume on restart.
+   */
+  saveActiveSessionsSnapshot(sessions: ActiveSessionSnapshot[]): void {
+    this.store.set('activeSessionsSnapshot', sessions);
+    this.logger.debug(`Saved active sessions snapshot (${sessions.length} sessions)`);
+  }
+
+  /**
+   * Get the saved active sessions snapshot.
+   */
+  getActiveSessionsSnapshot(): ActiveSessionSnapshot[] {
+    return this.store.get('activeSessionsSnapshot', []);
+  }
+
+  /**
+   * Clear the active sessions snapshot (called after restore).
+   */
+  clearActiveSessionsSnapshot(): void {
+    this.store.set('activeSessionsSnapshot', []);
   }
 
   // ============================================

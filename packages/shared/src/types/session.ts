@@ -20,10 +20,7 @@ export type HealthLevel = 'healthy' | 'degraded' | 'failed';
 export type SessionStatus =
   | 'idle'
   | 'connecting'
-  | 'active'
   | 'thinking'
-  | 'executing'
-  | 'paused'
   | 'error'
   | 'disconnected'
   // MCP status values
@@ -51,12 +48,6 @@ export interface SessionConfig {
   /** Model identifier (e.g., 'claude-3-opus', 'gpt-4') */
   model?: string;
 
-  /** API key for the AI provider */
-  apiKey?: string;
-
-  /** Custom API endpoint */
-  apiEndpoint?: string;
-
   /** System prompt override */
   systemPrompt?: string;
 
@@ -71,12 +62,6 @@ export interface SessionConfig {
 
   /** Last activity timestamp */
   lastActiveAt: Date;
-
-  /** Auto-save interval in milliseconds */
-  autoSaveInterval?: number;
-
-  /** Enable MCP server connections */
-  mcpEnabled?: boolean;
 
   /** MCP server configurations for this session */
   mcpServers?: string[];
@@ -95,18 +80,8 @@ export interface SessionState {
   /** Error message if status is 'error' */
   errorMessage?: string;
 
-  /** Token usage for current session */
-  tokenUsage: {
-    input: number;
-    output: number;
-    total: number;
-  };
-
   /** Conversation history length */
   messageCount: number;
-
-  /** Active tool calls */
-  activeTools: string[];
 }
 
 /**
@@ -132,4 +107,81 @@ export interface UpdateSessionOptions {
   maxTokens?: number;
   temperature?: number;
   mcpServers?: string[];
+}
+
+// ============================================
+// Claude Code Session Tracking Types
+// ============================================
+
+/** Entry from Claude Code's sessions-index.json */
+export interface ClaudeSessionEntry {
+  sessionId: string;
+  fullPath: string;
+  fileMtime: number;
+  firstPrompt: string;
+  summary: string;
+  messageCount: number;
+  created: string;
+  modified: string;
+  gitBranch: string;
+  projectPath: string;
+  isSidechain: boolean;
+}
+
+/** Claude Code's sessions-index.json format */
+export interface ClaudeSessionsIndex {
+  version: number;
+  entries: ClaudeSessionEntry[];
+  originalPath?: string;
+}
+
+/** Omniscribe's persisted session history entry */
+export interface SessionHistoryEntry {
+  omniscribeSessionId: string;
+  claudeSessionId: string;
+  projectPath: string;
+  name: string;
+  lastStatus: string;
+  createdAt: string;
+  lastActiveAt: string;
+  branch?: string;
+  exitCode?: number;
+  summary?: string;
+}
+
+/**
+ * Extended session config with runtime state.
+ * Base shared type used by both backend and frontend.
+ * Each app may extend this with app-specific fields.
+ */
+export interface ExtendedSessionConfig extends SessionConfig {
+  /** Git branch assigned to this session */
+  branch?: string;
+  /** Git worktree path if using worktrees */
+  worktreePath?: string;
+  /** Project path for grouping sessions */
+  projectPath: string;
+  /** Current status of the session */
+  status: SessionStatus;
+  /** Status message for display */
+  statusMessage?: string;
+  /** Whether the session needs user input */
+  needsInputPrompt?: boolean;
+  /** Whether session was launched with skip-permissions mode */
+  skipPermissions?: boolean;
+  /** Terminal session ID if launched */
+  terminalSessionId?: number;
+  /** Claude Code session UUID captured after launch */
+  claudeSessionId?: string;
+  /** Whether this session was resumed from a previous Claude session */
+  isResumed?: boolean;
+}
+
+/**
+ * Result of launching a session
+ */
+export interface LaunchSessionResult {
+  success: boolean;
+  terminalSessionId?: number;
+  error?: string;
 }

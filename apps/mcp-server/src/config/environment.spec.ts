@@ -8,6 +8,12 @@ describe('loadEnvironmentConfig', () => {
     'OMNISCRIBE_INSTANCE_ID',
   ] as const;
 
+  beforeEach(() => {
+    for (const key of envKeys) {
+      delete process.env[key];
+    }
+  });
+
   afterEach(() => {
     for (const key of envKeys) {
       delete process.env[key];

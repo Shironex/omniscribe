@@ -1,9 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { QuickAction, createLogger } from '@omniscribe/shared';
-import { TerminalService } from '../terminal/terminal.service';
-import { GitService } from '../git/git.service';
-import { SessionService } from '../session/session.service';
+import { QuickAction, createLogger, extractErrorMessage } from '@omniscribe/shared';
+import { InternalQuickActionEvents } from '../shared/events';
+import { TerminalService } from '../terminal';
+import { GitService } from '../git';
+import { SessionService } from '../session';
 
 /**
  * Result of a quick action execution
@@ -90,7 +91,7 @@ export class QuickActionService {
           };
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      const errorMessage = extractErrorMessage(error, 'Unknown error occurred');
       this.logger.error(`Quick action failed: ${errorMessage}`, error);
 
       return {
@@ -127,7 +128,7 @@ export class QuickActionService {
     this.terminalService.write(terminalId, `${params.command}\n`);
 
     // Emit event for tracking
-    this.eventEmitter.emit('quickaction.executed', {
+    this.eventEmitter.emit(InternalQuickActionEvents.EXECUTED, {
       handler: 'terminal:execute',
       terminalId,
       command: params.command,
@@ -185,7 +186,7 @@ export class QuickActionService {
     this.terminalService.write(terminalId, `${commands}\n`);
 
     // Emit event for tracking
-    this.eventEmitter.emit('quickaction.executed', {
+    this.eventEmitter.emit(InternalQuickActionEvents.EXECUTED, {
       handler: 'git:commit-push',
       terminalId,
       repoPath,
@@ -232,7 +233,7 @@ export class QuickActionService {
     this.terminalService.write(terminalId, 'git pull\n');
 
     // Emit event for tracking
-    this.eventEmitter.emit('quickaction.executed', {
+    this.eventEmitter.emit(InternalQuickActionEvents.EXECUTED, {
       handler: 'git:pull',
       terminalId,
       repoPath,
@@ -275,7 +276,7 @@ export class QuickActionService {
       'Provide the fixes with clear explanations.';
 
     // Emit event to send prompt to AI session
-    this.eventEmitter.emit('quickaction.ai.prompt', {
+    this.eventEmitter.emit(InternalQuickActionEvents.AI_PROMPT, {
       sessionId,
       prompt,
       action: 'fix-errors',
@@ -334,7 +335,7 @@ export class QuickActionService {
     }
 
     // Emit event to send prompt to AI session
-    this.eventEmitter.emit('quickaction.ai.prompt', {
+    this.eventEmitter.emit(InternalQuickActionEvents.AI_PROMPT, {
       sessionId,
       prompt,
       action: 'explain',

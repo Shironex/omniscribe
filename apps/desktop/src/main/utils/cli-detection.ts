@@ -14,9 +14,8 @@ export type CLITool = (typeof CLI_TOOLS)[number];
  * Check if a CLI tool is available in PATH
  */
 export async function checkCliAvailable(tool: CLITool): Promise<boolean> {
-  const { execSync } = await import('child_process');
   try {
-    execSync(`${tool} --version`, { stdio: 'ignore' });
+    await execAsync(`${tool} --version`);
     return true;
   } catch {
     return false;

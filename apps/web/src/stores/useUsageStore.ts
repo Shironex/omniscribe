@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import type { ClaudeUsage, UsageStatus, UsageError } from '@omniscribe/shared';
-import { createLogger } from '@omniscribe/shared';
+import { createLogger, UsageEvents } from '@omniscribe/shared';
 import { socket } from '@/lib/socket';
 import { emitAsync } from '@/lib/socketHelpers';
 
@@ -12,6 +12,9 @@ const USAGE_POLLING_INTERVAL = 15 * 60 * 1000;
 
 /** Data is considered stale after 2 minutes */
 const STALE_THRESHOLD = 2 * 60 * 1000;
+
+/** Module-level polling interval ID (non-serializable, kept out of reactive state) */
+let pollingIntervalId: ReturnType<typeof setInterval> | null = null;
 
 interface UsageState {
   /** Claude usage data */
@@ -28,8 +31,6 @@ interface UsageState {
   workingDir: string | null;
   /** Whether polling is enabled */
   pollingEnabled: boolean;
-  /** Polling interval ID */
-  pollingIntervalId: ReturnType<typeof setInterval> | null;
 }
 
 interface UsageActions {
@@ -62,7 +63,6 @@ export const useUsageStore = create<UsageStore>()(
       lastFetched: null,
       workingDir: null,
       pollingEnabled: false,
-      pollingIntervalId: null,
 
       // Actions
       fetchUsage: async (workingDir?: string) => {
@@ -90,7 +90,7 @@ export const useUsageStore = create<UsageStore>()(
           const response = await emitAsync<
             { workingDir: string },
             { usage?: ClaudeUsage; error?: UsageError; message?: string }
-          >('usage:fetch', { workingDir: dir }, { timeout: 60000 });
+          >(UsageEvents.FETCH, { workingDir: dir }, { timeout: 60000 });
 
           if (response.error) {
             logger.warn('Usage fetch error:', response.error, response.message);
@@ -136,10 +136,9 @@ export const useUsageStore = create<UsageStore>()(
       },
 
       startPolling: () => {
-        const state = get();
-
-        // Already polling
-        if (state.pollingIntervalId) {
+        // Already polling — ensure state is synced (handles devtools time-travel)
+        if (pollingIntervalId) {
+          set({ pollingEnabled: true }, undefined, 'usage/startPolling');
           return;
         }
 
@@ -151,29 +150,25 @@ export const useUsageStore = create<UsageStore>()(
 
         logger.info('Starting usage polling');
         // Fetch immediately
-        state.fetchUsage();
+        get().fetchUsage();
 
         // Set up interval
-        const intervalId = setInterval(() => {
+        pollingIntervalId = setInterval(() => {
           get().fetchUsage();
         }, USAGE_POLLING_INTERVAL);
 
-        set(
-          { pollingEnabled: true, pollingIntervalId: intervalId },
-          undefined,
-          'usage/startPolling'
-        );
+        set({ pollingEnabled: true }, undefined, 'usage/startPolling');
       },
 
       stopPolling: () => {
         logger.info('Stopping usage polling');
-        const state = get();
 
-        if (state.pollingIntervalId) {
-          clearInterval(state.pollingIntervalId);
+        if (pollingIntervalId) {
+          clearInterval(pollingIntervalId);
+          pollingIntervalId = null;
         }
 
-        set({ pollingEnabled: false, pollingIntervalId: null }, undefined, 'usage/stopPolling');
+        set({ pollingEnabled: false }, undefined, 'usage/stopPolling');
       },
 
       isStale: () => {
@@ -189,11 +184,10 @@ export const useUsageStore = create<UsageStore>()(
       },
 
       clear: () => {
-        const state = get();
-
         // Stop polling if active
-        if (state.pollingIntervalId) {
-          clearInterval(state.pollingIntervalId);
+        if (pollingIntervalId) {
+          clearInterval(pollingIntervalId);
+          pollingIntervalId = null;
         }
 
         set(
@@ -204,7 +198,6 @@ export const useUsageStore = create<UsageStore>()(
             errorMessage: null,
             lastFetched: null,
             pollingEnabled: false,
-            pollingIntervalId: null,
           },
           undefined,
           'usage/clear'

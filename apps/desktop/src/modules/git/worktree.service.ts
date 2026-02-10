@@ -10,6 +10,7 @@ import {
   WORKTREES_DIR,
   APP_NAME_LOWER,
   createLogger,
+  normalizePath,
 } from '@omniscribe/shared';
 import { GitBaseService } from './git-base.service';
 
@@ -223,18 +224,47 @@ export class WorktreeService {
       }
     }
 
+    // Defensive check: verify the worktree directory was actually created
+    try {
+      await fs.access(worktreePath);
+    } catch {
+      throw new Error(
+        `Worktree directory was not created at ${worktreePath}. ` +
+          `The git worktree add command may have failed silently for branch "${branch}".`
+      );
+    }
+
     return worktreePath;
+  }
+
+  /**
+   * Validate that a worktree path is within Omniscribe-managed directories.
+   * Prevents arbitrary path deletion via fs.rm().
+   */
+  private validateWorktreePath(projectPath: string, worktreePath: string): void {
+    const resolved = path.resolve(worktreePath);
+    const allowedProjectDir = path.resolve(projectPath, PROJECT_WORKTREE_DIR) + path.sep;
+    const allowedCentralDir = path.resolve(CENTRAL_DIR) + path.sep;
+
+    if (!resolved.startsWith(allowedProjectDir) && !resolved.startsWith(allowedCentralDir)) {
+      throw new Error(
+        'Worktree path is outside of managed directories. ' +
+          'Path must be within the project .worktrees/ directory or the central worktree directory.'
+      );
+    }
   }
 
   /**
    * Clean up a worktree
    */
   async cleanup(projectPath: string, worktreePath: string): Promise<void> {
+    this.validateWorktreePath(projectPath, worktreePath);
     this.logger.info(`Cleaning up worktree at ${worktreePath}`);
     // Remove the worktree
     try {
       await this.gitBase.execGit(projectPath, ['worktree', 'remove', worktreePath, '--force']);
-    } catch {
+    } catch (error) {
+      this.logger.warn(`git worktree remove failed for ${worktreePath}: ${error}`);
       // If git worktree remove fails, try manual cleanup
       try {
         await fs.rm(worktreePath, { recursive: true, force: true });
@@ -303,12 +333,12 @@ export class WorktreeService {
    */
   async cleanupAll(projectPath: string): Promise<void> {
     const worktrees = await this.list(projectPath);
-    const projectWorktreeDir = path.join(projectPath, PROJECT_WORKTREE_DIR).replace(/\\/g, '/');
+    const projectWorktreeDir = normalizePath(path.join(projectPath, PROJECT_WORKTREE_DIR));
 
     for (const worktree of worktrees) {
       // Normalize path separators for cross-platform comparison
-      const normalizedPath = worktree.path.replace(/\\/g, '/');
-      const normalizedCentralDir = CENTRAL_DIR.replace(/\\/g, '/');
+      const normalizedPath = normalizePath(worktree.path);
+      const normalizedCentralDir = normalizePath(CENTRAL_DIR);
 
       // Only clean up worktrees managed by Omniscribe (in .worktrees/ or central dir)
       const isProjectWorktree = normalizedPath.startsWith(projectWorktreeDir);

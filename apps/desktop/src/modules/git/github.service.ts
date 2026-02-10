@@ -1,10 +1,15 @@
 import { Injectable } from '@nestjs/common';
-import { execFile, ExecException, execSync } from 'child_process';
+import { execFile, ExecException } from 'child_process';
 import { promisify } from 'util';
 import { existsSync } from 'fs';
 import { homedir } from 'os';
 import { join } from 'path';
-import { GH_TIMEOUT_MS, createLogger } from '@omniscribe/shared';
+import {
+  GH_TIMEOUT_MS,
+  createLogger,
+  normalizePath,
+  extractErrorMessage,
+} from '@omniscribe/shared';
 import type {
   GhCliStatus,
   GhCliAuthStatus,
@@ -18,6 +23,7 @@ import type {
   ListIssuesOptions,
   RepoInfo,
 } from '@omniscribe/shared';
+import type { ExecResult } from './git-base.service';
 
 const execFileAsync = promisify(execFile);
 
@@ -30,21 +36,9 @@ const GH_ENV: Record<string, string> = {
   NO_COLOR: '1',
 };
 
-interface ExecResult {
-  stdout: string;
-  stderr: string;
-}
-
 interface CliDetectionResult {
   cliPath?: string;
   method: GhCliDetectionMethod | 'none';
-}
-
-/**
- * Normalize path separators
- */
-function normalizePath(path: string): string {
-  return path.replace(/\\/g, '/');
 }
 
 /**
@@ -220,7 +214,7 @@ export class GithubService {
       return { authenticated: false };
     } catch (error) {
       // gh auth status returns non-zero exit code when not logged in
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage = extractErrorMessage(error);
 
       // Check if the error message indicates not logged in vs actual error
       if (
@@ -309,19 +303,6 @@ export class GithubService {
   }
 
   /**
-   * Check if gh CLI is available (quick synchronous check)
-   */
-  isAvailable(): boolean {
-    try {
-      const command = process.platform === 'win32' ? 'where gh' : 'which gh';
-      execSync(command, { stdio: 'ignore' });
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
-  /**
    * Check if repository has a GitHub remote
    */
   async hasGitHubRemote(repoPath: string): Promise<boolean> {
@@ -392,25 +373,7 @@ export class GithubService {
     }
 
     const data = JSON.parse(stdout);
-    return data.map((pr: Record<string, unknown>) => ({
-      number: pr.number,
-      title: pr.title,
-      body: pr.body || undefined,
-      state: (pr.state === 'MERGED'
-        ? 'merged'
-        : (pr.state as string).toLowerCase()) as PullRequestState,
-      author: {
-        login: (pr.author as Record<string, unknown>)?.login || 'unknown',
-        name: (pr.author as Record<string, unknown>)?.name,
-      },
-      url: pr.url,
-      headRefName: pr.headRefName,
-      baseRefName: pr.baseRefName,
-      isDraft: pr.isDraft || false,
-      createdAt: pr.createdAt,
-      updatedAt: pr.updatedAt,
-      mergedAt: pr.mergedAt || undefined,
-    }));
+    return data.map((pr: Record<string, unknown>) => this.mapPullRequest(pr));
   }
 
   /**
@@ -448,24 +411,7 @@ export class GithubService {
     const { stdout } = await this.execGh(repoPath, args);
     const data = JSON.parse(stdout);
 
-    return {
-      number: data.number,
-      title: data.title,
-      body: data.body || undefined,
-      state: (data.state === 'MERGED'
-        ? 'merged'
-        : (data.state as string).toLowerCase()) as PullRequestState,
-      author: {
-        login: data.author?.login || 'unknown',
-        name: data.author?.name,
-      },
-      url: data.url,
-      headRefName: data.headRefName,
-      baseRefName: data.baseRefName,
-      isDraft: data.isDraft || false,
-      createdAt: data.createdAt,
-      updatedAt: data.updatedAt,
-    };
+    return this.mapPullRequest(data);
   }
 
   /**
@@ -498,24 +444,7 @@ export class GithubService {
     }
 
     const data = JSON.parse(stdout);
-    return data.map((issue: Record<string, unknown>) => ({
-      number: issue.number,
-      title: issue.title,
-      body: issue.body || undefined,
-      state: (issue.state as string).toLowerCase() as IssueState,
-      author: {
-        login: (issue.author as Record<string, unknown>)?.login || 'unknown',
-        name: (issue.author as Record<string, unknown>)?.name,
-      },
-      url: issue.url,
-      labels: ((issue.labels as Array<Record<string, unknown>>) || []).map(label => ({
-        name: label.name as string,
-        color: label.color as string | undefined,
-      })),
-      createdAt: issue.createdAt,
-      updatedAt: issue.updatedAt,
-      closedAt: issue.closedAt || undefined,
-    }));
+    return data.map((issue: Record<string, unknown>) => this.mapIssue(issue));
   }
 
   /**
@@ -532,25 +461,7 @@ export class GithubService {
       ]);
 
       const data = JSON.parse(stdout);
-      return {
-        number: data.number,
-        title: data.title,
-        body: data.body || undefined,
-        state: (data.state === 'MERGED'
-          ? 'merged'
-          : (data.state as string).toLowerCase()) as PullRequestState,
-        author: {
-          login: data.author?.login || 'unknown',
-          name: data.author?.name,
-        },
-        url: data.url,
-        headRefName: data.headRefName,
-        baseRefName: data.baseRefName,
-        isDraft: data.isDraft || false,
-        createdAt: data.createdAt,
-        updatedAt: data.updatedAt,
-        mergedAt: data.mergedAt || undefined,
-      };
+      return this.mapPullRequest(data);
     } catch (error) {
       this.logger.debug(`Failed to get PR #${prNumber}:`, error);
       return null;
@@ -571,27 +482,59 @@ export class GithubService {
       ]);
 
       const data = JSON.parse(stdout);
-      return {
-        number: data.number,
-        title: data.title,
-        body: data.body || undefined,
-        state: (data.state as string).toLowerCase() as IssueState,
-        author: {
-          login: data.author?.login || 'unknown',
-          name: data.author?.name,
-        },
-        url: data.url,
-        labels: (data.labels || []).map((label: Record<string, unknown>) => ({
-          name: label.name as string,
-          color: label.color as string | undefined,
-        })),
-        createdAt: data.createdAt,
-        updatedAt: data.updatedAt,
-        closedAt: data.closedAt || undefined,
-      };
+      return this.mapIssue(data);
     } catch (error) {
       this.logger.debug(`Failed to get issue #${issueNumber}:`, error);
       return null;
     }
+  }
+
+  /**
+   * Map raw gh CLI JSON output to a typed PullRequest object
+   */
+  private mapPullRequest(pr: Record<string, unknown>): PullRequest {
+    return {
+      number: pr.number as number,
+      title: pr.title as string,
+      body: (pr.body as string) || undefined,
+      state: (pr.state === 'MERGED'
+        ? 'merged'
+        : (pr.state as string).toLowerCase()) as PullRequestState,
+      author: {
+        login: ((pr.author as Record<string, unknown>)?.login as string) || 'unknown',
+        name: (pr.author as Record<string, unknown>)?.name as string | undefined,
+      },
+      url: pr.url as string,
+      headRefName: pr.headRefName as string,
+      baseRefName: pr.baseRefName as string,
+      isDraft: (pr.isDraft as boolean) || false,
+      createdAt: pr.createdAt as string,
+      updatedAt: pr.updatedAt as string,
+      mergedAt: (pr.mergedAt as string) || undefined,
+    };
+  }
+
+  /**
+   * Map raw gh CLI JSON output to a typed Issue object
+   */
+  private mapIssue(issue: Record<string, unknown>): Issue {
+    return {
+      number: issue.number as number,
+      title: issue.title as string,
+      body: (issue.body as string) || undefined,
+      state: (issue.state as string).toLowerCase() as IssueState,
+      author: {
+        login: ((issue.author as Record<string, unknown>)?.login as string) || 'unknown',
+        name: (issue.author as Record<string, unknown>)?.name as string | undefined,
+      },
+      url: issue.url as string,
+      labels: ((issue.labels as Array<Record<string, unknown>>) || []).map(label => ({
+        name: label.name as string,
+        color: label.color as string | undefined,
+      })),
+      createdAt: issue.createdAt as string,
+      updatedAt: issue.updatedAt as string,
+      closedAt: (issue.closedAt as string) || undefined,
+    };
   }
 }

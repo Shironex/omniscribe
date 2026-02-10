@@ -7,12 +7,11 @@ import { BranchAutocomplete } from '@/components/shared/BranchAutocomplete';
 import { ClaudeIcon } from '@/components/shared/ClaudeIcon';
 import { getPrelaunchShortcutForIndex } from '@/lib/prelaunch-shortcuts';
 import { Button } from '@/components/ui/button';
-
-export type AIMode = 'claude' | 'plain';
+import type { AiMode } from '@omniscribe/shared';
 
 export interface PreLaunchSlot {
   id: string;
-  aiMode: AIMode;
+  aiMode: AiMode;
   branch: string;
   shortcutKey: string;
 }
@@ -32,7 +31,7 @@ interface PreLaunchBarProps {
 }
 
 interface AIModeOption {
-  value: AIMode;
+  value: AiMode;
   label: string;
   icon: ComponentType<{ size?: string | number; className?: string }>;
   color: string;

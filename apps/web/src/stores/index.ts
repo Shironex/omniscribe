@@ -8,3 +8,4 @@ export * from './useSettingsStore';
 export * from './useUsageStore';
 export * from './useUpdateStore';
 export * from './useConnectionStore';
+export * from './useSessionHistoryStore';

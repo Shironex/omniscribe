@@ -1,6 +1,6 @@
 {
   "name": "@omniscribe/shared",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "private": true,
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -15,10 +15,16 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "jest",
+    "test:cov": "jest --coverage",
+    "test:watch": "jest --watch"
   },
   "devDependencies": {
+    "@types/jest": "^30.0.0",
     "@types/node": "^25.2.1",
+    "jest": "^30.0.0",
+    "ts-jest": "^29.4.0",
     "typescript": "^5.5.0"
   }
 }

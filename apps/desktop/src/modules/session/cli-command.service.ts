@@ -13,6 +13,12 @@ export interface CliSessionContext {
   model?: string;
   systemPrompt?: string;
   skipPermissions?: boolean;
+  /** Claude Code session UUID to resume (passes --resume flag) */
+  resumeSessionId?: string;
+  /** Claude Code session UUID to fork (passes --resume + --fork-session flags) */
+  forkSessionId?: string;
+  /** Whether to continue the most recent session (passes --continue flag) */
+  continueLastSession?: boolean;
 }
 
 /**
@@ -68,19 +74,32 @@ export class CliCommandService {
       args.push('--dangerously-skip-permissions');
     }
 
+    // Add continue flag for continuing the most recent session (mutually exclusive with --resume)
+    if (session.continueLastSession) {
+      args.push('--continue');
+    }
+    // Add resume flag if resuming a previous session (primary action flag, before --model)
+    else if (session.forkSessionId) {
+      args.push('--resume', session.forkSessionId, '--fork-session');
+    } else if (session.resumeSessionId) {
+      args.push('--resume', session.resumeSessionId);
+    }
+
     // Add model flag if specified
     if (session.model) {
       args.push('--model', session.model);
     }
 
-    // Add system prompt if specified (replaces default)
-    if (session.systemPrompt) {
-      args.push('--system-prompt', session.systemPrompt);
-    }
+    // Skip system prompt flags when resuming/forking/continuing — the session already has its prompts
+    if (!session.resumeSessionId && !session.forkSessionId && !session.continueLastSession) {
+      // Add system prompt if specified (replaces default)
+      if (session.systemPrompt) {
+        args.push('--system-prompt', session.systemPrompt);
+      }
 
-    // Append Omniscribe status reporting instructions
-    // This adds to the default system prompt without replacing it
-    const omniscribePrompt = `
+      // Append Omniscribe status reporting instructions
+      // This adds to the default system prompt without replacing it
+      const omniscribePrompt = `
 ## Omniscribe Integration
 
 You have access to the Omniscribe MCP server which keeps the Omniscribe UI in sync with your progress. Use these tools proactively:
@@ -101,7 +120,8 @@ You have access to the Omniscribe MCP server which keeps the Omniscribe UI in sy
 Call these tools at the start and end of every user request, and at each meaningful transition in between.
 `.trim();
 
-    args.push('--append-system-prompt', omniscribePrompt);
+      args.push('--append-system-prompt', omniscribePrompt);
+    }
 
     // Find the Claude CLI command with proper path resolution
     // This is needed on all platforms because Electron doesn't inherit the user's shell PATH

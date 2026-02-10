@@ -4,9 +4,11 @@ import {
   SubscribeMessage,
   MessageBody,
   ConnectedSocket,
+  OnGatewayInit,
 } from '@nestjs/websockets';
 import { UseGuards } from '@nestjs/common';
 import { SkipThrottle } from '@nestjs/throttler';
+import * as path from 'path';
 import { Server, Socket } from 'socket.io';
 import { WsThrottlerGuard } from '../shared/ws-throttler.guard';
 import { GitService } from './git.service';
@@ -18,12 +20,14 @@ import {
   GitCheckoutPayload,
   GitCreateBranchPayload,
   GitCurrentBranchPayload,
+  GitWorktreesPayload,
+  GitWorktreeCleanupPayload,
   GitBranchesResponse,
   GitCommitsResponse,
   GitCheckoutResponse,
   GitCreateBranchResponse,
   GitCurrentBranchResponse,
-  WorktreeInfo,
+  GitWorktreesResponse,
   SuccessResponse,
   GithubStatusPayload,
   GithubStatusResponse,
@@ -39,39 +43,19 @@ import {
   GithubIssuesResponse,
   GithubGetIssuePayload,
   GithubIssueResponse,
+  GitEvents,
+  GithubEvents,
+  MAX_PATH_LENGTH,
   createLogger,
+  extractErrorMessage,
 } from '@omniscribe/shared';
 import { CORS_CONFIG } from '../shared/cors.config';
-
-/**
- * Payload for listing worktrees
- */
-interface GitWorktreesPayload {
-  projectPath: string;
-}
-
-/**
- * Payload for cleaning up a worktree
- */
-interface GitWorktreeCleanupPayload {
-  projectPath: string;
-  worktreePath: string;
-}
-
-/**
- * Response for worktrees list
- */
-interface GitWorktreesResponse {
-  worktrees: WorktreeInfo[];
-  error?: string;
-}
 
 @UseGuards(WsThrottlerGuard)
 @WebSocketGateway({
   cors: CORS_CONFIG,
-  namespace: '/',
 })
-export class GitGateway {
+export class GitGateway implements OnGatewayInit {
   private readonly logger = createLogger('GitGateway');
 
   @WebSocketServer()
@@ -83,20 +67,42 @@ export class GitGateway {
     private readonly githubService: GithubService
   ) {}
 
+  afterInit(): void {
+    this.logger.log('Initialized');
+  }
+
+  /**
+   * Validate that a path is a non-empty absolute string within length limits.
+   * Returns an error message string if invalid, or null if valid.
+   */
+  private validatePath(value: unknown, label = 'projectPath'): string | null {
+    if (!value || typeof value !== 'string') {
+      return `Invalid ${label}: must be a non-empty string`;
+    }
+    if (value.length > MAX_PATH_LENGTH) {
+      return `${label} exceeds maximum length of ${MAX_PATH_LENGTH} characters`;
+    }
+    if (!path.isAbsolute(value)) {
+      return `Invalid ${label}: must be an absolute path`;
+    }
+    return null;
+  }
+
   @SkipThrottle()
-  @SubscribeMessage('git:branches')
+  @SubscribeMessage(GitEvents.BRANCHES)
   async handleBranches(
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: GitBranchesPayload
   ): Promise<GitBranchesResponse> {
     try {
       const { projectPath } = payload;
+      const pathError = this.validatePath(projectPath);
 
-      if (!projectPath) {
+      if (pathError) {
         return {
           branches: [],
           currentBranch: '',
-          error: 'Project path is required',
+          error: pathError,
         };
       }
 
@@ -113,7 +119,7 @@ export class GitGateway {
         currentBranch,
       };
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
+      const message = extractErrorMessage(error, 'Unknown error');
       this.logger.error(`Error fetching branches: ${message}`);
 
       return {
@@ -125,18 +131,19 @@ export class GitGateway {
   }
 
   @SkipThrottle()
-  @SubscribeMessage('git:commits')
+  @SubscribeMessage(GitEvents.COMMITS)
   async handleCommits(
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: GitCommitsPayload
   ): Promise<GitCommitsResponse> {
     try {
       const { projectPath, limit = 50, allBranches = true } = payload;
+      const pathError = this.validatePath(projectPath);
 
-      if (!projectPath) {
+      if (pathError) {
         return {
           commits: [],
-          error: 'Project path is required',
+          error: pathError,
         };
       }
 
@@ -149,7 +156,7 @@ export class GitGateway {
         commits,
       };
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
+      const message = extractErrorMessage(error, 'Unknown error');
       this.logger.error(`Error fetching commits: ${message}`);
 
       return {
@@ -159,18 +166,23 @@ export class GitGateway {
     }
   }
 
-  @SubscribeMessage('git:checkout')
+  @SubscribeMessage(GitEvents.CHECKOUT)
   async handleCheckout(
     @ConnectedSocket() _client: Socket,
     @MessageBody() payload: GitCheckoutPayload
   ): Promise<GitCheckoutResponse> {
     try {
       const { projectPath, branch } = payload;
+      const pathError = this.validatePath(projectPath);
 
-      if (!projectPath || !branch) {
+      if (pathError) {
+        return { success: false, error: pathError };
+      }
+
+      if (!branch) {
         return {
           success: false,
-          error: 'Project path and branch are required',
+          error: 'Branch is required',
         };
       }
 
@@ -178,7 +190,7 @@ export class GitGateway {
       const currentBranch = await this.gitService.getCurrentBranch(projectPath);
 
       // Notify all clients watching this project
-      this.server.to(`git:${projectPath}`).emit('git:branches', {
+      this.server.to(`git:${projectPath}`).emit(GitEvents.BRANCHES, {
         projectPath,
         currentBranch,
       });
@@ -188,7 +200,7 @@ export class GitGateway {
         currentBranch,
       };
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
+      const message = extractErrorMessage(error, 'Unknown error');
       this.logger.error(`Error checking out branch: ${message}`);
 
       return {
@@ -198,18 +210,23 @@ export class GitGateway {
     }
   }
 
-  @SubscribeMessage('git:create-branch')
+  @SubscribeMessage(GitEvents.CREATE_BRANCH)
   async handleCreateBranch(
     @ConnectedSocket() _client: Socket,
     @MessageBody() payload: GitCreateBranchPayload
   ): Promise<GitCreateBranchResponse> {
     try {
       const { projectPath, name, startPoint } = payload;
+      const pathError = this.validatePath(projectPath);
 
-      if (!projectPath || !name) {
+      if (pathError) {
+        return { success: false, error: pathError };
+      }
+
+      if (!name) {
         return {
           success: false,
-          error: 'Project path and branch name are required',
+          error: 'Branch name is required',
         };
       }
 
@@ -220,7 +237,7 @@ export class GitGateway {
       const newBranch = branches.find(b => b.name === name);
 
       // Notify all clients watching this project
-      this.server.to(`git:${projectPath}`).emit('git:branches', {
+      this.server.to(`git:${projectPath}`).emit(GitEvents.BRANCHES, {
         projectPath,
         branches,
         currentBranch: name,
@@ -231,7 +248,7 @@ export class GitGateway {
         branch: newBranch,
       };
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
+      const message = extractErrorMessage(error, 'Unknown error');
       this.logger.error(`Error creating branch: ${message}`);
 
       return {
@@ -242,18 +259,19 @@ export class GitGateway {
   }
 
   @SkipThrottle()
-  @SubscribeMessage('git:current-branch')
+  @SubscribeMessage(GitEvents.CURRENT_BRANCH)
   async handleCurrentBranch(
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: GitCurrentBranchPayload
   ): Promise<GitCurrentBranchResponse> {
     try {
       const { projectPath } = payload;
+      const pathError = this.validatePath(projectPath);
 
-      if (!projectPath) {
+      if (pathError) {
         return {
           currentBranch: '',
-          error: 'Project path is required',
+          error: pathError,
         };
       }
 
@@ -266,7 +284,7 @@ export class GitGateway {
         currentBranch,
       };
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
+      const message = extractErrorMessage(error, 'Unknown error');
       this.logger.error(`Error getting current branch: ${message}`);
 
       return {
@@ -277,18 +295,19 @@ export class GitGateway {
   }
 
   @SkipThrottle()
-  @SubscribeMessage('git:worktrees')
+  @SubscribeMessage(GitEvents.WORKTREES)
   async handleWorktrees(
     @ConnectedSocket() _client: Socket,
     @MessageBody() payload: GitWorktreesPayload
   ): Promise<GitWorktreesResponse> {
     try {
       const { projectPath } = payload;
+      const pathError = this.validatePath(projectPath);
 
-      if (!projectPath) {
+      if (pathError) {
         return {
           worktrees: [],
-          error: 'Project path is required',
+          error: pathError,
         };
       }
 
@@ -298,7 +317,7 @@ export class GitGateway {
         worktrees,
       };
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
+      const message = extractErrorMessage(error, 'Unknown error');
       this.logger.error(`Error listing worktrees: ${message}`);
 
       return {
@@ -308,19 +327,23 @@ export class GitGateway {
     }
   }
 
-  @SubscribeMessage('git:worktree:cleanup')
+  @SubscribeMessage(GitEvents.WORKTREE_CLEANUP)
   async handleWorktreeCleanup(
     @ConnectedSocket() _client: Socket,
     @MessageBody() payload: GitWorktreeCleanupPayload
   ): Promise<SuccessResponse> {
     try {
       const { projectPath, worktreePath } = payload;
+      const projectPathError = this.validatePath(projectPath);
 
-      if (!projectPath || !worktreePath) {
-        return {
-          success: false,
-          error: 'Project path and worktree path are required',
-        };
+      if (projectPathError) {
+        return { success: false, error: projectPathError };
+      }
+
+      const worktreePathError = this.validatePath(worktreePath, 'worktreePath');
+
+      if (worktreePathError) {
+        return { success: false, error: worktreePathError };
       }
 
       await this.worktreeService.cleanup(projectPath, worktreePath);
@@ -329,7 +352,7 @@ export class GitGateway {
         success: true,
       };
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
+      const message = extractErrorMessage(error, 'Unknown error');
       this.logger.error(`Error cleaning up worktree: ${message}`);
 
       return {
@@ -344,7 +367,7 @@ export class GitGateway {
   // ============================================
 
   @SkipThrottle()
-  @SubscribeMessage('github:status')
+  @SubscribeMessage(GithubEvents.STATUS)
   async handleGithubStatus(
     @ConnectedSocket() _client: Socket,
     @MessageBody() payload: GithubStatusPayload
@@ -360,7 +383,7 @@ export class GitGateway {
         status,
       };
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
+      const message = extractErrorMessage(error, 'Unknown error');
       this.logger.error(`Error getting GitHub CLI status: ${message}`);
 
       return {
@@ -376,18 +399,19 @@ export class GitGateway {
   }
 
   @SkipThrottle()
-  @SubscribeMessage('github:repo-info')
+  @SubscribeMessage(GithubEvents.REPO_INFO)
   async handleGithubRepoInfo(
     @ConnectedSocket() _client: Socket,
     @MessageBody() payload: GithubProjectPayload
   ): Promise<GithubRepoInfoResponse> {
     try {
       const { projectPath } = payload;
+      const pathError = this.validatePath(projectPath);
 
-      if (!projectPath) {
+      if (pathError) {
         return {
           repo: null,
-          error: 'Project path is required',
+          error: pathError,
         };
       }
 
@@ -397,7 +421,7 @@ export class GitGateway {
         repo,
       };
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
+      const message = extractErrorMessage(error, 'Unknown error');
       this.logger.error(`Error getting repo info: ${message}`);
 
       return {
@@ -408,18 +432,19 @@ export class GitGateway {
   }
 
   @SkipThrottle()
-  @SubscribeMessage('github:prs')
+  @SubscribeMessage(GithubEvents.PRS)
   async handleGithubPRs(
     @ConnectedSocket() _client: Socket,
     @MessageBody() payload: GithubListPRsPayload
   ): Promise<GithubPRsResponse> {
     try {
       const { projectPath, state, limit } = payload;
+      const pathError = this.validatePath(projectPath);
 
-      if (!projectPath) {
+      if (pathError) {
         return {
           pullRequests: [],
-          error: 'Project path is required',
+          error: pathError,
         };
       }
 
@@ -429,7 +454,7 @@ export class GitGateway {
         pullRequests,
       };
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
+      const message = extractErrorMessage(error, 'Unknown error');
       this.logger.error(`Error listing pull requests: ${message}`);
 
       return {
@@ -440,18 +465,23 @@ export class GitGateway {
   }
 
   @SkipThrottle()
-  @SubscribeMessage('github:pr')
+  @SubscribeMessage(GithubEvents.PR)
   async handleGithubPR(
     @ConnectedSocket() _client: Socket,
     @MessageBody() payload: GithubGetPRPayload
   ): Promise<GithubPRResponse> {
     try {
       const { projectPath, prNumber } = payload;
+      const pathError = this.validatePath(projectPath);
 
-      if (!projectPath || !prNumber) {
+      if (pathError) {
+        return { pullRequest: null, error: pathError };
+      }
+
+      if (!prNumber) {
         return {
           pullRequest: null,
-          error: 'Project path and PR number are required',
+          error: 'PR number is required',
         };
       }
 
@@ -461,7 +491,7 @@ export class GitGateway {
         pullRequest,
       };
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
+      const message = extractErrorMessage(error, 'Unknown error');
       this.logger.error(`Error getting pull request: ${message}`);
 
       return {
@@ -471,18 +501,23 @@ export class GitGateway {
     }
   }
 
-  @SubscribeMessage('github:create-pr')
+  @SubscribeMessage(GithubEvents.CREATE_PR)
   async handleGithubCreatePR(
     @ConnectedSocket() _client: Socket,
     @MessageBody() payload: GithubCreatePRPayload
   ): Promise<GithubCreatePRResponse> {
     try {
       const { projectPath, title, body, base, head, draft } = payload;
+      const pathError = this.validatePath(projectPath);
 
-      if (!projectPath || !title) {
+      if (pathError) {
+        return { success: false, error: pathError };
+      }
+
+      if (!title) {
         return {
           success: false,
-          error: 'Project path and title are required',
+          error: 'Title is required',
         };
       }
 
@@ -499,7 +534,7 @@ export class GitGateway {
         pullRequest,
       };
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
+      const message = extractErrorMessage(error, 'Unknown error');
       this.logger.error(`Error creating pull request: ${message}`);
 
       return {
@@ -510,18 +545,19 @@ export class GitGateway {
   }
 
   @SkipThrottle()
-  @SubscribeMessage('github:issues')
+  @SubscribeMessage(GithubEvents.ISSUES)
   async handleGithubIssues(
     @ConnectedSocket() _client: Socket,
     @MessageBody() payload: GithubListIssuesPayload
   ): Promise<GithubIssuesResponse> {
     try {
       const { projectPath, state, limit, labels } = payload;
+      const pathError = this.validatePath(projectPath);
 
-      if (!projectPath) {
+      if (pathError) {
         return {
           issues: [],
-          error: 'Project path is required',
+          error: pathError,
         };
       }
 
@@ -535,7 +571,7 @@ export class GitGateway {
         issues,
       };
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
+      const message = extractErrorMessage(error, 'Unknown error');
       this.logger.error(`Error listing issues: ${message}`);
 
       return {
@@ -546,18 +582,23 @@ export class GitGateway {
   }
 
   @SkipThrottle()
-  @SubscribeMessage('github:issue')
+  @SubscribeMessage(GithubEvents.ISSUE)
   async handleGithubIssue(
     @ConnectedSocket() _client: Socket,
     @MessageBody() payload: GithubGetIssuePayload
   ): Promise<GithubIssueResponse> {
     try {
       const { projectPath, issueNumber } = payload;
+      const pathError = this.validatePath(projectPath);
 
-      if (!projectPath || !issueNumber) {
+      if (pathError) {
+        return { issue: null, error: pathError };
+      }
+
+      if (!issueNumber) {
         return {
           issue: null,
-          error: 'Project path and issue number are required',
+          error: 'Issue number is required',
         };
       }
 
@@ -567,7 +608,7 @@ export class GitGateway {
         issue,
       };
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
+      const message = extractErrorMessage(error, 'Unknown error');
       this.logger.error(`Error getting issue: ${message}`);
 
       return {

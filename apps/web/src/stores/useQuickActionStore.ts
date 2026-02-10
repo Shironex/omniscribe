@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { devtools, persist, createJSONStorage, StateStorage } from 'zustand/middleware';
 import { QuickAction, createLogger } from '@omniscribe/shared';
+import { createMemoizedSelector } from './utils';
 
 const logger = createLogger('QuickActionStore');
 
@@ -134,12 +135,6 @@ interface QuickActionActions {
   reorderActions: (fromIndex: number, toIndex: number) => void;
   /** Reset to default actions */
   resetToDefaults: () => void;
-  /** Get action by ID */
-  getAction: (id: string) => QuickAction | undefined;
-  /** Get actions by category */
-  getActionsByCategory: (category: QuickAction['category']) => QuickAction[];
-  /** Get enabled actions only */
-  getEnabledActions: () => QuickAction[];
 }
 
 /**
@@ -186,7 +181,7 @@ const electronStorage: StateStorage = {
 export const useQuickActionStore = create<QuickActionStore>()(
   devtools(
     persist(
-      (set, get) => ({
+      set => ({
         // Initial state
         actions: DEFAULT_QUICK_ACTIONS,
 
@@ -251,18 +246,6 @@ export const useQuickActionStore = create<QuickActionStore>()(
           logger.info('Resetting to default actions');
           set({ actions: DEFAULT_QUICK_ACTIONS }, undefined, 'quick-actions/resetToDefaults');
         },
-
-        getAction: (id: string) => {
-          return get().actions.find(action => action.id === id);
-        },
-
-        getActionsByCategory: (category: QuickAction['category']) => {
-          return get().actions.filter(action => action.category === category);
-        },
-
-        getEnabledActions: () => {
-          return get().actions.filter(action => action.enabled !== false);
-        },
       }),
       {
         name: 'quick-actions',
@@ -309,8 +292,9 @@ export const selectActions = (state: QuickActionStore) => state.actions;
 /**
  * Select enabled actions only
  */
-export const selectEnabledActions = (state: QuickActionStore) =>
-  state.actions.filter(action => action.enabled !== false);
+export const selectEnabledActions = createMemoizedSelector((state: QuickActionStore) =>
+  state.actions.filter(action => action.enabled !== false)
+);
 
 /**
  * Select actions by category

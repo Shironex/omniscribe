@@ -104,7 +104,7 @@ export function TaskListPopover({ sessionId }: TaskListPopoverProps) {
   // across renders (for the same sessionId), preventing Zustand re-subscribe loops.
   // EMPTY_TASKS is a module-level constant to avoid new array references.
   const tasks = useTaskStore(
-    useCallback(state => state.tasksBySession.get(sessionId) ?? EMPTY_TASKS, [sessionId])
+    useCallback(state => state.tasksBySession[sessionId] ?? EMPTY_TASKS, [sessionId])
   );
   const taskCount = tasks.length;
 

@@ -1,67 +1,107 @@
-import { Injectable, Inject, forwardRef } from '@nestjs/common';
-import { EventEmitter2 } from '@nestjs/event-emitter';
+import { Injectable, Inject, forwardRef, OnModuleDestroy } from '@nestjs/common';
+import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
 import {
-  SessionConfig,
   SessionStatus,
+  SessionHistoryEntry,
+  ActiveSessionSnapshot,
   AiMode,
   CreateSessionOptions,
+  UpdateSessionOptions,
   WorktreeSettings,
   DEFAULT_WORKTREE_SETTINGS,
+  ExtendedSessionConfig,
+  LaunchSessionResult,
+  SessionStatusUpdate,
+  MAX_SESSION_NAME_LENGTH,
+  MAX_MODEL_LENGTH,
+  MAX_SYSTEM_PROMPT_LENGTH,
   createLogger,
+  extractErrorMessage,
 } from '@omniscribe/shared';
-import { TerminalService } from '../terminal/terminal.service';
+import { TerminalService } from '../terminal';
 import { McpWriterService, McpDiscoveryService } from '../mcp';
-import { WorktreeService } from '../git/worktree.service';
-import { WorkspaceService } from '../workspace/workspace.service';
+import { WorktreeService } from '../git';
+import { WorkspaceService } from '../workspace';
 import { CliCommandService } from './cli-command.service';
+import { ClaudeSessionReaderService } from './claude-session-reader.service';
+import { HookManagerService } from './hook-manager.service';
+import { InternalSessionEvents, InternalTerminalEvents } from '../shared/events';
 
 /**
- * Extended session config with branch information
+ * Backend-specific extension with fields not shared with frontend
  */
-export interface ExtendedSessionConfig extends SessionConfig {
-  /** Git branch assigned to this session */
-  branch?: string;
-  /** Git worktree path if using worktrees */
-  worktreePath?: string;
-  /** Project path for grouping sessions */
-  projectPath: string;
-  /** Current status of the session */
-  status: SessionStatus;
-  /** Status message for display */
-  statusMessage?: string;
-  /** Whether the session needs user input */
-  needsInputPrompt?: boolean;
-  /** Whether session was launched with skip-permissions mode */
-  skipPermissions?: boolean;
-  /** Terminal session ID if launched */
-  terminalSessionId?: number;
+export interface BackendSessionConfig extends ExtendedSessionConfig {
   /** Timestamp of last terminal output (for health checks) */
   lastOutputAt?: Date;
+  /** Claude Code session UUID to resume (used during launch) */
+  resumeSessionId?: string;
+  /** Claude Code session UUID to fork (used during launch) */
+  forkSessionId?: string;
+  /** Whether this session continues the most recent Claude session */
+  continueLastSession?: boolean;
 }
 
 /**
- * Result of launching a session
+ * Valid session status transitions.
+ * Maps each status to the set of statuses it can transition to.
  */
-export interface LaunchSessionResult {
-  success: boolean;
-  terminalSessionId?: number;
-  error?: string;
-}
-
-/**
- * Session status update payload
- */
-export interface SessionStatusUpdate {
-  sessionId: string;
-  status: SessionStatus;
-  message?: string;
-  needsInputPrompt?: boolean;
-}
+const VALID_TRANSITIONS: Record<SessionStatus, Set<SessionStatus>> = {
+  idle: new Set([
+    'connecting',
+    'working',
+    'planning',
+    'thinking',
+    'needs_input',
+    'finished',
+    'error',
+  ]),
+  connecting: new Set(['idle', 'error']),
+  working: new Set([
+    'idle',
+    'needs_input',
+    'planning',
+    'thinking',
+    'error',
+    'finished',
+    'disconnected',
+  ]),
+  planning: new Set([
+    'idle',
+    'working',
+    'needs_input',
+    'thinking',
+    'error',
+    'finished',
+    'disconnected',
+  ]),
+  thinking: new Set([
+    'idle',
+    'working',
+    'planning',
+    'needs_input',
+    'error',
+    'finished',
+    'disconnected',
+  ]),
+  needs_input: new Set([
+    'idle',
+    'working',
+    'planning',
+    'thinking',
+    'error',
+    'finished',
+    'disconnected',
+  ]),
+  finished: new Set(['idle', 'error']),
+  error: new Set(['idle', 'connecting']),
+  disconnected: new Set(['idle', 'error']),
+};
 
 @Injectable()
-export class SessionService {
+export class SessionService implements OnModuleDestroy {
   private readonly logger = createLogger('SessionService');
-  private sessions = new Map<string, ExtendedSessionConfig>();
+  private sessions = new Map<string, BackendSessionConfig>();
+  private terminalToSession = new Map<number, string>();
   private sessionCounter = 0;
 
   constructor(
@@ -72,15 +112,64 @@ export class SessionService {
     private readonly worktreeService: WorktreeService,
     @Inject(forwardRef(() => WorkspaceService))
     private readonly workspaceService: WorkspaceService,
-    private readonly cliCommandService: CliCommandService
+    private readonly cliCommandService: CliCommandService,
+    private readonly claudeSessionReader: ClaudeSessionReaderService,
+    private readonly hookManager: HookManagerService
   ) {
     // Listen for terminal close events to update session status
-    this.eventEmitter.on('terminal.closed', this.handleTerminalClosed.bind(this));
+    this.eventEmitter.on(InternalTerminalEvents.CLOSED, this.handleTerminalClosed.bind(this));
 
     // Listen for terminal output to track last output time (for health checks)
-    this.eventEmitter.on('terminal.output', (event: { sessionId: number; data: string }) => {
-      this.updateLastOutput(event.sessionId);
-    });
+    this.eventEmitter.on(
+      InternalTerminalEvents.OUTPUT,
+      (event: { sessionId: number; data: string }) => {
+        this.updateLastOutput(event.sessionId);
+      }
+    );
+  }
+
+  /**
+   * Clear the terminal reference from a session and remove the reverse lookup entry.
+   */
+  private clearTerminalRef(session: BackendSessionConfig): void {
+    if (session.terminalSessionId !== undefined) {
+      this.terminalToSession.delete(session.terminalSessionId);
+      session.terminalSessionId = undefined;
+    }
+  }
+
+  /**
+   * On module destroy, save a final snapshot as a fallback.
+   */
+  onModuleDestroy(): void {
+    this.refreshActiveSessionsSnapshot('shutdown');
+  }
+
+  /**
+   * Eagerly refresh the active sessions snapshot whenever sessions change.
+   * Called when a Claude session ID is captured, a terminal closes, or a session is removed.
+   * This ensures the snapshot is always up-to-date regardless of how the process exits.
+   */
+  private refreshActiveSessionsSnapshot(reason: string): void {
+    try {
+      const activeSessions = this.getRunningSessions();
+      const snapshots: ActiveSessionSnapshot[] = activeSessions
+        .filter(s => s.claudeSessionId)
+        .map(s => ({
+          claudeSessionId: s.claudeSessionId!,
+          projectPath: s.projectPath,
+          branch: s.branch,
+          name: s.name,
+        }));
+
+      this.workspaceService.saveActiveSessionsSnapshot(snapshots);
+      this.logger.debug(
+        `Refreshed active sessions snapshot (${snapshots.length} sessions, reason: ${reason})`
+      );
+    } catch (error) {
+      const msg = extractErrorMessage(error);
+      this.logger.warn(`Failed to save active sessions snapshot: ${msg}`);
+    }
   }
 
   /**
@@ -102,10 +191,46 @@ export class SessionService {
             : `Session exited with code ${event.exitCode}`;
 
         this.updateStatus(event.externalId, status, message);
-        session.terminalSessionId = undefined;
+        this.clearTerminalRef(session);
+
+        // Persist session history if we captured a Claude session ID
+        if (session.claudeSessionId) {
+          this.persistSessionHistory(session, event.exitCode);
+        }
+
+        // Session is no longer running — update snapshot
+        this.refreshActiveSessionsSnapshot('terminal-closed');
 
         this.logger.log(`Session ${event.externalId} terminal closed (exit=${event.exitCode})`);
       }
+    }
+  }
+
+  /**
+   * Persist a session's history entry to the workspace store.
+   * Called when a terminal closes and a Claude session ID was captured.
+   */
+  private persistSessionHistory(session: BackendSessionConfig, exitCode: number): void {
+    try {
+      const entry: SessionHistoryEntry = {
+        omniscribeSessionId: session.id,
+        claudeSessionId: session.claudeSessionId!,
+        projectPath: session.projectPath,
+        name: session.name,
+        lastStatus: session.status,
+        createdAt: session.createdAt.toISOString(),
+        lastActiveAt: session.lastActiveAt.toISOString(),
+        branch: session.branch,
+        exitCode,
+      };
+
+      this.workspaceService.addSessionHistory(entry);
+      this.logger.info(
+        `Persisted session history for ${session.id} (claude: ${session.claudeSessionId})`
+      );
+    } catch (error) {
+      const errorMessage = extractErrorMessage(error);
+      this.logger.warn(`Failed to persist session history for ${session.id}: ${errorMessage}`);
     }
   }
 
@@ -115,12 +240,18 @@ export class SessionService {
   create(
     mode: AiMode,
     projectPath: string,
-    options?: Partial<CreateSessionOptions> & { skipPermissions?: boolean }
-  ): ExtendedSessionConfig {
+    options?: Partial<CreateSessionOptions> & {
+      skipPermissions?: boolean;
+      resumeSessionId?: string;
+      forkSessionId?: string;
+      continueLastSession?: boolean;
+    }
+  ): BackendSessionConfig {
     const id = `session-${++this.sessionCounter}-${Date.now()}`;
     const now = new Date();
+    const isResumed = !!options?.resumeSessionId;
 
-    const session: ExtendedSessionConfig = {
+    const session: BackendSessionConfig = {
       id,
       name: options?.name ?? `Session ${this.sessionCounter}`,
       workingDirectory: options?.workingDirectory ?? projectPath,
@@ -133,12 +264,29 @@ export class SessionService {
       projectPath,
       status: 'idle',
       skipPermissions: options?.skipPermissions,
+      // Resume-related fields
+      claudeSessionId: options?.resumeSessionId,
+      isResumed,
+      resumeSessionId: options?.resumeSessionId,
+      // Fork-related fields
+      forkSessionId: options?.forkSessionId,
+      // Continue-last field
+      continueLastSession: options?.continueLastSession,
     };
 
     this.sessions.set(id, session);
-    this.logger.info(`Created session ${id} (mode: ${mode}, project: ${projectPath})`);
 
-    this.eventEmitter.emit('session.created', session);
+    let detail = '';
+    if (isResumed) {
+      detail = `, resuming: ${options!.resumeSessionId}`;
+    } else if (options?.forkSessionId) {
+      detail = `, forking: ${options.forkSessionId}`;
+    } else if (options?.continueLastSession) {
+      detail = ', continuing last';
+    }
+    this.logger.info(`Created session ${id} (mode: ${mode}, project: ${projectPath}${detail})`);
+
+    this.eventEmitter.emit(InternalSessionEvents.CREATED, session);
 
     return session;
   }
@@ -151,10 +299,19 @@ export class SessionService {
     status: SessionStatus,
     message?: string,
     needsInputPrompt?: boolean
-  ): ExtendedSessionConfig | undefined {
+  ): BackendSessionConfig | undefined {
     const session = this.sessions.get(sessionId);
 
     if (!session) {
+      return undefined;
+    }
+
+    // Validate state transition
+    const validTargets = VALID_TRANSITIONS[session.status];
+    if (validTargets && !validTargets.has(status)) {
+      this.logger.warn(
+        `Invalid session status transition for ${sessionId}: ${session.status} -> ${status}`
+      );
       return undefined;
     }
 
@@ -173,7 +330,96 @@ export class SessionService {
       needsInputPrompt,
     };
 
-    this.eventEmitter.emit('session.status', statusUpdate);
+    this.eventEmitter.emit(InternalSessionEvents.STATUS, statusUpdate);
+
+    return session;
+  }
+
+  /**
+   * Handle MCP status updates received by the HTTP status server.
+   * Uses event-based communication to avoid circular dependency between
+   * McpModule and SessionModule.
+   */
+  @OnEvent(InternalSessionEvents.MCP_STATUS_RECEIVED)
+  onMcpStatusReceived(event: {
+    sessionId: string;
+    status: string;
+    message?: string;
+    needsInputPrompt?: string;
+  }): void {
+    const updated = this.updateStatus(
+      event.sessionId,
+      event.status as SessionStatus,
+      event.message,
+      event.needsInputPrompt ? true : undefined
+    );
+
+    if (!updated) {
+      this.logger.debug(
+        `MCP status update not applied for ${event.sessionId} (session not found or invalid transition)`
+      );
+    }
+  }
+
+  /**
+   * Update session metadata (name, model, systemPrompt, etc.)
+   * Emits a status update event so the frontend is notified.
+   */
+  update(sessionId: string, updates: UpdateSessionOptions): BackendSessionConfig | undefined {
+    const session = this.sessions.get(sessionId);
+
+    if (!session) {
+      return undefined;
+    }
+
+    // Validate string length limits (same as session creation)
+    if (updates.name !== undefined && updates.name.length > MAX_SESSION_NAME_LENGTH) {
+      this.logger.warn(`[update] name exceeds max length for session ${sessionId}`);
+      return undefined;
+    }
+    if (updates.model !== undefined && updates.model.length > MAX_MODEL_LENGTH) {
+      this.logger.warn(`[update] model exceeds max length for session ${sessionId}`);
+      return undefined;
+    }
+    if (
+      updates.systemPrompt !== undefined &&
+      updates.systemPrompt.length > MAX_SYSTEM_PROMPT_LENGTH
+    ) {
+      this.logger.warn(`[update] systemPrompt exceeds max length for session ${sessionId}`);
+      return undefined;
+    }
+
+    if (updates.name !== undefined) {
+      session.name = updates.name;
+    }
+    if (updates.aiMode !== undefined) {
+      session.aiMode = updates.aiMode;
+    }
+    if (updates.model !== undefined) {
+      session.model = updates.model;
+    }
+    if (updates.systemPrompt !== undefined) {
+      session.systemPrompt = updates.systemPrompt;
+    }
+    if (updates.maxTokens !== undefined) {
+      session.maxTokens = updates.maxTokens;
+    }
+    if (updates.temperature !== undefined) {
+      session.temperature = updates.temperature;
+    }
+    if (updates.mcpServers !== undefined) {
+      session.mcpServers = updates.mcpServers;
+    }
+
+    session.lastActiveAt = new Date();
+
+    const statusUpdate: SessionStatusUpdate = {
+      sessionId,
+      status: session.status,
+      message: 'Session updated',
+    };
+
+    this.eventEmitter.emit(InternalSessionEvents.STATUS, statusUpdate);
 
     return session;
   }
@@ -184,11 +430,11 @@ export class SessionService {
    * @param terminalSessionId The terminal PTY session ID
    */
   updateLastOutput(terminalSessionId: number): void {
-    // Find the session that owns this terminal
-    for (const session of this.sessions.values()) {
-      if (session.terminalSessionId === terminalSessionId) {
+    const sessionId = this.terminalToSession.get(terminalSessionId);
+    if (sessionId) {
+      const session = this.sessions.get(sessionId);
+      if (session) {
         session.lastOutputAt = new Date();
-        return;
       }
     }
   }
@@ -200,7 +446,7 @@ export class SessionService {
     sessionId: string,
     branch: string,
     worktreePath?: string
-  ): ExtendedSessionConfig | undefined {
+  ): BackendSessionConfig | undefined {
     const session = this.sessions.get(sessionId);
 
     if (!session) {
@@ -212,7 +458,7 @@ export class SessionService {
     session.lastActiveAt = new Date();
 
     // Emit status update to notify about branch assignment
-    this.eventEmitter.emit('session.status', {
+    this.eventEmitter.emit(InternalSessionEvents.STATUS, {
       sessionId,
       status: session.status,
       message: `Branch assigned: ${branch}`,
@@ -237,7 +483,7 @@ export class SessionService {
       if (this.terminalService.hasSession(session.terminalSessionId)) {
         await this.terminalService.kill(session.terminalSessionId);
       }
-      session.terminalSessionId = undefined;
+      this.clearTerminalRef(session);
     }
 
     // Cleanup worktree if auto-cleanup is enabled
@@ -252,7 +498,7 @@ export class SessionService {
             `Cleaned up worktree at ${session.worktreePath} for session ${sessionId}`
           );
         } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : String(error);
+          const errorMessage = extractErrorMessage(error);
           this.logger.warn(`Failed to cleanup worktree for session ${sessionId}: ${errorMessage}`);
           // Continue with session removal even if worktree cleanup fails
         }
@@ -265,7 +511,10 @@ export class SessionService {
 
     this.sessions.delete(sessionId);
 
-    this.eventEmitter.emit('session.removed', { sessionId });
+    // Session removed — update snapshot
+    this.refreshActiveSessionsSnapshot('session-removed');
+
+    this.eventEmitter.emit(InternalSessionEvents.REMOVED, { sessionId });
 
     return true;
   }
@@ -273,14 +522,14 @@ export class SessionService {
   /**
    * Get a session by ID
    */
-  get(sessionId: string): ExtendedSessionConfig | undefined {
+  get(sessionId: string): BackendSessionConfig | undefined {
     return this.sessions.get(sessionId);
   }
 
   /**
    * Get all sessions
    */
-  getAll(): ExtendedSessionConfig[] {
+  getAll(): BackendSessionConfig[] {
     return Array.from(this.sessions.values());
   }
 
@@ -288,7 +537,7 @@ export class SessionService {
    * Get all sessions that have an active terminal (running sessions).
    * Done/Error sessions without terminals are NOT counted.
    */
-  getRunningSessions(): ExtendedSessionConfig[] {
+  getRunningSessions(): BackendSessionConfig[] {
     return Array.from(this.sessions.values()).filter(
       session =>
         session.terminalSessionId !== undefined &&
@@ -300,7 +549,7 @@ export class SessionService {
    * Get idle sessions that could be closed to free slots.
    * A session is "idle" if it has an active terminal but status is 'idle' or 'needs_input'.
    */
-  getIdleSessions(): ExtendedSessionConfig[] {
+  getIdleSessions(): BackendSessionConfig[] {
     return this.getRunningSessions().filter(
       session => session.status === 'idle' || session.status === 'needs_input'
     );
@@ -309,7 +558,7 @@ export class SessionService {
   /**
    * Get sessions for a specific project
    */
-  getForProject(projectPath: string): ExtendedSessionConfig[] {
+  getForProject(projectPath: string): BackendSessionConfig[] {
     return Array.from(this.sessions.values()).filter(
       session => session.projectPath === projectPath
     );
@@ -360,21 +609,54 @@ export class SessionService {
         };
       }
       // Terminal no longer exists, clear the reference
-      session.terminalSessionId = undefined;
+      this.clearTerminalRef(session);
     }
 
     // Update status to connecting
     this.updateStatus(sessionId, 'connecting', 'Starting AI session...');
 
+    // Snapshot current Claude session IDs before spawning (for non-resumed sessions, forks, and continue)
+    // so we can detect which new Claude session was created by this launch.
+    // Fork creates a new session (sidechain), so we poll for it. Continue also creates/resumes.
+    const shouldPollForNewSession =
+      aiMode === 'claude' &&
+      (!session.isResumed || session.forkSessionId || session.continueLastSession);
+    let previousSessionIds: Set<string> | null = null;
+    if (shouldPollForNewSession) {
+      try {
+        const currentEntries = await this.claudeSessionReader.readSessionsIndex(projectPath);
+        previousSessionIds = new Set(currentEntries.map(e => e.sessionId));
+        this.logger.debug(
+          `Snapshotted ${previousSessionIds.size} existing Claude sessions for ${sessionId}`
+        );
+      } catch (error) {
+        const msg = extractErrorMessage(error);
+        this.logger.warn(`Failed to snapshot Claude sessions for ${sessionId}: ${msg}`);
+      }
+    }
+
     try {
-      // Discover all available MCP servers for this project
-      const allServers = await this.mcpDiscoveryService.discoverServers(projectPath);
-      this.logger.log(`Discovered ${allServers.length} MCP servers for session ${sessionId}`);
+      // Register hooks for instant session ID capture (fire-and-forget)
+      if (aiMode === 'claude') {
+        this.hookManager.registerHooks(projectPath).catch(err => {
+          const msg = err instanceof Error ? err.message : String(err);
+          this.logger.warn(`Failed to register hooks for ${sessionId}: ${msg}`);
+        });
+        this.hookManager.startWatching();
+      }
 
-      // Write MCP config with all discovered servers
-      await this.mcpWriterService.writeConfig(worktreePath, sessionId, projectPath, allServers);
+      // Only discover and write MCP config for Claude sessions.
+      // Plain terminals don't use Claude Code and don't read .mcp.json.
+      // Writing for all modes causes a race condition where the plain session
+      // overwrites the Claude session's ID in .mcp.json.
+      if (aiMode === 'claude') {
+        const allServers = await this.mcpDiscoveryService.discoverServers(projectPath);
+        this.logger.log(`Discovered ${allServers.length} MCP servers for session ${sessionId}`);
 
-      this.logger.log(`MCP config written to ${worktreePath}/.mcp.json`);
+        await this.mcpWriterService.writeConfig(worktreePath, sessionId, projectPath, allServers);
+
+        this.logger.log(`MCP config written to ${worktreePath}/.mcp.json`);
+      }
 
       // Get CLI configuration for the AI mode
       const cliConfig = this.cliCommandService.getCliConfig(aiMode, session);
@@ -382,11 +664,9 @@ export class SessionService {
       // Generate project hash for MCP status file identification
       const projectHash = this.mcpWriterService.generateProjectHash(projectPath);
 
-      // Build environment variables
-      // IMPORTANT: OMNISCRIBE_SESSION_ID and OMNISCRIBE_PROJECT_HASH are passed here
-      // via shell environment (NOT in .mcp.json) to avoid race conditions when
-      // multiple sessions share the same .mcp.json file. The MCP server inherits
-      // these from the shell process that launched Claude CLI.
+      // Build environment variables for the spawned terminal process.
+      // Note: OMNISCRIBE_SESSION_ID is also written to .mcp.json env for Claude sessions
+      // so the MCP server subprocess can identify which session it belongs to.
       const env: Record<string, string> = {
         OMNISCRIBE_SESSION_ID: sessionId,
         OMNISCRIBE_PROJECT_HASH: projectHash,
@@ -415,6 +695,7 @@ export class SessionService {
 
       // Update session with terminal reference
       session.terminalSessionId = terminalSessionId;
+      this.terminalToSession.set(terminalSessionId, session.id);
       session.worktreePath = worktreePath;
       session.lastActiveAt = new Date();
 
@@ -428,12 +709,17 @@ export class SessionService {
 
       this.logger.log(`Session ${sessionId} launched with terminal ${terminalSessionId}`);
 
+      // Poll for new Claude session ID (fire-and-forget, does not block launch)
+      if (shouldPollForNewSession && previousSessionIds) {
+        this.pollForClaudeSessionId(sessionId, projectPath, previousSessionIds);
+      }
+
       return {
         success: true,
         terminalSessionId,
       };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage = extractErrorMessage(error);
 
       this.logger.error(`Failed to launch session ${sessionId}: ${errorMessage}`);
 
@@ -470,7 +756,7 @@ export class SessionService {
       this.logger.debug(
         `stopSession: terminal ${terminalId} for session ${sessionId} no longer exists`
       );
-      session.terminalSessionId = undefined;
+      this.clearTerminalRef(session);
       return false;
     }
 
@@ -478,7 +764,7 @@ export class SessionService {
 
     await this.terminalService.kill(terminalId);
 
-    session.terminalSessionId = undefined;
+    this.clearTerminalRef(session);
     this.updateStatus(sessionId, 'idle', 'Session stopped');
 
     this.logger.log(`Session ${sessionId} stopped`);
@@ -536,5 +822,69 @@ export class SessionService {
     }
 
     return this.terminalService.hasSession(session.terminalSessionId);
+  }
+
+  /**
+   * Poll for a newly created Claude session ID after launching a CLI process.
+   * Polls every 2 seconds for up to 30 seconds. When found, updates the session
+   * and emits an event so the frontend can track it.
+   *
+   * This is fire-and-forget -- it does not block session launch.
+   */
+  private async pollForClaudeSessionId(
+    sessionId: string,
+    projectPath: string,
+    previousSessionIds: Set<string>
+  ): Promise<void> {
+    const POLL_INTERVAL_MS = 2000;
+    const MAX_POLLS = 15; // 15 * 2s = 30s total
+
+    for (let i = 0; i < MAX_POLLS; i++) {
+      await new Promise<void>(resolve => setTimeout(resolve, POLL_INTERVAL_MS));
+
+      // Check if session still exists (might have been removed during polling)
+      const session = this.sessions.get(sessionId);
+      if (!session) {
+        this.logger.debug(`Session ${sessionId} removed during Claude session ID polling`);
+        return;
+      }
+
+      // Check if session already has a Claude session ID (e.g., set by resume)
+      if (session.claudeSessionId) {
+        this.logger.debug(`Session ${sessionId} already has Claude session ID, stopping poll`);
+        return;
+      }
+
+      try {
+        const newSession = await this.claudeSessionReader.findNewSession(
+          projectPath,
+          previousSessionIds
+        );
+
+        if (newSession) {
+          session.claudeSessionId = newSession.sessionId;
+          this.logger.info(`Captured Claude session ID for ${sessionId}: ${newSession.sessionId}`);
+
+          // Emit event so the gateway can broadcast to frontend
+          this.eventEmitter.emit(InternalSessionEvents.CLAUDE_ID_CAPTURED, {
+            sessionId,
+            claudeSessionId: newSession.sessionId,
+          });
+
+          // Session is now resumable — eagerly update the snapshot
+          this.refreshActiveSessionsSnapshot('claude-id-captured');
+
+          return;
+        }
+      } catch (error) {
+        const msg = extractErrorMessage(error);
+        this.logger.warn(`Poll error for Claude session ID (${sessionId}): ${msg}`);
+        // Continue polling despite errors
+      }
+    }
+
+    this.logger.debug(
+      `Claude session ID polling timed out for ${sessionId} after ${(MAX_POLLS * POLL_INTERVAL_MS) / 1000}s`
+    );
   }
 }

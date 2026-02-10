@@ -60,16 +60,17 @@ export class McpDiscoveryService {
       const configPath = path.join(projectPath, configFile);
 
       try {
-        if (fs.existsSync(configPath)) {
-          const content = await fs.promises.readFile(configPath, 'utf-8');
-          const config = JSON.parse(content) as McpConfigFile;
-          const parsedServers = this.parseConfig(config);
-          servers.push(...parsedServers);
+        const content = await fs.promises.readFile(configPath, 'utf-8');
+        const config = JSON.parse(content) as McpConfigFile;
+        const parsedServers = this.parseConfig(config);
+        servers.push(...parsedServers);
 
-          this.logger.log(`Discovered ${parsedServers.length} servers from ${configPath}`);
-        }
+        this.logger.log(`Discovered ${parsedServers.length} servers from ${configPath}`);
       } catch (error) {
-        this.logger.error(`Error reading ${configPath}:`, error);
+        // ENOENT is expected — file simply doesn't exist. Only log real errors.
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+          this.logger.error(`Error reading ${configPath}:`, error);
+        }
       }
     }
 

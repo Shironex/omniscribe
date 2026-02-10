@@ -1,9 +1,18 @@
 import { clsx } from 'clsx';
-import { Terminal, GitBranch, ArrowUp, ArrowDown, FolderGit2, ShieldOff } from 'lucide-react';
+import {
+  Terminal,
+  GitBranch,
+  ArrowUp,
+  ArrowDown,
+  FolderGit2,
+  ShieldOff,
+  RotateCcw,
+} from 'lucide-react';
 import { type ComponentType } from 'react';
 import { StatusDot } from '@/components/shared/StatusLegend';
 import { ClaudeIcon } from '@/components/shared/ClaudeIcon';
-import type { AIMode, TerminalSession, GitBranchInfo } from './TerminalHeader';
+import type { AiMode } from '@omniscribe/shared';
+import type { TerminalSession, GitBranchInfo } from './TerminalHeader';
 
 interface AIModeConfigItem {
   icon: ComponentType<{ size?: string | number; className?: string }>;
@@ -11,7 +20,7 @@ interface AIModeConfigItem {
   color: string;
 }
 
-export const aiModeConfig: Record<AIMode, AIModeConfigItem> = {
+export const aiModeConfig: Record<AiMode, AIModeConfigItem> = {
   claude: { icon: ClaudeIcon, label: 'Claude', color: 'text-orange-400' },
   plain: { icon: Terminal, label: 'Plain', color: 'text-muted-foreground' },
 };
@@ -85,6 +94,19 @@ export function SessionStatusDisplay({ session, gitBranch }: SessionStatusDispla
         >
           <ShieldOff size={11} aria-hidden="true" />
           <span className="sr-only">Skip-permissions enabled</span>
+        </div>
+      )}
+
+      {/* Resumed session indicator */}
+      {session.isResumed && (
+        <div
+          className="flex items-center gap-1 text-xs text-emerald-400 shrink-0 px-1.5 py-0.5 rounded bg-emerald-500/10"
+          title="Resumed from previous Claude Code session"
+          role="status"
+          aria-label="Resumed from previous Claude Code session"
+        >
+          <RotateCcw size={11} aria-hidden="true" />
+          <span>Resumed</span>
         </div>
       )}
 

@@ -2,6 +2,133 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.6.0 (2026-02-10)
+
+### Features
+
+- **Session History** — Browse, search, and filter past Claude Code sessions with branch filtering and sort controls (newest/oldest)
+- **Resume Sessions** — Resume any previous Claude Code session directly from the history panel or terminal header
+- **Fork Sessions** — Fork an existing session into a new conversation branch using `--fork-session`
+- **Continue Last** — One-click button to continue the most recent Claude Code conversation (`--continue` flag)
+- **Auto-Resume on Restart** _(Experimental)_ — Toggle in Settings > Sessions to automatically restore active sessions when Omniscribe restarts; uses eager snapshot saving for reliability across all shutdown scenarios
+- **Hooks Integration** — Automatic Claude Code `SessionStart`/`SessionEnd` hooks for instant session ID capture (falls back to polling)
+- **Tailwind CSS v4** — Migrated frontend from Tailwind CSS v3 to v4 with updated theme configuration
+- **Keyboard Shortcuts** — Added missing shortcuts for settings (`Ctrl+,`), history (`Ctrl+H`), tabs, and terminal clear
+
+### Bug Fixes
+
+- **Shell PATH resolution** — Spawned sessions now inherit the user's full shell PATH on macOS/Linux, fixing missing dev tools like `node`, `git`, `claude` in terminal sessions (#97)
+- **Terminal freezing** — Fixed backpressure oscillation that caused terminal UI lag and freezes; increased thresholds and replaced flickering bar with debounced theme-aware overlay
+- **MCP status not updating UI** — Fixed MCP status updates not propagating to the frontend; status server now routes through SessionService via internal event
+- **MCP config race condition** — Plain terminal sessions no longer write `.mcp.json`, preventing them from overwriting Claude session IDs
+- **Hooks field name** — Fixed hook event field from `event` to `hook_event_name` to match Claude Code's actual format
+- **Session state transitions** — Added `needs_input` and `finished` as valid transitions from `idle` status
+- **Git error swallowing** — Fixed `execGit` silently swallowing fatal git errors
+- **Git path validation** — Added input validation to Git gateway and worktree cleanup to prevent path traversal
+- **Claude CLI auth on macOS** — Detect authentication via config file fallback when CLI detection fails
+- **Git event mismatch** — Fixed event naming between frontend and backend, removed dead code
+- **Predefined slot hover border** — Added missing hover border to predefined session slot cards
+- **Auto-resume reliability** — Switched from shutdown-time snapshot saving to eager snapshots on every session state change, ensuring recovery even after forced kills (SIGINT/SIGTERM)
+- **E2E test label matching** — Accept both "Claude" and "Plain AI" mode labels in e2e tests
+
+### Performance
+
+- **O(1) session lookup** — Removed static gateway maps in favor of direct SessionService lookups, eliminating duplicate state and O(N) scans (#93)
+- **Remove execSync** — Replaced blocking `execSync` in GithubService with async `execFile`, unblocking the main thread
+- **Frontend performance** — Improved React patterns, memoization, and socket reliability
+
+### Refactoring
+
+- **Shared package extraction** — Extracted types, constants, and event names to shared package; removed deprecated aliases
+- **DRY deduplication** — Eliminated code duplication across backend and frontend
+- **Gateway lifecycle alignment** — Aligned gateway lifecycle, event naming, and imports across all modules
+
+### Dependencies
+
+- Upgrade `react-resizable-panels` from 2.1.9 to 4.6.2
+
+### Code Quality
+
+- **Backend safety** — Hardened input validation and resource management across all gateways
+- **WCAG accessibility** — Fixed accessibility issues across settings and terminal components
+- **Comprehensive test coverage** — Added tests for backend services, frontend stores/hooks/components, and shared package utilities
+- **Test infrastructure** — Fixed test failures, worker process leaks, and shared Jest config
+
+### Stats
+
+- 63 commits across 15+ PRs
+- 214 files changed — +26,037 / −4,028 lines
+
+## 0.6.0-beta.3 (2026-02-10)
+
+### Bug Fixes
+
+- **Shell PATH resolution** — Spawned sessions now inherit the user's full shell PATH on macOS/Linux, fixing missing dev tools like `node`, `git`, `claude` in terminal sessions (#97)
+- **MCP status not updating UI** — Fixed MCP status updates not propagating to the frontend; status server now routes through SessionService via internal event to keep backend state in sync before broadcasting
+- **MCP config race condition** — Plain terminal sessions no longer write `.mcp.json`, preventing them from overwriting Claude session IDs and breaking MCP communication
+- **Hooks integration broken** — Fixed hook event field name from `event` to `hook_event_name` to match Claude Code's actual format
+- **Session state transitions** — Added `needs_input` and `finished` as valid transitions from `idle` status, fixing rejected MCP status updates
+- **Backpressure too aggressive** — Increased backpressure thresholds (HIGH_WATER_MARK 128→512, LOW_WATER_MARK 16→64, safety timeout 5s→10s) to prevent premature pausing during Claude Code output bursts
+- **Backpressure overlay flicker** — Replaced flickering backpressure bar with a debounced theme-aware overlay
+- **E2E test label matching** — Accept both "Claude" and "Plain AI" mode labels in e2e tests
+
+### Code Quality
+
+- **Test coverage expansion** — Added component smoke tests, store tests, hook tests, and lib utility tests across the frontend
+- **Test infrastructure** — Fixed test failures and worker process leaks
+- **Dead code cleanup** — Removed unused types, deprecated aliases, and code inconsistencies from shared package
+- **Documentation** — Updated CLAUDE.md with accurate patterns and missing documentation
+
+## 0.6.0-beta.2 (2026-02-10)
+
+### Features
+
+- **Tailwind CSS v4 migration** — Migrated frontend from Tailwind CSS v3 to v4 with updated theme configuration
+- **Keyboard shortcuts** — Added missing shortcuts for settings, history, tabs, and terminal clear
+
+### Bug Fixes
+
+- **Terminal freezing** — Fixed backpressure oscillation that caused terminal UI lag and freezes
+- **Worktree creation failures** — Fixed `execGit` silently swallowing fatal git errors
+- **Claude CLI auth on macOS** — Detect authentication via config file fallback
+- **Git event mismatch** — Fixed event naming between frontend and backend, removed dead code
+- **Frontend performance** — Improved React patterns and socket reliability
+- **Backend safety** — Hardened input validation and resource management
+- **Predefined slot hover border** — Added missing hover border to predefined session slot cards
+
+### Refactoring
+
+- **Shared package extraction** — Extracted types, constants, and event names to shared package; removed deprecated aliases
+- **DRY deduplication** — Eliminated code duplication across backend and frontend
+
+### Code Quality
+
+- **Pattern consistency & WCAG accessibility** — Aligned gateway lifecycle, event naming, imports, and fixed accessibility issues
+- **Comprehensive test coverage** — Added tests for backend, frontend, and shared package; formatted shared Jest config
+
+## 0.6.0-beta.1 (2026-02-08)
+
+### Features
+
+- **Session History** — Browse, search, and filter past Claude Code sessions with branch filtering and sort controls (newest/oldest)
+- **Resume Sessions** — Resume any previous Claude Code session directly from the history panel or terminal header
+- **Fork Sessions** — Fork an existing session into a new conversation branch using `--fork-session`
+- **Continue Last** — One-click button to continue the most recent Claude Code conversation (`--continue` flag)
+- **Auto-Resume on Restart** — Toggle in Settings > Sessions to automatically restore active sessions when Omniscribe restarts
+- **Hooks Integration** — Automatic Claude Code `SessionStart`/`SessionEnd` hooks for instant session ID capture (falls back to polling)
+
+### Improvements
+
+- Claude session reader service for parsing `sessions-index.json` and `.jsonl` session files
+- Hook manager service that registers/unregisters hooks and watches for hook events via temp directory
+- Shared payload types for resume, fork, continue-last, and session history WebSocket events
+- Gateway refactored to use shared `launchSessionWithWorktree()` helper, eliminating code duplication
+- Session history panel with debounced search, branch dropdown filter, and sort toggle
+- Resumed session indicator with accessibility attributes (`role="status"`, `aria-label`)
+- `type="button"` added to all interactive buttons to prevent unintended form submission
+- `fetchHistory` socket call includes 15-second timeout
+- `autoResumeOnRestart` default added to session settings
+
 ## 0.5.1 (2026-02-08)
 
 ### Bug Fixes
@@ -9,6 +136,50 @@ All notable changes to this project will be documented in this file.
 - **Clipboard copy broken on Windows** — `navigator.clipboard.writeText()` silently fails in production because `file://` is not a secure context; replaced with Electron's native `clipboard` module via IPC
 - **"Run in Terminal" broken on Windows** — `spawn('powershell', ...)` with `detached: true` ran as a hidden background process; fixed by using `cmd.exe /c start powershell` to open a visible console window
 - **No feedback on copy/run actions** — Added toast notifications for success and error states on both the Copy and Run in Terminal buttons
+
+## 0.5.0-beta.4 (2026-02-08)
+
+### Bug Fixes
+
+- **Proper CLI auth detection** — Replaced process-spawning detection (`spawn`, `execSync`) with credential file reading (`~/.claude/.credentials.json`) for reliable authentication state (#49)
+
+### Internal
+
+- Refactored `UsageService` to delegate CLI detection to shared `getClaudeCliStatus()` utility
+- Removed `isAvailable()` method and `checkAuth()` in favor of the unified detection function
+- Updated all usage gateway and service tests to mock the new utility
+
+## 0.5.0-beta.3 (2026-02-08)
+
+### Bug Fixes
+
+- **Fixed raw error dump on update check** — The "release pending" detection now catches any `.yml` 404 regardless of the current channel, fixing a race condition where switching channels mid-check would show the raw HTTP error instead of the friendly "release is being prepared" message
+
+## 0.5.0-beta.2 (2026-02-08)
+
+### Improvements
+
+- **Usage tooltip** — Claude usage button in TopBar now shows "Claude usage: X% (5h window)" on hover; tooltip auto-hides when popover is open
+- **README** — Added Beta Releases section with opt-in/opt-out instructions
+- **CI fix** — Explicitly set electron-builder publish channel for GitHub provider to generate correct `beta.yml` files
+
+## 0.5.0-beta.1 (2026-02-08)
+
+### Features
+
+- **Beta update channel** — Switch between Stable and Beta update channels at runtime in Settings > General > Updates; preference persists across restarts
+- **Unified TopBar** — Merged ProjectTabs, TopBar, and BottomBar into a single header, reclaiming +32px of terminal space; icon-only action buttons with tooltip hints on hover
+- **Pre-release CI support** — Beta builds generate `beta.yml` for auto-update; pre-release GitHub Releases skip version sync to master
+
+### Improvements
+
+- Consolidated raw `<button>` elements to shadcn `Button` component across 7 files (net -90 lines)
+- Theme-aware colors: replaced hardcoded status green with `primary`/`destructive` tokens
+- Global TooltipProvider with 300ms delay for consistent hover hints
+- Downgrade-aware messaging when switching from beta to stable channel
+- Contextual error text when no beta release is available
+- Channel label shown in update toast notifications
+- `bump-version.sh` accepts full SemVer 2.0.0 pre-release suffixes (`-beta.1`, `-rc.1`)
 
 ## 0.5.0 (2026-02-08)
 

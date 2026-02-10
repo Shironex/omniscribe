@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
-import { createLogger } from '@omniscribe/shared';
+import { createLogger, SessionEvents } from '@omniscribe/shared';
 import type { TaskItem, SessionTasksUpdate, SessionRemovePayload } from '@omniscribe/shared';
 import {
   SocketStoreState,
@@ -17,7 +17,7 @@ const logger = createLogger('TaskStore');
  */
 interface TaskState extends SocketStoreState {
   /** Tasks indexed by session ID */
-  tasksBySession: Map<string, TaskItem[]>;
+  tasksBySession: Record<string, TaskItem[]>;
 }
 
 /**
@@ -57,18 +57,18 @@ export const useTaskStore = create<TaskStore>()(
         {
           listeners: [
             {
-              event: 'session:tasks',
+              event: SessionEvents.TASKS,
               handler: (data, get) => {
                 const update = data as SessionTasksUpdate;
-                logger.debug('session:tasks', update.sessionId, update.tasks.length);
+                logger.debug(SessionEvents.TASKS, update.sessionId, update.tasks.length);
                 get().setTasks(update.sessionId, update.tasks);
               },
             },
             {
-              event: 'session:removed',
+              event: SessionEvents.REMOVED,
               handler: (data, get) => {
                 const { sessionId } = data as SessionRemovePayload;
-                logger.debug('session:removed — clearing tasks', sessionId);
+                logger.debug(SessionEvents.REMOVED, '-- clearing tasks', sessionId);
                 get().clearTasks(sessionId);
               },
             },
@@ -79,7 +79,7 @@ export const useTaskStore = create<TaskStore>()(
       return {
         // Initial state (spread common state + custom state)
         ...initialSocketState,
-        tasksBySession: new Map(),
+        tasksBySession: {},
 
         // Common socket actions
         ...socketActions,
@@ -91,11 +91,9 @@ export const useTaskStore = create<TaskStore>()(
         // Custom actions
         setTasks: (sessionId: string, tasks: TaskItem[]) => {
           set(
-            state => {
-              const newMap = new Map(state.tasksBySession);
-              newMap.set(sessionId, tasks);
-              return { tasksBySession: newMap };
-            },
+            state => ({
+              tasksBySession: { ...state.tasksBySession, [sessionId]: tasks },
+            }),
             undefined,
             'task/setTasks'
           );
@@ -104,9 +102,8 @@ export const useTaskStore = create<TaskStore>()(
         clearTasks: (sessionId: string) => {
           set(
             state => {
-              const newMap = new Map(state.tasksBySession);
-              newMap.delete(sessionId);
-              return { tasksBySession: newMap };
+              const { [sessionId]: _removed, ...rest } = state.tasksBySession;
+              return { tasksBySession: rest };
             },
             undefined,
             'task/clearTasks'
@@ -127,16 +124,16 @@ const EMPTY_TASKS: TaskItem[] = [];
  * Select tasks for a specific session
  */
 export const selectTasksForSession = (sessionId: string) => (state: TaskStore) =>
-  state.tasksBySession.get(sessionId) ?? EMPTY_TASKS;
+  state.tasksBySession[sessionId] ?? EMPTY_TASKS;
 
 /**
  * Select total task count for a session
  */
 export const selectTaskCountForSession = (sessionId: string) => (state: TaskStore) =>
-  state.tasksBySession.get(sessionId)?.length ?? 0;
+  state.tasksBySession[sessionId]?.length ?? 0;
 
 /**
  * Select whether a session has any in-progress tasks
  */
 export const selectHasInProgressTasks = (sessionId: string) => (state: TaskStore) =>
-  state.tasksBySession.get(sessionId)?.some(t => t.status === 'in_progress') ?? false;
+  state.tasksBySession[sessionId]?.some(t => t.status === 'in_progress') ?? false;

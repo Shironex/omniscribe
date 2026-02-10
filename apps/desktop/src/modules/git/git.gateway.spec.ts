@@ -5,6 +5,7 @@ import { GitGateway } from './git.gateway';
 import { GitService } from './git.service';
 import { WorktreeService } from './worktree.service';
 import { GithubService } from './github.service';
+import { MAX_PATH_LENGTH } from '@omniscribe/shared';
 
 // ---------------------------------------------------------------------------
 // Mock helpers
@@ -84,6 +85,87 @@ describe('GitGateway', () => {
   });
 
   // ========================================================================
+  // Path validation (shared across handlers)
+  // ========================================================================
+
+  describe('path validation', () => {
+    it('should reject relative paths', async () => {
+      const result = await gateway.handleBranches(client, {
+        projectPath: 'relative/path',
+      });
+
+      expect(result.error).toBe('Invalid projectPath: must be an absolute path');
+      expect(mockGitService.getBranches).not.toHaveBeenCalled();
+    });
+
+    it('should reject path traversal attempts', async () => {
+      const result = await gateway.handleBranches(client, {
+        projectPath: '../../etc',
+      });
+
+      expect(result.error).toBe('Invalid projectPath: must be an absolute path');
+      expect(mockGitService.getBranches).not.toHaveBeenCalled();
+    });
+
+    it('should reject paths exceeding MAX_PATH_LENGTH', async () => {
+      const result = await gateway.handleBranches(client, {
+        projectPath: '/' + 'a'.repeat(MAX_PATH_LENGTH),
+      });
+
+      expect(result.error).toBe(
+        `projectPath exceeds maximum length of ${MAX_PATH_LENGTH} characters`
+      );
+      expect(mockGitService.getBranches).not.toHaveBeenCalled();
+    });
+
+    it('should reject non-string projectPath values', async () => {
+      const result = await gateway.handleBranches(client, {
+        projectPath: 123 as unknown as string,
+      });
+
+      expect(result.error).toBe('Invalid projectPath: must be a non-empty string');
+      expect(mockGitService.getBranches).not.toHaveBeenCalled();
+    });
+
+    it('should accept valid absolute paths', async () => {
+      mockGitService.getBranches.mockResolvedValue([]);
+      mockGitService.getCurrentBranch.mockResolvedValue('main');
+
+      const result = await gateway.handleBranches(client, {
+        projectPath: '/valid/absolute/path',
+      });
+
+      expect(result.error).toBeUndefined();
+      expect(mockGitService.getBranches).toHaveBeenCalledWith('/valid/absolute/path');
+    });
+
+    it('should validate worktreePath in handleWorktreeCleanup', async () => {
+      const result = await gateway.handleWorktreeCleanup(client, {
+        projectPath: '/repo',
+        worktreePath: 'relative/worktree',
+      });
+
+      expect(result).toEqual({
+        success: false,
+        error: 'Invalid worktreePath: must be an absolute path',
+      });
+      expect(mockWorktreeService.cleanup).not.toHaveBeenCalled();
+    });
+
+    it('should validate projectPath before worktreePath in handleWorktreeCleanup', async () => {
+      const result = await gateway.handleWorktreeCleanup(client, {
+        projectPath: 'relative',
+        worktreePath: 'also-relative',
+      });
+
+      expect(result).toEqual({
+        success: false,
+        error: 'Invalid projectPath: must be an absolute path',
+      });
+    });
+  });
+
+  // ========================================================================
   // git:branches
   // ========================================================================
 
@@ -114,7 +196,7 @@ describe('GitGateway', () => {
       expect(result).toEqual({
         branches: [],
         currentBranch: '',
-        error: 'Project path is required',
+        error: 'Invalid projectPath: must be a non-empty string',
       });
       expect(mockGitService.getBranches).not.toHaveBeenCalled();
     });
@@ -185,7 +267,7 @@ describe('GitGateway', () => {
 
       expect(result).toEqual({
         commits: [],
-        error: 'Project path is required',
+        error: 'Invalid projectPath: must be a non-empty string',
       });
     });
 
@@ -231,7 +313,7 @@ describe('GitGateway', () => {
 
       expect(result).toEqual({
         success: false,
-        error: 'Project path and branch are required',
+        error: 'Invalid projectPath: must be a non-empty string',
       });
     });
 
@@ -243,7 +325,7 @@ describe('GitGateway', () => {
 
       expect(result).toEqual({
         success: false,
-        error: 'Project path and branch are required',
+        error: 'Branch is required',
       });
     });
 
@@ -317,7 +399,7 @@ describe('GitGateway', () => {
 
       expect(result).toEqual({
         success: false,
-        error: 'Project path and branch name are required',
+        error: 'Invalid projectPath: must be a non-empty string',
       });
     });
 
@@ -329,7 +411,7 @@ describe('GitGateway', () => {
 
       expect(result).toEqual({
         success: false,
-        error: 'Project path and branch name are required',
+        error: 'Branch name is required',
       });
     });
 
@@ -369,7 +451,7 @@ describe('GitGateway', () => {
 
       expect(result).toEqual({
         currentBranch: '',
-        error: 'Project path is required',
+        error: 'Invalid projectPath: must be a non-empty string',
       });
     });
 
@@ -408,7 +490,7 @@ describe('GitGateway', () => {
 
       expect(result).toEqual({
         worktrees: [],
-        error: 'Project path is required',
+        error: 'Invalid projectPath: must be a non-empty string',
       });
     });
 
@@ -448,7 +530,7 @@ describe('GitGateway', () => {
 
       expect(result).toEqual({
         success: false,
-        error: 'Project path and worktree path are required',
+        error: 'Invalid projectPath: must be a non-empty string',
       });
     });
 
@@ -460,7 +542,7 @@ describe('GitGateway', () => {
 
       expect(result).toEqual({
         success: false,
-        error: 'Project path and worktree path are required',
+        error: 'Invalid worktreePath: must be a non-empty string',
       });
     });
 
@@ -553,7 +635,7 @@ describe('GitGateway', () => {
 
       expect(result).toEqual({
         repo: null,
-        error: 'Project path is required',
+        error: 'Invalid projectPath: must be a non-empty string',
       });
     });
 
@@ -597,7 +679,7 @@ describe('GitGateway', () => {
 
       expect(result).toEqual({
         pullRequests: [],
-        error: 'Project path is required',
+        error: 'Invalid projectPath: must be a non-empty string',
       });
     });
 
@@ -638,7 +720,7 @@ describe('GitGateway', () => {
 
       expect(result).toEqual({
         pullRequest: null,
-        error: 'Project path and PR number are required',
+        error: 'Invalid projectPath: must be a non-empty string',
       });
     });
 
@@ -650,7 +732,7 @@ describe('GitGateway', () => {
 
       expect(result).toEqual({
         pullRequest: null,
-        error: 'Project path and PR number are required',
+        error: 'PR number is required',
       });
     });
 
@@ -702,7 +784,7 @@ describe('GitGateway', () => {
 
       expect(result).toEqual({
         success: false,
-        error: 'Project path and title are required',
+        error: 'Invalid projectPath: must be a non-empty string',
       });
     });
 
@@ -714,7 +796,7 @@ describe('GitGateway', () => {
 
       expect(result).toEqual({
         success: false,
-        error: 'Project path and title are required',
+        error: 'Title is required',
       });
     });
 
@@ -764,7 +846,7 @@ describe('GitGateway', () => {
 
       expect(result).toEqual({
         issues: [],
-        error: 'Project path is required',
+        error: 'Invalid projectPath: must be a non-empty string',
       });
     });
 
@@ -805,7 +887,7 @@ describe('GitGateway', () => {
 
       expect(result).toEqual({
         issue: null,
-        error: 'Project path and issue number are required',
+        error: 'Invalid projectPath: must be a non-empty string',
       });
     });
 
@@ -817,7 +899,7 @@ describe('GitGateway', () => {
 
       expect(result).toEqual({
         issue: null,
-        error: 'Project path and issue number are required',
+        error: 'Issue number is required',
       });
     });
 

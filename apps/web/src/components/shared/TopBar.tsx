@@ -1,6 +1,17 @@
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { GitBranch, X, Plus, Minus, Square, XIcon, Settings, Play, LayoutGrid } from 'lucide-react';
+import {
+  GitBranch,
+  X,
+  Plus,
+  Minus,
+  Square,
+  XIcon,
+  Settings,
+  Play,
+  LayoutGrid,
+  History,
+} from 'lucide-react';
 import { StatusLegend, StatusCounts } from './StatusLegend';
 import { StatusDot, SessionStatus } from './StatusLegend';
 import { UsagePopover } from '@/components/shared/UsagePopover';
@@ -38,6 +49,8 @@ interface TopBarProps {
   canLaunch: boolean;
   isLaunching?: boolean;
   hasActiveSessions: boolean;
+  onToggleHistory?: () => void;
+  isHistoryOpen?: boolean;
   className?: string;
 }
 
@@ -59,6 +72,8 @@ export function TopBar({
   canLaunch,
   isLaunching = false,
   hasActiveSessions,
+  onToggleHistory,
+  isHistoryOpen,
   className,
 }: TopBarProps) {
   const isElectron = typeof window !== 'undefined' && !!window.electronAPI;
@@ -69,6 +84,9 @@ export function TopBar({
 
   const canAddMore = hasActiveProject && sessionCount + preLaunchSlotCount < MAX_SESSIONS;
   const stopShortcut = isMac ? '⌘ K' : 'Ctrl+K';
+  const settingsShortcut = isMac ? '⌘ ,' : 'Ctrl+,';
+  const historyShortcut = isMac ? '⌘ ⇧ H' : 'Ctrl+Shift+H';
+  const closeTabShortcut = isMac ? '⌘ W' : 'Ctrl+W';
 
   return (
     <div
@@ -122,7 +140,12 @@ export function TopBar({
                   <X size={14} />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent side="bottom">Close tab</TooltipContent>
+              <TooltipContent side="bottom">
+                Close tab
+                <kbd className="ml-1.5 px-1 py-0.5 text-[10px] bg-white/10 rounded">
+                  {closeTabShortcut}
+                </kbd>
+              </TooltipContent>
             </Tooltip>
           </div>
         ))}
@@ -169,6 +192,29 @@ export function TopBar({
         {/* Divider */}
         <div className="w-px h-5 bg-border mx-1" />
 
+        {/* Session History toggle */}
+        {hasActiveProject && onToggleHistory && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onToggleHistory}
+                className={clsx('no-drag w-7 h-7', isHistoryOpen && 'bg-primary/10 text-primary')}
+                aria-label="Session history"
+              >
+                <History size={15} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              Session history
+              <kbd className="ml-1.5 px-1 py-0.5 text-[10px] bg-white/10 rounded">
+                {historyShortcut}
+              </kbd>
+            </TooltipContent>
+          </Tooltip>
+        )}
+
         {/* Settings */}
         <Tooltip>
           <TooltipTrigger asChild>
@@ -182,7 +228,12 @@ export function TopBar({
               <Settings size={15} />
             </Button>
           </TooltipTrigger>
-          <TooltipContent side="bottom">Settings</TooltipContent>
+          <TooltipContent side="bottom">
+            Settings
+            <kbd className="ml-1.5 px-1 py-0.5 text-[10px] bg-white/10 rounded">
+              {settingsShortcut}
+            </kbd>
+          </TooltipContent>
         </Tooltip>
 
         {/* Set Up Sessions */}

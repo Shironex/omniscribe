@@ -1,7 +1,13 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
-import { createLogger } from '@omniscribe/shared';
+import {
+  createLogger,
+  DEFAULT_PREFERENCES,
+  WorkspaceEvents,
+  normalizePath,
+} from '@omniscribe/shared';
 import { socket } from '@/lib/socket';
+import { emitAsync } from '@/lib/socketHelpers';
 
 const logger = createLogger('WorkspaceStore');
 import type {
@@ -16,7 +22,6 @@ import type {
   PreferencesResponse,
   WorkspaceStateResponse,
 } from '@omniscribe/shared';
-import { DEFAULT_WORKTREE_SETTINGS, DEFAULT_SESSION_SETTINGS } from '@omniscribe/shared';
 import { useSettingsStore } from './useSettingsStore';
 import {
   SocketStoreState,
@@ -61,12 +66,8 @@ interface WorkspaceActions extends SocketStoreActions {
   removeSessionFromTab: (tabId: string, sessionId: string) => void;
   /** Clear stale session references (called on rehydrate) */
   clearStaleSessions: (validSessionIds: string[]) => void;
-  /** Get tab by project path */
-  getTabByProjectPath: (projectPath: string) => ProjectTab | undefined;
-  /** Get active tab */
-  getActiveTab: () => ProjectTab | undefined;
   /** Restore workspace state from backend */
-  restoreState: () => void;
+  restoreState: () => Promise<void>;
   /** Update a preference */
   updatePreference: (key: string, value: unknown) => void;
   /** Set tabs (internal) */
@@ -95,7 +96,7 @@ function generateTabId(): string {
  * Extract project name from path
  */
 function extractProjectName(projectPath: string): string {
-  const parts = projectPath.replace(/\\/g, '/').split('/');
+  const parts = normalizePath(projectPath).split('/');
   return parts[parts.length - 1] || projectPath;
 }
 
@@ -111,15 +112,6 @@ function convertBackendTab(dto: ProjectTabDTO): ProjectTab {
 }
 
 /**
- * Default preferences
- */
-const DEFAULT_PREFERENCES: UserPreferences = {
-  theme: 'dark',
-  worktree: DEFAULT_WORKTREE_SETTINGS,
-  session: DEFAULT_SESSION_SETTINGS,
-};
-
-/**
  * Workspace store using Zustand with WebSocket-based persistence
  */
 export const useWorkspaceStore = create<WorkspaceStore>()(
@@ -133,7 +125,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
         createSocketListeners<WorkspaceStore>(get, set, 'workspace', {
           listeners: [
             {
-              event: 'workspace:tabs-updated',
+              event: WorkspaceEvents.TABS_UPDATED,
               handler: (data, get) => {
                 const update = data as TabsUpdatedEvent;
                 const tabs = update.tabs.map(convertBackendTab);
@@ -141,7 +133,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
               },
             },
             {
-              event: 'workspace:preferences-updated',
+              event: WorkspaceEvents.PREFERENCES_UPDATED,
               handler: (data, get) => {
                 const update = data as PreferencesUpdatedEvent;
                 get().setPreferences(update.preferences);
@@ -180,17 +172,17 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
         openProject: (projectPath: string, name?: string) => {
           logger.info('Opening project', projectPath);
           const state = get();
-          const normalizedPath = projectPath.replace(/\\/g, '/');
+          const normalizedPath = normalizePath(projectPath);
 
           // Check if project is already open
           const existingTab = state.tabs.find(
-            tab => tab.projectPath.replace(/\\/g, '/') === normalizedPath
+            tab => normalizePath(tab.projectPath) === normalizedPath
           );
 
           if (existingTab) {
             // Focus existing tab via backend
             socket.emit(
-              'workspace:select-tab',
+              WorkspaceEvents.SELECT_TAB,
               { tabId: existingTab.id },
               (response: TabsResponse) => {
                 if (response.success) {
@@ -215,7 +207,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
           const currentTheme = useSettingsStore.getState().theme;
 
           socket.emit(
-            'workspace:add-tab',
+            WorkspaceEvents.ADD_TAB,
             { id: tabId, projectPath, name: tabName, theme: currentTheme },
             (response: TabsResponse) => {
               if (response.success) {
@@ -234,7 +226,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
 
         closeTab: (tabId: string) => {
           logger.debug('closeTab', tabId);
-          socket.emit('workspace:remove-tab', { tabId }, (response: TabsResponse) => {
+          socket.emit(WorkspaceEvents.REMOVE_TAB, { tabId }, (response: TabsResponse) => {
             if (response.success) {
               set(
                 {
@@ -255,7 +247,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
           // This ensures activeTab computed value is accurate before socket response
           set({ activeTabId: tabId }, undefined, 'workspace/selectTabOptimistic');
 
-          socket.emit('workspace:select-tab', { tabId }, (response: TabsResponse) => {
+          socket.emit(WorkspaceEvents.SELECT_TAB, { tabId }, (response: TabsResponse) => {
             if (response.success) {
               set(
                 {
@@ -275,7 +267,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
 
         updateTabTheme: (tabId: string, theme: Theme) => {
           socket.emit(
-            'workspace:update-tab-theme',
+            WorkspaceEvents.UPDATE_TAB_THEME,
             { tabId, theme },
             (response: TabsOnlyResponse) => {
               if (response.success) {
@@ -330,25 +322,21 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
           );
         },
 
-        getTabByProjectPath: (projectPath: string) => {
-          const normalizedPath = projectPath.replace(/\\/g, '/');
-          return get().tabs.find(tab => tab.projectPath.replace(/\\/g, '/') === normalizedPath);
-        },
-
-        getActiveTab: () => {
+        restoreState: async () => {
           const state = get();
-          return state.tabs.find(tab => tab.id === state.activeTabId);
-        },
-
-        restoreState: () => {
-          const state = get();
-          if (state.isRestored) {
-            return; // Already restored
+          if (state.isRestored || state.isLoading) {
+            return; // Already restored or in progress
           }
 
           set({ isLoading: true }, undefined, 'workspace/restoreStateStart');
 
-          socket.emit('workspace:get-state', {}, (response: WorkspaceStateResponse) => {
+          try {
+            const response = await emitAsync<object, WorkspaceStateResponse>(
+              WorkspaceEvents.GET_STATE,
+              {},
+              { timeout: 10_000 }
+            );
+
             if (response) {
               const tabs = (response.tabs ?? []).map(convertBackendTab);
               // Clear session IDs on restore - they'll be re-associated
@@ -379,12 +367,19 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
                 'workspace/restoreStateEmpty'
               );
             }
-          });
+          } catch (err) {
+            const message = err instanceof Error ? err.message : 'Restore timed out';
+            set(
+              { isLoading: false, isRestored: true, error: message },
+              undefined,
+              'workspace/restoreStateError'
+            );
+          }
         },
 
         updatePreference: (key: string, value: unknown) => {
           socket.emit(
-            'workspace:update-preference',
+            WorkspaceEvents.UPDATE_PREFERENCE,
             { key, value },
             (response: PreferencesResponse) => {
               if (response.success) {
@@ -424,8 +419,8 @@ export const selectActiveTab = (state: WorkspaceStore) =>
  * Select tab by project path
  */
 export const selectTabByProjectPath = (projectPath: string) => (state: WorkspaceStore) => {
-  const normalizedPath = projectPath.replace(/\\/g, '/');
-  return state.tabs.find(tab => tab.projectPath.replace(/\\/g, '/') === normalizedPath);
+  const normalizedPath = normalizePath(projectPath);
+  return state.tabs.find(tab => normalizePath(tab.projectPath) === normalizedPath);
 };
 
 /**

@@ -141,7 +141,7 @@ describe('GitGateway (integration)', () => {
       error?: string;
     }>(client, 'git:branches', { projectPath: '' });
 
-    expect(response.error).toBe('Project path is required');
+    expect(response.error).toBe('Invalid projectPath: must be a non-empty string');
     expect(response.branches).toEqual([]);
   });
 });

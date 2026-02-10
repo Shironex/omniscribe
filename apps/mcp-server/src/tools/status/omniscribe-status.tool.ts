@@ -6,9 +6,7 @@
 import { z } from 'zod';
 import type { Tool, ToolDependencies, ToolMetadata, ToolResponse } from '../types.js';
 import type { OmniscribeHttpClient } from '../../http/index.js';
-import type { SessionStatusState } from '@omniscribe/shared';
-
-const STATUS_STATES = ['idle', 'working', 'planning', 'needs_input', 'finished', 'error'] as const;
+import { SESSION_STATUS_STATES, type SessionStatusState } from '@omniscribe/shared';
 
 interface OmniscribeStatusInput {
   state: SessionStatusState;
@@ -26,7 +24,7 @@ export class OmniscribeStatusTool implements Tool<OmniscribeStatusInput> {
 
   readonly inputSchema = {
     state: z
-      .enum(STATUS_STATES)
+      .enum(SESSION_STATUS_STATES)
       .describe(
         'Current agent state: idle (waiting), working (executing), planning (in plan mode), needs_input (waiting for user), finished (task complete), error (something went wrong)'
       ),

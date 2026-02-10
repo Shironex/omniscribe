@@ -1,7 +1,12 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { toast } from 'sonner';
-import { createLogger, type ConnectionStatus, type WsThrottledPayload } from '@omniscribe/shared';
+import {
+  createLogger,
+  SystemEvents,
+  type ConnectionStatus,
+  type WsThrottledPayload,
+} from '@omniscribe/shared';
 import { socket } from '@/lib/socket';
 
 const logger = createLogger('ConnectionStore');
@@ -122,7 +127,7 @@ export const useConnectionStore = create<ConnectionStore>()(
         socket.on('connect', connectHandler);
         socket.on('disconnect', disconnectHandler);
         socket.on('reconnect_failed', reconnectFailedHandler);
-        socket.on('ws:throttled', throttledHandler);
+        socket.on(SystemEvents.THROTTLED, throttledHandler);
 
         listenersInitialized = true;
         logger.debug('Connection listeners registered');
@@ -147,7 +152,7 @@ export const useConnectionStore = create<ConnectionStore>()(
           reconnectFailedHandler = null;
         }
         if (throttledHandler) {
-          socket.off('ws:throttled', throttledHandler);
+          socket.off(SystemEvents.THROTTLED, throttledHandler);
           throttledHandler = null;
         }
 

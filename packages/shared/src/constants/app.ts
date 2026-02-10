@@ -5,6 +5,9 @@
  * Use these instead of hardcoding values throughout the codebase.
  */
 
+import type { UserPreferences } from '../types/project-tab';
+import { DEFAULT_WORKTREE_SETTINGS, DEFAULT_SESSION_SETTINGS } from '../types/settings';
+
 // =============================================================================
 // App Identity
 // =============================================================================
@@ -103,8 +106,55 @@ export const LOG_BUFFER_MAX_ENTRIES = 50;
 export const LOG_CLEANUP_INTERVAL_MS = 60 * 60 * 1000;
 
 // =============================================================================
+// Validation
+// =============================================================================
+
+/** Valid AI modes for session creation */
+export const VALID_AI_MODES = ['claude', 'plain'] as const;
+
+/** Maximum length for model identifier */
+export const MAX_MODEL_LENGTH = 200;
+
+/** Maximum length for system prompt */
+export const MAX_SYSTEM_PROMPT_LENGTH = 100_000;
+
+/** Maximum length for session name */
+export const MAX_SESSION_NAME_LENGTH = 200;
+
+/** Maximum length for project path */
+export const MAX_PATH_LENGTH = 1024;
+
+// =============================================================================
 // Session Limits
 // =============================================================================
 
 /** Maximum concurrent running sessions (matches terminal grid capacity) */
 export const MAX_CONCURRENT_SESSIONS = 12;
+
+// =============================================================================
+// MCP Status States
+// =============================================================================
+
+/** Valid session status states for MCP status reporting */
+export const SESSION_STATUS_STATES = [
+  'idle',
+  'working',
+  'planning',
+  'needs_input',
+  'finished',
+  'error',
+] as const;
+
+/** Valid task statuses for MCP task reporting */
+export const TASK_STATUSES = ['pending', 'in_progress', 'completed'] as const;
+
+// =============================================================================
+// Default Preferences
+// =============================================================================
+
+/** Default user preferences */
+export const DEFAULT_PREFERENCES: UserPreferences = {
+  theme: 'dark',
+  worktree: DEFAULT_WORKTREE_SETTINGS,
+  session: DEFAULT_SESSION_SETTINGS,
+};

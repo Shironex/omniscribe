@@ -6,6 +6,7 @@ import {
   WelcomeView,
   SettingsModal,
   LaunchPresetsModal,
+  SessionHistoryPanel,
 } from '@/components';
 import {
   useAppInitialization,
@@ -20,7 +21,10 @@ import {
   useDefaultAiMode,
 } from '@/hooks';
 import { useUpdateToast } from '@/hooks/useUpdateToast';
-import { useTerminalStore, useWorkspaceStore } from '@/stores';
+import { useTerminalStore, useWorkspaceStore, useSettingsStore, useSessionStore } from '@/stores';
+import { resumeSession } from '@/lib/session';
+import { extractErrorMessage } from '@omniscribe/shared';
+import { toast } from 'sonner';
 
 function App() {
   useAppInitialization();
@@ -39,8 +43,6 @@ function App() {
 
   const { branches, currentBranch } = useProjectGit(activeProjectPath);
 
-  const sessionsHookResult = useProjectSessions(activeProjectPath, []);
-
   const {
     preLaunchSlots,
     canLaunch,
@@ -52,7 +54,7 @@ function App() {
     handleUpdateSlot,
     handleLaunchSlot,
     handleLaunch,
-  } = usePreLaunchSlots(activeProjectPath, currentBranch, sessionsHookResult.updateSession);
+  } = usePreLaunchSlots(activeProjectPath, currentBranch);
 
   const {
     terminalSessions,
@@ -63,6 +65,9 @@ function App() {
     handleFocusSession,
     handleSessionClose,
   } = useProjectSessions(activeProjectPath, preLaunchSlots);
+
+  // Stable store action for handleResume (no need for a second hook call)
+  const updateSession = useSessionStore(state => state.updateSession);
 
   const sessionOrder = useTerminalStore(state => state.sessionOrder);
   const setSessionOrder = useTerminalStore(state => state.setSessionOrder);
@@ -125,8 +130,65 @@ function App() {
   const [isLaunchModalOpen, setIsLaunchModalOpen] = useState(false);
   const handleOpenLaunchModal = useCallback(() => setIsLaunchModalOpen(true), []);
 
+  // Session history panel state
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const handleToggleHistory = useCallback(() => setIsHistoryOpen(prev => !prev), []);
+
+  // Toggle settings modal
+  const handleToggleSettings = useCallback(() => {
+    const { isOpen, openSettings, closeSettings } = useSettingsStore.getState();
+    if (isOpen) {
+      closeSettings();
+    } else {
+      openSettings();
+    }
+  }, []);
+
+  // Close current tab
+  const handleCloseCurrentTab = useCallback(() => {
+    if (activeTabId) {
+      handleCloseTab(activeTabId);
+    }
+  }, [activeTabId, handleCloseTab]);
+
+  // Switch tab by index
+  const handleSelectTabByIndex = useCallback(
+    (index: number) => {
+      const { tabs: currentTabs } = useWorkspaceStore.getState();
+      if (index >= 0 && index < currentTabs.length) {
+        handleSelectTab(currentTabs[index].id);
+      }
+    },
+    [handleSelectTab]
+  );
+
   // Default AI mode for modal
   const { defaultAiMode, claudeAvailable } = useDefaultAiMode();
+
+  // Resume session handler
+  const handleResume = useCallback(
+    async (sessionId: string) => {
+      const session = useSessionStore.getState().sessions.find(s => s.id === sessionId);
+      if (!session?.claudeSessionId || !activeProjectPath) return;
+      try {
+        const resumed = await resumeSession(
+          session.claudeSessionId,
+          activeProjectPath,
+          session.branch
+        );
+        if (resumed.terminalSessionId !== undefined) {
+          updateSession(resumed.id, {
+            terminalSessionId: resumed.terminalSessionId,
+          });
+        }
+        toast.success('Session resumed');
+      } catch (error) {
+        const msg = extractErrorMessage(error, 'Failed to resume');
+        toast.error(msg);
+      }
+    },
+    [updateSession, activeProjectPath]
+  );
 
   useAppKeyboardShortcuts({
     canLaunch,
@@ -141,6 +203,10 @@ function App() {
     handleLaunch,
     handleLaunchSlot,
     handleStopAll,
+    handleToggleSettings,
+    handleToggleHistory,
+    handleCloseCurrentTab,
+    handleSelectTabByIndex,
   });
 
   return (
@@ -166,42 +232,55 @@ function App() {
         canLaunch={canLaunch}
         isLaunching={isLaunching}
         hasActiveSessions={hasActiveSessions}
+        onToggleHistory={handleToggleHistory}
+        isHistoryOpen={isHistoryOpen}
       />
 
       <main className="flex-1 flex overflow-hidden bg-background">
-        {activeProjectPath ? (
-          hasContent ? (
-            <TerminalGrid
-              sessions={orderedTerminalSessions}
-              preLaunchSlots={preLaunchSlots}
-              launchingSlotIds={launchingSlotIds}
-              branches={branches}
-              quickActions={quickActionsForTerminal}
-              focusedSessionId={focusedSessionId}
-              onFocusSession={handleFocusSession}
-              onAddSlot={handleAddSession}
-              onOpenLaunchModal={handleOpenLaunchModal}
-              onRemoveSlot={handleRemoveSlot}
-              onUpdateSlot={handleUpdateSlot}
-              onLaunch={handleLaunchSlot}
-              onKill={handleKillSession}
-              onSessionClose={handleSessionClose}
-              onQuickAction={handleQuickAction}
-              onReorderSessions={handleReorderSessions}
-            />
+        {/* Main content area */}
+        <div className="flex-1 min-w-0">
+          {activeProjectPath ? (
+            hasContent ? (
+              <TerminalGrid
+                sessions={orderedTerminalSessions}
+                preLaunchSlots={preLaunchSlots}
+                launchingSlotIds={launchingSlotIds}
+                branches={branches}
+                quickActions={quickActionsForTerminal}
+                focusedSessionId={focusedSessionId}
+                onFocusSession={handleFocusSession}
+                onAddSlot={handleAddSession}
+                onOpenLaunchModal={handleOpenLaunchModal}
+                onRemoveSlot={handleRemoveSlot}
+                onUpdateSlot={handleUpdateSlot}
+                onLaunch={handleLaunchSlot}
+                onKill={handleKillSession}
+                onSessionClose={handleSessionClose}
+                onQuickAction={handleQuickAction}
+                onResume={handleResume}
+                onReorderSessions={handleReorderSessions}
+              />
+            ) : (
+              <IdleLandingView
+                onAddSession={handleAddSession}
+                onOpenLaunchModal={handleOpenLaunchModal}
+              />
+            )
           ) : (
-            <IdleLandingView
-              onAddSession={handleAddSession}
-              onOpenLaunchModal={handleOpenLaunchModal}
+            <WelcomeView
+              recentProjects={recentProjects}
+              onOpenProject={handleSelectDirectory}
+              onSelectProject={handleSelectTab}
             />
-          )
-        ) : (
-          <WelcomeView
-            recentProjects={recentProjects}
-            onOpenProject={handleSelectDirectory}
-            onSelectProject={handleSelectTab}
-          />
-        )}
+          )}
+        </div>
+
+        {/* Session History Panel */}
+        <SessionHistoryPanel
+          isOpen={isHistoryOpen}
+          onClose={() => setIsHistoryOpen(false)}
+          projectPath={activeProjectPath}
+        />
       </main>
 
       <SettingsModal />

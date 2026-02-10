@@ -54,6 +54,37 @@ function isValidGitRefName(name: string): boolean {
   return true;
 }
 
+/**
+ * Remove surrounding quotes from git output line and trim whitespace.
+ * Git format strings wrapped in double quotes for Windows compatibility
+ * may produce quoted output lines.
+ */
+function cleanGitOutputLine(line: string): string {
+  return line.trim().replace(/^["']|["']$/g, '');
+}
+
+/**
+ * Remove trailing quote from a pipe-delimited field value.
+ * The last field in a git format string may retain a trailing quote
+ * after splitting on '|'.
+ */
+function cleanTrailingQuote(value: string): string {
+  return value.replace(/["']$/g, '');
+}
+
+/**
+ * Parse ahead/behind tracking info from git upstream:track output.
+ * Input format: "[ahead 2, behind 1]" or "[ahead 3]" or "[behind 1]"
+ */
+function parseBranchTrackingInfo(track: string): { ahead?: number; behind?: number } {
+  const result: { ahead?: number; behind?: number } = {};
+  const aheadMatch = track.match(/ahead (\d+)/);
+  const behindMatch = track.match(/behind (\d+)/);
+  if (aheadMatch) result.ahead = parseInt(aheadMatch[1], 10);
+  if (behindMatch) result.behind = parseInt(behindMatch[1], 10);
+  return result;
+}
+
 @Injectable()
 export class GitBranchService {
   private readonly logger = createLogger('GitBranchService');
@@ -89,7 +120,7 @@ export class GitBranchService {
       if (!line.trim()) continue;
 
       // Remove surrounding quotes that may be present on Windows
-      const cleanLine = line.trim().replace(/^["']|["']$/g, '');
+      const cleanLine = cleanGitOutputLine(line);
       if (!cleanLine) continue;
 
       const parts = cleanLine.split('|');
@@ -99,8 +130,8 @@ export class GitBranchService {
 
       const isCurrent = parts[0].trim() === '*';
       // Also clean individual parts in case quotes are embedded
-      const name = parts[1].trim().replace(/^["']|["']$/g, '');
-      const refType = (parts[2]?.trim() || '').replace(/^["']|["']$/g, '');
+      const name = cleanGitOutputLine(parts[1]);
+      const refType = cleanGitOutputLine(parts[2] ?? '');
 
       // Remote branches have refType containing 'remotes' (e.g., 'refs/remotes')
       const isRemote = refType.includes('remotes');
@@ -171,7 +202,7 @@ export class GitBranchService {
       for (const line of localRefOutput.split('\n')) {
         if (!line.trim()) continue;
         // Remove surrounding quotes that may be present on Windows
-        const cleanLine = line.trim().replace(/^["']|["']$/g, '');
+        const cleanLine = cleanGitOutputLine(line);
         if (!cleanLine) continue;
         const [name, hash, message, upstream, track] = cleanLine.split('|');
         if (name) {
@@ -179,7 +210,7 @@ export class GitBranchService {
             hash: hash || '',
             message: message || '',
             upstream: upstream || '',
-            track: (track || '').replace(/["']$/g, ''), // Remove trailing quote if present
+            track: cleanTrailingQuote(track || ''),
           });
         }
       }
@@ -197,13 +228,13 @@ export class GitBranchService {
       for (const line of remoteRefOutput.split('\n')) {
         if (!line.trim()) continue;
         // Remove surrounding quotes that may be present on Windows
-        const cleanLine = line.trim().replace(/^["']|["']$/g, '');
+        const cleanLine = cleanGitOutputLine(line);
         if (!cleanLine) continue;
         const [name, hash, message] = cleanLine.split('|');
         if (name && !name.includes('/HEAD')) {
           remoteRefMap.set(name.trim(), {
             hash: hash || '',
-            message: (message || '').replace(/["']$/g, ''), // Remove trailing quote if present
+            message: cleanTrailingQuote(message || ''),
           });
         }
       }
@@ -229,10 +260,9 @@ export class GitBranchService {
 
               // Parse tracking info (e.g., "[ahead 2, behind 1]")
               if (refInfo.track) {
-                const aheadMatch = refInfo.track.match(/ahead (\d+)/);
-                const behindMatch = refInfo.track.match(/behind (\d+)/);
-                if (aheadMatch) branch.ahead = parseInt(aheadMatch[1], 10);
-                if (behindMatch) branch.behind = parseInt(behindMatch[1], 10);
+                const tracking = parseBranchTrackingInfo(refInfo.track);
+                if (tracking.ahead !== undefined) branch.ahead = tracking.ahead;
+                if (tracking.behind !== undefined) branch.behind = tracking.behind;
               }
             }
           }
@@ -262,7 +292,7 @@ export class GitBranchService {
       if (!line.trim()) continue;
 
       // Remove surrounding quotes that may be present on Windows
-      const cleanLine = line.trim().replace(/^["']|["']$/g, '');
+      const cleanLine = cleanGitOutputLine(line);
       if (!cleanLine) continue;
 
       const [name, hash, message, upstream, track] = cleanLine.split('|');
@@ -281,13 +311,11 @@ export class GitBranchService {
         branch.remote = remoteParts[0];
         branch.upstream = upstream;
 
-        // Clean track value of any trailing quotes
-        const cleanTrack = (track || '').replace(/["']$/g, '');
+        const cleanTrack = cleanTrailingQuote(track || '');
         if (cleanTrack) {
-          const aheadMatch = cleanTrack.match(/ahead (\d+)/);
-          const behindMatch = cleanTrack.match(/behind (\d+)/);
-          if (aheadMatch) branch.ahead = parseInt(aheadMatch[1], 10);
-          if (behindMatch) branch.behind = parseInt(behindMatch[1], 10);
+          const tracking = parseBranchTrackingInfo(cleanTrack);
+          if (tracking.ahead !== undefined) branch.ahead = tracking.ahead;
+          if (tracking.behind !== undefined) branch.behind = tracking.behind;
         }
       }
 
@@ -306,7 +334,7 @@ export class GitBranchService {
       if (!line.trim() || line.includes('/HEAD')) continue;
 
       // Remove surrounding quotes that may be present on Windows
-      const cleanLine = line.trim().replace(/^["']|["']$/g, '');
+      const cleanLine = cleanGitOutputLine(line);
       if (!cleanLine || cleanLine.includes('/HEAD')) continue;
 
       const [name, hash, message] = cleanLine.split('|');
@@ -320,7 +348,7 @@ export class GitBranchService {
         isRemote: true,
         remote: remoteParts[0],
         lastCommitHash: hash || undefined,
-        lastCommitMessage: (message || '').replace(/["']$/g, '') || undefined, // Remove trailing quote if present
+        lastCommitMessage: cleanTrailingQuote(message || '') || undefined,
       });
     }
 

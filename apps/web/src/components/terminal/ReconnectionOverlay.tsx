@@ -41,7 +41,7 @@ export function ReconnectionOverlay() {
     return (
       <div
         data-testid="reconnection-overlay"
-        className="absolute inset-0 bg-background/80 backdrop-blur-sm z-10 flex flex-col items-center justify-center gap-2 transition-opacity duration-300"
+        className="absolute inset-0 bg-background/80 backdrop-blur-xs z-10 flex flex-col items-center justify-center gap-2 transition-opacity duration-300"
       >
         <CheckCircle2 className="h-6 w-6 text-green-500" />
         <span className="text-sm text-green-500 font-medium">Reconnected</span>
@@ -54,7 +54,7 @@ export function ReconnectionOverlay() {
     return (
       <div
         data-testid="reconnection-overlay"
-        className="absolute inset-0 bg-background/80 backdrop-blur-sm z-10 flex flex-col items-center justify-center gap-3"
+        className="absolute inset-0 bg-background/80 backdrop-blur-xs z-10 flex flex-col items-center justify-center gap-3"
       >
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         <span className="text-sm text-muted-foreground">Reconnecting...</span>
@@ -66,13 +66,13 @@ export function ReconnectionOverlay() {
   return (
     <div
       data-testid="reconnection-overlay"
-      className="absolute inset-0 bg-background/80 backdrop-blur-sm z-10 flex flex-col items-center justify-center gap-3"
+      className="absolute inset-0 bg-background/80 backdrop-blur-xs z-10 flex flex-col items-center justify-center gap-3"
     >
       <WifiOff className="h-6 w-6 text-destructive" />
       <span className="text-sm text-destructive">Connection lost</span>
       <button
         type="button"
-        className="text-xs text-primary hover:underline cursor-pointer"
+        className="text-xs text-primary hover:underline cursor-pointer rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         onClick={retryConnection}
       >
         Retry
