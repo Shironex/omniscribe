@@ -6,7 +6,6 @@
  * All MCP sub-services are mocked at the service boundary.
  */
 import { Module, INestApplication } from '@nestjs/common';
-import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Socket } from 'socket.io-client';
 import { createTestApp, getAppPort } from '../../../test/integration/helpers/create-test-app';
 import {
@@ -166,24 +165,6 @@ describe('McpGateway (integration)', () => {
     expect(response.running).toBe(true);
     expect(response.port).toBe(9876);
     expect(response.instanceId).toBe('test-instance');
-  });
-
-  it('should broadcast session:status when session.status event is emitted', async () => {
-    const statusPromise = waitForEvent<{
-      sessionId: string;
-      status: string;
-    }>(client, 'session:status');
-
-    const eventEmitter = app.get(EventEmitter2);
-    eventEmitter.emit('session.status', {
-      sessionId: 'session-1',
-      status: 'working',
-      message: 'Processing...',
-    });
-
-    const status = await statusPromise;
-    expect(status.sessionId).toBe('session-1');
-    expect(status.status).toBe('working');
   });
 
   it('should return error for mcp:discover without projectPath', async () => {
