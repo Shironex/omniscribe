@@ -11,6 +11,7 @@ import {
   Play,
   LayoutGrid,
   History,
+  ExternalLink,
 } from 'lucide-react';
 import { StatusLegend, StatusCounts } from './StatusLegend';
 import { StatusDot, SessionStatus } from './StatusLegend';
@@ -18,6 +19,7 @@ import { UsagePopover } from '@/components/shared/UsagePopover';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
 import { useSettingsStore } from '@/stores';
+import type { RepoInfo } from '@omniscribe/shared';
 
 const MAX_SESSIONS = 12;
 
@@ -51,6 +53,7 @@ interface TopBarProps {
   hasActiveSessions: boolean;
   onToggleHistory?: () => void;
   isHistoryOpen?: boolean;
+  repoInfo?: RepoInfo | null;
   className?: string;
 }
 
@@ -74,6 +77,7 @@ export function TopBar({
   hasActiveSessions,
   onToggleHistory,
   isHistoryOpen,
+  repoInfo,
   className,
 }: TopBarProps) {
   const isElectron = typeof window !== 'undefined' && !!window.electronAPI;
@@ -172,6 +176,46 @@ export function TopBar({
 
       {/* Right: Status info + Actions + Window controls */}
       <div className="no-drag flex items-center gap-1.5 px-2 shrink-0">
+        {/* Repo info */}
+        {repoInfo && (
+          <div className="flex items-center gap-1.5 px-2 py-1">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => window.open(repoInfo.url, '_blank')}
+                  className="flex items-center gap-1 text-xs text-foreground-secondary hover:text-foreground transition-colors"
+                >
+                  <span className="font-mono truncate max-w-48">{repoInfo.fullName}</span>
+                  <ExternalLink size={10} className="shrink-0 opacity-50" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">Open on GitHub</TooltipContent>
+            </Tooltip>
+            <span
+              className={clsx(
+                'text-[10px] font-medium px-1.5 py-0.5 rounded-full leading-none',
+                repoInfo.visibility === 'private'
+                  ? 'bg-amber-500/15 text-amber-500'
+                  : repoInfo.visibility === 'internal'
+                    ? 'bg-blue-500/15 text-blue-500'
+                    : 'bg-muted-foreground/15 text-muted-foreground'
+              )}
+            >
+              {repoInfo.visibility.charAt(0).toUpperCase() + repoInfo.visibility.slice(1)}
+            </span>
+            {repoInfo.isFork && (
+              <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full leading-none bg-muted-foreground/15 text-muted-foreground">
+                Fork
+              </span>
+            )}
+            {repoInfo.isArchived && (
+              <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full leading-none bg-orange-500/15 text-orange-500">
+                Archived
+              </span>
+            )}
+          </div>
+        )}
+
         {/* Git branch */}
         <div
           className={clsx(

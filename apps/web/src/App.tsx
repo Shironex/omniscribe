@@ -19,6 +19,7 @@ import {
   useAppKeyboardShortcuts,
   useQuickActionExecution,
   useDefaultAiMode,
+  useGithubRepoInfo,
 } from '@/hooks';
 import { useUpdateToast } from '@/hooks/useUpdateToast';
 import { useTerminalStore, useWorkspaceStore, useSettingsStore, useSessionStore } from '@/stores';
@@ -169,6 +170,9 @@ function App() {
   const githubCliStatus = useSettingsStore(state => state.githubCliStatus);
   const ghCliAvailable = !!(githubCliStatus?.installed && githubCliStatus?.auth.authenticated);
 
+  // GitHub repo info for top bar
+  const { repoInfo } = useGithubRepoInfo(activeProjectPath, ghCliAvailable);
+
   // Resume session handler
   const handleResume = useCallback(
     async (sessionId: string) => {
@@ -238,6 +242,7 @@ function App() {
         hasActiveSessions={hasActiveSessions}
         onToggleHistory={handleToggleHistory}
         isHistoryOpen={isHistoryOpen}
+        repoInfo={repoInfo}
       />
 
       <main className="flex-1 flex overflow-hidden bg-background">

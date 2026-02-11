@@ -24,3 +24,4 @@ export { useClaudeCliStatus } from './useClaudeCliStatus';
 export { useDefaultAiMode } from './useDefaultAiMode';
 export { useAppVersion } from './useAppVersion';
 export { useSplashScreen } from './useSplashScreen';
+export { useGithubRepoInfo } from './useGithubRepoInfo';
