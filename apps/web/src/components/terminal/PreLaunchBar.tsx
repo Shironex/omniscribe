@@ -1,19 +1,21 @@
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { Play, X, Terminal, ChevronDown } from 'lucide-react';
+import { Play, X, Terminal, ChevronDown, Github } from 'lucide-react';
 import { useState, useRef, useEffect, type ComponentType } from 'react';
 import type { Branch } from '@/components/shared/BranchSelector';
 import { BranchAutocomplete } from '@/components/shared/BranchAutocomplete';
 import { ClaudeIcon } from '@/components/shared/ClaudeIcon';
 import { getPrelaunchShortcutForIndex } from '@/lib/prelaunch-shortcuts';
 import { Button } from '@/components/ui/button';
-import type { AiMode } from '@omniscribe/shared';
+import { IssuePickerDialog } from './IssuePickerDialog';
+import type { AiMode, Issue } from '@omniscribe/shared';
 
 export interface PreLaunchSlot {
   id: string;
   aiMode: AiMode;
   branch: string;
   shortcutKey: string;
+  issue?: Issue;
 }
 
 interface PreLaunchBarProps {
@@ -23,7 +25,14 @@ interface PreLaunchBarProps {
   isLaunching?: boolean;
   /** Whether Claude CLI is available (controls Claude mode option) */
   claudeAvailable?: boolean;
-  onUpdate: (slotId: string, updates: Partial<Pick<PreLaunchSlot, 'aiMode' | 'branch'>>) => void;
+  /** Project path for GitHub issue fetching */
+  projectPath: string | null;
+  /** Whether GitHub CLI is installed and authenticated */
+  ghCliAvailable?: boolean;
+  onUpdate: (
+    slotId: string,
+    updates: Partial<Pick<PreLaunchSlot, 'aiMode' | 'branch' | 'issue'>>
+  ) => void;
   onLaunch: (slotId: string) => void;
   onRemove: (slotId: string) => void;
   onCreateBranch?: (branchName: string) => void;
@@ -48,6 +57,8 @@ export function PreLaunchBar({
   branches,
   isLaunching = false,
   claudeAvailable = true,
+  projectPath,
+  ghCliAvailable = false,
   onUpdate,
   onLaunch,
   onRemove,
@@ -55,7 +66,10 @@ export function PreLaunchBar({
   className,
 }: PreLaunchBarProps) {
   const [isAIModeOpen, setIsAIModeOpen] = useState(false);
+  const [isIssuePickerOpen, setIsIssuePickerOpen] = useState(false);
   const aiModeRef = useRef<HTMLDivElement>(null);
+
+  const showIssueButton = ghCliAvailable && slot.aiMode === 'claude' && !!projectPath;
 
   // Close AI mode dropdown when clicking outside
   useEffect(() => {
@@ -154,6 +168,53 @@ export function PreLaunchBar({
         side="top"
         className="h-8 w-[240px] text-xs"
       />
+
+      {/* GitHub Issue button */}
+      {showIssueButton && (
+        <>
+          <div className="flex items-center">
+            <Button
+              variant={slot.issue ? 'secondary' : 'outline'}
+              size="sm"
+              onClick={() => setIsIssuePickerOpen(true)}
+              className={clsx('text-xs gap-1', slot.issue && 'rounded-r-none')}
+              title={
+                slot.issue
+                  ? `Issue #${slot.issue.number}: ${slot.issue.title}`
+                  : 'Attach GitHub issue'
+              }
+            >
+              <Github size={14} />
+              {slot.issue ? (
+                <span className="max-w-[100px] truncate">#{slot.issue.number}</span>
+              ) : (
+                <span>Issue</span>
+              )}
+            </Button>
+            {slot.issue && (
+              <Button
+                variant="secondary"
+                size="sm"
+                className="rounded-l-none border-l border-border/50 px-1.5"
+                onClick={() => onUpdate(slot.id, { issue: undefined })}
+                aria-label="Clear issue"
+              >
+                <X size={10} />
+              </Button>
+            )}
+          </div>
+          <IssuePickerDialog
+            open={isIssuePickerOpen}
+            onOpenChange={setIsIssuePickerOpen}
+            projectPath={projectPath!}
+            selectedIssueNumber={slot.issue?.number}
+            onSelectIssue={issue => {
+              onUpdate(slot.id, { issue });
+              setIsIssuePickerOpen(false);
+            }}
+          />
+        </>
+      )}
 
       {/* Spacer */}
       <div className="flex-1" />

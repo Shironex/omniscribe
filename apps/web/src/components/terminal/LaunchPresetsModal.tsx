@@ -85,6 +85,7 @@ export function LaunchPresetsModal({
             'data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%]',
             'data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]'
           )}
+          aria-describedby={undefined}
           onEscapeKeyDown={e => {
             // When the AI mode dropdown is open, close it instead of the dialog
             if (isAIModeOpen) {

@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { createLogger, extractErrorMessage } from '@omniscribe/shared';
 import type { PreLaunchSlot } from '@/components/terminal/TerminalGrid';
 import { createSession } from '@/lib/session';
+import { buildIssueSystemPrompt, buildIssueSessionName } from '@/lib/issue-prompt';
 
 import { useTerminalStore, useSessionStore, selectRunningSessionCount } from '@/stores';
 import type { FrontendSessionConfig } from '@/stores/useSessionStore';
@@ -31,7 +32,7 @@ interface UsePreLaunchSlotsReturn {
   /** Handler to update a slot */
   handleUpdateSlot: (
     slotId: string,
-    updates: Partial<Pick<PreLaunchSlot, 'aiMode' | 'branch'>>
+    updates: Partial<Pick<PreLaunchSlot, 'aiMode' | 'branch' | 'issue'>>
   ) => void;
   /** Handler to batch-create slots with shared defaults */
   handleBatchAddSessions: (count: number, aiMode: PreLaunchSlot['aiMode'], branch: string) => void;
@@ -136,7 +137,7 @@ export function usePreLaunchSlots(
 
   // Update pre-launch slot handler
   const handleUpdateSlot = useCallback(
-    (slotId: string, updates: Partial<Pick<PreLaunchSlot, 'aiMode' | 'branch'>>) => {
+    (slotId: string, updates: Partial<Pick<PreLaunchSlot, 'aiMode' | 'branch' | 'issue'>>) => {
       setPreLaunchSlots(prev =>
         prev.map(slot => (slot.id === slotId ? { ...slot, ...updates } : slot))
       );
@@ -165,8 +166,23 @@ export function usePreLaunchSlots(
 
       try {
         logger.info('Launching slot', slotId, slot.aiMode);
+
+        // Build session options from attached issue (Claude mode only)
+        const issueOptions =
+          slot.issue && slot.aiMode === 'claude'
+            ? {
+                name: buildIssueSessionName(slot.issue),
+                systemPrompt: buildIssueSystemPrompt(slot.issue),
+              }
+            : undefined;
+
         // Create the session via socket (map UI aiMode to backend AiMode)
-        const session = await createSession(slot.aiMode, activeProjectPath, slot.branch);
+        const session = await createSession(
+          slot.aiMode,
+          activeProjectPath,
+          slot.branch,
+          issueOptions
+        );
 
         logger.info('Session created', session.id);
         // The session:created event arrives before terminalSessionId is set,

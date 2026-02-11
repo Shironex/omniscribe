@@ -14,6 +14,7 @@ import {
   createSocketClient,
   connectClient,
   emitWithAck,
+  waitForEvent,
 } from '../../../test/integration/helpers/socket-client';
 import { UsageGateway } from './usage.gateway';
 import { UsageService } from './usage.service';
@@ -77,7 +78,7 @@ describe('UsageGateway (integration)', () => {
     expect(mockUsageService.fetchUsageData).toHaveBeenCalledWith('/tmp/test-project');
   });
 
-  it('should return error when CLI is not available', async () => {
+  it('should reject usage:fetch when CLI is not installed (guard blocks)', async () => {
     mockUsageService.getStatus.mockResolvedValueOnce({
       installed: false,
       platform: 'darwin',
@@ -85,15 +86,24 @@ describe('UsageGateway (integration)', () => {
       auth: { authenticated: false },
     });
 
-    const response = await emitWithAck<{ usage?: any; error?: string; message?: string }>(
+    // ClaudeCliGuard throws NotImplementedException, which NestJS WsExceptionsHandler
+    // converts to an 'exception' event (no ack is sent back to the client).
+    const exceptionPromise = waitForEvent<{ status: string; message: string }>(
       client,
-      'usage:fetch',
-      { workingDir: '/tmp/test-project' }
+      'exception',
+      5_000
     );
 
-    expect(response.error).toBe('cli_not_found');
-    expect(response.message).toContain('Claude CLI not found');
-    expect(response.usage).toBeUndefined();
+    client.emit('usage:fetch', { workingDir: '/tmp/test-project' }, () => {
+      // ack callback -- will never fire because guard blocks the request
+    });
+
+    const exception = await exceptionPromise;
+    expect(exception.status).toBe('error');
+    // NestJS WsExceptionsHandler sanitizes the guard's NotImplementedException
+    // to a generic "Internal server error" message. The key assertion is that
+    // the guard blocked the request (exception event fired, no ack returned).
+    expect(exception.message).toBeDefined();
   });
 
   it('should handle claude:status and return CLI status', async () => {

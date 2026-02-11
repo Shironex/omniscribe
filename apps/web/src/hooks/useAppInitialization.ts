@@ -31,6 +31,26 @@ async function detectClaudeCliStatus(): Promise<void> {
 }
 
 /**
+ * Detect GitHub CLI installation & auth status via IPC and store the result.
+ * Called at startup so the issue picker button can be shown/hidden immediately.
+ */
+async function detectGithubCliStatus(): Promise<void> {
+  try {
+    if (window.electronAPI?.github?.getStatus) {
+      const status = await window.electronAPI.github.getStatus();
+      useSettingsStore.getState().setGithubCliStatus(status);
+      logger.info(
+        'GitHub CLI detected:',
+        status.installed ? 'installed' : 'not installed',
+        status.auth.authenticated ? '(authenticated)' : '(not authenticated)'
+      );
+    }
+  } catch (error) {
+    logger.warn('Failed to detect GitHub CLI status:', error);
+  }
+}
+
+/**
  * Check if auto-resume is enabled and resume any sessions that were active when Omniscribe last closed.
  * Called once on startup after the socket connection is established.
  */
@@ -139,6 +159,8 @@ export function useAppInitialization(): void {
         fetchInternalMcpStatus();
         // Detect Claude CLI status early so pre-launch slots use the correct default AI mode
         detectClaudeCliStatus().catch(() => {}); // internal try/catch handles logging
+        // Detect GitHub CLI status so the issue picker button renders immediately
+        detectGithubCliStatus().catch(() => {}); // internal try/catch handles logging
         // Auto-resume sessions from previous run if enabled
         autoResumeOnRestart().catch(() => {}); // internal try/catch handles logging
         // Init updater listeners (IPC-based, not socket)
