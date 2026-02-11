@@ -24,3 +24,5 @@ export { ReconnectionOverlay } from './ReconnectionOverlay';
 
 export { GridPresetCard } from './GridPresetCard';
 export { LaunchPresetsModal } from './LaunchPresetsModal';
+
+export { IssuePickerDialog } from './IssuePickerDialog';

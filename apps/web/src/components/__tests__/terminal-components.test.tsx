@@ -325,6 +325,7 @@ describe('PreLaunchSection', () => {
   it('renders nothing when preLaunchSlots is empty', () => {
     const { container } = render(
       <PreLaunchSection
+        projectPath={null}
         preLaunchSlots={[]}
         branches={[]}
         onRemoveSlot={vi.fn()}
@@ -342,6 +343,7 @@ describe('PreLaunchSection', () => {
     ];
     render(
       <PreLaunchSection
+        projectPath={null}
         preLaunchSlots={slots}
         branches={[{ name: 'main', isRemote: false }]}
         onRemoveSlot={vi.fn()}
@@ -358,6 +360,7 @@ describe('PreLaunchSection', () => {
     const slots = [makeSlot({ id: 'slot-1' })];
     render(
       <PreLaunchSection
+        projectPath={null}
         preLaunchSlots={slots}
         branches={[]}
         onRemoveSlot={vi.fn()}
@@ -373,6 +376,7 @@ describe('PreLaunchSection', () => {
     const slots = [makeSlot({ id: 'slot-42' })];
     render(
       <PreLaunchSection
+        projectPath={null}
         preLaunchSlots={slots}
         branches={[]}
         onRemoveSlot={vi.fn()}
@@ -389,6 +393,7 @@ describe('PreLaunchSection', () => {
     const slots = [makeSlot({ id: 'slot-7' })];
     render(
       <PreLaunchSection
+        projectPath={null}
         preLaunchSlots={slots}
         branches={[]}
         onRemoveSlot={onRemoveSlot}

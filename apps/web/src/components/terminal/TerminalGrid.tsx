@@ -26,6 +26,10 @@ interface TerminalGridProps {
   branches: Branch[];
   /** Whether Claude CLI is available (controls Claude mode option) */
   claudeAvailable?: boolean;
+  /** Project path for GitHub issue fetching */
+  projectPath: string | null;
+  /** Whether GitHub CLI is installed and authenticated */
+  ghCliAvailable?: boolean;
   quickActions?: QuickActionItem[];
   focusedSessionId: string | null;
   onFocusSession: (sessionId: string) => void;
@@ -33,7 +37,7 @@ interface TerminalGridProps {
   onRemoveSlot: (slotId: string) => void;
   onUpdateSlot: (
     slotId: string,
-    updates: Partial<Pick<PreLaunchSlot, 'aiMode' | 'branch'>>
+    updates: Partial<Pick<PreLaunchSlot, 'aiMode' | 'branch' | 'issue'>>
   ) => void;
   onLaunch: (slotId: string) => void;
   onKill: (sessionId: string) => void;
@@ -51,6 +55,8 @@ export function TerminalGrid({
   launchingSlotIds,
   branches,
   claudeAvailable,
+  projectPath,
+  ghCliAvailable,
   quickActions = [],
   focusedSessionId,
   onFocusSession,
@@ -268,6 +274,8 @@ export function TerminalGrid({
         launchingSlotIds={launchingSlotIds}
         branches={branches}
         claudeAvailable={claudeAvailable}
+        projectPath={projectPath}
+        ghCliAvailable={ghCliAvailable}
         onRemoveSlot={onRemoveSlot}
         onUpdateSlot={onUpdateSlot}
         onLaunch={onLaunch}

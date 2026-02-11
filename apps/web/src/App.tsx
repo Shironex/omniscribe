@@ -165,6 +165,10 @@ function App() {
   // Default AI mode for modal
   const { defaultAiMode, claudeAvailable } = useDefaultAiMode();
 
+  // GitHub CLI availability (installed + authenticated)
+  const githubCliStatus = useSettingsStore(state => state.githubCliStatus);
+  const ghCliAvailable = !!(githubCliStatus?.installed && githubCliStatus?.auth.authenticated);
+
   // Resume session handler
   const handleResume = useCallback(
     async (sessionId: string) => {
@@ -246,6 +250,9 @@ function App() {
                 preLaunchSlots={preLaunchSlots}
                 launchingSlotIds={launchingSlotIds}
                 branches={branches}
+                claudeAvailable={claudeAvailable}
+                projectPath={activeProjectPath}
+                ghCliAvailable={ghCliAvailable}
                 quickActions={quickActionsForTerminal}
                 focusedSessionId={focusedSessionId}
                 onFocusSession={handleFocusSession}

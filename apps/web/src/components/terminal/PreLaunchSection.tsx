@@ -8,10 +8,14 @@ interface PreLaunchSectionProps {
   branches: Branch[];
   /** Whether Claude CLI is available (controls Claude mode option) */
   claudeAvailable?: boolean;
+  /** Project path for GitHub issue fetching */
+  projectPath: string | null;
+  /** Whether GitHub CLI is installed and authenticated */
+  ghCliAvailable?: boolean;
   onRemoveSlot: (slotId: string) => void;
   onUpdateSlot: (
     slotId: string,
-    updates: Partial<Pick<PreLaunchSlot, 'aiMode' | 'branch'>>
+    updates: Partial<Pick<PreLaunchSlot, 'aiMode' | 'branch' | 'issue'>>
   ) => void;
   onLaunch: (slotId: string) => void;
 }
@@ -21,6 +25,8 @@ export function PreLaunchSection({
   launchingSlotIds,
   branches,
   claudeAvailable,
+  projectPath,
+  ghCliAvailable,
   onRemoveSlot,
   onUpdateSlot,
   onLaunch,
@@ -37,6 +43,8 @@ export function PreLaunchSection({
           branches={branches}
           isLaunching={launchingSlotIds?.has(slot.id)}
           claudeAvailable={claudeAvailable}
+          projectPath={projectPath}
+          ghCliAvailable={ghCliAvailable}
           onUpdate={onUpdateSlot}
           onLaunch={onLaunch}
           onRemove={onRemoveSlot}
