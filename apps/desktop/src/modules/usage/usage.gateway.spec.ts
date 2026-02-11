@@ -3,6 +3,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
 import { Socket } from 'socket.io';
 import { UsageGateway } from './usage.gateway';
 import { UsageService } from './usage.service';
+import { ClaudeCliGuard } from '../../common/guards';
 
 // ---- Helpers ----
 
@@ -48,7 +49,7 @@ describe('UsageGateway', () => {
 
     const module: TestingModule = await Test.createTestingModule({
       imports: [ThrottlerModule.forRoot([])],
-      providers: [UsageGateway, { provide: UsageService, useValue: usageService }],
+      providers: [UsageGateway, { provide: UsageService, useValue: usageService }, ClaudeCliGuard],
     }).compile();
 
     gateway = module.get<UsageGateway>(UsageGateway);
@@ -60,19 +61,6 @@ describe('UsageGateway', () => {
   // ================================================================
   describe('handleFetch', () => {
     const payload = { workingDir: '/my/project' };
-
-    it('should return cli_not_found error when CLI is not installed', async () => {
-      usageService.getStatus.mockResolvedValue(notInstalledStatus);
-
-      const result = await gateway.handleFetch(mockSocket, payload);
-
-      expect(result).toEqual({
-        error: 'cli_not_found',
-        message: 'Claude CLI not found. Please install Claude Code CLI.',
-      });
-      expect(usageService.getStatus).toHaveBeenCalled();
-      expect(usageService.fetchUsageData).not.toHaveBeenCalled();
-    });
 
     it('should return usage data on successful fetch', async () => {
       const usageData = {
@@ -88,18 +76,15 @@ describe('UsageGateway', () => {
         userTimezone: 'America/New_York',
       };
 
-      usageService.getStatus.mockResolvedValue(installedStatus);
       usageService.fetchUsageData.mockResolvedValue({ usage: usageData });
 
       const result = await gateway.handleFetch(mockSocket, payload);
 
       expect(result).toEqual({ usage: usageData });
-      expect(usageService.getStatus).toHaveBeenCalled();
       expect(usageService.fetchUsageData).toHaveBeenCalledWith('/my/project');
     });
 
     it('should return error when fetchUsageData returns an error', async () => {
-      usageService.getStatus.mockResolvedValue(installedStatus);
       usageService.fetchUsageData.mockResolvedValue({
         error: 'auth_required',
         message: 'Authentication required',
@@ -115,7 +100,6 @@ describe('UsageGateway', () => {
     });
 
     it('should return timeout error from fetchUsageData', async () => {
-      usageService.getStatus.mockResolvedValue(installedStatus);
       usageService.fetchUsageData.mockResolvedValue({
         error: 'timeout',
         message: 'The Claude CLI took too long to respond.',
@@ -130,7 +114,6 @@ describe('UsageGateway', () => {
     });
 
     it('should return trust_prompt error from fetchUsageData', async () => {
-      usageService.getStatus.mockResolvedValue(installedStatus);
       usageService.fetchUsageData.mockResolvedValue({
         error: 'trust_prompt',
         message: 'TRUST_PROMPT_PENDING: Please approve folder access.',
@@ -145,7 +128,6 @@ describe('UsageGateway', () => {
     });
 
     it('should return unknown error from fetchUsageData', async () => {
-      usageService.getStatus.mockResolvedValue(installedStatus);
       usageService.fetchUsageData.mockResolvedValue({
         error: 'unknown',
         message: 'Something went wrong',
@@ -160,7 +142,6 @@ describe('UsageGateway', () => {
     });
 
     it('should pass the correct workingDir to fetchUsageData', async () => {
-      usageService.getStatus.mockResolvedValue(installedStatus);
       usageService.fetchUsageData.mockResolvedValue({
         usage: {
           sessionPercentage: 0,
@@ -179,14 +160,6 @@ describe('UsageGateway', () => {
       await gateway.handleFetch(mockSocket, { workingDir: '/different/path' });
 
       expect(usageService.fetchUsageData).toHaveBeenCalledWith('/different/path');
-    });
-
-    it('should not call fetchUsageData when CLI is not installed', async () => {
-      usageService.getStatus.mockResolvedValue(notInstalledStatus);
-
-      await gateway.handleFetch(mockSocket, payload);
-
-      expect(usageService.fetchUsageData).not.toHaveBeenCalled();
     });
   });
 

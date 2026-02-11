@@ -11,6 +11,7 @@ import { SkipThrottle } from '@nestjs/throttler';
 import * as path from 'path';
 import { Server, Socket } from 'socket.io';
 import { WsThrottlerGuard } from '../shared/ws-throttler.guard';
+import { GitHubCliGuard, RequiresGhCli, SkipGhCliCheck } from '../../common/guards';
 import { GitService } from './git.service';
 import { WorktreeService } from './worktree.service';
 import { GithubService } from './github.service';
@@ -51,7 +52,7 @@ import {
 } from '@omniscribe/shared';
 import { CORS_CONFIG } from '../shared/cors.config';
 
-@UseGuards(WsThrottlerGuard)
+@UseGuards(WsThrottlerGuard, GitHubCliGuard)
 @WebSocketGateway({
   cors: CORS_CONFIG,
 })
@@ -367,6 +368,7 @@ export class GitGateway implements OnGatewayInit {
   // ============================================
 
   @SkipThrottle()
+  @SkipGhCliCheck()
   @SubscribeMessage(GithubEvents.STATUS)
   async handleGithubStatus(
     @ConnectedSocket() _client: Socket,
@@ -399,6 +401,7 @@ export class GitGateway implements OnGatewayInit {
   }
 
   @SkipThrottle()
+  @RequiresGhCli()
   @SubscribeMessage(GithubEvents.REPO_INFO)
   async handleGithubRepoInfo(
     @ConnectedSocket() _client: Socket,
@@ -432,6 +435,7 @@ export class GitGateway implements OnGatewayInit {
   }
 
   @SkipThrottle()
+  @RequiresGhCli()
   @SubscribeMessage(GithubEvents.PRS)
   async handleGithubPRs(
     @ConnectedSocket() _client: Socket,
@@ -465,6 +469,7 @@ export class GitGateway implements OnGatewayInit {
   }
 
   @SkipThrottle()
+  @RequiresGhCli()
   @SubscribeMessage(GithubEvents.PR)
   async handleGithubPR(
     @ConnectedSocket() _client: Socket,
@@ -501,6 +506,7 @@ export class GitGateway implements OnGatewayInit {
     }
   }
 
+  @RequiresGhCli()
   @SubscribeMessage(GithubEvents.CREATE_PR)
   async handleGithubCreatePR(
     @ConnectedSocket() _client: Socket,
@@ -545,6 +551,7 @@ export class GitGateway implements OnGatewayInit {
   }
 
   @SkipThrottle()
+  @RequiresGhCli()
   @SubscribeMessage(GithubEvents.ISSUES)
   async handleGithubIssues(
     @ConnectedSocket() _client: Socket,
@@ -582,6 +589,7 @@ export class GitGateway implements OnGatewayInit {
   }
 
   @SkipThrottle()
+  @RequiresGhCli()
   @SubscribeMessage(GithubEvents.ISSUE)
   async handleGithubIssue(
     @ConnectedSocket() _client: Socket,
