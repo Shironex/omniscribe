@@ -26,25 +26,24 @@ export function useGithubRepoInfo(projectPath: string | null, ghCliAvailable: bo
     let cancelled = false;
 
     const fetchRepoInfo = async () => {
+      let info: RepoInfo | null = null;
       try {
         const response = await emitAsync<GithubProjectPayload, GithubRepoInfoResponse>(
           GithubEvents.REPO_INFO,
           { projectPath }
         );
-        if (cancelled) return;
-
-        if (response.error || !response.repo) {
-          setRepoInfo(null);
-        } else {
-          setRepoInfo(response.repo);
+        if (response.repo && !response.error) {
+          info = response.repo;
         }
-        fetchedPathRef.current = projectPath;
       } catch (err) {
         if (!cancelled) {
           logger.warn('Failed to fetch repo info:', err);
-          setRepoInfo(null);
-          fetchedPathRef.current = projectPath;
         }
+      }
+
+      if (!cancelled) {
+        setRepoInfo(info);
+        fetchedPathRef.current = projectPath;
       }
     };
 
