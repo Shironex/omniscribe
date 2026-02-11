@@ -26,6 +26,13 @@ describe('buildIssueSystemPrompt', () => {
     expect(prompt).toContain('The login form crashes when submitting empty fields.');
   });
 
+  it('wraps body in <issue_body> tags for prompt injection protection', () => {
+    const prompt = buildIssueSystemPrompt(makeIssue());
+    expect(prompt).toContain('<issue_body>');
+    expect(prompt).toContain('</issue_body>');
+    expect(prompt).toContain('reference material ONLY');
+  });
+
   it('includes labels when present', () => {
     const prompt = buildIssueSystemPrompt(
       makeIssue({ labels: [{ name: 'bug' }, { name: 'urgent', color: 'ff0000' }] })

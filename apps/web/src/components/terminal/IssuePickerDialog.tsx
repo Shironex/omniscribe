@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { Check, Loader2, AlertCircle, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -13,6 +13,7 @@ import {
   CommandItem,
 } from '@/components/ui/command';
 import { emitAsync } from '@/lib/socketHelpers';
+import { formatRelativeTime } from '@/lib/date-utils';
 import {
   GithubEvents,
   type Issue,
@@ -26,24 +27,6 @@ interface IssuePickerDialogProps {
   projectPath: string;
   selectedIssueNumber?: number;
   onSelectIssue: (issue: Issue) => void;
-}
-
-/**
- * Format a relative time string from an ISO date.
- */
-function relativeTime(dateStr: string): string {
-  const now = Date.now();
-  const then = new Date(dateStr).getTime();
-  const diffMs = now - then;
-  const diffMin = Math.floor(diffMs / 60_000);
-  if (diffMin < 1) return 'just now';
-  if (diffMin < 60) return `${diffMin}m ago`;
-  const diffHrs = Math.floor(diffMin / 60);
-  if (diffHrs < 24) return `${diffHrs}h ago`;
-  const diffDays = Math.floor(diffHrs / 24);
-  if (diffDays < 30) return `${diffDays}d ago`;
-  const diffMonths = Math.floor(diffDays / 30);
-  return `${diffMonths}mo ago`;
 }
 
 export function IssuePickerDialog({
@@ -80,6 +63,12 @@ export function IssuePickerDialog({
       setIsLoading(false);
     }
   }, [projectPath]);
+
+  // Map for O(1) lookups in cmdk filter (avoids O(n) find per keystroke)
+  const issuesMap = useMemo(
+    () => new Map(issues.map(issue => [String(issue.number), issue])),
+    [issues]
+  );
 
   // Fetch issues when dialog opens (or when project changes while open)
   useEffect(() => {
@@ -140,7 +129,7 @@ export function IssuePickerDialog({
             ) : (
               <Command
                 filter={(value, search) => {
-                  const issue = issues.find(i => String(i.number) === value);
+                  const issue = issuesMap.get(value);
                   if (!issue) return 0;
                   const text =
                     `#${issue.number} ${issue.title} ${issue.labels.map(l => l.name).join(' ')}`.toLowerCase();
@@ -199,7 +188,8 @@ export function IssuePickerDialog({
                             )}
                             {/* Meta */}
                             <span className="ml-auto text-[10px] text-muted-foreground shrink-0">
-                              {issue.author.login} &middot; {relativeTime(issue.createdAt)}
+                              {issue.author.login} &middot;{' '}
+                              {formatRelativeTime(new Date(issue.createdAt))}
                             </span>
                           </div>
                         </div>
