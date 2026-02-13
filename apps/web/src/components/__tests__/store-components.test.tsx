@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 
 // ─── Socket mock ───────────────────────────────────────────────────────────────
-const _mockSocket = { on: vi.fn(), off: vi.fn(), emit: vi.fn(), connected: true };
 vi.mock('@/lib/socket', () => {
   const sock = { on: vi.fn(), off: vi.fn(), emit: vi.fn(), connected: true };
   return {
