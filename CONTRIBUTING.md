@@ -86,4 +86,4 @@ security: security improvements
 
 ## License
 
-By contributing, you agree to the terms outlined in the [LICENSE](LICENSE) file.
+By contributing, you agree that your contributions will be licensed under the [MIT License](LICENSE).
