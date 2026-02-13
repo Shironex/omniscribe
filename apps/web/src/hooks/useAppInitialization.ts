@@ -124,7 +124,12 @@ export function useAppInitialization(): void {
         logger.info('Initializing app...');
         // Fetch backend port via IPC and initialize socket
         const port = await window.electronAPI?.app?.getBackendPort?.();
-        if (!port) throw new Error('Failed to get backend port');
+        if (port === undefined || port === null) {
+          throw new Error('Failed to get backend port — electronAPI not available');
+        }
+        if (port <= 0 || port > 65535) {
+          throw new Error(`Invalid backend port: ${port}`);
+        }
         initializeSocket(port);
         // Register all socket listeners BEFORE connecting so that onConnect
         // callbacks fire on the initial connection, not just on reconnect

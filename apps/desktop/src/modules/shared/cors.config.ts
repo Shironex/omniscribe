@@ -5,7 +5,12 @@
  * malicious websites from connecting to the local server.
  */
 
-/** Allowed origins for CORS */
+/**
+ * Allowed origins for CORS.
+ * We allow any localhost port because the backend port is dynamically assigned.
+ * This is acceptable for a desktop Electron app where all localhost services
+ * are under the user's control.
+ */
 export const ALLOWED_ORIGINS: (string | RegExp)[] = [
   /^http:\/\/localhost:\d+$/,
   /^http:\/\/127\.0\.0\.1:\d+$/,

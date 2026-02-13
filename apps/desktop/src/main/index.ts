@@ -45,7 +45,13 @@ async function bootstrapNestApp(): Promise<void> {
     logger.info('Starting to listen on dynamic port...');
     await nestApp.listen(0, LOCALHOST);
     const addr = nestApp.getHttpServer().address();
-    const port = typeof addr === 'object' && addr ? addr.port : 0;
+    if (!addr || typeof addr === 'string') {
+      throw new Error(`Failed to get server port: address() returned ${JSON.stringify(addr)}`);
+    }
+    const port = addr.port;
+    if (!port || port === 0) {
+      throw new Error('OS assigned port 0 — server did not bind successfully');
+    }
     setBackendPort(port);
     logger.info(`NestJS server running on port ${port}`);
     logger.info('Log file location:', getLogPath());

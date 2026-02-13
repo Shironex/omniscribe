@@ -18,5 +18,8 @@ export function setBackendPort(port: number): void {
   if (_port !== null) {
     throw new Error('Backend port already set');
   }
+  if (!Number.isInteger(port) || port <= 0 || port > 65535) {
+    throw new Error(`Invalid backend port: ${port}`);
+  }
   _port = port;
 }

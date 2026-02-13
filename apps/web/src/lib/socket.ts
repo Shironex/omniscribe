@@ -1,5 +1,5 @@
 import { io, Socket } from 'socket.io-client';
-import { createLogger } from '@omniscribe/shared';
+import { createLogger, LOCALHOST } from '@omniscribe/shared';
 
 const logger = createLogger('Socket');
 
@@ -11,10 +11,14 @@ let _socket: Socket | null = null;
  */
 export function initializeSocket(port: number): Socket {
   if (_socket) {
+    if (import.meta.env.DEV) {
+      logger.warn('Socket already initialized, returning existing instance');
+      return _socket;
+    }
     throw new Error('Socket already initialized');
   }
 
-  const url = `ws://localhost:${port}`;
+  const url = `ws://${LOCALHOST}:${port}`;
   logger.info('Initializing socket connection to', url);
 
   _socket = io(url, {
