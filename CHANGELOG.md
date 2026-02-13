@@ -2,6 +2,30 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.7.0 (2026-02-13)
+
+### Features
+
+- **Dynamic backend port** — NestJS backend now binds to an OS-assigned port (`listen(0)`) instead of hardcoded port 3001, eliminating EADDRINUSE crashes when running multiple Omniscribe instances (#105)
+- **Lazy socket initialization** — Frontend socket singleton is now initialized with the dynamic port via IPC bridge (`app:get-backend-port`), replacing the eager module-level construction
+
+### Bug Fixes
+
+- **Reconnect listeners never firing** — Fixed socket.io-client v4 reconnect event handlers (`reconnect`, `reconnect_attempt`, `reconnect_error`, `reconnect_failed`) to attach to the Manager (`socket.io`) instead of the Socket instance, where they were silently ignored
+- **Socket teardown for HMR** — Added `resetSocket()` export for safe socket cleanup during Vite HMR and test isolation
+- **Usage polling crash guard** — `getSocket().connected` in usage store polling is now wrapped in try-catch to handle the case where the socket isn't initialized yet
+
+### Code Quality
+
+- **Port validation** — `setBackendPort()` rejects invalid ports (non-integer, <=0, >65535) and the startup flow throws on unexpected server address instead of silently falling back to port 0
+- **CORS dynamic ports** — Regex-based origin matching now allows any localhost port instead of hardcoded values, with tests documenting that port-less origins are rejected
+- **Consistent IPC logging** — Added debug log to `app:get-backend-port` handler for consistency with all other IPC handlers
+- **Vite dev port** — Changed from default 5173 to 15174 to avoid collisions with other Vite projects
+
+### Stats
+
+- 34 files changed — +299 / −148 lines
+
 ## 0.6.1 (2026-02-13)
 
 ### Changes
