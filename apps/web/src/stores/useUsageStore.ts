@@ -143,7 +143,13 @@ export const useUsageStore = create<UsageStore>()(
         }
 
         // Ensure socket is connected
-        if (!getSocket().connected) {
+        let connected = false;
+        try {
+          connected = getSocket().connected;
+        } catch {
+          // Socket not initialized yet
+        }
+        if (!connected) {
           logger.warn('Socket not connected, cannot start polling');
           return;
         }

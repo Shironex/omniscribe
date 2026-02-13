@@ -66,6 +66,11 @@ describe('cors.config', () => {
       expect(isOriginAllowed('file:///path/to/index.html')).toBe(true);
     });
 
+    it('should return false for localhost without a port', () => {
+      expect(isOriginAllowed('http://localhost')).toBe(false);
+      expect(isOriginAllowed('http://127.0.0.1')).toBe(false);
+    });
+
     it('should return false for disallowed origins', () => {
       expect(isOriginAllowed('http://evil.com')).toBe(false);
       expect(isOriginAllowed('https://malicious-site.example.com')).toBe(false);

@@ -41,19 +41,20 @@ export function initializeSocket(port: number): Socket {
     logger.warn('Disconnected:', reason);
   });
 
-  _socket.on('reconnect', attemptNumber => {
+  // Reconnect events are emitted on the Manager (socket.io), not the Socket instance
+  _socket.io.on('reconnect', attemptNumber => {
     logger.info('Reconnected after', attemptNumber, 'attempts');
   });
 
-  _socket.on('reconnect_attempt', attemptNumber => {
+  _socket.io.on('reconnect_attempt', attemptNumber => {
     logger.debug('Reconnection attempt', attemptNumber);
   });
 
-  _socket.on('reconnect_error', error => {
+  _socket.io.on('reconnect_error', error => {
     logger.error('Reconnection error:', error);
   });
 
-  _socket.on('reconnect_failed', () => {
+  _socket.io.on('reconnect_failed', () => {
     logger.error('Reconnection failed after all attempts');
   });
 
@@ -63,6 +64,18 @@ export function initializeSocket(port: number): Socket {
   }
 
   return _socket;
+}
+
+/**
+ * Tear down the existing socket (for HMR / tests).
+ */
+export function resetSocket(): void {
+  if (_socket) {
+    _socket.removeAllListeners();
+    _socket.io.removeAllListeners();
+    _socket.disconnect();
+    _socket = null;
+  }
 }
 
 /**

@@ -64,6 +64,7 @@ export function registerAppHandlers(): void {
   });
 
   ipcMain.handle('app:get-backend-port', () => {
+    logger.debug('app:get-backend-port invoked');
     return getBackendPort();
   });
 }
