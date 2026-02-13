@@ -7,7 +7,7 @@ import {
   type ConnectionStatus,
   type WsThrottledPayload,
 } from '@omniscribe/shared';
-import { socket } from '@/lib/socket';
+import { getSocket } from '@/lib/socket';
 
 const logger = createLogger('ConnectionStore');
 
@@ -93,7 +93,7 @@ export const useConnectionStore = create<ConnectionStore>()(
       retryConnection: () => {
         logger.info('Manual retry requested');
         get().setReconnecting();
-        socket.connect();
+        getSocket().connect();
       },
 
       initListeners: () => {
@@ -124,10 +124,10 @@ export const useConnectionStore = create<ConnectionStore>()(
           });
         };
 
-        socket.on('connect', connectHandler);
-        socket.on('disconnect', disconnectHandler);
-        socket.on('reconnect_failed', reconnectFailedHandler);
-        socket.on(SystemEvents.THROTTLED, throttledHandler);
+        getSocket().on('connect', connectHandler);
+        getSocket().on('disconnect', disconnectHandler);
+        getSocket().on('reconnect_failed', reconnectFailedHandler);
+        getSocket().on(SystemEvents.THROTTLED, throttledHandler);
 
         listenersInitialized = true;
         logger.debug('Connection listeners registered');
@@ -140,19 +140,19 @@ export const useConnectionStore = create<ConnectionStore>()(
         }
 
         if (connectHandler) {
-          socket.off('connect', connectHandler);
+          getSocket().off('connect', connectHandler);
           connectHandler = null;
         }
         if (disconnectHandler) {
-          socket.off('disconnect', disconnectHandler);
+          getSocket().off('disconnect', disconnectHandler);
           disconnectHandler = null;
         }
         if (reconnectFailedHandler) {
-          socket.off('reconnect_failed', reconnectFailedHandler);
+          getSocket().off('reconnect_failed', reconnectFailedHandler);
           reconnectFailedHandler = null;
         }
         if (throttledHandler) {
-          socket.off(SystemEvents.THROTTLED, throttledHandler);
+          getSocket().off(SystemEvents.THROTTLED, throttledHandler);
           throttledHandler = null;
         }
 

@@ -45,6 +45,7 @@ interface ElectronAPI {
     isValidProject: (projectPath: string) => Promise<{ valid: boolean; reason?: string }>;
     openLogsFolder: () => Promise<void>;
     clipboardWrite: (text: string) => Promise<void>;
+    getBackendPort: () => Promise<number>;
   };
   claude?: {
     getStatus: () => Promise<ClaudeCliStatus>;

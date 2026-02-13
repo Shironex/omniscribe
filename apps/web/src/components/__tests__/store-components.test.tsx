@@ -2,9 +2,14 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 
 // ─── Socket mock ───────────────────────────────────────────────────────────────
-vi.mock('@/lib/socket', () => ({
-  socket: { on: vi.fn(), off: vi.fn(), emit: vi.fn(), connected: true },
-}));
+vi.mock('@/lib/socket', () => {
+  const sock = { on: vi.fn(), off: vi.fn(), emit: vi.fn(), connected: true };
+  return {
+    socket: sock,
+    getSocket: vi.fn(() => sock),
+    initializeSocket: vi.fn(() => sock),
+  };
+});
 
 vi.mock('@/lib/socketHelpers', () => ({
   emitAsync: vi.fn(),
@@ -207,7 +212,7 @@ describe('BackpressureOverlay', () => {
   });
 
   it('shows cancel button that emits terminal cancel event', async () => {
-    const { socket } = await import('@/lib/socket');
+    const { getSocket } = await import('@/lib/socket');
     mockSessionState = { backpressured: { 1: true } };
     render(<BackpressureOverlay terminalSessionId={1} />);
 
@@ -216,7 +221,7 @@ describe('BackpressureOverlay', () => {
     });
 
     fireEvent.click(screen.getByText('Cancel output'));
-    expect(socket.emit).toHaveBeenCalled();
+    expect(getSocket().emit).toHaveBeenCalled();
   });
 });
 

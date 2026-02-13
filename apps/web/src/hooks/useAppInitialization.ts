@@ -9,7 +9,7 @@ import { useSessionHistoryStore } from '@/stores/useSessionHistoryStore';
 import { useUpdateStore } from '@/stores/useUpdateStore';
 import { useConnectionStore } from '@/stores/useConnectionStore';
 import { useSettingsStore } from '@/stores/useSettingsStore';
-import { connectSocket, socket } from '@/lib/socket';
+import { connectSocket, getSocket, initializeSocket } from '@/lib/socket';
 import { resumeSession } from '@/lib/session';
 
 const logger = createLogger('AppInit');
@@ -38,7 +38,7 @@ async function autoResumeOnRestart(): Promise<void> {
   try {
     const response = await new Promise<RestoreSnapshotResponse>((resolve, reject) => {
       const timeout = setTimeout(() => reject(new Error('Timeout')), 5000);
-      socket.emit(SessionEvents.GET_RESTORE_SNAPSHOT, {}, (res: RestoreSnapshotResponse) => {
+      getSocket().emit(SessionEvents.GET_RESTORE_SNAPSHOT, {}, (res: RestoreSnapshotResponse) => {
         clearTimeout(timeout);
         resolve(res);
       });
@@ -122,6 +122,15 @@ export function useAppInitialization(): void {
     const init = async () => {
       try {
         logger.info('Initializing app...');
+        // Fetch backend port via IPC and initialize socket
+        const port = await window.electronAPI?.app?.getBackendPort?.();
+        if (port === undefined || port === null) {
+          throw new Error('Failed to get backend port — electronAPI not available');
+        }
+        if (port <= 0 || port > 65535) {
+          throw new Error(`Invalid backend port: ${port}`);
+        }
+        initializeSocket(port);
         // Register all socket listeners BEFORE connecting so that onConnect
         // callbacks fire on the initial connection, not just on reconnect
         initConnectionListeners();

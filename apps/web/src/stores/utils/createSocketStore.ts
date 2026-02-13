@@ -1,5 +1,5 @@
 import type { NamedSet } from 'zustand/middleware';
-import { socket } from '@/lib/socket';
+import { getSocket } from '@/lib/socket';
 import { createLogger } from '@omniscribe/shared';
 
 const logger = createLogger('SocketStore');
@@ -119,7 +119,7 @@ export function createSocketListeners<T extends SocketStoreState>(
         config.handler(data, get);
       };
       customHandlers.set(config.event, handler);
-      socket.on(config.event, handler);
+      getSocket().on(config.event, handler);
     }
 
     // Handle connection error (store ref for cleanup)
@@ -128,7 +128,7 @@ export function createSocketListeners<T extends SocketStoreState>(
         logger.error('Connection error:', err.message);
         setError(`Connection error: ${err.message}`);
       };
-      socket.on('connect_error', connectErrorHandler);
+      getSocket().on('connect_error', connectErrorHandler);
     }
 
     // Handle reconnection (store ref for cleanup)
@@ -137,13 +137,13 @@ export function createSocketListeners<T extends SocketStoreState>(
       setError(null);
       // Connection State Recovery: if the server successfully restored
       // rooms and replayed buffered events, skip the manual re-fetch
-      if (socket.recovered) {
+      if (getSocket().recovered) {
         logger.info('Connection recovered via CSR -- skipping manual re-fetch');
       } else {
         onConnect?.(get);
       }
     };
-    socket.on('connect', connectHandler);
+    getSocket().on('connect', connectHandler);
 
     set({ listenersInitialized: true } as Partial<T>, undefined, `${storeName}/initListeners`);
   };
@@ -152,17 +152,17 @@ export function createSocketListeners<T extends SocketStoreState>(
     logger.debug('Cleaning up listeners');
     // Remove custom listeners using stored references
     for (const [event, handler] of customHandlers) {
-      socket.off(event, handler);
+      getSocket().off(event, handler);
     }
     customHandlers.clear();
 
     // Remove connection listeners using stored references
     if (connectHandler) {
-      socket.off('connect', connectHandler);
+      getSocket().off('connect', connectHandler);
       connectHandler = null;
     }
     if (connectErrorHandler) {
-      socket.off('connect_error', connectErrorHandler);
+      getSocket().off('connect_error', connectErrorHandler);
       connectErrorHandler = null;
     }
 

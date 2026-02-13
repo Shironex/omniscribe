@@ -13,7 +13,7 @@ import {
   type ClaudeSessionIdCapturedEvent,
 } from '@omniscribe/shared';
 import { toast } from 'sonner';
-import { socket } from '@/lib/socket';
+import { getSocket } from '@/lib/socket';
 
 const logger = createLogger('SessionStore');
 
@@ -182,7 +182,7 @@ export const useSessionStore = create<SessionStore>()(
           onConnect: get => {
             // Request fresh session list on reconnect
             logger.info('Refreshing session list on reconnect');
-            socket.emit(SessionEvents.LIST, {}, (sessions: FrontendSessionConfig[]) => {
+            getSocket().emit(SessionEvents.LIST, {}, (sessions: FrontendSessionConfig[]) => {
               if (Array.isArray(sessions)) {
                 get().setSessions(sessions.map(convertBackendSession));
                 // Rejoin terminal rooms for all sessions with active terminals
@@ -190,7 +190,7 @@ export const useSessionStore = create<SessionStore>()(
                 for (const session of sessions) {
                   if (session.terminalSessionId !== undefined) {
                     logger.debug('Rejoining terminal room', session.terminalSessionId);
-                    socket.emit(TerminalEvents.JOIN, { sessionId: session.terminalSessionId });
+                    getSocket().emit(TerminalEvents.JOIN, { sessionId: session.terminalSessionId });
                   }
                 }
               }

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Loader2, XCircle } from 'lucide-react';
 import { TerminalEvents } from '@omniscribe/shared';
 import { useSessionStore } from '@/stores/useSessionStore';
-import { socket } from '@/lib/socket';
+import { getSocket } from '@/lib/socket';
 
 const DEBOUNCE_MS = 300;
 
@@ -30,7 +30,7 @@ export function BackpressureOverlay({ terminalSessionId }: BackpressureOverlayPr
   }, [isBackpressured]);
 
   const handleCancel = useCallback(() => {
-    socket.emit(TerminalEvents.CANCEL, { sessionId: terminalSessionId });
+    getSocket().emit(TerminalEvents.CANCEL, { sessionId: terminalSessionId });
   }, [terminalSessionId]);
 
   if (!visible) {

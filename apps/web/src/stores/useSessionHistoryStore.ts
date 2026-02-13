@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { SessionEvents } from '@omniscribe/shared';
 import type { ClaudeSessionEntry, ClaudeSessionHistoryResponse } from '@omniscribe/shared';
-import { socket } from '@/lib/socket';
+import { getSocket } from '@/lib/socket';
 import {
   SocketStoreState,
   SocketStoreActions,
@@ -95,7 +95,7 @@ export const useSessionHistoryStore = create<SessionHistoryStore>()(
             );
           }, 15_000);
 
-          socket.emit(
+          getSocket().emit(
             SessionEvents.HISTORY,
             { projectPath },
             (response: ClaudeSessionHistoryResponse) => {

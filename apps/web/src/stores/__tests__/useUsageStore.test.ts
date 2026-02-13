@@ -3,6 +3,8 @@ import { mockSocket } from '../../test/mocks/socket';
 
 vi.mock('@/lib/socket', () => ({
   socket: mockSocket,
+  getSocket: vi.fn(() => mockSocket),
+  initializeSocket: vi.fn(() => mockSocket),
   connectSocket: vi.fn(),
   default: mockSocket,
 }));
