@@ -609,4 +609,43 @@ describe('TerminalGateway', () => {
       expect(other.emit).not.toHaveBeenCalled();
     });
   });
+
+  // =========================================================================
+  // Backpressure
+  // =========================================================================
+
+  describe('backpressure', () => {
+    it('should pause terminal when pending chars exceed HIGH_WATER_MARK', () => {
+      terminalService.pause = jest.fn();
+
+      // Emit enough data to exceed ~250KB (HIGH_WATER_MARK = 256_000)
+      const largeData = 'x'.repeat(260_000);
+      gateway.handleTerminalOutput({ sessionId: 1, data: largeData });
+
+      expect(terminalService.pause).toHaveBeenCalledWith(1);
+    });
+
+    it('should track chars not packets — many small writes should not trigger', () => {
+      terminalService.pause = jest.fn();
+
+      // 100 small packets (100 chars total — well below 256KB)
+      for (let i = 0; i < 100; i++) {
+        gateway.handleTerminalOutput({ sessionId: 1, data: 'x' });
+      }
+
+      expect(terminalService.pause).not.toHaveBeenCalled();
+    });
+
+    it('should not pause the same terminal twice', () => {
+      terminalService.pause = jest.fn();
+
+      // First call triggers pause
+      gateway.handleTerminalOutput({ sessionId: 1, data: 'x'.repeat(260_000) });
+      expect(terminalService.pause).toHaveBeenCalledTimes(1);
+
+      // Second call should not re-pause (already paused)
+      gateway.handleTerminalOutput({ sessionId: 1, data: 'x'.repeat(260_000) });
+      expect(terminalService.pause).toHaveBeenCalledTimes(1);
+    });
+  });
 });

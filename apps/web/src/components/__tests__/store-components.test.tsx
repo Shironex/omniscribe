@@ -199,12 +199,12 @@ describe('BackpressureOverlay', () => {
     mockSessionState = { backpressured: { 1: true } };
     render(<BackpressureOverlay terminalSessionId={1} />);
 
-    // Before debounce (300ms) — should be hidden
+    // Before debounce (500ms) — should be hidden
     expect(screen.queryByTestId('backpressure-overlay')).toBeNull();
 
     // Advance past debounce
     act(() => {
-      vi.advanceTimersByTime(350);
+      vi.advanceTimersByTime(550);
     });
 
     expect(screen.getByTestId('backpressure-overlay')).toBeTruthy();
@@ -217,7 +217,7 @@ describe('BackpressureOverlay', () => {
     render(<BackpressureOverlay terminalSessionId={1} />);
 
     act(() => {
-      vi.advanceTimersByTime(350);
+      vi.advanceTimersByTime(550);
     });
 
     fireEvent.click(screen.getByText('Cancel output'));

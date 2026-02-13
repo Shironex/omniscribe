@@ -33,10 +33,9 @@ import { CORS_CONFIG } from '../shared/cors.config';
 
 const MAX_INPUT_SIZE = 1_048_576; // 1MB
 
-// Backpressure constants
-const HIGH_WATER_MARK = 512; // Pause PTY after this many undelivered packets
-const LOW_WATER_MARK = 64; // Resume PTY only when pending drops below this (hysteresis)
-const PAUSE_SAFETY_TIMEOUT_MS = 10_000; // Force-resume after 10s to prevent deadlock
+// Backpressure constants (character-based — counts unacknowledged characters, not packets)
+const HIGH_WATER_MARK = 256_000; // ~250KB — pause PTY when this many chars are unacknowledged
+const PAUSE_SAFETY_TIMEOUT_MS = 15_000; // Force-resume after 15s to prevent deadlock
 
 @UseGuards(WsThrottlerGuard)
 @WebSocketGateway({
@@ -90,17 +89,21 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
       // one renderer process connecting via one socket. Therefore, when this
       // client's write buffer drains, it is safe to resume all paused terminals
       // unconditionally -- they all belong to this single client.
-      // Use hysteresis: only resume when pending counter is below LOW_WATER_MARK
-      // to prevent rapid pause/resume oscillation.
-      for (const sessionId of this.pausedTerminals) {
-        const pending = this.pendingWrites.get(sessionId) ?? 0;
-        // Drain reduces counter by half (exponential decay) rather than resetting to 0.
-        // This prevents immediate re-trigger after resume.
-        const reduced = Math.floor(pending / 2);
-        this.pendingWrites.set(sessionId, reduced);
-        if (reduced < LOW_WATER_MARK) {
-          this.resumeTerminal(sessionId);
-        }
+      // Drain indicates the TCP buffer is flushed — all in-flight data was delivered.
+
+      // Reset counters for ALL terminals, not just paused ones.
+      // Non-paused terminals accumulate pendingWrites monotonically; without
+      // this reset they would eventually hit HIGH_WATER_MARK even though the
+      // socket is keeping up.
+      for (const [sessionId] of this.pendingWrites) {
+        this.pendingWrites.set(sessionId, 0);
+      }
+
+      // Snapshot the set to avoid mutating during iteration
+      // (resumeTerminal calls pausedTerminals.delete)
+      const pausedIds = [...this.pausedTerminals];
+      for (const sessionId of pausedIds) {
+        this.resumeTerminal(sessionId);
       }
     });
   }
@@ -115,8 +118,9 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
     // Terminals are killed explicitly via terminal:kill or session:remove
 
     // Resume any paused terminals to prevent deadlock when client disconnects
-    // while backpressure is active
-    for (const sessionId of this.pausedTerminals) {
+    // while backpressure is active (snapshot to avoid mutation during iteration)
+    const pausedIds = [...this.pausedTerminals];
+    for (const sessionId of pausedIds) {
       this.resumeTerminal(sessionId);
     }
 
@@ -305,8 +309,9 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
       }
     }
 
-    // Track pending writes for backpressure management
-    const pending = (this.pendingWrites.get(event.sessionId) ?? 0) + 1;
+    // Track pending output size for backpressure management (string length, not packet count).
+    // Uses string length as a proxy for bytes — accurate for ASCII, underestimates multibyte.
+    const pending = (this.pendingWrites.get(event.sessionId) ?? 0) + event.data.length;
     this.pendingWrites.set(event.sessionId, pending);
 
     // Check if backpressure threshold exceeded
@@ -392,7 +397,7 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
       this.server.to(room).emit(TerminalEvents.BACKPRESSURE, { sessionId, paused: true });
     }
 
-    // Safety timeout: force-resume after 10s to prevent deadlock
+    // Safety timeout: force-resume after 15s to prevent deadlock
     const timeout = setTimeout(() => {
       if (this.pausedTerminals.has(sessionId)) {
         this.logger.warn(

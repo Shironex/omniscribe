@@ -7,10 +7,10 @@ import { InternalTerminalEvents } from '../shared/events';
 import { buildSafeEnv } from '../shared/env-utils';
 
 // Performance constants
-const OUTPUT_THROTTLE_MS = 16; // ~1 frame at 60fps
-const OUTPUT_BATCH_SIZE = 16_384; // 16KB chunks
+const OUTPUT_THROTTLE_MS = 32; // ~30fps — frontend RAF batches at 60fps anyway
+const OUTPUT_BATCH_SIZE = 65_536; // 64KB chunks — fewer, larger packets reduce backpressure noise
 const MAX_SCROLLBACK_SIZE = 50_000; // 50KB per terminal
-const MAX_OUTPUT_BUFFER_SIZE = 100_000; // 100KB cap
+const MAX_OUTPUT_BUFFER_SIZE = 524_288; // 512KB cap — headroom for burst buffering
 const CHUNKED_WRITE_THRESHOLD = 1000;
 const CHUNK_SIZE = 100;
 

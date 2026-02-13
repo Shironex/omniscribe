@@ -91,7 +91,7 @@ describe('TerminalService', () => {
   });
 
   describe('output batching', () => {
-    it('should batch output and emit after OUTPUT_THROTTLE_MS (16ms)', () => {
+    it('should batch output and emit after OUTPUT_THROTTLE_MS (32ms)', () => {
       const sessionId = service.spawnCommand('bash', [], '/home');
       const ptyInstance = mockPtyInstances[0];
 
@@ -101,8 +101,8 @@ describe('TerminalService', () => {
       // Not emitted yet (still within batch interval)
       expect(eventEmitter.emit).not.toHaveBeenCalledWith('terminal.output', expect.anything());
 
-      // Advance timers past the 16ms batch interval
-      jest.advanceTimersByTime(20);
+      // Advance timers past the 32ms batch interval
+      jest.advanceTimersByTime(35);
 
       expect(eventEmitter.emit).toHaveBeenCalledWith('terminal.output', {
         sessionId,
@@ -110,39 +110,39 @@ describe('TerminalService', () => {
       });
     });
 
-    it('should chunk large output (>16KB) across multiple flushes', () => {
+    it('should chunk large output (>64KB) across multiple flushes', () => {
       const sessionId = service.spawnCommand('bash', [], '/home');
       const ptyInstance = mockPtyInstances[0];
 
-      // Simulate 32KB of data
-      const bigData = 'x'.repeat(32768);
+      // Simulate 128KB of data
+      const bigData = 'x'.repeat(131072);
       ptyInstance.simulateData(bigData);
 
-      // First flush at 16ms
-      jest.advanceTimersByTime(20);
+      // First flush at 32ms
+      jest.advanceTimersByTime(35);
 
-      // First chunk should be 16384 bytes
+      // First chunk should be 65536 bytes (64KB)
       expect(eventEmitter.emit).toHaveBeenCalledWith('terminal.output', {
         sessionId,
-        data: 'x'.repeat(16384),
+        data: 'x'.repeat(65536),
       });
 
-      // Second flush at 16ms later
-      jest.advanceTimersByTime(20);
+      // Second flush at 32ms later
+      jest.advanceTimersByTime(35);
 
-      // Second chunk should be remaining 16384 bytes
+      // Second chunk should be remaining 65536 bytes
       expect(eventEmitter.emit).toHaveBeenCalledWith('terminal.output', {
         sessionId,
-        data: 'x'.repeat(16384),
+        data: 'x'.repeat(65536),
       });
     });
 
-    it('should cap output buffer at MAX_OUTPUT_BUFFER_SIZE (100KB)', () => {
+    it('should cap output buffer at MAX_OUTPUT_BUFFER_SIZE (512KB)', () => {
       service.spawnCommand('bash', [], '/home');
       const ptyInstance = mockPtyInstances[0];
 
-      // Simulate 150KB of data
-      const bigData = 'x'.repeat(150_000);
+      // Simulate 600KB of data (exceeds 512KB cap)
+      const bigData = 'x'.repeat(600_000);
       ptyInstance.simulateData(bigData);
 
       // The buffer should be capped internally; we verify indirectly
@@ -164,7 +164,7 @@ describe('TerminalService', () => {
 
       ptyInstance.simulateData('line1\n');
       ptyInstance.simulateData('line2\n');
-      jest.advanceTimersByTime(20);
+      jest.advanceTimersByTime(35);
 
       const scrollback = service.getScrollback(sessionId);
       expect(scrollback).toBe('line1\nline2\n');
@@ -285,7 +285,7 @@ describe('TerminalService', () => {
       // First resize - should NOT suppress output
       service.resize(sessionId, 80, 24);
       ptyInstance.simulateData('after-first-resize');
-      jest.advanceTimersByTime(20);
+      jest.advanceTimersByTime(35);
       expect(eventEmitter.emit).toHaveBeenCalledWith('terminal.output', {
         sessionId,
         data: 'after-first-resize',
@@ -297,7 +297,7 @@ describe('TerminalService', () => {
       // Second resize - output should still be delivered (no data loss)
       service.resize(sessionId, 120, 40);
       ptyInstance.simulateData('during-resize');
-      jest.advanceTimersByTime(20);
+      jest.advanceTimersByTime(35);
       expect(eventEmitter.emit).toHaveBeenCalledWith('terminal.output', {
         sessionId,
         data: 'during-resize',
@@ -305,7 +305,7 @@ describe('TerminalService', () => {
 
       // Subsequent output should continue normally
       ptyInstance.simulateData('after-resize');
-      jest.advanceTimersByTime(20);
+      jest.advanceTimersByTime(35);
       expect(eventEmitter.emit).toHaveBeenCalledWith('terminal.output', {
         sessionId,
         data: 'after-resize',

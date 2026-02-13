@@ -4,7 +4,7 @@ import { TerminalEvents } from '@omniscribe/shared';
 import { useSessionStore } from '@/stores/useSessionStore';
 import { getSocket } from '@/lib/socket';
 
-const DEBOUNCE_MS = 300;
+const DEBOUNCE_MS = 500;
 
 interface BackpressureOverlayProps {
   terminalSessionId: number;
@@ -12,7 +12,7 @@ interface BackpressureOverlayProps {
 
 /**
  * Semi-transparent overlay displayed when terminal output is backpressured.
- * Only appears after backpressure persists for 300ms to avoid flickering
+ * Only appears after backpressure persists for 500ms to avoid flickering
  * on transient spikes. Disappears immediately when backpressure clears.
  */
 export function BackpressureOverlay({ terminalSessionId }: BackpressureOverlayProps) {
