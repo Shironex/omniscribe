@@ -10,7 +10,7 @@ import {
   type McpDiscoverPayload,
   type McpDiscoverResponse,
 } from '@omniscribe/shared';
-import { socket } from '@/lib/socket';
+import { getSocket } from '@/lib/socket';
 import { emitAsync } from '@/lib/socketHelpers';
 
 const logger = createLogger('McpStore');
@@ -233,9 +233,13 @@ export const useMcpStore = create<McpStore>()(
         },
 
         fetchInternalMcpStatus: () => {
-          socket.emit(McpEvents.GET_INTERNAL_STATUS, {}, (response: McpInternalStatusResponse) => {
-            set({ internalMcp: response }, undefined, 'mcp/fetchInternalMcpStatus');
-          });
+          getSocket().emit(
+            McpEvents.GET_INTERNAL_STATUS,
+            {},
+            (response: McpInternalStatusResponse) => {
+              set({ internalMcp: response }, undefined, 'mcp/fetchInternalMcpStatus');
+            }
+          );
         },
       };
     },

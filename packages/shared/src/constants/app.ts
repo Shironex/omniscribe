@@ -58,7 +58,7 @@ export const STATUS_CACHE_TTL_MS = 5 * 60 * 1000;
 // =============================================================================
 
 /** Vite dev server port */
-export const VITE_DEV_PORT = 5173;
+export const VITE_DEV_PORT = 15174;
 
 /** MCP status server port range start */
 export const MCP_STATUS_PORT_START = 9900;

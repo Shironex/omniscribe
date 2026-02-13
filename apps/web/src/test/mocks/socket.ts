@@ -76,6 +76,8 @@ export const mockSocket = {
  */
 export const mockSocketModule = {
   socket: mockSocket,
+  getSocket: vi.fn(() => mockSocket),
+  initializeSocket: vi.fn(() => mockSocket),
   connectSocket: vi.fn().mockResolvedValue(undefined),
   disconnectSocket: vi.fn(),
   default: mockSocket,

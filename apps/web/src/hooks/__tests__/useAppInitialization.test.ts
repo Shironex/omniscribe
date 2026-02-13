@@ -21,6 +21,8 @@ const mockCleanupConnection = vi.fn();
 const mockCleanupUpdate = vi.fn();
 const mockInitUpdate = vi.fn().mockReturnValue(mockCleanupUpdate);
 const mockConnectSocket = vi.fn().mockResolvedValue(undefined);
+const mockInitializeSocket = vi.fn();
+const mockGetSocket = vi.fn().mockReturnValue({ emit: vi.fn() });
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Selector = (state: any) => any;
@@ -74,7 +76,8 @@ vi.mock('@/stores/useSettingsStore', () => ({
 
 vi.mock('@/lib/socket', () => ({
   connectSocket: (...args: unknown[]) => mockConnectSocket(...args),
-  socket: { emit: vi.fn() },
+  initializeSocket: (...args: unknown[]) => mockInitializeSocket(...args),
+  getSocket: (...args: unknown[]) => mockGetSocket(...args),
 }));
 
 vi.mock('@/lib/session', () => ({
@@ -96,6 +99,12 @@ describe('useAppInitialization', () => {
     vi.clearAllMocks();
     mockConnectSocket.mockResolvedValue(undefined);
     mockInitUpdate.mockReturnValue(mockCleanupUpdate);
+    // Mock window.electronAPI for getBackendPort and getStatus
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (window as any).electronAPI = {
+      app: { getBackendPort: vi.fn().mockResolvedValue(12345) },
+      claude: { getStatus: vi.fn().mockResolvedValue({ installed: false }) },
+    };
   });
 
   describe('initialization order', () => {
@@ -183,6 +192,12 @@ describe('useAppInitialization', () => {
       );
 
       const { unmount } = renderHook(() => useAppInitialization());
+
+      // Let the async init progress past getBackendPort/initializeSocket
+      // until it reaches connectSocket (which is deferred)
+      await act(async () => {
+        await flushPromises();
+      });
 
       // Unmount while connectSocket is still pending
       unmount();

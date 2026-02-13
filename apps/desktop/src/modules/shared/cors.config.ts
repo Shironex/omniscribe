@@ -7,10 +7,8 @@
 
 /** Allowed origins for CORS */
 export const ALLOWED_ORIGINS: (string | RegExp)[] = [
-  'http://localhost:5173', // Vite dev server
-  'http://127.0.0.1:5173',
-  'http://localhost:3001', // NestJS server
-  'http://127.0.0.1:3001',
+  /^http:\/\/localhost:\d+$/,
+  /^http:\/\/127\.0\.0\.1:\d+$/,
   /^app:\/\//, // Electron app protocol
   /^file:\/\//, // Local file protocol
 ];

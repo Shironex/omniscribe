@@ -1,4 +1,4 @@
-import { socket, connectSocket } from './socket';
+import { getSocket, connectSocket } from './socket';
 import {
   createLogger,
   TerminalEvents,
@@ -29,7 +29,7 @@ export async function spawnTerminal(cwd?: string, env?: Record<string, string>):
   await connectSocket();
 
   return new Promise((resolve, reject) => {
-    socket.emit(
+    getSocket().emit(
       TerminalEvents.SPAWN,
       { cwd, env },
       (response: { sessionId: number } | { error: string }) => {
@@ -76,13 +76,13 @@ export function connectTerminal(
   };
 
   logger.debug('Connecting to terminal', sessionId);
-  socket.on(TerminalEvents.OUTPUT, handleOutput);
-  socket.on(TerminalEvents.CLOSED, handleClosed);
+  getSocket().on(TerminalEvents.OUTPUT, handleOutput);
+  getSocket().on(TerminalEvents.CLOSED, handleClosed);
 
   const cleanup = () => {
     logger.debug('Cleaning up terminal connection', sessionId);
-    socket.off(TerminalEvents.OUTPUT, handleOutput);
-    socket.off(TerminalEvents.CLOSED, handleClosed);
+    getSocket().off(TerminalEvents.OUTPUT, handleOutput);
+    getSocket().off(TerminalEvents.CLOSED, handleClosed);
   };
 
   return {
@@ -99,12 +99,12 @@ export function connectTerminal(
  * @param data The data to write
  */
 export function writeToTerminal(sessionId: number, data: string): void {
-  if (!socket.connected) {
+  if (!getSocket().connected) {
     logger.warn('writeToTerminal: socket not connected, skipping');
     return;
   }
 
-  socket.emit(TerminalEvents.INPUT, { sessionId, data });
+  getSocket().emit(TerminalEvents.INPUT, { sessionId, data });
 }
 
 /**
@@ -113,19 +113,19 @@ export function writeToTerminal(sessionId: number, data: string): void {
  * @param data The data to write
  */
 export async function writeToTerminalChunked(sessionId: number, data: string): Promise<void> {
-  if (!socket.connected) {
+  if (!getSocket().connected) {
     logger.warn('writeToTerminalChunked: socket not connected, skipping');
     return;
   }
 
   if (data.length <= PASTE_CHUNK_SIZE) {
-    socket.emit(TerminalEvents.INPUT, { sessionId, data });
+    getSocket().emit(TerminalEvents.INPUT, { sessionId, data });
     return;
   }
 
   for (let i = 0; i < data.length; i += PASTE_CHUNK_SIZE) {
     const chunk = data.slice(i, i + PASTE_CHUNK_SIZE);
-    socket.emit(TerminalEvents.INPUT, { sessionId, data: chunk });
+    getSocket().emit(TerminalEvents.INPUT, { sessionId, data: chunk });
 
     if (i + PASTE_CHUNK_SIZE < data.length) {
       await new Promise(resolve => setTimeout(resolve, PASTE_CHUNK_DELAY_MS));
@@ -140,12 +140,12 @@ export async function writeToTerminalChunked(sessionId: number, data: string): P
  * @param rows Number of rows
  */
 export function resizeTerminal(sessionId: number, cols: number, rows: number): void {
-  if (!socket.connected) {
+  if (!getSocket().connected) {
     logger.warn('resizeTerminal: socket not connected, skipping');
     return;
   }
 
-  socket.emit(TerminalEvents.RESIZE, { sessionId, cols, rows });
+  getSocket().emit(TerminalEvents.RESIZE, { sessionId, cols, rows });
 }
 
 /**
@@ -153,12 +153,12 @@ export function resizeTerminal(sessionId: number, cols: number, rows: number): v
  * @param sessionId The session ID to kill
  */
 export function killTerminal(sessionId: number): void {
-  if (!socket.connected) {
+  if (!getSocket().connected) {
     logger.warn('killTerminal: socket not connected, skipping');
     return;
   }
 
-  socket.emit(TerminalEvents.KILL, { sessionId });
+  getSocket().emit(TerminalEvents.KILL, { sessionId });
 }
 
 /**
@@ -173,7 +173,7 @@ export async function joinTerminal(
 
   logger.debug('Joining terminal', sessionId);
   return new Promise(resolve => {
-    socket.emit(TerminalEvents.JOIN, { sessionId }, (response: TerminalJoinResponse) => {
+    getSocket().emit(TerminalEvents.JOIN, { sessionId }, (response: TerminalJoinResponse) => {
       resolve({ success: response.success, scrollback: response.scrollback });
     });
 

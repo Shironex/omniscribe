@@ -7,16 +7,19 @@ describe('cors.config', () => {
       expect(ALLOWED_ORIGINS.length).toBeGreaterThan(0);
     });
 
-    it('should contain string origins for localhost dev servers', () => {
-      expect(ALLOWED_ORIGINS).toContain('http://localhost:5173');
-      expect(ALLOWED_ORIGINS).toContain('http://127.0.0.1:5173');
-      expect(ALLOWED_ORIGINS).toContain('http://localhost:3001');
-      expect(ALLOWED_ORIGINS).toContain('http://127.0.0.1:3001');
+    it('should contain RegExp patterns for localhost', () => {
+      const regexps = ALLOWED_ORIGINS.filter(o => o instanceof RegExp);
+      expect(regexps.length).toBeGreaterThanOrEqual(2);
+
+      // Verify localhost patterns match any port
+      const localhostRegex = regexps.find(r => r.test('http://localhost:3001'));
+      const ipRegex = regexps.find(r => r.test('http://127.0.0.1:3001'));
+      expect(localhostRegex).toBeDefined();
+      expect(ipRegex).toBeDefined();
     });
 
     it('should contain RegExp patterns for Electron protocols', () => {
       const regexps = ALLOWED_ORIGINS.filter(o => o instanceof RegExp);
-      expect(regexps.length).toBeGreaterThanOrEqual(2);
 
       const appRegex = regexps.find(r => r.test('app://something'));
       const fileRegex = regexps.find(r => r.test('file://something'));
@@ -40,20 +43,17 @@ describe('cors.config', () => {
       expect(isOriginAllowed(undefined)).toBe(true);
     });
 
-    it('should return true for http://localhost:5173', () => {
+    it('should return true for any localhost port', () => {
       expect(isOriginAllowed('http://localhost:5173')).toBe(true);
-    });
-
-    it('should return true for http://127.0.0.1:5173', () => {
-      expect(isOriginAllowed('http://127.0.0.1:5173')).toBe(true);
-    });
-
-    it('should return true for http://localhost:3001', () => {
       expect(isOriginAllowed('http://localhost:3001')).toBe(true);
+      expect(isOriginAllowed('http://localhost:9999')).toBe(true);
+      expect(isOriginAllowed('http://localhost:15174')).toBe(true);
     });
 
-    it('should return true for http://127.0.0.1:3001', () => {
+    it('should return true for any 127.0.0.1 port', () => {
+      expect(isOriginAllowed('http://127.0.0.1:5173')).toBe(true);
       expect(isOriginAllowed('http://127.0.0.1:3001')).toBe(true);
+      expect(isOriginAllowed('http://127.0.0.1:8080')).toBe(true);
     });
 
     it('should return true for app:// protocol origins', () => {
@@ -68,9 +68,11 @@ describe('cors.config', () => {
 
     it('should return false for disallowed origins', () => {
       expect(isOriginAllowed('http://evil.com')).toBe(false);
-      expect(isOriginAllowed('http://localhost:9999')).toBe(false);
       expect(isOriginAllowed('https://malicious-site.example.com')).toBe(false);
-      expect(isOriginAllowed('http://127.0.0.1:8080')).toBe(false);
+    });
+
+    it('should return false for localhost with path (not a valid origin)', () => {
+      expect(isOriginAllowed('http://localhost:3001/api')).toBe(false);
     });
 
     it('should return true for empty string origin (falsy, same as undefined)', () => {
@@ -107,14 +109,12 @@ describe('cors.config', () => {
       expect(errorArg.message).toBe('Not allowed by CORS');
     });
 
-    it('should call callback(Error) for unknown localhost port', () => {
+    it('should call callback(null, true) for any localhost port', () => {
       const callback = jest.fn();
 
       corsOriginCallback('http://localhost:9999', callback);
 
-      expect(callback).toHaveBeenCalledTimes(1);
-      const errorArg = callback.mock.calls[0][0];
-      expect(errorArg).toBeInstanceOf(Error);
+      expect(callback).toHaveBeenCalledWith(null, true);
     });
 
     it('should call callback(null, true) for app:// protocol', () => {

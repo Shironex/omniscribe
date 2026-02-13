@@ -11,6 +11,7 @@ import { corsOriginCallback } from '../modules/shared/cors.config';
 import { NestLoggerAdapter } from '../modules/shared/nest-logger';
 import { LOCALHOST } from '@omniscribe/shared';
 import { resolveShellPath } from './utils/shell-path';
+import { setBackendPort } from './backend-port';
 
 // Allow E2E tests to isolate userData by setting ELECTRON_USER_DATA_DIR.
 // Must run before app.ready so electron-store and other userData consumers
@@ -41,9 +42,12 @@ async function bootstrapNestApp(): Promise<void> {
       credentials: true,
     });
 
-    logger.info('Starting to listen on port 3001...');
-    await nestApp.listen(3001, LOCALHOST);
-    logger.info('NestJS server running on port 3001');
+    logger.info('Starting to listen on dynamic port...');
+    await nestApp.listen(0, LOCALHOST);
+    const addr = nestApp.getHttpServer().address();
+    const port = typeof addr === 'object' && addr ? addr.port : 0;
+    setBackendPort(port);
+    logger.info(`NestJS server running on port ${port}`);
     logger.info('Log file location:', getLogPath());
   } catch (error) {
     logger.error('Failed to bootstrap NestJS:', error);

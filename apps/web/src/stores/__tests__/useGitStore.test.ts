@@ -5,6 +5,8 @@ import { GitEvents } from '@omniscribe/shared';
 
 vi.mock('@/lib/socket', () => ({
   socket: mockSocket,
+  getSocket: vi.fn(() => mockSocket),
+  initializeSocket: vi.fn(() => mockSocket),
   connectSocket: vi.fn(),
   default: mockSocket,
 }));

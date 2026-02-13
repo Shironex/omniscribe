@@ -6,7 +6,7 @@ import {
   WorkspaceEvents,
   normalizePath,
 } from '@omniscribe/shared';
-import { socket } from '@/lib/socket';
+import { getSocket } from '@/lib/socket';
 import { emitAsync } from '@/lib/socketHelpers';
 
 const logger = createLogger('WorkspaceStore');
@@ -181,7 +181,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
 
           if (existingTab) {
             // Focus existing tab via backend
-            socket.emit(
+            getSocket().emit(
               WorkspaceEvents.SELECT_TAB,
               { tabId: existingTab.id },
               (response: TabsResponse) => {
@@ -206,7 +206,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
           // New tabs inherit the current theme from settings
           const currentTheme = useSettingsStore.getState().theme;
 
-          socket.emit(
+          getSocket().emit(
             WorkspaceEvents.ADD_TAB,
             { id: tabId, projectPath, name: tabName, theme: currentTheme },
             (response: TabsResponse) => {
@@ -226,7 +226,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
 
         closeTab: (tabId: string) => {
           logger.debug('closeTab', tabId);
-          socket.emit(WorkspaceEvents.REMOVE_TAB, { tabId }, (response: TabsResponse) => {
+          getSocket().emit(WorkspaceEvents.REMOVE_TAB, { tabId }, (response: TabsResponse) => {
             if (response.success) {
               set(
                 {
@@ -247,7 +247,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
           // This ensures activeTab computed value is accurate before socket response
           set({ activeTabId: tabId }, undefined, 'workspace/selectTabOptimistic');
 
-          socket.emit(WorkspaceEvents.SELECT_TAB, { tabId }, (response: TabsResponse) => {
+          getSocket().emit(WorkspaceEvents.SELECT_TAB, { tabId }, (response: TabsResponse) => {
             if (response.success) {
               set(
                 {
@@ -266,7 +266,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
         },
 
         updateTabTheme: (tabId: string, theme: Theme) => {
-          socket.emit(
+          getSocket().emit(
             WorkspaceEvents.UPDATE_TAB_THEME,
             { tabId, theme },
             (response: TabsOnlyResponse) => {
@@ -378,7 +378,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
         },
 
         updatePreference: (key: string, value: unknown) => {
-          socket.emit(
+          getSocket().emit(
             WorkspaceEvents.UPDATE_PREFERENCE,
             { key, value },
             (response: PreferencesResponse) => {

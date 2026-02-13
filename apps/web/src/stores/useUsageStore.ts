@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import type { ClaudeUsage, UsageStatus, UsageError } from '@omniscribe/shared';
 import { createLogger, UsageEvents } from '@omniscribe/shared';
-import { socket } from '@/lib/socket';
+import { getSocket } from '@/lib/socket';
 import { emitAsync } from '@/lib/socketHelpers';
 
 const logger = createLogger('UsageStore');
@@ -143,7 +143,7 @@ export const useUsageStore = create<UsageStore>()(
         }
 
         // Ensure socket is connected
-        if (!socket.connected) {
+        if (!getSocket().connected) {
           logger.warn('Socket not connected, cannot start polling');
           return;
         }

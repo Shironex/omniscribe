@@ -6,6 +6,8 @@ import type { ClaudeSessionEntry, ClaudeSessionHistoryResponse } from '@omniscri
 // Mock the socket module
 vi.mock('@/lib/socket', () => ({
   socket: mockSocket,
+  getSocket: vi.fn(() => mockSocket),
+  initializeSocket: vi.fn(() => mockSocket),
   connectSocket: vi.fn(),
   default: mockSocket,
 }));

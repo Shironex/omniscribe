@@ -1,4 +1,4 @@
-import { socket, connectSocket } from './socket';
+import { getSocket, connectSocket } from './socket';
 import { createLogger } from '@omniscribe/shared';
 
 const logger = createLogger('SocketHelper');
@@ -32,7 +32,7 @@ type SuccessResponse = { success: boolean; error?: string };
  * Ensure socket is connected before making requests
  */
 async function ensureConnected(): Promise<void> {
-  if (!socket.connected) {
+  if (!getSocket().connected) {
     await connectSocket();
   }
 }
@@ -68,7 +68,7 @@ export async function emitAsync<TPayload, TResponse>(
       reject(new Error(`Socket request '${event}' timed out after ${timeout}ms`));
     }, timeout);
 
-    socket.emit(event, payload, (response: TResponse) => {
+    getSocket().emit(event, payload, (response: TResponse) => {
       clearTimeout(timeoutId);
       resolve(response);
     });

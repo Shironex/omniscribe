@@ -4,6 +4,7 @@ import { join } from 'path';
 import { createLogger } from '@omniscribe/shared';
 import { CLI_TOOLS, checkCliAvailable, type CLITool } from '../utils';
 import { getLogsDir } from '../logger';
+import { getBackendPort } from '../backend-port';
 import type { ProjectValidationResult } from './types';
 
 const logger = createLogger('IPC:App');
@@ -61,6 +62,10 @@ export function registerAppHandlers(): void {
     }
     clipboard.writeText(text);
   });
+
+  ipcMain.handle('app:get-backend-port', () => {
+    return getBackendPort();
+  });
 }
 
 /**
@@ -73,4 +78,5 @@ export function cleanupAppHandlers(): void {
   ipcMain.removeHandler('app:is-valid-project');
   ipcMain.removeHandler('app:open-logs-folder');
   ipcMain.removeHandler('app:clipboard-write');
+  ipcMain.removeHandler('app:get-backend-port');
 }
