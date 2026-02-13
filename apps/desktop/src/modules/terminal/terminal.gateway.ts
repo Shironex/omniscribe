@@ -33,8 +33,8 @@ import { CORS_CONFIG } from '../shared/cors.config';
 
 const MAX_INPUT_SIZE = 1_048_576; // 1MB
 
-// Backpressure constants (byte-based — counts unacknowledged bytes, not packets)
-const HIGH_WATER_MARK = 256_000; // 256KB — pause PTY when this many bytes are unacknowledged
+// Backpressure constants (character-based — counts unacknowledged characters, not packets)
+const HIGH_WATER_MARK = 256_000; // ~250KB — pause PTY when this many chars are unacknowledged
 const PAUSE_SAFETY_TIMEOUT_MS = 15_000; // Force-resume after 15s to prevent deadlock
 
 @UseGuards(WsThrottlerGuard)
@@ -89,10 +89,20 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
       // one renderer process connecting via one socket. Therefore, when this
       // client's write buffer drains, it is safe to resume all paused terminals
       // unconditionally -- they all belong to this single client.
-      // On drain, reset byte counter to 0 — for localhost connections, drain
-      // reliably indicates the TCP write buffer has been flushed to the renderer.
-      for (const sessionId of this.pausedTerminals) {
+      // Drain indicates the TCP buffer is flushed — all in-flight data was delivered.
+
+      // Reset counters for ALL terminals, not just paused ones.
+      // Non-paused terminals accumulate pendingWrites monotonically; without
+      // this reset they would eventually hit HIGH_WATER_MARK even though the
+      // socket is keeping up.
+      for (const [sessionId] of this.pendingWrites) {
         this.pendingWrites.set(sessionId, 0);
+      }
+
+      // Snapshot the set to avoid mutating during iteration
+      // (resumeTerminal calls pausedTerminals.delete)
+      const pausedIds = [...this.pausedTerminals];
+      for (const sessionId of pausedIds) {
         this.resumeTerminal(sessionId);
       }
     });
@@ -108,8 +118,9 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
     // Terminals are killed explicitly via terminal:kill or session:remove
 
     // Resume any paused terminals to prevent deadlock when client disconnects
-    // while backpressure is active
-    for (const sessionId of this.pausedTerminals) {
+    // while backpressure is active (snapshot to avoid mutation during iteration)
+    const pausedIds = [...this.pausedTerminals];
+    for (const sessionId of pausedIds) {
       this.resumeTerminal(sessionId);
     }
 
@@ -298,7 +309,8 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
       }
     }
 
-    // Track pending bytes for backpressure management (byte-based, not packet-based)
+    // Track pending output size for backpressure management (string length, not packet count).
+    // Uses string length as a proxy for bytes — accurate for ASCII, underestimates multibyte.
     const pending = (this.pendingWrites.get(event.sessionId) ?? 0) + event.data.length;
     this.pendingWrites.set(event.sessionId, pending);
 
