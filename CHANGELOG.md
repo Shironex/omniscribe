@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.6.1 (2026-02-13)
+
+### Changes
+
+- **License** — Switched from custom license to MIT, making Omniscribe fully open source
+
+### Security
+
+- **axios** — Bumped from 1.13.4 to 1.13.5 to fix high severity vulnerability
+
 ## 0.6.0 (2026-02-10)
 
 ### Features
