@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.7.1 (2026-02-13)
+
+### Performance
+
+- **Byte-based terminal backpressure** — Switched backpressure tracking from packet-counting to byte-counting and tuned buffer thresholds, significantly reducing "Buffering output..." overlay noise during normal Claude Code usage (#109)
+
+### Bug Fixes
+
+- **Backpressure drain reset** — Reset pending counters for all terminals on drain (not just paused ones) and snapshot the paused set before iterating to avoid mutation during iteration (#109)
+
 ## 0.7.0 (2026-02-13)
 
 ### Features
