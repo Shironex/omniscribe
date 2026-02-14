@@ -42,16 +42,21 @@ describe('isExternalUrlAllowed', () => {
     expect(isExternalUrlAllowed('https://github.com/owner/repo/issues/1')).toBe(true);
   });
 
-  it('should allow vscode protocol', () => {
+  it('should allow vscode file protocol', () => {
     expect(isExternalUrlAllowed('vscode://file/path/to/file.ts:10:5')).toBe(true);
   });
 
-  it('should allow vscode-insiders protocol', () => {
+  it('should allow vscode-insiders file protocol', () => {
     expect(isExternalUrlAllowed('vscode-insiders://file/path/to/file.ts')).toBe(true);
   });
 
-  it('should allow cursor protocol', () => {
+  it('should allow cursor file protocol', () => {
     expect(isExternalUrlAllowed('cursor://file/path/to/file.ts')).toBe(true);
+  });
+
+  it('should block non-file editor protocol URIs', () => {
+    expect(isExternalUrlAllowed('vscode://vscode.git/clone?url=https://evil.com')).toBe(false);
+    expect(isExternalUrlAllowed('cursor://some-extension/action')).toBe(false);
   });
 
   // --- Blocked protocols ---
@@ -80,5 +85,10 @@ describe('isExternalUrlAllowed', () => {
 
   it('should reject invalid URL', () => {
     expect(isExternalUrlAllowed('not-a-url')).toBe(false);
+  });
+
+  it('should handle case-insensitive protocols', () => {
+    expect(isExternalUrlAllowed('HTTP://example.com')).toBe(true);
+    expect(isExternalUrlAllowed('HTTPS://example.com')).toBe(true);
   });
 });

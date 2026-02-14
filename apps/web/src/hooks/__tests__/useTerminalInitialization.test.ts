@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 
 // --- Mocks ---
@@ -119,6 +119,33 @@ describe('useTerminalInitialization', () => {
   });
 
   describe('WebLinksAddon custom handler', () => {
+    let mockWindowOpen: ReturnType<typeof vi.fn>;
+
+    beforeEach(() => {
+      mockWindowOpen = vi.fn();
+      vi.stubGlobal('open', mockWindowOpen);
+    });
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+      // Re-stub globals needed by other tests
+      vi.stubGlobal(
+        'ResizeObserver',
+        vi.fn(() => ({
+          observe: vi.fn(),
+          unobserve: vi.fn(),
+          disconnect: vi.fn(),
+        }))
+      );
+      vi.stubGlobal(
+        'requestAnimationFrame',
+        vi.fn((cb: () => void) => {
+          cb();
+          return 1;
+        })
+      );
+    });
+
     it('should pass a custom handler to WebLinksAddon', () => {
       const refs = createRefs();
 
@@ -131,8 +158,6 @@ describe('useTerminalInitialization', () => {
 
     it('should call window.open with the URL and _blank target when handler is invoked', () => {
       const refs = createRefs();
-      const mockWindowOpen = vi.fn();
-      vi.stubGlobal('open', mockWindowOpen);
 
       renderHook(() =>
         useTerminalInitialization(1, defaultSettings, refs, vi.fn(), vi.fn(), vi.fn())
@@ -146,10 +171,8 @@ describe('useTerminalInitialization', () => {
       expect(mockWindowOpen).toHaveBeenCalledWith('https://github.com/owner/repo', '_blank');
     });
 
-    it('should handle non-http URLs through the handler', () => {
+    it('should pass the full URL including query params to window.open', () => {
       const refs = createRefs();
-      const mockWindowOpen = vi.fn();
-      vi.stubGlobal('open', mockWindowOpen);
 
       renderHook(() =>
         useTerminalInitialization(1, defaultSettings, refs, vi.fn(), vi.fn(), vi.fn())
