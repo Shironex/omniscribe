@@ -153,8 +153,8 @@ app.on('before-quit', event => {
   (async () => {
     try {
       await flushLogs();
-    } catch {
-      // Log flush failure is non-critical
+    } catch (error) {
+      logger.warn('Log flush failed during shutdown', error);
     }
     if (nestApp) {
       await shutdownNestApp();

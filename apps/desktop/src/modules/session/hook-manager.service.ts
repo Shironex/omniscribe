@@ -97,8 +97,8 @@ export class HookManagerService implements OnModuleDestroy {
       try {
         const content = await fs.promises.readFile(settingsPath, 'utf-8');
         settings = JSON.parse(content);
-      } catch {
-        // File doesn't exist or is invalid — start fresh
+      } catch (error) {
+        this.logger.debug('Settings file not found or invalid, starting fresh', error);
       }
 
       // Build hook command
@@ -150,8 +150,9 @@ export class HookManagerService implements OnModuleDestroy {
       try {
         const content = await fs.promises.readFile(settingsPath, 'utf-8');
         settings = JSON.parse(content);
-      } catch {
-        return; // No settings file — nothing to unregister
+      } catch (error) {
+        this.logger.debug('No settings file to unregister hooks from', error);
+        return;
       }
 
       if (!settings.hooks) return;

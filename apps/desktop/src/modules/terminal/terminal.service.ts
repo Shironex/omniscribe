@@ -146,8 +146,7 @@ export class TerminalService implements OnModuleDestroy {
       ptyProcess = pty.spawn(command, args, ptyOptions);
       this.logger.log(`[spawnCommand] pty.spawn() succeeded, PID: ${ptyProcess.pid}`);
     } catch (spawnError) {
-      const errorMessage = spawnError instanceof Error ? spawnError.message : String(spawnError);
-      this.logger.error(`[spawnCommand] pty.spawn() FAILED: ${errorMessage}`);
+      this.logger.error('[spawnCommand] pty.spawn() FAILED', spawnError);
       throw spawnError;
     }
 
@@ -189,8 +188,7 @@ export class TerminalService implements OnModuleDestroy {
           }, OUTPUT_THROTTLE_MS);
         }
       } catch (dataError) {
-        const errorMessage = dataError instanceof Error ? dataError.message : String(dataError);
-        this.logger.error(`[onData] Error handling data for session ${sessionId}: ${errorMessage}`);
+        this.logger.error(`[onData] Error handling data for session ${sessionId}`, dataError);
       }
     });
 
@@ -481,7 +479,7 @@ export class TerminalService implements OnModuleDestroy {
         try {
           session.pty.resume();
         } catch {
-          // Ignore resume errors during cleanup
+          this.logger.debug('Resume error during cleanup (expected)');
         }
         session.paused = false;
       }

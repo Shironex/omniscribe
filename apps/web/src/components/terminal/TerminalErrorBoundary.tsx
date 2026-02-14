@@ -1,5 +1,8 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { AlertTriangle, RotateCcw, ChevronDown, ChevronUp } from 'lucide-react';
+import { createLogger } from '@omniscribe/shared';
+
+const logger = createLogger('TerminalErrorBoundary');
 
 interface Props {
   children: ReactNode;
@@ -24,7 +27,7 @@ export class TerminalErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('Terminal crashed:', error, errorInfo);
+    logger.error('Terminal crashed', error, errorInfo);
   }
 
   handleRestart = () => {

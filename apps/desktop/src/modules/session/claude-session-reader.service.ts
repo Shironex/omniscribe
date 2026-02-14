@@ -128,8 +128,7 @@ export class ClaudeSessionReaderService implements OnModuleDestroy {
           const entries = await this.readSessionsIndex(projectPath);
           callback(entries);
         } catch (error) {
-          const errorMessage = extractErrorMessage(error);
-          this.logger.error(`Watcher callback error for ${projectPath}: ${errorMessage}`);
+          this.logger.error(`Watcher callback error for ${projectPath}`, error);
         }
       }, DEBOUNCE_MS);
     };
@@ -152,7 +151,7 @@ export class ClaudeSessionReaderService implements OnModuleDestroy {
       });
 
       watcher.on('error', (error: Error) => {
-        this.logger.error(`File watcher error for ${projectPath}: ${error.message}`);
+        this.logger.error(`File watcher error for ${projectPath}`, error);
       });
 
       this.watchers.set(projectPath, watcher);
@@ -169,8 +168,7 @@ export class ClaudeSessionReaderService implements OnModuleDestroy {
         this.logger.debug(`Stopped watching sessions index for ${projectPath}`);
       };
     } catch (error) {
-      const errorMessage = extractErrorMessage(error);
-      this.logger.error(`Failed to set up watcher for ${projectPath}: ${errorMessage}`);
+      this.logger.error(`Failed to set up watcher for ${projectPath}`, error);
       return () => {};
     }
   }
@@ -237,7 +235,8 @@ export class ClaudeSessionReaderService implements OnModuleDestroy {
         try {
           const stat = await fs.promises.stat(path.join(sessionsDir, c.name));
           return { ...c, mtime: stat.mtimeMs };
-        } catch {
+        } catch (error) {
+          this.logger.debug(`Failed to stat file ${c.name}`, error);
           return null;
         }
       })
@@ -320,7 +319,7 @@ export class ClaudeSessionReaderService implements OnModuleDestroy {
             }
           }
         } catch {
-          // Skip unparseable lines
+          this.logger.debug(`Skipping unparseable JSONL line: ${line.slice(0, 100)}`);
         }
       }
 

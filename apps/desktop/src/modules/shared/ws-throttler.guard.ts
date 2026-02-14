@@ -41,8 +41,8 @@ export class WsThrottlerGuard extends ThrottlerGuard {
           retryAfter: timeToBlockExpire,
         };
         client.emit(SystemEvents.THROTTLED, payload);
-      } catch {
-        // Best-effort — don't let notification failure affect the guard
+      } catch (error) {
+        logger.debug('Failed to emit throttle notification to client', error);
       }
 
       await this.throwThrottlingException(context, {

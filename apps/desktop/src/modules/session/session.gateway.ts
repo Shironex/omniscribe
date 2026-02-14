@@ -262,7 +262,7 @@ export class SessionGateway implements OnGatewayInit {
       return { sessions };
     } catch (error) {
       const errorMessage = extractErrorMessage(error);
-      this.logger.error(`Failed to fetch session history: ${errorMessage}`);
+      this.logger.error('Failed to fetch session history', error);
       return { sessions: [], error: errorMessage };
     }
   }

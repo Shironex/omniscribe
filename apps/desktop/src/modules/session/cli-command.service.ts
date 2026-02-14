@@ -204,7 +204,8 @@ Call these tools at the start and end of every user request, and at each meaning
       // 'where' on Windows may return multiple lines, take the first
       const firstLine = result.trim().split(/\r?\n/)[0];
       return firstLine || null;
-    } catch {
+    } catch (error) {
+      this.logger.debug(`CLI "${command}" not found in PATH`, error);
       return null;
     }
   }
@@ -267,8 +268,8 @@ Call these tools at the start and end of every user request, and at each meaning
         if (fs.existsSync(p)) {
           return p;
         }
-      } catch {
-        // Ignore errors, try next path
+      } catch (error) {
+        this.logger.debug(`Error checking path ${p}`, error);
       }
     }
     return null;

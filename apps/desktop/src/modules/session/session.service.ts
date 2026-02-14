@@ -741,7 +741,7 @@ export class SessionService implements OnModuleDestroy {
     } catch (error) {
       const errorMessage = extractErrorMessage(error);
 
-      this.logger.error(`Failed to launch session ${sessionId}: ${errorMessage}`);
+      this.logger.error(`Failed to launch session ${sessionId}`, error);
 
       this.updateStatus(sessionId, 'error', `Launch failed: ${errorMessage}`);
 
