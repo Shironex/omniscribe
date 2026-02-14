@@ -11,6 +11,7 @@ import { SkipThrottle } from '@nestjs/throttler';
 import { Server, Socket } from 'socket.io';
 import { OnEvent } from '@nestjs/event-emitter';
 import { WsThrottlerGuard } from '../shared/ws-throttler.guard';
+import { validatePath } from '../shared/validation';
 import {
   McpDiscoverPayload,
   McpSetEnabledPayload,
@@ -86,17 +87,22 @@ export class McpGateway implements OnGatewayInit {
   ): Promise<McpDiscoverResponse> {
     try {
       // Validate payload has required projectPath
-      if (!payload?.projectPath) {
-        this.logger.warn('mcp:discover called without projectPath');
-        return { servers: [], error: 'projectPath is required' };
+      const projectPath = payload?.projectPath;
+      const pathError = validatePath(projectPath);
+      if (pathError) {
+        this.logger.warn('mcp:discover called with invalid projectPath');
+        return { servers: [], error: pathError };
       }
 
-      const servers = await this.discoveryService.discoverServers(payload.projectPath);
+      // validatePath ensures projectPath is a non-empty string here
+      const validProjectPath = projectPath as string;
+
+      const servers = await this.discoveryService.discoverServers(validProjectPath);
 
       // Cache the discovered servers
-      this.projectCache.setServers(payload.projectPath, servers);
+      this.projectCache.setServers(validProjectPath, servers);
 
-      this.logger.log(`Discovered ${servers.length} MCP servers for ${payload.projectPath}`);
+      this.logger.log(`Discovered ${servers.length} MCP servers for ${validProjectPath}`);
 
       return { servers };
     } catch (error) {

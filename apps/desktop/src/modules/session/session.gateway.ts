@@ -12,7 +12,7 @@ import { WsThrottlerGuard } from '../shared/ws-throttler.guard';
 import { Server, Socket } from 'socket.io';
 import { OnEvent } from '@nestjs/event-emitter';
 import * as crypto from 'crypto';
-import * as path from 'path';
+import { validatePath } from '../shared/validation';
 import { SessionService, BackendSessionConfig } from './session.service';
 import { TerminalGateway } from '../terminal';
 import { WorktreeService, GitService } from '../git';
@@ -42,7 +42,6 @@ import {
   MAX_MODEL_LENGTH,
   MAX_SYSTEM_PROMPT_LENGTH,
   MAX_SESSION_NAME_LENGTH,
-  MAX_PATH_LENGTH,
   SessionEvents,
   ZombieEvents,
   createLogger,
@@ -358,14 +357,9 @@ export class SessionGateway implements OnGatewayInit {
     }
 
     // Validate projectPath
-    if (!payload.projectPath || typeof payload.projectPath !== 'string') {
-      return { error: 'Invalid projectPath: must be a non-empty string' };
-    }
-    if (payload.projectPath.length > MAX_PATH_LENGTH) {
-      return { error: `projectPath exceeds maximum length of ${MAX_PATH_LENGTH} characters` };
-    }
-    if (!path.isAbsolute(payload.projectPath)) {
-      return { error: 'Invalid projectPath: must be an absolute path' };
+    const pathError = validatePath(payload.projectPath);
+    if (pathError) {
+      return { error: pathError };
     }
 
     // Check concurrency limit

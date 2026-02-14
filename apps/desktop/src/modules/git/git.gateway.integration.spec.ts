@@ -16,8 +16,6 @@ import {
 import { GitGateway } from './git.gateway';
 import { GitService } from './git.service';
 import { WorktreeService } from './worktree.service';
-import { GithubService } from './github.service';
-
 describe('GitGateway (integration)', () => {
   let app: INestApplication;
   let client: Socket;
@@ -45,28 +43,11 @@ describe('GitGateway (integration)', () => {
       cleanup: jest.fn().mockResolvedValue(undefined),
     };
 
-    const mockGithubService = {
-      getStatus: jest.fn().mockResolvedValue({
-        installed: true,
-        platform: 'darwin',
-        arch: 'arm64',
-        auth: { authenticated: true },
-      }),
-      getRepoInfo: jest.fn().mockResolvedValue(null),
-      listPullRequests: jest.fn().mockResolvedValue([]),
-      getPullRequest: jest.fn().mockResolvedValue(null),
-      createPullRequest: jest.fn().mockResolvedValue(null),
-      listIssues: jest.fn().mockResolvedValue([]),
-      getIssue: jest.fn().mockResolvedValue(null),
-      clearCache: jest.fn(),
-    };
-
     @Module({
       providers: [
         GitGateway,
         { provide: GitService, useValue: mockGitService },
         { provide: WorktreeService, useValue: mockWorktreeService },
-        { provide: GithubService, useValue: mockGithubService },
       ],
     })
     class TestGitModule {}

@@ -13,6 +13,7 @@ import { SkipThrottle } from '@nestjs/throttler';
 import { Server, Socket } from 'socket.io';
 import { OnEvent } from '@nestjs/event-emitter';
 import { WsThrottlerGuard } from '../shared/ws-throttler.guard';
+import { isValidSessionId } from '../shared/validation';
 import { TerminalService } from './terminal.service';
 import {
   TerminalSpawnPayload,
@@ -56,18 +57,6 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
   private pauseTimeouts = new Map<number, NodeJS.Timeout>();
 
   constructor(private readonly terminalService: TerminalService) {}
-
-  /**
-   * Validate that a sessionId is a positive finite integer.
-   */
-  private isValidSessionId(sessionId: unknown): sessionId is number {
-    return (
-      typeof sessionId === 'number' &&
-      Number.isFinite(sessionId) &&
-      Number.isInteger(sessionId) &&
-      sessionId > 0
-    );
-  }
 
   afterInit(): void {
     this.logger.log('Initialized');
@@ -157,7 +146,7 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
     const { sessionId, data } = payload;
 
     // SessionId validation
-    if (!this.isValidSessionId(sessionId)) {
+    if (!isValidSessionId(sessionId)) {
       this.logger.warn(`[input] Invalid sessionId: ${sessionId}`);
       return;
     }
@@ -210,7 +199,7 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
     const { sessionId, cols, rows } = payload;
 
     // SessionId validation
-    if (!this.isValidSessionId(sessionId)) {
+    if (!isValidSessionId(sessionId)) {
       this.logger.warn(`[resize] Invalid sessionId: ${sessionId}`);
       return;
     }
@@ -234,7 +223,7 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
   ): Promise<SuccessResponse> {
     const { sessionId } = payload;
 
-    if (!this.isValidSessionId(sessionId)) {
+    if (!isValidSessionId(sessionId)) {
       this.logger.warn(`[kill] Invalid sessionId: ${sessionId}`);
       return { success: false, error: 'Invalid sessionId' };
     }
@@ -263,7 +252,7 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
   ): TerminalJoinResponse {
     const { sessionId } = payload;
 
-    if (!this.isValidSessionId(sessionId)) {
+    if (!isValidSessionId(sessionId)) {
       this.logger.warn(`[join] Invalid sessionId: ${sessionId}`);
       return { success: false, error: 'Invalid sessionId' };
     }
@@ -359,7 +348,7 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
   ): SuccessResponse {
     const { sessionId } = payload;
 
-    if (!this.isValidSessionId(sessionId)) {
+    if (!isValidSessionId(sessionId)) {
       this.logger.warn(`[cancel] Invalid sessionId: ${sessionId}`);
       return { success: false, error: 'Invalid sessionId' };
     }

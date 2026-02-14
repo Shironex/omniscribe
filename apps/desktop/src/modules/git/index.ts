@@ -9,3 +9,4 @@ export { GitService } from './git.service';
 export { WorktreeService } from './worktree.service';
 export { GithubService } from './github.service';
 export { GitGateway } from './git.gateway';
+export { GithubGateway } from './github.gateway';
