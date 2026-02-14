@@ -129,7 +129,7 @@ export function LogViewerModal({ open, onOpenChange }: LogViewerModalProps) {
         <DialogOverlay className="bg-black/60 backdrop-blur-xs" />
         <DialogPrimitive.Content
           className={cn(
-            'fixed left-[50%] top-[50%] z-[60] translate-x-[-50%] translate-y-[-50%]',
+            'fixed left-[50%] top-[50%] z-60 translate-x-[-50%] translate-y-[-50%]',
             'w-full max-w-5xl mx-4',
             'bg-background rounded-2xl shadow-2xl',
             'border border-border',
