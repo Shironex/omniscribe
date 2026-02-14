@@ -18,9 +18,6 @@ module.exports = {
     '!src/**/index.ts',
     // Exclude main-process files that don't have tests yet
     '!src/main/preload.ts',
-    '!src/main/logger.ts',
-    '!src/main/updater.ts',
-    '!src/main/backend-port.ts',
     '!src/main/ipc-handlers.ts',
   ],
   transform: {
