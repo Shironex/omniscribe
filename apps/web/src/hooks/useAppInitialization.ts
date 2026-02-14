@@ -1,16 +1,10 @@
 import { useEffect } from 'react';
 import { createLogger, SessionEvents, type RestoreSnapshotResponse } from '@omniscribe/shared';
-import { useSessionStore } from '@/stores/useSessionStore';
-import { useWorkspaceStore } from '@/stores/useWorkspaceStore';
-import { useGitStore } from '@/stores/useGitStore';
-import { useMcpStore } from '@/stores/useMcpStore';
-import { useTaskStore } from '@/stores/useTaskStore';
-import { useSessionHistoryStore } from '@/stores/useSessionHistoryStore';
 import { useUpdateStore } from '@/stores/useUpdateStore';
-import { useConnectionStore } from '@/stores/useConnectionStore';
 import { useSettingsStore } from '@/stores/useSettingsStore';
 import { connectSocket, getSocket, initializeSocket } from '@/lib/socket';
 import { resumeSession } from '@/lib/session';
+import { useStoreListeners } from './useStoreListeners';
 
 const logger = createLogger('AppInit');
 
@@ -83,34 +77,7 @@ async function autoResumeOnRestart(): Promise<void> {
  * update listeners. Cleans up all registered listeners when the component using this hook unmounts.
  */
 export function useAppInitialization(): void {
-  // Session store
-  const initSessionListeners = useSessionStore(state => state.initListeners);
-  const cleanupSessionListeners = useSessionStore(state => state.cleanupListeners);
-
-  // Workspace store
-  const initWorkspaceListeners = useWorkspaceStore(state => state.initListeners);
-  const cleanupWorkspaceListeners = useWorkspaceStore(state => state.cleanupListeners);
-
-  // Git store
-  const initGitListeners = useGitStore(state => state.initListeners);
-  const cleanupGitListeners = useGitStore(state => state.cleanupListeners);
-
-  // MCP store
-  const initMcpListeners = useMcpStore(state => state.initListeners);
-  const cleanupMcpListeners = useMcpStore(state => state.cleanupListeners);
-  const fetchInternalMcpStatus = useMcpStore(state => state.fetchInternalMcpStatus);
-
-  // Task store
-  const initTaskListeners = useTaskStore(state => state.initListeners);
-  const cleanupTaskListeners = useTaskStore(state => state.cleanupListeners);
-
-  // Session history store
-  const initSessionHistoryListeners = useSessionHistoryStore(state => state.initListeners);
-  const cleanupSessionHistoryListeners = useSessionHistoryStore(state => state.cleanupListeners);
-
-  // Connection store (global socket connection state)
-  const initConnectionListeners = useConnectionStore(state => state.initListeners);
-  const cleanupConnectionListeners = useConnectionStore(state => state.cleanupListeners);
+  const { initAllListeners, cleanupAllListeners, fetchInternalMcpStatus } = useStoreListeners();
 
   // Update store (uses IPC, not socket — init separately)
   const initUpdateListeners = useUpdateStore(state => state.initListeners);
@@ -133,13 +100,7 @@ export function useAppInitialization(): void {
         initializeSocket(port);
         // Register all socket listeners BEFORE connecting so that onConnect
         // callbacks fire on the initial connection, not just on reconnect
-        initConnectionListeners();
-        initSessionListeners();
-        initGitListeners();
-        initWorkspaceListeners();
-        initMcpListeners();
-        initTaskListeners();
-        initSessionHistoryListeners();
+        initAllListeners();
         logger.info('All listeners registered');
         await connectSocket();
         if (!mounted) return;
@@ -162,31 +123,8 @@ export function useAppInitialization(): void {
     return () => {
       mounted = false;
       logger.debug('Cleaning up listeners');
-      cleanupConnectionListeners();
-      cleanupSessionListeners();
-      cleanupGitListeners();
-      cleanupWorkspaceListeners();
-      cleanupMcpListeners();
-      cleanupTaskListeners();
-      cleanupSessionHistoryListeners();
+      cleanupAllListeners();
       cleanupUpdateListeners?.();
     };
-  }, [
-    initConnectionListeners,
-    cleanupConnectionListeners,
-    initSessionListeners,
-    cleanupSessionListeners,
-    initGitListeners,
-    cleanupGitListeners,
-    initWorkspaceListeners,
-    cleanupWorkspaceListeners,
-    initMcpListeners,
-    cleanupMcpListeners,
-    initTaskListeners,
-    cleanupTaskListeners,
-    initSessionHistoryListeners,
-    cleanupSessionHistoryListeners,
-    fetchInternalMcpStatus,
-    initUpdateListeners,
-  ]);
+  }, [initAllListeners, cleanupAllListeners, fetchInternalMcpStatus, initUpdateListeners]);
 }

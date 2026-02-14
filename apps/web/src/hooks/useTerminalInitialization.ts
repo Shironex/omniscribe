@@ -1,14 +1,14 @@
 import { useEffect } from 'react';
 import { createLogger } from '@omniscribe/shared';
-import { Terminal } from '@xterm/xterm';
-import { FitAddon } from '@xterm/addon-fit';
-import { WebLinksAddon } from '@xterm/addon-web-links';
-import { SearchAddon } from '@xterm/addon-search';
-import { WebglAddon } from '@xterm/addon-webgl';
+import type { Terminal } from '@xterm/xterm';
+import type { FitAddon } from '@xterm/addon-fit';
+import type { SearchAddon } from '@xterm/addon-search';
 import { writeToTerminal, resizeTerminal } from '@/lib/terminal';
 import { getTerminalTheme } from '@/lib/terminal-themes';
-import { FilePathLinkProvider } from '@/lib/terminal-link-provider';
 import { safeFit } from './useTerminalResize';
+import { createTerminalInstance } from './createTerminalInstance';
+import { loadTerminalAddons } from './loadTerminalAddons';
+import { useTerminalRefitListener } from './useTerminalRefitListener';
 import type { UseTerminalSettingsReturn } from './useTerminalSettings';
 
 const logger = createLogger('TerminalInit');
@@ -27,6 +27,7 @@ export interface TerminalRefs {
 
 /**
  * Hook that initializes the terminal instance, loads addons, and manages the terminal lifecycle.
+ * Uses extracted pure functions for terminal creation and addon loading.
  */
 export function useTerminalInitialization(
   sessionId: number,
@@ -48,6 +49,9 @@ export function useTerminalInitialization(
     resizeDebounceRef,
   } = refs;
 
+  // Listen for refit-all events (from panel resizes, DnD)
+  useTerminalRefitListener(isDisposedRef, isReadyRef, handleResize);
+
   useEffect(() => {
     if (!terminalRef.current) return;
 
@@ -57,7 +61,6 @@ export function useTerminalInitialization(
     const container = terminalRef.current;
     let terminal: Terminal | null = null;
     let fitAddon: FitAddon | null = null;
-    let searchAddon: SearchAddon | null = null;
     let isInitialized = false;
     let initRetryTimeout: ReturnType<typeof setTimeout> | null = null;
     const deferredFitTimeouts: ReturnType<typeof setTimeout>[] = [];
@@ -72,57 +75,18 @@ export function useTerminalInitialization(
 
       isInitialized = true;
 
-      terminal = new Terminal({
-        fontSize: settings.fontSize,
-        fontFamily: settings.fontFamily.join(', '),
-        fontWeight: settings.fontWeight,
-        lineHeight: settings.lineHeight,
-        letterSpacing: settings.letterSpacing,
-        cursorBlink: settings.cursorBlink,
-        cursorStyle: settings.cursorStyle,
-        scrollback: settings.scrollback,
-        theme,
-        allowProposedApi: true,
-      });
-
-      fitAddon = new FitAddon();
-      // URI is validated by Electron's setWindowOpenHandler in the main process
-      // which checks isExternalUrlAllowed() before calling shell.openExternal()
-      const webLinksAddon = new WebLinksAddon((_event, uri) => {
-        window.open(uri, '_blank');
-      });
-      searchAddon = new SearchAddon();
-
-      terminal.loadAddon(fitAddon);
-      terminal.loadAddon(webLinksAddon);
-      terminal.loadAddon(searchAddon);
-
-      logger.info('Terminal opened for session', sessionId);
-      terminal.open(container);
-
-      // Try WebGL rendering with canvas fallback
-      try {
-        const webglAddon = new WebglAddon();
-        webglAddon.onContextLoss(() => {
-          webglAddon.dispose();
-        });
-        terminal.loadAddon(webglAddon);
-        logger.debug('WebGL addon loaded successfully');
-      } catch {
-        logger.debug('WebGL addon failed, using canvas fallback');
-      }
-
-      // Register file path link provider
-      terminal.registerLinkProvider(new FilePathLinkProvider(terminal));
+      terminal = createTerminalInstance(settings, theme);
+      const addons = loadTerminalAddons(terminal, container, sessionId);
+      fitAddon = addons.fitAddon;
 
       xtermRef.current = terminal;
       fitAddonRef.current = fitAddon;
-      searchAddonRef.current = searchAddon;
+      searchAddonRef.current = addons.searchAddon;
 
       // Attach keyboard handler
       attachKeyboardHandler(terminal);
 
-      // Delayed initial fit
+      // Delayed initial fit with retry mechanism
       const performInitialFit = (retriesLeft: number) => {
         if (isDisposedRef.current || !terminal || !fitAddon) return;
 
@@ -178,20 +142,10 @@ export function useTerminalInitialization(
 
     initializeTerminal();
 
-    // Listen for refit-all events (from panel resizes, DnD)
-    const handleRefitAll = () => {
-      if (!isDisposedRef.current && isReadyRef.current) {
-        handleResize();
-      }
-    };
-    window.addEventListener('terminal-refit-all', handleRefitAll);
-
     return () => {
       logger.debug('Cleaning up terminal for session', sessionId);
       isDisposedRef.current = true;
       isReadyRef.current = false;
-
-      window.removeEventListener('terminal-refit-all', handleRefitAll);
 
       if (resizeDebounceRef.current) {
         clearTimeout(resizeDebounceRef.current);
