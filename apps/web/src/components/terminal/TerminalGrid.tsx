@@ -1,9 +1,8 @@
-import React, { useCallback, useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { DndContext, DragOverlay, closestCenter } from '@dnd-kit/core';
 import { SortableContext, rectSwappingStrategy } from '@dnd-kit/sortable';
-import { Group, Panel, Separator } from 'react-resizable-panels';
 import { SortableTerminalWrapper } from './SortableTerminalWrapper';
 import { TerminalCard } from './TerminalCard';
 import type { QuickActionItem } from './TerminalCard';
@@ -17,6 +16,8 @@ import type { WorktreeMode } from '@omniscribe/shared';
 import { buildColumns, getLayout } from '@/lib/terminal-layout';
 import { useTerminalGridDnd } from '@/hooks/useTerminalGridDnd';
 import { useTerminalPanelResize } from '@/hooks/useTerminalPanelResize';
+import { RowPrimaryLayout } from './RowPrimaryLayout';
+import { ColumnPrimaryLayout } from './ColumnPrimaryLayout';
 
 const NOOP = () => {};
 
@@ -149,105 +150,19 @@ export function TerminalGrid({
           >
             <SortableContext items={sessionIds} strategy={rectSwappingStrategy}>
               {useRowPrimaryLayout ? (
-                <Group
-                  orientation="vertical"
+                <RowPrimaryLayout
+                  rows={layout.rows}
+                  sessions={sessions}
                   onLayoutChange={handlePanelResize}
-                  className="h-full w-full min-h-0 min-w-0"
-                >
-                  {layout.rows.map((row, rowIndex) => (
-                    <React.Fragment key={`row-${rowIndex}`}>
-                      {rowIndex > 0 && (
-                        <Separator className="h-1.5 flex items-center justify-center group">
-                          <div className="w-8 h-0.5 bg-border rounded-full group-hover:bg-primary transition-colors" />
-                        </Separator>
-                      )}
-                      <Panel
-                        id={`row-${rowIndex}`}
-                        defaultSize={`${100 / layout.rows.length}%`}
-                        minSize="15%"
-                        className="min-h-0 min-w-0 overflow-hidden"
-                      >
-                        <Group
-                          orientation="horizontal"
-                          onLayoutChange={handlePanelResize}
-                          className="h-full w-full min-h-0 min-w-0"
-                        >
-                          {row.map((sessionIndex, colIndex) => {
-                            const session = sessions[sessionIndex];
-                            if (!session) return null;
-                            return (
-                              <React.Fragment key={session.id}>
-                                {colIndex > 0 && (
-                                  <Separator className="w-1.5 flex items-center justify-center group">
-                                    <div className="h-8 w-0.5 bg-border rounded-full group-hover:bg-primary transition-colors" />
-                                  </Separator>
-                                )}
-                                <Panel
-                                  id={`cell-${rowIndex}-${colIndex}`}
-                                  defaultSize={`${100 / row.length}%`}
-                                  minSize="15%"
-                                  className="min-h-0 min-w-0 overflow-hidden"
-                                >
-                                  {renderTerminalCard(session)}
-                                </Panel>
-                              </React.Fragment>
-                            );
-                          })}
-                        </Group>
-                      </Panel>
-                    </React.Fragment>
-                  ))}
-                </Group>
+                  renderTerminalCard={renderTerminalCard}
+                />
               ) : (
-                <Group
-                  orientation="horizontal"
+                <ColumnPrimaryLayout
+                  columns={columns}
+                  sessions={sessions}
                   onLayoutChange={handlePanelResize}
-                  className="h-full w-full min-h-0 min-w-0"
-                >
-                  {columns.map((column, columnIndex) => (
-                    <React.Fragment key={`column-${columnIndex}`}>
-                      {columnIndex > 0 && (
-                        <Separator className="w-1.5 flex items-center justify-center group">
-                          <div className="h-8 w-0.5 bg-border rounded-full group-hover:bg-primary transition-colors" />
-                        </Separator>
-                      )}
-                      <Panel
-                        id={`column-${columnIndex}`}
-                        defaultSize={`${100 / columns.length}%`}
-                        minSize="15%"
-                        className="min-h-0 min-w-0 overflow-hidden"
-                      >
-                        <Group
-                          orientation="vertical"
-                          onLayoutChange={handlePanelResize}
-                          className="h-full w-full min-h-0 min-w-0"
-                        >
-                          {column.map((sessionIndex, rowIndex) => {
-                            const session = sessions[sessionIndex];
-                            if (!session) return null;
-                            return (
-                              <React.Fragment key={session.id}>
-                                {rowIndex > 0 && (
-                                  <Separator className="h-1.5 flex items-center justify-center group">
-                                    <div className="w-8 h-0.5 bg-border rounded-full group-hover:bg-primary transition-colors" />
-                                  </Separator>
-                                )}
-                                <Panel
-                                  id={`cell-${columnIndex}-${rowIndex}`}
-                                  defaultSize={`${100 / column.length}%`}
-                                  minSize="15%"
-                                  className="min-h-0 min-w-0 overflow-hidden"
-                                >
-                                  {renderTerminalCard(session)}
-                                </Panel>
-                              </React.Fragment>
-                            );
-                          })}
-                        </Group>
-                      </Panel>
-                    </React.Fragment>
-                  ))}
-                </Group>
+                  renderTerminalCard={renderTerminalCard}
+                />
               )}
             </SortableContext>
             <DragOverlay dropAnimation={{ duration: 200, easing: 'ease' }}>

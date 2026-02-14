@@ -1,7 +1,12 @@
-const platform = typeof window !== 'undefined' ? window.electronAPI?.platform : undefined;
+/** Whether we're running inside Electron (vs plain browser) */
+export const IS_ELECTRON = typeof window !== 'undefined' && !!window.electronAPI;
+
+const platform = IS_ELECTRON ? window.electronAPI?.platform : undefined;
 
 /** Whether the app is running on macOS */
-export const IS_MAC = platform === 'darwin';
+export const IS_MAC =
+  platform === 'darwin' ||
+  (!IS_ELECTRON && typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform));
 
 /** Whether the app is running on Windows */
 export const IS_WINDOWS = platform === 'win32';
