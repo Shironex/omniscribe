@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import {
   X,
   ChevronLeft,
@@ -68,7 +69,15 @@ export function LogViewerModal({ open, onOpenChange }: LogViewerModalProps) {
   const [entries, setEntries] = useState<LogEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const contentRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const virtualizer = useVirtualizer({
+    count: entries.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => 28,
+    overscan: 20,
+    getItemKey: useCallback((index: number) => index, []),
+  });
 
   const loadFiles = useCallback(async () => {
     setIsLoading(true);
@@ -112,10 +121,10 @@ export function LogViewerModal({ open, onOpenChange }: LogViewerModalProps) {
 
   // Scroll to bottom when entries load
   useEffect(() => {
-    if (entries.length > 0 && contentRef.current) {
-      contentRef.current.scrollTop = contentRef.current.scrollHeight;
+    if (entries.length > 0) {
+      virtualizer.scrollToIndex(entries.length - 1);
     }
-  }, [entries]);
+  }, [entries.length, virtualizer]);
 
   const handleBack = () => {
     setSelectedFile(null);
@@ -174,7 +183,7 @@ export function LogViewerModal({ open, onOpenChange }: LogViewerModalProps) {
           </div>
 
           {/* Content */}
-          <div ref={contentRef} className="flex-1 overflow-y-auto px-6 py-4 min-h-0">
+          <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-4 min-h-0">
             {isLoading && (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
@@ -228,45 +237,67 @@ export function LogViewerModal({ open, onOpenChange }: LogViewerModalProps) {
               </div>
             )}
 
-            {/* Log Entries */}
+            {/* Log Entries (Virtualized) */}
             {!isLoading && !error && selectedFile && (
-              <div className="space-y-0.5 font-mono text-xs">
+              <>
                 {entries.length === 0 ? (
                   <div className="text-center py-12 text-muted-foreground">
                     <p className="text-sm">No log entries found</p>
                   </div>
                 ) : (
-                  entries.map((entry, index) => (
-                    <div
-                      key={index}
-                      className="flex items-start gap-2 py-1 px-2 rounded hover:bg-muted/30 group"
-                    >
-                      <span className="text-muted-foreground shrink-0 w-[85px]">
-                        {formatLogTimestamp(entry.timestamp)}
-                      </span>
-                      <span
-                        className={cn(
-                          'shrink-0 px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase border w-[52px] text-center',
-                          LEVEL_STYLES[entry.level] ?? 'bg-muted text-muted-foreground'
-                        )}
-                      >
-                        {entry.level}
-                      </span>
-                      <span className="shrink-0 text-primary/70 w-[140px] truncate">
-                        {entry.context}
-                      </span>
-                      <span className="text-foreground break-all min-w-0 flex-1">
-                        {entry.message}
-                        {entry.data != null && (
-                          <div className="mt-0.5">
-                            <ExpandableData data={entry.data} />
+                  <div
+                    style={{
+                      height: virtualizer.getTotalSize(),
+                      width: '100%',
+                      position: 'relative',
+                    }}
+                    className="font-mono text-xs"
+                  >
+                    {virtualizer.getVirtualItems().map(virtualItem => {
+                      const entry = entries[virtualItem.index];
+                      return (
+                        <div
+                          key={virtualItem.key}
+                          data-index={virtualItem.index}
+                          ref={virtualizer.measureElement}
+                          style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            transform: `translateY(${virtualItem.start}px)`,
+                          }}
+                        >
+                          <div className="flex items-start gap-2 py-1 px-2 rounded hover:bg-muted/30">
+                            <span className="text-muted-foreground shrink-0 w-[85px]">
+                              {formatLogTimestamp(entry.timestamp)}
+                            </span>
+                            <span
+                              className={cn(
+                                'shrink-0 px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase border w-[52px] text-center',
+                                LEVEL_STYLES[entry.level] ?? 'bg-muted text-muted-foreground'
+                              )}
+                            >
+                              {entry.level}
+                            </span>
+                            <span className="shrink-0 text-primary/70 w-[140px] truncate">
+                              {entry.context}
+                            </span>
+                            <span className="text-foreground break-all min-w-0 flex-1">
+                              {entry.message}
+                              {entry.data != null && (
+                                <div className="mt-0.5">
+                                  <ExpandableData data={entry.data} />
+                                </div>
+                              )}
+                            </span>
                           </div>
-                        )}
-                      </span>
-                    </div>
-                  ))
+                        </div>
+                      );
+                    })}
+                  </div>
                 )}
-              </div>
+              </>
             )}
           </div>
         </DialogPrimitive.Content>
