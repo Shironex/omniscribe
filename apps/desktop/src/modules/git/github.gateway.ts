@@ -192,7 +192,7 @@ export class GithubGateway implements OnGatewayInit {
     @MessageBody() payload: GithubCreatePRPayload
   ): Promise<GithubCreatePRResponse> {
     this.logger.debug(
-      `[github:create-pr] projectPath=${payload.projectPath}, title=${payload.title}`
+      `[github:create-pr] projectPath=${payload.projectPath}, title=${payload.title?.slice(0, 50)}`
     );
     try {
       const { projectPath, title, body, base, head, draft } = payload;

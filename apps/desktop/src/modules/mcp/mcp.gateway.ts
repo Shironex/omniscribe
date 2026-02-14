@@ -123,10 +123,10 @@ export class McpGateway implements OnGatewayInit {
     @MessageBody() payload: McpSetEnabledPayload,
     @ConnectedSocket() _client: Socket
   ): McpSetEnabledResponse {
-    this.logger.debug(
-      `[mcp:set-enabled] sessionId=${payload.sessionId}, serverIds=${payload.serverIds.join(',')}`
-    );
     try {
+      this.logger.debug(
+        `[mcp:set-enabled] sessionId=${payload.sessionId}, serverIds=${payload.serverIds?.join(',')}`
+      );
       // Store the enabled servers in the registry
       this.sessionRegistry.setEnabledServers(
         payload.projectPath,
@@ -160,8 +160,14 @@ export class McpGateway implements OnGatewayInit {
     @ConnectedSocket() _client: Socket
   ): Promise<McpWriteConfigResponse> {
     this.logger.debug(
-      `[mcp:write-config] sessionId=${payload.sessionId}, servers=${payload.servers.length}`
+      `[mcp:write-config] sessionId=${payload.sessionId}, servers=${payload.servers?.length}`
     );
+
+    const pathError = validatePath(payload.workingDir, 'workingDir');
+    if (pathError) {
+      return { success: false, error: pathError };
+    }
+
     try {
       // Filter to only enabled servers
       const enabledServers = payload.servers.filter(s => s.enabled);
@@ -225,6 +231,12 @@ export class McpGateway implements OnGatewayInit {
     @ConnectedSocket() _client: Socket
   ): Promise<McpRemoveConfigResponse> {
     this.logger.debug(`[mcp:remove-config] sessionId=${payload.sessionId}`);
+
+    const pathError = validatePath(payload.workingDir, 'workingDir');
+    if (pathError) {
+      return { success: false, error: pathError };
+    }
+
     try {
       const success = await this.writerService.removeConfig(payload.workingDir, payload.sessionId);
 
@@ -272,7 +284,7 @@ export class McpGateway implements OnGatewayInit {
    */
   @OnEvent(InternalSessionEvents.TASKS)
   onSessionTasks(event: SessionTasksUpdate): void {
-    this.logger.debug(`Broadcasting session:tasks for ${event.sessionId}`);
+    this.logger.debug(`[session:tasks] broadcasting for ${event.sessionId}`);
     this.server.emit(SessionEvents.TASKS, {
       sessionId: event.sessionId,
       tasks: event.tasks,

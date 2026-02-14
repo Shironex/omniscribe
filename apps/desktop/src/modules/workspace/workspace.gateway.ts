@@ -193,7 +193,7 @@ export class WorkspaceGateway implements OnGatewayInit {
   @SkipThrottle()
   @SubscribeMessage(WorkspaceEvents.GET_STATE)
   handleGetWorkspaceState(@ConnectedSocket() _client: Socket): WorkspaceState {
-    this.logger.debug('Getting workspace state');
+    this.logger.debug('[workspace:get-state] getting workspace state');
     return this.workspaceService.getWorkspaceState();
   }
 
@@ -206,7 +206,7 @@ export class WorkspaceGateway implements OnGatewayInit {
     @MessageBody() payload: SaveStatePayload,
     @ConnectedSocket() _client: Socket
   ): SuccessResponse {
-    this.logger.debug('Saving workspace state');
+    this.logger.debug('[workspace:save-state] saving workspace state');
     this.workspaceService.saveWorkspaceState(payload);
     return { success: true };
   }
@@ -296,7 +296,7 @@ export class WorkspaceGateway implements OnGatewayInit {
     @MessageBody() payload: SelectTabPayload,
     @ConnectedSocket() client: Socket
   ): TabsResponse {
-    this.logger.debug(`Selecting tab: ${payload.tabId}`);
+    this.logger.debug(`[workspace:select-tab] tabId=${payload.tabId}`);
 
     const tabs = this.workspaceService.selectTab(payload.tabId);
 

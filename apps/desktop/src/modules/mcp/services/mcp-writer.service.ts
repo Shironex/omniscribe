@@ -178,7 +178,7 @@ export class McpWriterService implements OnModuleDestroy {
    * @returns True if omniscribe was removed, false if not found
    */
   async removeConfig(workingDir: string, sessionId?: string): Promise<boolean> {
-    this.logger.debug(`[removeConfig] workingDir=${workingDir}, sessionId=${sessionId}`);
+    this.logger.debug(`[removeConfig] workingDir=${workingDir}, sessionId=${sessionId ?? 'none'}`);
     // Unregister session from registry (outside mutex - separate concern)
     if (sessionId) {
       this.sessionRegistry.unregisterSession(sessionId);

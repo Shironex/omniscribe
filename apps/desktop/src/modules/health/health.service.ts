@@ -110,11 +110,11 @@ export class HealthService {
 
     // Idle/waiting statuses or recent output = healthy
     if (IDLE_STATUSES.has(session.status) || session.lastOutputAt) {
-      this.logger.debug(`[determineHealth] session ${session.id}: healthy`);
+      this.logger.debug(`[determineHealth] session ${session.id}: healthy (idle or has output)`);
       return { level: 'healthy' };
     }
 
-    this.logger.debug(`[determineHealth] session ${session.id}: healthy`);
+    this.logger.debug(`[determineHealth] session ${session.id}: healthy (default)`);
     return { level: 'healthy' };
   }
 

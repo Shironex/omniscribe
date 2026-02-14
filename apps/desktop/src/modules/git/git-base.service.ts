@@ -29,7 +29,7 @@ export class GitBaseService {
     timeoutMs: number = GIT_TIMEOUT_MS
   ): Promise<ExecResult> {
     const commandStr = `git ${args.join(' ')}`;
-    this.logger.debug(`execGit: ${commandStr} (cwd: ${repoPath})`);
+    this.logger.debug(`[execGit] starting: ${commandStr} (cwd: ${repoPath})`);
 
     try {
       const result = await execFileAsync('git', args, {

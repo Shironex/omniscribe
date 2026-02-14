@@ -108,6 +108,14 @@ export class SessionGateway implements OnGatewayInit {
     @ConnectedSocket() client: Socket
   ): Promise<CreateSessionResponse> {
     this.logger.debug(`[session:create] mode=${payload.mode}, project=${payload.projectPath}`);
+
+    if (payload.workingDirectory) {
+      const pathError = validatePath(payload.workingDirectory, 'workingDirectory');
+      if (pathError) {
+        return { error: pathError };
+      }
+    }
+
     // Validate string length limits (model/systemPrompt are create-only fields)
     if (payload.model && payload.model.length > MAX_MODEL_LENGTH) {
       return { error: `model exceeds maximum length of ${MAX_MODEL_LENGTH} characters` };
@@ -193,7 +201,7 @@ export class SessionGateway implements OnGatewayInit {
    */
   @OnEvent(InternalSessionEvents.CREATED)
   onSessionCreated(session: BackendSessionConfig): void {
-    this.logger.debug(`Broadcasting session:created for ${session.id}`);
+    this.logger.debug(`[session:created] broadcasting for ${session.id}`);
     this.server.emit(SessionEvents.CREATED, session);
   }
 
@@ -210,7 +218,7 @@ export class SessionGateway implements OnGatewayInit {
    */
   @OnEvent(InternalSessionEvents.REMOVED)
   onSessionRemoved(payload: { sessionId: string }): void {
-    this.logger.debug(`Broadcasting session:removed for ${payload.sessionId}`);
+    this.logger.debug(`[session:removed] broadcasting for ${payload.sessionId}`);
     this.server.emit(SessionEvents.REMOVED, payload);
   }
 
