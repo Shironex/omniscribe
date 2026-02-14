@@ -9,6 +9,7 @@ import {
 } from '@omniscribe/shared';
 import type { FrontendSessionConfig } from '@/stores/useSessionStore';
 import { emitAsync, emitWithErrorHandling, emitWithSuccessHandling } from './socketHelpers';
+import { toast } from 'sonner';
 
 const logger = createLogger('SessionAPI');
 
@@ -26,6 +27,11 @@ function handleSessionResponse(
   if (!response.session) {
     logger.error('No session returned from server');
     throw new Error('No session returned from server');
+  }
+  // Show worktree warning to user if present
+  if (response.warning) {
+    logger.warn(`Session ${operationName} warning:`, response.warning);
+    toast.warning(response.warning);
   }
   return response.session;
 }
@@ -47,6 +53,7 @@ interface CreateSessionOptions {
 interface CreateSessionResponse {
   session?: FrontendSessionConfig;
   error?: string;
+  warning?: string;
   idleSessions?: string[];
 }
 
@@ -95,6 +102,12 @@ export async function createSession(
   if (!response.session) {
     logger.error('No session returned from server');
     throw new Error('No session returned from server');
+  }
+
+  // Show worktree warning to user if present
+  if (response.warning) {
+    logger.warn('Session creation warning:', response.warning);
+    toast.warning(response.warning);
   }
 
   return response.session;

@@ -59,6 +59,7 @@ import { CORS_CONFIG } from '../shared/cors.config';
 interface CreateSessionResponse {
   session?: BackendSessionConfig;
   error?: string;
+  warning?: string;
   idleSessions?: string[];
 }
 
@@ -392,38 +393,43 @@ export class SessionGateway implements OnGatewayInit {
 
     // Worktree setup (use currentBranch fallback when branch is absent)
     let worktreePath: string | null = null;
-    try {
-      if (worktreeSettings.mode !== 'never') {
-        const currentBranch = await this.gitService.getCurrentBranch(payload.projectPath);
-        const branchToUse = payload.branch ?? currentBranch;
+    let worktreeWarning: string | undefined;
 
+    if (worktreeSettings.mode !== 'never') {
+      // Fetch currentBranch once to avoid TOCTOU race (Bug #8)
+      const currentBranch = await this.gitService.getCurrentBranch(payload.projectPath);
+      const branchToUse = payload.branch ?? currentBranch;
+
+      try {
         if (worktreeSettings.mode === 'always') {
           const uniqueSuffix = crypto.randomUUID().slice(0, 8);
           const isolatedBranch = `${branchToUse}-${uniqueSuffix}`;
           worktreePath = await this.worktreeService.prepare(
             payload.projectPath,
             isolatedBranch,
-            worktreeSettings.location
+            worktreeSettings.location,
+            currentBranch
           );
         } else if (worktreeSettings.mode === 'branch' && branchToUse !== currentBranch) {
           worktreePath = await this.worktreeService.prepare(
             payload.projectPath,
             branchToUse,
-            worktreeSettings.location
+            worktreeSettings.location,
+            currentBranch
           );
         }
+      } catch (error) {
+        const errorMessage = extractErrorMessage(error);
+        this.logger.warn(`Failed to create worktree for session ${session.id}: ${errorMessage}`);
+        worktreeWarning = `Worktree creation failed: ${errorMessage}. Running in main project directory.`;
       }
-    } catch (error) {
-      const errorMessage = extractErrorMessage(error);
-      this.logger.warn(`Failed to create worktree for session ${session.id}: ${errorMessage}`);
-    }
 
-    // Assign branch
-    if (payload.branch) {
-      this.sessionService.assignBranch(session.id, payload.branch, worktreePath ?? undefined);
-    } else if (worktreePath) {
-      const currentBranch = await this.gitService.getCurrentBranch(payload.projectPath);
-      this.sessionService.assignBranch(session.id, currentBranch, worktreePath);
+      // Assign branch (only when worktrees are enabled)
+      if (payload.branch) {
+        this.sessionService.assignBranch(session.id, payload.branch, worktreePath ?? undefined);
+      } else if (worktreePath) {
+        this.sessionService.assignBranch(session.id, currentBranch, worktreePath);
+      }
     }
 
     // Launch
@@ -448,7 +454,16 @@ export class SessionGateway implements OnGatewayInit {
       );
     }
 
-    return { session: this.sessionService.get(session.id) ?? session };
+    const result: CreateSessionResponse = {
+      session: this.sessionService.get(session.id) ?? session,
+    };
+
+    // Notify frontend about worktree creation failure (Bug #7)
+    if (worktreeWarning) {
+      result.warning = worktreeWarning;
+    }
+
+    return result;
   }
 
   /**

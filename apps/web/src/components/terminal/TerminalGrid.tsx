@@ -13,6 +13,7 @@ import { PreLaunchSection } from './PreLaunchSection';
 import type { PreLaunchSlot } from './PreLaunchBar';
 import { IdleLandingView } from '@/components/shared/IdleLandingView';
 import { Branch } from '@/components/shared/BranchSelector';
+import type { WorktreeMode } from '@omniscribe/shared';
 import { buildColumns, getLayout } from '@/lib/terminal-layout';
 import { useTerminalGridDnd } from '@/hooks/useTerminalGridDnd';
 import { useTerminalPanelResize } from '@/hooks/useTerminalPanelResize';
@@ -26,6 +27,8 @@ interface TerminalGridProps {
   branches: Branch[];
   /** Whether Claude CLI is available (controls Claude mode option) */
   claudeAvailable?: boolean;
+  /** Worktree mode — hides branch selector when 'never' */
+  worktreeMode?: WorktreeMode;
   quickActions?: QuickActionItem[];
   focusedSessionId: string | null;
   onFocusSession: (sessionId: string) => void;
@@ -51,6 +54,7 @@ export function TerminalGrid({
   launchingSlotIds,
   branches,
   claudeAvailable,
+  worktreeMode,
   quickActions = [],
   focusedSessionId,
   onFocusSession,
@@ -268,6 +272,7 @@ export function TerminalGrid({
         launchingSlotIds={launchingSlotIds}
         branches={branches}
         claudeAvailable={claudeAvailable}
+        worktreeMode={worktreeMode}
         onRemoveSlot={onRemoveSlot}
         onUpdateSlot={onUpdateSlot}
         onLaunch={onLaunch}

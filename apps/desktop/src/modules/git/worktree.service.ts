@@ -109,7 +109,8 @@ export class WorktreeService {
   async prepare(
     projectPath: string,
     branch?: string,
-    location: WorktreeLocation = 'project'
+    location: WorktreeLocation = 'project',
+    currentBranchOverride?: string
   ): Promise<string | null> {
     this.logger.info(`Preparing worktree for branch "${branch || 'current'}" in ${projectPath}`);
 
@@ -118,15 +119,21 @@ export class WorktreeService {
       return null;
     }
 
-    // Get the current branch
-    const { stdout: currentBranch } = await this.gitBase.execGit(projectPath, [
-      'rev-parse',
-      '--abbrev-ref',
-      'HEAD',
-    ]);
+    // Use provided currentBranch to avoid redundant git calls (Bug #8: TOCTOU race)
+    let currentBranch: string;
+    if (currentBranchOverride) {
+      currentBranch = currentBranchOverride;
+    } else {
+      const { stdout } = await this.gitBase.execGit(projectPath, [
+        'rev-parse',
+        '--abbrev-ref',
+        'HEAD',
+      ]);
+      currentBranch = stdout.trim();
+    }
 
     // If the requested branch is the current branch, work directly on the repo
-    if (currentBranch.trim() === branch) {
+    if (currentBranch === branch) {
       return null;
     }
 

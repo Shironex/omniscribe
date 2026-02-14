@@ -223,7 +223,8 @@ describe('SessionGateway', () => {
       expect(mockWorktreeService.prepare).toHaveBeenCalledWith(
         '/project',
         'main-12345678',
-        'project'
+        'project',
+        'main'
       );
       expect(mockSessionService.assignBranch).toHaveBeenCalledWith(
         'session-1-1700000000000',
@@ -251,7 +252,8 @@ describe('SessionGateway', () => {
       expect(mockWorktreeService.prepare).toHaveBeenCalledWith(
         '/project',
         'feature-12345678',
-        'central'
+        'central',
+        'main'
       );
       // Branch is assigned from payload.branch
       expect(mockSessionService.assignBranch).toHaveBeenCalledWith(
@@ -271,7 +273,12 @@ describe('SessionGateway', () => {
       const payload = { ...basePayload, branch: 'feature-x' };
       await gateway.handleCreate(payload, client);
 
-      expect(mockWorktreeService.prepare).toHaveBeenCalledWith('/project', 'feature-x', 'project');
+      expect(mockWorktreeService.prepare).toHaveBeenCalledWith(
+        '/project',
+        'feature-x',
+        'project',
+        'main'
+      );
       expect(mockSessionService.assignBranch).toHaveBeenCalledWith(
         'session-1-1700000000000',
         'feature-x',
