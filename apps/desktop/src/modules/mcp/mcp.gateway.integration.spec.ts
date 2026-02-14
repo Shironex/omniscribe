@@ -174,7 +174,7 @@ describe('McpGateway (integration)', () => {
       {}
     );
 
-    expect(response.error).toBe('projectPath is required');
+    expect(response.error).toBe('Invalid projectPath: must be a non-empty string');
     expect(response.servers).toEqual([]);
   });
 });

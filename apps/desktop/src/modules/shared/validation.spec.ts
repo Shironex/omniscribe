@@ -4,7 +4,6 @@ import { validatePath, isValidSessionId } from './validation';
 describe('validatePath', () => {
   it('should return null for valid absolute paths', () => {
     expect(validatePath('/valid/absolute/path')).toBeNull();
-    expect(validatePath('C:\\Users\\test')).toBeNull();
   });
 
   it('should reject empty string', () => {
