@@ -16,7 +16,7 @@ module.exports = {
     '!src/**/*.spec.ts',
     '!src/**/*.module.ts',
     '!src/**/index.ts',
-    '!src/main/**',
+    '!src/main/index.ts',
   ],
   transform: {
     '^.+\\.ts$': [
