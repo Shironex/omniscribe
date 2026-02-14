@@ -9,6 +9,37 @@ export function getGreeting(): string {
 }
 
 /**
+ * Formats a Unix timestamp as a locale date string (e.g. "Feb 14, 2025, 10:30 AM").
+ */
+export function formatDate(timestamp: number): string {
+  return new Date(timestamp).toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+/**
+ * Formats an ISO timestamp for log display (HH:mm:ss.SSS).
+ */
+export function formatLogTimestamp(iso: string): string {
+  try {
+    const d = new Date(iso);
+    const time = d.toLocaleTimeString(undefined, {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    });
+    const ms = String(d.getMilliseconds()).padStart(3, '0');
+    return `${time}.${ms}`;
+  } catch {
+    return iso;
+  }
+}
+
+/**
  * Formats a Date as a human-readable relative time string.
  */
 export function formatRelativeTime(date: Date): string {

@@ -10,9 +10,10 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { formatDate, formatLogTimestamp } from '@/lib/date-utils';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogOverlay, DialogPortal, DialogTitle } from '@/components/ui/dialog';
-import type { LogEntry } from '@omniscribe/shared';
+import { type LogEntry, formatFileSize, parseLogEntries } from '@omniscribe/shared';
 
 interface LogFile {
   name: string;
@@ -31,50 +32,6 @@ const LEVEL_STYLES: Record<string, string> = {
   info: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
   debug: 'bg-purple-500/15 text-purple-400 border-purple-500/30',
 };
-
-function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function formatDate(timestamp: number): string {
-  return new Date(timestamp).toLocaleDateString(undefined, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
-
-function formatLogTimestamp(iso: string): string {
-  try {
-    const d = new Date(iso);
-    const time = d.toLocaleTimeString(undefined, {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-    });
-    const ms = String(d.getMilliseconds()).padStart(3, '0');
-    return `${time}.${ms}`;
-  } catch {
-    return iso;
-  }
-}
-
-function parseLogContent(raw: string): LogEntry[] {
-  const lines = raw.split('\n').filter(Boolean);
-  const entries: LogEntry[] = [];
-  for (const line of lines) {
-    try {
-      entries.push(JSON.parse(line) as LogEntry);
-    } catch {
-      // Skip malformed lines
-    }
-  }
-  return entries;
-}
 
 function ExpandableData({ data }: { data: unknown }) {
   const [expanded, setExpanded] = useState(false);
@@ -132,7 +89,7 @@ export function LogViewerModal({ open, onOpenChange }: LogViewerModalProps) {
     try {
       const content = await window.electronAPI?.app?.readLogFile(fileName);
       if (content) {
-        const parsed = parseLogContent(content);
+        const parsed = parseLogEntries(content);
         setEntries(parsed.slice(-MAX_DISPLAY_ENTRIES));
       }
       setSelectedFile(fileName);

@@ -129,6 +129,23 @@ export interface LogEntry {
 }
 
 /**
+ * Parse JSONL log content into LogEntry array.
+ * Skips malformed lines.
+ */
+export function parseLogEntries(raw: string): LogEntry[] {
+  const lines = raw.split('\n').filter(Boolean);
+  const entries: LogEntry[] = [];
+  for (const line of lines) {
+    try {
+      entries.push(JSON.parse(line) as LogEntry);
+    } catch {
+      // Skip malformed lines
+    }
+  }
+  return entries;
+}
+
+/**
  * Format a message for file logging as structured JSONL (one JSON object per line)
  */
 function formatFileLog(level: string, context: string, args: unknown[]): string {
