@@ -42,6 +42,8 @@ describe('GithubGateway', () => {
   let client: Socket;
 
   beforeEach(async () => {
+    jest.clearAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       imports: [ThrottlerModule.forRoot([])],
       providers: [GithubGateway, { provide: GithubService, useValue: mockGithubService }],
@@ -229,6 +231,18 @@ describe('GithubGateway', () => {
       });
     });
 
+    it('should return error when prNumber is negative', async () => {
+      const result = await gateway.handleGithubPR(client, {
+        projectPath: '/repo',
+        prNumber: -1,
+      });
+
+      expect(result).toEqual({
+        pullRequest: null,
+        error: 'PR number is required',
+      });
+    });
+
     it('should return error when service throws', async () => {
       mockGithubService.getPullRequest.mockRejectedValue(new Error('not found'));
 
@@ -388,6 +402,18 @@ describe('GithubGateway', () => {
       const result = await gateway.handleGithubIssue(client, {
         projectPath: '/repo',
         issueNumber: 0,
+      });
+
+      expect(result).toEqual({
+        issue: null,
+        error: 'Issue number is required',
+      });
+    });
+
+    it('should return error when issueNumber is negative', async () => {
+      const result = await gateway.handleGithubIssue(client, {
+        projectPath: '/repo',
+        issueNumber: -1,
       });
 
       expect(result).toEqual({

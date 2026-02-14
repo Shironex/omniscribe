@@ -87,21 +87,22 @@ export class McpGateway implements OnGatewayInit {
   ): Promise<McpDiscoverResponse> {
     try {
       // Validate payload has required projectPath
-      const pathError = validatePath(payload?.projectPath);
+      const projectPath = payload?.projectPath;
+      const pathError = validatePath(projectPath);
       if (pathError) {
         this.logger.warn('mcp:discover called with invalid projectPath');
         return { servers: [], error: pathError };
       }
 
-      // validatePath guarantees projectPath is a non-empty string
-      const projectPath = payload.projectPath as string;
+      // validatePath ensures projectPath is a non-empty string here
+      const validProjectPath = projectPath as string;
 
-      const servers = await this.discoveryService.discoverServers(projectPath);
+      const servers = await this.discoveryService.discoverServers(validProjectPath);
 
       // Cache the discovered servers
-      this.projectCache.setServers(projectPath, servers);
+      this.projectCache.setServers(validProjectPath, servers);
 
-      this.logger.log(`Discovered ${servers.length} MCP servers for ${projectPath}`);
+      this.logger.log(`Discovered ${servers.length} MCP servers for ${validProjectPath}`);
 
       return { servers };
     } catch (error) {

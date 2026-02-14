@@ -157,7 +157,7 @@ export class GithubGateway implements OnGatewayInit {
         return { pullRequest: null, error: pathError };
       }
 
-      if (!prNumber) {
+      if (!prNumber || prNumber < 0) {
         return {
           pullRequest: null,
           error: 'PR number is required',
@@ -274,7 +274,7 @@ export class GithubGateway implements OnGatewayInit {
         return { issue: null, error: pathError };
       }
 
-      if (!issueNumber) {
+      if (!issueNumber || issueNumber < 0) {
         return {
           issue: null,
           error: 'Issue number is required',

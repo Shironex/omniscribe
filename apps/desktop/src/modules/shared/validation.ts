@@ -12,7 +12,7 @@ export function validatePath(value: unknown, label = 'projectPath'): string | nu
   if (value.length > MAX_PATH_LENGTH) {
     return `${label} exceeds maximum length of ${MAX_PATH_LENGTH} characters`;
   }
-  if (!path.isAbsolute(value)) {
+  if (!path.posix.isAbsolute(value) && !path.win32.isAbsolute(value)) {
     return `Invalid ${label}: must be an absolute path`;
   }
   return null;
