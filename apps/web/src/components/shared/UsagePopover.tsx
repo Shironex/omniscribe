@@ -3,7 +3,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, AlertTriangle, ExternalLink, Loader2 } from 'lucide-react';
-import { clsx } from 'clsx';
+import { cn } from '@/lib/utils';
 import { ClaudeIcon } from '@/components/shared/ClaudeIcon';
 import { UsageCard, getStatusInfo } from '@/components/shared/UsageCard';
 import { useUsageStore } from '@/stores/useUsageStore';
@@ -100,16 +100,16 @@ export function UsagePopover() {
 
   const trigger = (
     <Button variant="ghost" size="sm" className="h-8 gap-2 px-2 hover:bg-accent">
-      <ClaudeIcon className={clsx('w-4 h-4', claudeUsage && statusColor)} size={16} />
+      <ClaudeIcon className={cn('w-4 h-4', claudeUsage && statusColor)} size={16} />
       {claudeUsage && (
         <div
-          className={clsx(
+          className={cn(
             'h-1.5 w-12 bg-muted rounded-full overflow-hidden border border-border/50 transition-opacity',
             isStale && 'opacity-60'
           )}
         >
           <div
-            className={clsx('h-full transition-all duration-500 rounded-full', sessionStatus.bg)}
+            className={cn('h-full transition-all duration-500 rounded-full', sessionStatus.bg)}
             style={{ width: `${Math.min(sessionPercentage, 100)}%` }}
           />
         </div>

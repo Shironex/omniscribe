@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { clsx } from 'clsx';
+import { cn } from '@/lib/utils';
 import {
   GitCommit,
   GitCommitVertical,
@@ -89,7 +89,7 @@ export function QuickActionsDropdown({
         onClick={disabled ? undefined : onToggle}
         disabled={disabled}
         title={disabled ? disabledTooltip : 'Quick actions'}
-        className={clsx(
+        className={cn(
           'p-1 rounded',
           disabled
             ? 'text-muted-foreground/40 cursor-not-allowed'

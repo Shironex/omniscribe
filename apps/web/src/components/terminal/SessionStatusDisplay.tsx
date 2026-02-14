@@ -1,4 +1,4 @@
-import { clsx } from 'clsx';
+import { cn } from '@/lib/utils';
 import {
   Terminal,
   GitBranch,
@@ -47,7 +47,7 @@ export function SessionStatusDisplay({ session, gitBranch }: SessionStatusDispla
 
       {/* AI Mode icon + Session label */}
       <div className="flex items-center gap-1 shrink-0">
-        <ModeIcon size={14} className={clsx('shrink-0', modeConfig.color)} />
+        <ModeIcon size={14} className={cn('shrink-0', modeConfig.color)} />
         <span className="text-xs font-medium text-foreground">
           {modeConfig.label} #{session.sessionNumber}
         </span>

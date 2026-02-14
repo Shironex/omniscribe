@@ -1,5 +1,5 @@
 import React from 'react';
-import { clsx } from 'clsx';
+import { cn } from '@/lib/utils';
 import { TerminalView } from './TerminalView';
 import { TerminalErrorBoundary } from './TerminalErrorBoundary';
 import { TerminalHeader } from './TerminalHeader';
@@ -53,7 +53,7 @@ export const TerminalCard = React.memo(function TerminalCard({
   return (
     <div
       data-testid={`session-card-${session.id}`}
-      className={clsx(
+      className={cn(
         'flex flex-col h-full min-h-0 min-w-0 rounded-lg overflow-hidden',
         'border border-border',
         'bg-card',

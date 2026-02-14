@@ -1,5 +1,5 @@
 import { Loader2, RefreshCw } from 'lucide-react';
-import { clsx } from 'clsx';
+import { cn } from '@/lib/utils';
 import { ClaudeIcon } from '@/components/shared/ClaudeIcon';
 import { useClaudeCliStatus } from '@/hooks/useClaudeCliStatus';
 import { ClaudeCliStatusCard } from './ClaudeCliStatusCard';
@@ -32,7 +32,7 @@ export function IntegrationsSection() {
       {/* Section Header */}
       <div className="flex items-center gap-3">
         <div
-          className={clsx(
+          className={cn(
             'w-10 h-10 rounded-xl flex items-center justify-center',
             'bg-linear-to-br from-orange-500/20 to-orange-600/10',
             'ring-1 ring-orange-500/20'
@@ -52,7 +52,7 @@ export function IntegrationsSection() {
             checkVersion();
           }}
           disabled={isLoading || isVersionCheckLoading}
-          className={clsx(
+          className={cn(
             'p-2 rounded-lg transition-colors',
             'hover:bg-muted text-muted-foreground hover:text-foreground',
             'disabled:opacity-50 disabled:cursor-not-allowed'

@@ -1,5 +1,5 @@
 import { Copy, Check, Play, TriangleAlert } from 'lucide-react';
-import { clsx } from 'clsx';
+import { cn } from '@/lib/utils';
 import type { ClaudeInstallCommand } from '@omniscribe/shared';
 import { Button } from '@/components/ui/button';
 
@@ -27,7 +27,7 @@ export function InstallCommandDisplay({
             variant="ghost"
             size="sm"
             onClick={onCopy}
-            className={clsx('text-xs', copiedCommand ? 'text-status-success' : '')}
+            className={cn('text-xs', copiedCommand ? 'text-status-success' : '')}
           >
             {copiedCommand ? (
               <>

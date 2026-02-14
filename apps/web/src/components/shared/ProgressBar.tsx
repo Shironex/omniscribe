@@ -1,4 +1,4 @@
-import { clsx } from 'clsx';
+import { cn } from '@/lib/utils';
 
 interface ProgressBarProps {
   percentage: number;
@@ -12,7 +12,7 @@ export function ProgressBar({ percentage, colorClass }: ProgressBarProps) {
   return (
     <div className="h-2 w-full bg-muted rounded-full overflow-hidden border border-border/50">
       <div
-        className={clsx('h-full transition-all duration-500 rounded-full', colorClass)}
+        className={cn('h-full transition-all duration-500 rounded-full', colorClass)}
         style={{ width: `${Math.max(0, Math.min(percentage, 100))}%` }}
       />
     </div>

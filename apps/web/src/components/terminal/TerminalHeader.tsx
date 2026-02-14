@@ -1,5 +1,4 @@
-import { clsx } from 'clsx';
-import { twMerge } from 'tailwind-merge';
+import { cn } from '@/lib/utils';
 import { useState, useRef, useCallback, type HTMLAttributes } from 'react';
 import { GripVertical, RotateCcw } from 'lucide-react';
 import { useClickOutside } from '@/hooks/useClickOutside';
@@ -88,13 +87,11 @@ export function TerminalHeader({
 
   return (
     <div
-      className={twMerge(
-        clsx(
-          'h-8 bg-muted border-b border-border',
-          'flex items-center justify-between px-2 gap-2',
-          'select-none',
-          className
-        )
+      className={cn(
+        'h-8 bg-muted border-b border-border',
+        'flex items-center justify-between px-2 gap-2',
+        'select-none',
+        className
       )}
     >
       {/* Left section */}

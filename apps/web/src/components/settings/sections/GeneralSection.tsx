@@ -12,7 +12,7 @@ import {
   FolderOpen,
   ScrollText,
 } from 'lucide-react';
-import { clsx } from 'clsx';
+import { cn } from '@/lib/utils';
 import {
   APP_NAME,
   GITHUB_RELEASES_URL,
@@ -71,7 +71,7 @@ export function GeneralSection() {
       {/* Section Header */}
       <div className="flex items-center gap-3">
         <div
-          className={clsx(
+          className={cn(
             'w-10 h-10 rounded-xl flex items-center justify-center',
             'bg-linear-to-br from-primary/20 to-brand-600/10',
             'ring-1'
@@ -146,7 +146,7 @@ export function GeneralSection() {
               onClick={handleCheckForUpdates}
               disabled={status === 'checking'}
             >
-              <RefreshCw className={clsx('w-3.5 h-3.5', status === 'checking' && 'animate-spin')} />
+              <RefreshCw className={cn('w-3.5 h-3.5', status === 'checking' && 'animate-spin')} />
               {status === 'checking' ? 'Checking...' : 'Check for Updates'}
             </Button>
           )}

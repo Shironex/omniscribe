@@ -1,4 +1,4 @@
-import { clsx } from 'clsx';
+import { cn } from '@/lib/utils';
 import type { NavigationItem } from './navigation-config';
 import { NAV_GROUPS } from './navigation-config';
 import type { SettingsSectionId } from '@omniscribe/shared';
@@ -22,7 +22,7 @@ function NavButton({
     <button
       key={item.id}
       onClick={() => onNavigate(item.id)}
-      className={clsx(
+      className={cn(
         'group w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ease-out text-left relative overflow-hidden',
         isActive
           ? [
@@ -45,13 +45,13 @@ function NavButton({
       )}
       <Icon
         size={16}
-        className={clsx(
+        className={cn(
           'w-4 h-4 shrink-0 transition-all duration-200',
           isActive ? 'text-primary' : 'group-hover:text-primary group-hover:scale-110'
         )}
       />
       <span
-        className={clsx(
+        className={cn(
           'truncate',
           isActive ? 'text-foreground' : 'text-muted-foreground group-hover:text-foreground'
         )}
@@ -65,7 +65,7 @@ function NavButton({
 export function SettingsNavigation({ activeSection, onNavigate }: SettingsNavigationProps) {
   return (
     <nav
-      className={clsx(
+      className={cn(
         'w-56 shrink-0 overflow-y-auto',
         'border-r border-border/50',
         'bg-muted/95 backdrop-blur-xl'

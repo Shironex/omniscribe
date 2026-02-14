@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState, memo } from 'react';
-import { clsx } from 'clsx';
+import { cn } from '@/lib/utils';
 import {
   Loader2,
   Circle,
@@ -82,15 +82,15 @@ const TaskRow = memo(function TaskRow({ task }: { task: TaskItem }) {
 
   return (
     <div
-      className={clsx(
+      className={cn(
         'flex items-center gap-1.5 px-2 py-1 text-xs',
         'animate-in fade-in-0 slide-in-from-top-1 duration-200',
         'transition-all duration-200'
       )}
     >
-      <Icon size={12} className={clsx('shrink-0', config.className)} />
+      <Icon size={12} className={cn('shrink-0', config.className)} />
       <span
-        className={clsx('truncate', isCompleted && 'line-through text-muted-foreground')}
+        className={cn('truncate', isCompleted && 'line-through text-muted-foreground')}
         title={task.subject}
       >
         {task.subject}
@@ -132,7 +132,7 @@ export function TaskListPopover({ sessionId }: TaskListPopoverProps) {
       <PopoverTrigger asChild>
         <button
           type="button"
-          className={clsx(
+          className={cn(
             'p-1 rounded',
             'text-muted-foreground hover:text-foreground',
             'hover:bg-card transition-colors'

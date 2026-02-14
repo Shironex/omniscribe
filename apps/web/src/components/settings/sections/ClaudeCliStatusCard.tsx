@@ -7,7 +7,7 @@ import {
   ArrowRight,
   ChevronDown,
 } from 'lucide-react';
-import { clsx } from 'clsx';
+import { cn } from '@/lib/utils';
 import type { ClaudeCliStatus, ClaudeVersionCheckResult } from '@omniscribe/shared';
 
 interface ClaudeCliStatusCardProps {
@@ -113,7 +113,7 @@ export function ClaudeCliStatusCard({
               <button
                 type="button"
                 onClick={onInstallClick}
-                className={clsx(
+                className={cn(
                   'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium',
                   'bg-primary text-primary-foreground',
                   'hover:bg-primary/90 transition-colors'
@@ -129,7 +129,7 @@ export function ClaudeCliStatusCard({
               <button
                 type="button"
                 onClick={onVersionPickerOpen}
-                className={clsx(
+                className={cn(
                   'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium',
                   'bg-muted text-muted-foreground',
                   'hover:bg-muted/80 hover:text-foreground transition-colors'
@@ -145,7 +145,7 @@ export function ClaudeCliStatusCard({
 
               {showVersionPicker && availableVersions.length > 0 && (
                 <div
-                  className={clsx(
+                  className={cn(
                     'absolute top-full left-0 mt-1 z-50',
                     'w-40 max-h-60 overflow-y-auto',
                     'rounded-lg border border-border bg-popover shadow-lg'
@@ -156,7 +156,7 @@ export function ClaudeCliStatusCard({
                       type="button"
                       key={version}
                       onClick={() => onVersionSelect(version)}
-                      className={clsx(
+                      className={cn(
                         'w-full px-3 py-2 text-left text-xs font-mono',
                         'hover:bg-muted transition-colors',
                         version === claudeCliStatus.version &&
@@ -180,7 +180,7 @@ export function ClaudeCliStatusCard({
           <button
             type="button"
             onClick={() => onGetInstallCommand(false)}
-            className={clsx(
+            className={cn(
               'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium',
               'bg-primary text-primary-foreground',
               'hover:bg-primary/90 transition-colors'

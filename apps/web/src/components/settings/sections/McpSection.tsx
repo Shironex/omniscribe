@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useEffect } from 'react';
 import { Server, CheckCircle2, RefreshCw, Loader2 } from 'lucide-react';
-import { clsx } from 'clsx';
+import { cn } from '@/lib/utils';
 import { MCP_SERVER_NAME } from '@omniscribe/shared';
 import { useMcpStore, useWorkspaceStore, selectActiveTab, selectInternalMcp } from '@/stores';
 
@@ -35,7 +35,7 @@ export function McpSection() {
       {/* Section Header */}
       <div className="flex items-center gap-3">
         <div
-          className={clsx(
+          className={cn(
             'w-10 h-10 rounded-xl flex items-center justify-center',
             'bg-linear-to-br from-primary/20 to-brand-600/10',
             'ring-1'
@@ -57,7 +57,7 @@ export function McpSection() {
           aria-label="Refresh MCP servers"
           onClick={handleRefresh}
           disabled={isLoading}
-          className={clsx(
+          className={cn(
             'p-2 rounded-lg transition-colors',
             'hover:bg-muted text-muted-foreground hover:text-foreground',
             'disabled:opacity-50 disabled:cursor-not-allowed'
@@ -76,7 +76,7 @@ export function McpSection() {
       <div className="rounded-xl border border-border/50 bg-card/50 p-4">
         <div className="flex items-center gap-3">
           <div
-            className={clsx(
+            className={cn(
               'w-3 h-3 rounded-full',
               internalMcp.available ? 'bg-primary' : 'bg-status-error'
             )}
@@ -90,7 +90,7 @@ export function McpSection() {
             </p>
           </div>
           <span
-            className={clsx(
+            className={cn(
               'text-xs font-medium px-2 py-1 rounded-full',
               internalMcp.available
                 ? 'bg-primary/10 text-primary'
@@ -175,7 +175,7 @@ export function McpSection() {
               return (
                 <div key={server.id} className="rounded-lg border border-border/50 bg-card/30 p-3">
                   <div className="flex items-center gap-3">
-                    <div className={clsx('w-2.5 h-2.5 rounded-full', statusConfig.color)} />
+                    <div className={cn('w-2.5 h-2.5 rounded-full', statusConfig.color)} />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium text-foreground truncate">
