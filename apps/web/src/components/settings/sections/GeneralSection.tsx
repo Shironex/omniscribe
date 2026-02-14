@@ -10,6 +10,7 @@ import {
   ExternalLink,
   FileText,
   FolderOpen,
+  ScrollText,
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import {
@@ -24,6 +25,7 @@ import { Progress } from '@/components/ui/progress';
 import { useUpdateStore } from '@/stores/useUpdateStore';
 import { useAppVersion } from '@/hooks/useAppVersion';
 import { IS_MAC } from '@/lib/platform';
+import { LogViewerModal } from '@/components/settings/LogViewerModal';
 
 const logger = createLogger('GeneralSection');
 
@@ -48,6 +50,7 @@ function MacDownloadFallback({ message }: { message: string }) {
 export function GeneralSection() {
   const version = useAppVersion();
   const [hasChecked, setHasChecked] = useState(false);
+  const [logViewerOpen, setLogViewerOpen] = useState(false);
   const {
     status,
     updateInfo,
@@ -113,22 +116,29 @@ export function GeneralSection() {
               </p>
             </div>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              try {
-                window.electronAPI?.app?.openLogsFolder();
-              } catch (err) {
-                logger.error('Failed to open logs folder:', err);
-              }
-            }}
-          >
-            <FolderOpen className="w-3.5 h-3.5" />
-            Open Log Folder
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => setLogViewerOpen(true)}>
+              <ScrollText className="w-3.5 h-3.5" />
+              View Logs
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                try {
+                  window.electronAPI?.app?.openLogsFolder();
+                } catch (err) {
+                  logger.error('Failed to open logs folder:', err);
+                }
+              }}
+            >
+              <FolderOpen className="w-3.5 h-3.5" />
+              Open Log Folder
+            </Button>
+          </div>
         </div>
       </div>
+      <LogViewerModal open={logViewerOpen} onOpenChange={setLogViewerOpen} />
 
       {/* Updates Card */}
       <div className="rounded-xl border border-border/50 bg-card/50 p-6 space-y-4">

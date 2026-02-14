@@ -1,7 +1,8 @@
 import { ipcMain, app, shell, clipboard } from 'electron';
 import { existsSync } from 'fs';
+import { readdir, stat, readFile } from 'fs/promises';
 import { join } from 'path';
-import { createLogger } from '@omniscribe/shared';
+import { createLogger, LOG_FILE_PREFIX } from '@omniscribe/shared';
 import { CLI_TOOLS, checkCliAvailable, type CLITool } from '../utils';
 import { getLogsDir } from '../logger';
 import { getBackendPort } from '../backend-port';
@@ -67,6 +68,51 @@ export function registerAppHandlers(): void {
     logger.debug('app:get-backend-port invoked');
     return getBackendPort();
   });
+
+  ipcMain.handle('app:list-log-files', async () => {
+    logger.debug('app:list-log-files invoked');
+    const logsDir = getLogsDir();
+    if (!existsSync(logsDir)) return [];
+
+    const entries = await readdir(logsDir);
+    const logFiles: { name: string; size: number; lastModified: number }[] = [];
+
+    for (const entry of entries) {
+      if (!entry.startsWith(LOG_FILE_PREFIX) || !entry.endsWith('.log')) continue;
+      const fileStat = await stat(join(logsDir, entry));
+      if (!fileStat.isFile()) continue;
+      logFiles.push({
+        name: entry,
+        size: fileStat.size,
+        lastModified: fileStat.mtimeMs,
+      });
+    }
+
+    return logFiles.sort((a, b) => b.lastModified - a.lastModified);
+  });
+
+  ipcMain.handle('app:read-log-file', async (_event, fileName: string) => {
+    logger.debug(`app:read-log-file invoked for "${fileName}"`);
+
+    // Security: reject path traversal and invalid filenames
+    if (
+      typeof fileName !== 'string' ||
+      fileName.includes('/') ||
+      fileName.includes('\\') ||
+      fileName.includes('..') ||
+      !fileName.startsWith(LOG_FILE_PREFIX) ||
+      !fileName.endsWith('.log')
+    ) {
+      throw new Error('Invalid log file name');
+    }
+
+    const filePath = join(getLogsDir(), fileName);
+    if (!existsSync(filePath)) {
+      throw new Error('Log file not found');
+    }
+
+    return readFile(filePath, 'utf-8');
+  });
 }
 
 /**
@@ -80,4 +126,6 @@ export function cleanupAppHandlers(): void {
   ipcMain.removeHandler('app:open-logs-folder');
   ipcMain.removeHandler('app:clipboard-write');
   ipcMain.removeHandler('app:get-backend-port');
+  ipcMain.removeHandler('app:list-log-files');
+  ipcMain.removeHandler('app:read-log-file');
 }

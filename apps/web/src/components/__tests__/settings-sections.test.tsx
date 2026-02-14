@@ -207,6 +207,8 @@ beforeEach(() => {
       app: {
         getVersion: vi.fn().mockResolvedValue('0.6.0'),
         openLogsFolder: vi.fn(),
+        listLogFiles: vi.fn().mockResolvedValue([]),
+        readLogFile: vi.fn().mockResolvedValue(''),
       },
       updater: {
         checkForUpdates: vi.fn().mockResolvedValue({ enabled: false }),
@@ -338,9 +340,10 @@ describe('GeneralSection', () => {
     expect(screen.getByText('Beta')).toBeTruthy();
   });
 
-  it('shows the Diagnostics section', () => {
+  it('shows the Diagnostics section with View Logs and Open Log Folder buttons', () => {
     render(<GeneralSection />);
     expect(screen.getByText('Diagnostics')).toBeTruthy();
+    expect(screen.getByText('View Logs')).toBeTruthy();
     expect(screen.getByText('Open Log Folder')).toBeTruthy();
   });
 
