@@ -86,7 +86,11 @@ export function useTerminalInitialization(
       });
 
       fitAddon = new FitAddon();
-      const webLinksAddon = new WebLinksAddon();
+      // URI is validated by Electron's setWindowOpenHandler in the main process
+      // which checks isExternalUrlAllowed() before calling shell.openExternal()
+      const webLinksAddon = new WebLinksAddon((_event, uri) => {
+        window.open(uri, '_blank');
+      });
       searchAddon = new SearchAddon();
 
       terminal.loadAddon(fitAddon);

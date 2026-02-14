@@ -47,12 +47,14 @@ function setupContentSecurityPolicy(isDev: boolean, backendPort: number): void {
   });
 }
 
-const ALLOWED_EXTERNAL_PROTOCOLS = ['http:', 'https:'];
+const ALLOWED_EXTERNAL_PROTOCOLS = new Set(['http:', 'https:']);
+const ALLOWED_EDITOR_PREFIXES = ['vscode://file/', 'vscode-insiders://file/', 'cursor://file/'];
 
-function isExternalUrlAllowed(url: string): boolean {
+export function isExternalUrlAllowed(url: string): boolean {
   try {
     const parsed = new URL(url);
-    return ALLOWED_EXTERNAL_PROTOCOLS.includes(parsed.protocol);
+    if (ALLOWED_EXTERNAL_PROTOCOLS.has(parsed.protocol)) return true;
+    return ALLOWED_EDITOR_PREFIXES.some(prefix => url.startsWith(prefix));
   } catch {
     return false;
   }
