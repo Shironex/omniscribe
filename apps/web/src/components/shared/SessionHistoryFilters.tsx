@@ -9,6 +9,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
+const ALL_BRANCHES_VALUE = '__all__';
+
 interface SessionHistoryFiltersProps {
   searchText: string;
   onSearchChange: (text: string) => void;
@@ -49,8 +51,8 @@ export function SessionHistoryFilters({
       {/* Branch filter + sort toggle */}
       <div className="flex items-center gap-1.5">
         <Select
-          value={selectedBranch || 'all'}
-          onValueChange={value => onBranchChange(value === 'all' ? '' : value)}
+          value={selectedBranch || ALL_BRANCHES_VALUE}
+          onValueChange={value => onBranchChange(value === ALL_BRANCHES_VALUE ? '' : value)}
         >
           <SelectTrigger
             className="h-auto flex-1 text-2xs bg-card border-border px-1.5 py-0.5 text-foreground-secondary"
@@ -59,7 +61,7 @@ export function SessionHistoryFilters({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All branches</SelectItem>
+            <SelectItem value={ALL_BRANCHES_VALUE}>All branches</SelectItem>
             {uniqueBranches.map(b => (
               <SelectItem key={b} value={b}>
                 {b}
