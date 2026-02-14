@@ -55,7 +55,7 @@ export class HealthService {
           this.cleanupZombie(session);
         }
       } catch (error) {
-        this.logger.error(`Health check failed for session ${session.id}: ${error}`);
+        this.logger.error(`Health check failed for session ${session.id}`, error);
       }
     }
   }
@@ -142,7 +142,7 @@ export class HealthService {
       this.terminalService.hasSession(session.terminalSessionId)
     ) {
       this.terminalService.kill(session.terminalSessionId).catch(err => {
-        this.logger.error(`Failed to kill zombie terminal for session ${session.id}: ${err}`);
+        this.logger.error(`Failed to kill zombie terminal for session ${session.id}`, err);
       });
     }
 

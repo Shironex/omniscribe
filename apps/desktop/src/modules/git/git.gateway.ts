@@ -120,7 +120,7 @@ export class GitGateway implements OnGatewayInit {
       };
     } catch (error) {
       const message = extractErrorMessage(error, 'Unknown error');
-      this.logger.error(`Error fetching branches: ${message}`);
+      this.logger.error('Error fetching branches', error);
 
       return {
         branches: [],
@@ -157,7 +157,7 @@ export class GitGateway implements OnGatewayInit {
       };
     } catch (error) {
       const message = extractErrorMessage(error, 'Unknown error');
-      this.logger.error(`Error fetching commits: ${message}`);
+      this.logger.error('Error fetching commits', error);
 
       return {
         commits: [],
@@ -201,7 +201,7 @@ export class GitGateway implements OnGatewayInit {
       };
     } catch (error) {
       const message = extractErrorMessage(error, 'Unknown error');
-      this.logger.error(`Error checking out branch: ${message}`);
+      this.logger.error('Error checking out branch', error);
 
       return {
         success: false,
@@ -249,7 +249,7 @@ export class GitGateway implements OnGatewayInit {
       };
     } catch (error) {
       const message = extractErrorMessage(error, 'Unknown error');
-      this.logger.error(`Error creating branch: ${message}`);
+      this.logger.error('Error creating branch', error);
 
       return {
         success: false,
@@ -285,7 +285,7 @@ export class GitGateway implements OnGatewayInit {
       };
     } catch (error) {
       const message = extractErrorMessage(error, 'Unknown error');
-      this.logger.error(`Error getting current branch: ${message}`);
+      this.logger.error('Error getting current branch', error);
 
       return {
         currentBranch: '',
@@ -318,7 +318,7 @@ export class GitGateway implements OnGatewayInit {
       };
     } catch (error) {
       const message = extractErrorMessage(error, 'Unknown error');
-      this.logger.error(`Error listing worktrees: ${message}`);
+      this.logger.error('Error listing worktrees', error);
 
       return {
         worktrees: [],
@@ -353,7 +353,7 @@ export class GitGateway implements OnGatewayInit {
       };
     } catch (error) {
       const message = extractErrorMessage(error, 'Unknown error');
-      this.logger.error(`Error cleaning up worktree: ${message}`);
+      this.logger.error('Error cleaning up worktree', error);
 
       return {
         success: false,
@@ -384,7 +384,7 @@ export class GitGateway implements OnGatewayInit {
       };
     } catch (error) {
       const message = extractErrorMessage(error, 'Unknown error');
-      this.logger.error(`Error getting GitHub CLI status: ${message}`);
+      this.logger.error('Error getting GitHub CLI status', error);
 
       return {
         status: {
@@ -422,7 +422,7 @@ export class GitGateway implements OnGatewayInit {
       };
     } catch (error) {
       const message = extractErrorMessage(error, 'Unknown error');
-      this.logger.error(`Error getting repo info: ${message}`);
+      this.logger.error('Error getting repo info', error);
 
       return {
         repo: null,
@@ -455,7 +455,7 @@ export class GitGateway implements OnGatewayInit {
       };
     } catch (error) {
       const message = extractErrorMessage(error, 'Unknown error');
-      this.logger.error(`Error listing pull requests: ${message}`);
+      this.logger.error('Error listing pull requests', error);
 
       return {
         pullRequests: [],
@@ -492,7 +492,7 @@ export class GitGateway implements OnGatewayInit {
       };
     } catch (error) {
       const message = extractErrorMessage(error, 'Unknown error');
-      this.logger.error(`Error getting pull request: ${message}`);
+      this.logger.error('Error getting pull request', error);
 
       return {
         pullRequest: null,
@@ -535,7 +535,7 @@ export class GitGateway implements OnGatewayInit {
       };
     } catch (error) {
       const message = extractErrorMessage(error, 'Unknown error');
-      this.logger.error(`Error creating pull request: ${message}`);
+      this.logger.error('Error creating pull request', error);
 
       return {
         success: false,
@@ -572,7 +572,7 @@ export class GitGateway implements OnGatewayInit {
       };
     } catch (error) {
       const message = extractErrorMessage(error, 'Unknown error');
-      this.logger.error(`Error listing issues: ${message}`);
+      this.logger.error('Error listing issues', error);
 
       return {
         issues: [],
@@ -609,7 +609,7 @@ export class GitGateway implements OnGatewayInit {
       };
     } catch (error) {
       const message = extractErrorMessage(error, 'Unknown error');
-      this.logger.error(`Error getting issue: ${message}`);
+      this.logger.error('Error getting issue', error);
 
       return {
         issue: null,

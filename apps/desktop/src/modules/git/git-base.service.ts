@@ -72,7 +72,7 @@ export class GitBaseService {
         };
       }
 
-      this.logger.error(`Git command failed: ${execError.message}`);
+      this.logger.error('Git command failed', execError);
       throw new Error(`Git command failed: ${execError.message}`);
     }
   }

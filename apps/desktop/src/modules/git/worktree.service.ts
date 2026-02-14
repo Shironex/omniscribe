@@ -152,8 +152,8 @@ export class WorktreeService {
       try {
         await fs.access(worktreePath);
         return worktreePath;
-      } catch {
-        // Worktree directory doesn't exist, remove stale reference
+      } catch (error) {
+        this.logger.debug('Worktree directory missing, pruning stale ref', error);
         await this.gitBase.execGit(projectPath, ['worktree', 'prune']);
       }
     }
@@ -166,8 +166,8 @@ export class WorktreeService {
     try {
       await this.gitBase.execGit(projectPath, ['rev-parse', '--verify', branch]);
       branchExists = true;
-    } catch {
-      // Check remote branches
+    } catch (error) {
+      this.logger.debug(`Branch "${branch}" not found locally, checking remote`, error);
       try {
         const { stdout: remoteBranches } = await this.gitBase.execGit(projectPath, [
           'branch',
@@ -181,8 +181,8 @@ export class WorktreeService {
           // Get the first matching remote branch (e.g., "origin/branch-name")
           remoteBranchRef = trimmed.split('\n')[0].trim();
         }
-      } catch {
-        // Branch doesn't exist remotely either
+      } catch (innerError) {
+        this.logger.debug(`Branch "${branch}" not found remotely either`, innerError);
       }
     }
 
@@ -271,7 +271,7 @@ export class WorktreeService {
     try {
       await this.gitBase.execGit(projectPath, ['worktree', 'remove', worktreePath, '--force']);
     } catch (error) {
-      this.logger.warn(`git worktree remove failed for ${worktreePath}: ${error}`);
+      this.logger.warn(`git worktree remove failed for ${worktreePath}`, error);
       // If git worktree remove fails, try manual cleanup
       try {
         await fs.rm(worktreePath, { recursive: true, force: true });

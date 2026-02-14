@@ -148,8 +148,8 @@ export class GithubService {
       if (firstPath) {
         return { cliPath: firstPath, method: 'path' };
       }
-    } catch {
-      // Not in PATH, fall through to check common locations
+    } catch (error) {
+      this.logger.debug('gh CLI not found in PATH, checking common locations', error);
     }
 
     // Check common installation locations
@@ -174,7 +174,8 @@ export class GithubService {
       // Parse version from output like "gh version 2.40.1 (2024-01-15)"
       const match = stdout.match(/gh version ([^\s(]+)/);
       return match ? match[1] : stdout.trim().split('\n')[0];
-    } catch {
+    } catch (error) {
+      this.logger.debug('Failed to get gh CLI version', error);
       return undefined;
     }
   }
@@ -310,7 +311,8 @@ export class GithubService {
       const { stdout } = await this.execGh(repoPath, ['repo', 'view', '--json', 'url']);
       const data = JSON.parse(stdout);
       return !!data.url;
-    } catch {
+    } catch (error) {
+      this.logger.debug('Failed to check GitHub remote', error);
       return false;
     }
   }

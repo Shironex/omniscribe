@@ -68,7 +68,7 @@ export class UsageService {
       return { usage };
     } catch (error) {
       const message = extractErrorMessage(error);
-      this.logger.error(`Failed to fetch usage: ${message}`);
+      this.logger.error('Failed to fetch usage', error);
 
       // Determine error type
       let errorType: UsageError = 'unknown';
@@ -128,7 +128,7 @@ export class UsageService {
         ptyProcess = pty.spawn(shell, args, ptyOptions);
       } catch (spawnError) {
         const errorMessage = extractErrorMessage(spawnError);
-        this.logger.error(`Failed to spawn PTY: ${errorMessage}`);
+        this.logger.error('Failed to spawn PTY', spawnError);
         reject(new Error(`Unable to access terminal: ${errorMessage}`));
         return;
       }
