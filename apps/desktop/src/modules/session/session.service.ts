@@ -17,6 +17,7 @@ import {
   MAX_SYSTEM_PROMPT_LENGTH,
   createLogger,
   extractErrorMessage,
+  normalizePath,
 } from '@omniscribe/shared';
 import { TerminalService } from '../terminal';
 import { McpWriterService, McpDiscoveryService } from '../mcp';
@@ -496,8 +497,11 @@ export class SessionService implements OnModuleDestroy {
 
       if (worktreeSettings.autoCleanup) {
         // Check if other sessions are still using the same worktree path
+        // Use normalizePath for cross-platform comparison (Windows backslash vs forward slash)
+        const normalizedPath = normalizePath(session.worktreePath);
         const otherSessionsUsingWorktree = Array.from(this.sessions.values()).filter(
-          s => s.id !== sessionId && s.worktreePath === session.worktreePath
+          s =>
+            s.id !== sessionId && s.worktreePath && normalizePath(s.worktreePath) === normalizedPath
         );
 
         if (otherSessionsUsingWorktree.length === 0) {

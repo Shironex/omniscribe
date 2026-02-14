@@ -126,13 +126,17 @@ export function usePreLaunchSlots(
 
   // Auto-update pre-launch slots when currentBranch changes (Bug #3: stale branch)
   // Only updates slots that still have the previous current branch (not user-customized ones)
+  // Returns same reference when no slots need updating to avoid unnecessary re-render
   useEffect(() => {
     const prevBranch = prevBranchRef.current;
     if (prevBranch !== currentBranch) {
-      setPreLaunchSlots(prev =>
-        prev.map(slot => (slot.branch === prevBranch ? { ...slot, branch: currentBranch } : slot))
-      );
       prevBranchRef.current = currentBranch;
+      setPreLaunchSlots(prev => {
+        if (!prev.some(slot => slot.branch === prevBranch)) return prev;
+        return prev.map(slot =>
+          slot.branch === prevBranch ? { ...slot, branch: currentBranch } : slot
+        );
+      });
     }
   }, [currentBranch]);
 

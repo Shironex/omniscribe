@@ -397,38 +397,55 @@ export class SessionGateway implements OnGatewayInit {
 
     if (worktreeSettings.mode !== 'never') {
       // Fetch currentBranch once to avoid TOCTOU race (Bug #8)
-      const currentBranch = await this.gitService.getCurrentBranch(payload.projectPath);
-      const branchToUse = payload.branch ?? currentBranch;
-
+      // Wrapped in try-catch so a git failure doesn't block session creation
+      let currentBranch: string | undefined;
       try {
-        if (worktreeSettings.mode === 'always') {
-          const uniqueSuffix = crypto.randomUUID().slice(0, 8);
-          const isolatedBranch = `${branchToUse}-${uniqueSuffix}`;
-          worktreePath = await this.worktreeService.prepare(
-            payload.projectPath,
-            isolatedBranch,
-            worktreeSettings.location,
-            currentBranch
-          );
-        } else if (worktreeSettings.mode === 'branch' && branchToUse !== currentBranch) {
-          worktreePath = await this.worktreeService.prepare(
-            payload.projectPath,
-            branchToUse,
-            worktreeSettings.location,
-            currentBranch
-          );
-        }
+        currentBranch = await this.gitService.getCurrentBranch(payload.projectPath);
       } catch (error) {
         const errorMessage = extractErrorMessage(error);
-        this.logger.warn(`Failed to create worktree for session ${session.id}: ${errorMessage}`);
-        worktreeWarning = `Worktree creation failed: ${errorMessage}. Running in main project directory.`;
+        this.logger.warn(`Failed to get current branch for worktree setup: ${errorMessage}`);
+        worktreeWarning = `Could not determine current branch: ${errorMessage}. Skipping worktree setup.`;
       }
 
-      // Assign branch (only when worktrees are enabled)
-      if (payload.branch) {
-        this.sessionService.assignBranch(session.id, payload.branch, worktreePath ?? undefined);
-      } else if (worktreePath) {
-        this.sessionService.assignBranch(session.id, currentBranch, worktreePath);
+      if (currentBranch) {
+        const branchToUse = payload.branch ?? currentBranch;
+
+        try {
+          if (worktreeSettings.mode === 'always') {
+            const uniqueSuffix = crypto.randomUUID().slice(0, 8);
+            const isolatedBranch = `${branchToUse}-${uniqueSuffix}`;
+            worktreePath = await this.worktreeService.prepare(
+              payload.projectPath,
+              isolatedBranch,
+              worktreeSettings.location,
+              currentBranch
+            );
+          } else if (worktreeSettings.mode === 'branch' && branchToUse !== currentBranch) {
+            worktreePath = await this.worktreeService.prepare(
+              payload.projectPath,
+              branchToUse,
+              worktreeSettings.location,
+              currentBranch
+            );
+          }
+        } catch (error) {
+          const errorMessage = extractErrorMessage(error);
+          this.logger.warn(`Failed to create worktree for session ${session.id}: ${errorMessage}`);
+          worktreeWarning = `Worktree creation failed: ${errorMessage}. Running in main project directory.`;
+        }
+
+        // Assign branch (only when worktrees are enabled)
+        if (payload.branch) {
+          this.sessionService.assignBranch(session.id, payload.branch, worktreePath ?? undefined);
+        } else if (worktreePath) {
+          this.sessionService.assignBranch(session.id, currentBranch, worktreePath);
+        } else {
+          // No worktree needed (e.g., already on the target branch) — still label the session
+          this.sessionService.assignBranch(session.id, currentBranch);
+        }
+      } else if (payload.branch) {
+        // getCurrentBranch failed but user specified a branch — assign it without worktree
+        this.sessionService.assignBranch(session.id, payload.branch);
       }
     }
 
