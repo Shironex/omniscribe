@@ -10,8 +10,9 @@ import {
 import type { LogEntry } from './logger';
 
 // Reset module-level state before each test.
-// jest.config.js has clearMocks: true, which auto-clears spy call history,
-// but module-level state (currentLogLevel, colorsEnabled, timestampsEnabled)
+// jest.config.js has clearMocks + restoreMocks, which auto-clears spy call
+// history and restores original implementations between tests.
+// Module-level state (currentLogLevel, colorsEnabled, timestampsEnabled)
 // must be reset manually.
 beforeEach(() => {
   setLogLevel(LogLevel.DEBUG);
@@ -249,8 +250,8 @@ describe('createLogger — fileTransport', () => {
 
     expect(transport).toHaveBeenCalledTimes(4);
 
-    const levels = transport.mock.calls.map((call: string[]) => {
-      const parsed = JSON.parse(call[0]) as LogEntry;
+    const levels = transport.mock.calls.map(call => {
+      const parsed = JSON.parse(call[0] as string) as LogEntry;
       return parsed.level;
     });
     expect(levels).toEqual(['error', 'warn', 'info', 'debug']);
@@ -397,35 +398,40 @@ describe('createLogger — browser path', () => {
       const mockError = jest.spyOn(console, 'error').mockImplementation(() => {});
       const mockWarn = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
-      const logger = createBrowserLogger('BrowserCtx');
+      try {
+        const logger = createBrowserLogger('BrowserCtx');
 
-      logger.info('browser info');
-      expect(mockLog).toHaveBeenCalled();
-      const infoArgs = mockLog.mock.calls[0];
-      expect(infoArgs[0]).toContain('%cINFO%c');
-      expect(infoArgs[0]).toContain('[BrowserCtx]');
+        logger.info('browser info');
+        expect(mockLog).toHaveBeenCalled();
+        const infoArgs = mockLog.mock.calls[0];
+        expect(infoArgs[0]).toContain('%cINFO%c');
+        expect(infoArgs[0]).toContain('[BrowserCtx]');
 
-      logger.error('browser error');
-      expect(mockError).toHaveBeenCalled();
-      const errorArgs = mockError.mock.calls[0];
-      expect(errorArgs[0]).toContain('%cERROR%c');
+        logger.error('browser error');
+        expect(mockError).toHaveBeenCalled();
+        const errorArgs = mockError.mock.calls[0];
+        expect(errorArgs[0]).toContain('%cERROR%c');
 
-      logger.warn('browser warn');
-      expect(mockWarn).toHaveBeenCalled();
-      const warnArgs = mockWarn.mock.calls[0];
-      expect(warnArgs[0]).toContain('%cWARN%c');
+        logger.warn('browser warn');
+        expect(mockWarn).toHaveBeenCalled();
+        const warnArgs = mockWarn.mock.calls[0];
+        expect(warnArgs[0]).toContain('%cWARN%c');
 
-      logger.debug('browser debug');
-      // debug uses console.log in browser
-      const debugArgs = mockLog.mock.calls[1];
-      expect(debugArgs[0]).toContain('%cDEBUG%c');
+        logger.debug('browser debug');
+        // debug uses console.log in browser
+        const debugArgs = mockLog.mock.calls[1];
+        expect(debugArgs[0]).toContain('%cDEBUG%c');
 
-      // log() is alias for info() in browser too
-      logger.log('browser log');
-      const logArgs = mockLog.mock.calls[2];
-      expect(logArgs[0]).toContain('%cINFO%c');
-
-      delete (globalThis as any).window;
+        // log() is alias for info() in browser too
+        logger.log('browser log');
+        const logArgs = mockLog.mock.calls[2];
+        expect(logArgs[0]).toContain('%cINFO%c');
+      } finally {
+        mockLog.mockRestore();
+        mockError.mockRestore();
+        mockWarn.mockRestore();
+        delete (globalThis as any).window;
+      }
     });
   });
 });

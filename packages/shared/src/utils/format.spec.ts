@@ -36,4 +36,14 @@ describe('formatFileSize', () => {
   it('displays GB-range values as MB (no GB tier)', () => {
     expect(formatFileSize(1073741824)).toBe('1024.0 MB');
   });
+
+  describe('edge case inputs', () => {
+    it('handles negative bytes', () => {
+      expect(formatFileSize(-1)).toBe('-1 B');
+    });
+
+    it('handles NaN', () => {
+      expect(formatFileSize(NaN)).toBe('NaN MB');
+    });
+  });
 });
