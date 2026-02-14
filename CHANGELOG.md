@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.7.3 (2026-02-14)
+
+### Bug Fixes
+
+- **Branch selector shown when worktrees disabled** — Hide the branch selector in pre-launch slots when worktree mode is set to "never" (#115, closes #111)
+- **Misleading branch label in non-worktree mode** — Sessions no longer get an incorrect branch assignment when worktree mode is disabled (#115)
+- **Pre-launch slots not tracking external checkouts** — Auto-update slot branch labels when the user checks out a different branch outside Omniscribe (#115)
+- **Missing branch/worktreePath in status events** — `SessionStatusUpdate` events now propagate `branch` and `worktreePath` fields so the frontend stays in sync (#115)
+- **Continue-last missing branch context** — Pass `currentBranch` when resuming the last session from the history panel (#115)
+- **Premature worktree cleanup** — Reference-count shared worktrees before auto-cleanup to prevent deleting worktrees still in use by other sessions (#115)
+- **Silent worktree creation failures** — Show a toast notification when worktree creation fails instead of silently falling back (#115)
+- **TOCTOU race in branch detection** — Fetch `currentBranch` once at session creation and reuse the value, eliminating a race where the branch could change between check and use (#115)
+- **Git failure blocking session creation** — `getCurrentBranch` errors are now caught so git failures don't prevent sessions from launching (#115)
+- **Worktree path comparison on Windows** — Use `normalizePath()` for worktree path comparison to handle Windows path separators correctly (#115)
+
 ## 0.7.2 (2026-02-14)
 
 ### Bug Fixes
