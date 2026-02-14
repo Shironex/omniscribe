@@ -4,8 +4,7 @@ import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip
 import { Button } from '@/components/ui/button';
 import { useSettingsStore } from '@/stores';
 import { IS_MAC } from '@/lib/platform';
-
-const MAX_SESSIONS = 12;
+import { MAX_CONCURRENT_SESSIONS } from '@omniscribe/shared';
 
 const STOP_SHORTCUT = IS_MAC ? '⌘ K' : 'Ctrl+K';
 const SETTINGS_SHORTCUT = IS_MAC ? '⌘ ,' : 'Ctrl+,';
@@ -41,7 +40,8 @@ export function ActionBar({
   hasActiveSessions,
 }: ActionBarProps) {
   const openSettings = useSettingsStore(state => state.openSettings);
-  const canAddMore = hasActiveProject && sessionCount + preLaunchSlotCount < MAX_SESSIONS;
+  const canAddMore =
+    hasActiveProject && sessionCount + preLaunchSlotCount < MAX_CONCURRENT_SESSIONS;
 
   return (
     <>
