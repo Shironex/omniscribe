@@ -85,6 +85,7 @@ export class McpGateway implements OnGatewayInit {
     @MessageBody() payload: McpDiscoverPayload,
     @ConnectedSocket() _client: Socket
   ): Promise<McpDiscoverResponse> {
+    this.logger.debug(`[mcp:discover] projectPath=${payload?.projectPath}`);
     try {
       // Validate payload has required projectPath
       const projectPath = payload?.projectPath;
@@ -123,6 +124,9 @@ export class McpGateway implements OnGatewayInit {
     @ConnectedSocket() _client: Socket
   ): McpSetEnabledResponse {
     try {
+      this.logger.debug(
+        `[mcp:set-enabled] sessionId=${payload.sessionId}, serverIds=${payload.serverIds?.join(',')}`
+      );
       // Store the enabled servers in the registry
       this.sessionRegistry.setEnabledServers(
         payload.projectPath,
@@ -155,6 +159,15 @@ export class McpGateway implements OnGatewayInit {
     @MessageBody() payload: McpWriteConfigPayload,
     @ConnectedSocket() _client: Socket
   ): Promise<McpWriteConfigResponse> {
+    this.logger.debug(
+      `[mcp:write-config] sessionId=${payload.sessionId}, servers=${payload.servers?.length}`
+    );
+
+    const pathError = validatePath(payload.workingDir, 'workingDir');
+    if (pathError) {
+      return { success: false, error: pathError };
+    }
+
     try {
       // Filter to only enabled servers
       const enabledServers = payload.servers.filter(s => s.enabled);
@@ -187,6 +200,7 @@ export class McpGateway implements OnGatewayInit {
     @MessageBody() payload: McpGetEnabledPayload,
     @ConnectedSocket() _client: Socket
   ): McpGetEnabledResponse {
+    this.logger.debug(`[mcp:get-enabled] sessionId=${payload.sessionId}`);
     const serverIds = this.sessionRegistry.getEnabledServers(
       payload.projectPath,
       payload.sessionId
@@ -203,6 +217,7 @@ export class McpGateway implements OnGatewayInit {
     @MessageBody() payload: McpGetServersPayload,
     @ConnectedSocket() _client: Socket
   ): McpGetServersResponse {
+    this.logger.debug(`[mcp:get-servers] projectPath=${payload.projectPath}`);
     const servers = this.projectCache.getServers(payload.projectPath);
     return { servers };
   }
@@ -215,6 +230,13 @@ export class McpGateway implements OnGatewayInit {
     @MessageBody() payload: McpRemoveConfigPayload,
     @ConnectedSocket() _client: Socket
   ): Promise<McpRemoveConfigResponse> {
+    this.logger.debug(`[mcp:remove-config] sessionId=${payload.sessionId}`);
+
+    const pathError = validatePath(payload.workingDir, 'workingDir');
+    if (pathError) {
+      return { success: false, error: pathError };
+    }
+
     try {
       const success = await this.writerService.removeConfig(payload.workingDir, payload.sessionId);
 
@@ -238,6 +260,7 @@ export class McpGateway implements OnGatewayInit {
   @SkipThrottle()
   @SubscribeMessage(McpEvents.GET_INTERNAL_STATUS)
   handleGetInternalStatus(): McpInternalStatusResponse {
+    this.logger.debug('[mcp:get-internal-status] called');
     return this.writerService.getInternalMcpInfo();
   }
 
@@ -247,6 +270,7 @@ export class McpGateway implements OnGatewayInit {
   @SkipThrottle()
   @SubscribeMessage(McpEvents.GET_STATUS_SERVER_INFO)
   handleGetStatusServerInfo(): McpStatusServerInfoResponse {
+    this.logger.debug('[mcp:get-status-server-info] called');
     return {
       running: this.statusServer.isRunning(),
       port: this.statusServer.getPort(),
@@ -260,6 +284,7 @@ export class McpGateway implements OnGatewayInit {
    */
   @OnEvent(InternalSessionEvents.TASKS)
   onSessionTasks(event: SessionTasksUpdate): void {
+    this.logger.debug(`[session:tasks] broadcasting for ${event.sessionId}`);
     this.server.emit(SessionEvents.TASKS, {
       sessionId: event.sessionId,
       tasks: event.tasks,

@@ -134,6 +134,7 @@ export class WorktreeService {
 
     // If the requested branch is the current branch, work directly on the repo
     if (currentBranch === branch) {
+      this.logger.debug(`Branch "${branch}" is current branch, no worktree needed`);
       return null;
     }
 
@@ -151,6 +152,7 @@ export class WorktreeService {
       // Worktree exists, verify it's still valid
       try {
         await fs.access(worktreePath);
+        this.logger.debug(`Reusing existing worktree at ${worktreePath}`);
         return worktreePath;
       } catch {
         this.logger.debug('Worktree directory missing, pruning stale ref');
@@ -231,6 +233,8 @@ export class WorktreeService {
       }
     }
 
+    this.logger.debug(`Worktree created at ${worktreePath} for branch "${branch}"`);
+
     // Defensive check: verify the worktree directory was actually created
     try {
       await fs.access(worktreePath);
@@ -286,6 +290,7 @@ export class WorktreeService {
    * List all worktrees for a repository
    */
   async list(projectPath: string): Promise<WorktreeInfo[]> {
+    this.logger.debug(`[list] projectPath=${projectPath}`);
     const worktrees: WorktreeInfo[] = [];
 
     const { stdout } = await this.gitBase.execGit(projectPath, ['worktree', 'list', '--porcelain']);
@@ -339,6 +344,7 @@ export class WorktreeService {
    * Clean up all worktrees for a repository that are managed by Omniscribe
    */
   async cleanupAll(projectPath: string): Promise<void> {
+    this.logger.debug(`[cleanupAll] projectPath=${projectPath}`);
     const worktrees = await this.list(projectPath);
     const projectWorktreeDir = normalizePath(path.join(projectPath, PROJECT_WORKTREE_DIR));
 

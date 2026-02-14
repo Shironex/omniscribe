@@ -38,6 +38,7 @@ export class HealthService {
   @Interval(HEALTH_CHECK_INTERVAL_MS)
   checkHealth(): void {
     const sessions = this.sessionService.getAll();
+    this.logger.debug(`[checkHealth] checking ${sessions.length} sessions`);
 
     for (const session of sessions) {
       if (session.terminalSessionId === undefined) continue;
@@ -109,9 +110,11 @@ export class HealthService {
 
     // Idle/waiting statuses or recent output = healthy
     if (IDLE_STATUSES.has(session.status) || session.lastOutputAt) {
+      this.logger.debug(`[determineHealth] session ${session.id}: healthy (idle or has output)`);
       return { level: 'healthy' };
     }
 
+    this.logger.debug(`[determineHealth] session ${session.id}: healthy (default)`);
     return { level: 'healthy' };
   }
 

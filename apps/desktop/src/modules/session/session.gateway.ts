@@ -107,6 +107,15 @@ export class SessionGateway implements OnGatewayInit {
     @MessageBody() payload: CreateSessionPayload,
     @ConnectedSocket() client: Socket
   ): Promise<CreateSessionResponse> {
+    this.logger.debug(`[session:create] mode=${payload.mode}, project=${payload.projectPath}`);
+
+    if (payload.workingDirectory) {
+      const pathError = validatePath(payload.workingDirectory, 'workingDirectory');
+      if (pathError) {
+        return { error: pathError };
+      }
+    }
+
     // Validate string length limits (model/systemPrompt are create-only fields)
     if (payload.model && payload.model.length > MAX_MODEL_LENGTH) {
       return { error: `model exceeds maximum length of ${MAX_MODEL_LENGTH} characters` };
@@ -141,6 +150,7 @@ export class SessionGateway implements OnGatewayInit {
     @MessageBody() payload: UpdateSessionPayload,
     @ConnectedSocket() _client: Socket
   ): UpdateSessionResponse {
+    this.logger.debug(`[session:update] sessionId=${payload.sessionId}`);
     const session = this.sessionService.update(payload.sessionId, payload.updates);
 
     if (!session) {
@@ -159,6 +169,7 @@ export class SessionGateway implements OnGatewayInit {
     @MessageBody() payload: SessionRemovePayload,
     @ConnectedSocket() _client: Socket
   ): Promise<SessionRemoveResponse> {
+    this.logger.debug(`[session:remove] sessionId=${payload.sessionId}`);
     const success = await this.sessionService.remove(payload.sessionId);
 
     if (!success) {
@@ -177,6 +188,7 @@ export class SessionGateway implements OnGatewayInit {
     @MessageBody() payload: SessionListPayload,
     @ConnectedSocket() _client: Socket
   ): BackendSessionConfig[] {
+    this.logger.debug(`[session:list] projectPath=${payload.projectPath ?? 'all'}`);
     if (payload.projectPath) {
       return this.sessionService.getForProject(payload.projectPath);
     }
@@ -189,6 +201,7 @@ export class SessionGateway implements OnGatewayInit {
    */
   @OnEvent(InternalSessionEvents.CREATED)
   onSessionCreated(session: BackendSessionConfig): void {
+    this.logger.debug(`[session:created] broadcasting for ${session.id}`);
     this.server.emit(SessionEvents.CREATED, session);
   }
 
@@ -205,6 +218,7 @@ export class SessionGateway implements OnGatewayInit {
    */
   @OnEvent(InternalSessionEvents.REMOVED)
   onSessionRemoved(payload: { sessionId: string }): void {
+    this.logger.debug(`[session:removed] broadcasting for ${payload.sessionId}`);
     this.server.emit(SessionEvents.REMOVED, payload);
   }
 
@@ -259,6 +273,7 @@ export class SessionGateway implements OnGatewayInit {
     @MessageBody() payload: ClaudeSessionHistoryPayload,
     @ConnectedSocket() _client: Socket
   ): Promise<ClaudeSessionHistoryResponse> {
+    this.logger.debug(`[session:history] projectPath=${payload.projectPath}`);
     try {
       const sessions = await this.claudeSessionReader.readSessionsIndex(payload.projectPath);
       return { sessions };
@@ -280,6 +295,9 @@ export class SessionGateway implements OnGatewayInit {
     @MessageBody() payload: ResumeSessionPayload,
     @ConnectedSocket() client: Socket
   ): Promise<CreateSessionResponse> {
+    this.logger.debug(
+      `[session:resume] claudeSessionId=${payload.claudeSessionId}, project=${payload.projectPath}`
+    );
     return this.launchSessionWithWorktree(
       client,
       { projectPath: payload.projectPath, branch: payload.branch, name: payload.name },
@@ -302,6 +320,9 @@ export class SessionGateway implements OnGatewayInit {
     @MessageBody() payload: ForkSessionPayload,
     @ConnectedSocket() client: Socket
   ): Promise<CreateSessionResponse> {
+    this.logger.debug(
+      `[session:fork] claudeSessionId=${payload.claudeSessionId}, project=${payload.projectPath}`
+    );
     return this.launchSessionWithWorktree(
       client,
       { projectPath: payload.projectPath, branch: payload.branch, name: payload.name },
@@ -324,6 +345,7 @@ export class SessionGateway implements OnGatewayInit {
     @MessageBody() payload: ContinueLastSessionPayload,
     @ConnectedSocket() client: Socket
   ): Promise<CreateSessionResponse> {
+    this.logger.debug(`[session:continue-last] project=${payload.projectPath}`);
     return this.launchSessionWithWorktree(
       client,
       { projectPath: payload.projectPath, branch: payload.branch, name: payload.name },
@@ -487,6 +509,7 @@ export class SessionGateway implements OnGatewayInit {
   @SkipThrottle()
   @SubscribeMessage(SessionEvents.GET_RESTORE_SNAPSHOT)
   handleGetRestoreSnapshot(): RestoreSnapshotResponse {
+    this.logger.debug('[session:get-restore-snapshot] called');
     const preferences = this.workspaceService.getPreferences();
     const sessionSettings: SessionSettings = preferences.session ?? DEFAULT_SESSION_SETTINGS;
     const autoResumeEnabled = sessionSettings.autoResumeOnRestart ?? false;

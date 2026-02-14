@@ -54,6 +54,7 @@ export class McpDiscoveryService {
       return [];
     }
 
+    this.logger.debug(`[discoverServers] projectPath=${projectPath}`);
     const servers: McpServerConfig[] = [];
 
     for (const configFile of MCP_CONFIG_FILES) {
@@ -97,6 +98,9 @@ export class McpDiscoveryService {
       return servers;
     }
 
+    this.logger.debug(
+      `[parseConfig] parsing ${Object.keys(config.mcpServers).length} server entries`
+    );
     for (const [id, entry] of Object.entries(config.mcpServers)) {
       const server = this.parseServerEntry(id, entry);
       if (server) {
@@ -139,6 +143,7 @@ export class McpDiscoveryService {
       return undefined;
     }
 
+    this.logger.debug(`[parseServerEntry] parsed server "${id}" (transport=${transport})`);
     return {
       id,
       name: id,

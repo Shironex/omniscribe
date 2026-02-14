@@ -114,6 +114,7 @@ export class WorkspaceGateway implements OnGatewayInit {
     @MessageBody() payload: GetQuickActionsPayload,
     @ConnectedSocket() _client: Socket
   ): QuickAction[] {
+    this.logger.debug(`[quick-action:list] category=${payload.category ?? 'all'}`);
     let actions = this.workspaceService.getQuickActions();
 
     // Filter by category if specified
@@ -137,6 +138,7 @@ export class WorkspaceGateway implements OnGatewayInit {
     @MessageBody() payload: UpdateQuickActionsPayload,
     @ConnectedSocket() _client: Socket
   ): SuccessResponse {
+    this.logger.debug(`[quick-action:update] count=${payload.actions.length}`);
     this.workspaceService.setQuickActions(payload.actions);
 
     // Broadcast update to all clients
@@ -152,6 +154,7 @@ export class WorkspaceGateway implements OnGatewayInit {
    */
   @SubscribeMessage(QuickActionEvents.RESET)
   handleResetQuickActions(@ConnectedSocket() _client: Socket): QuickActionsResponse {
+    this.logger.debug('[quick-action:reset] resetting to defaults');
     this.workspaceService.resetQuickActionsToDefaults();
 
     const actions = this.workspaceService.getQuickActions();
@@ -190,7 +193,7 @@ export class WorkspaceGateway implements OnGatewayInit {
   @SkipThrottle()
   @SubscribeMessage(WorkspaceEvents.GET_STATE)
   handleGetWorkspaceState(@ConnectedSocket() _client: Socket): WorkspaceState {
-    this.logger.debug('Getting workspace state');
+    this.logger.debug('[workspace:get-state] getting workspace state');
     return this.workspaceService.getWorkspaceState();
   }
 
@@ -203,7 +206,7 @@ export class WorkspaceGateway implements OnGatewayInit {
     @MessageBody() payload: SaveStatePayload,
     @ConnectedSocket() _client: Socket
   ): SuccessResponse {
-    this.logger.debug('Saving workspace state');
+    this.logger.debug('[workspace:save-state] saving workspace state');
     this.workspaceService.saveWorkspaceState(payload);
     return { success: true };
   }
@@ -293,7 +296,7 @@ export class WorkspaceGateway implements OnGatewayInit {
     @MessageBody() payload: SelectTabPayload,
     @ConnectedSocket() client: Socket
   ): TabsResponse {
-    this.logger.debug(`Selecting tab: ${payload.tabId}`);
+    this.logger.debug(`[workspace:select-tab] tabId=${payload.tabId}`);
 
     const tabs = this.workspaceService.selectTab(payload.tabId);
 
@@ -333,6 +336,7 @@ export class WorkspaceGateway implements OnGatewayInit {
   @SkipThrottle()
   @SubscribeMessage(WorkspaceEvents.GET_PREFERENCES)
   handleGetPreferences(@ConnectedSocket() _client: Socket): UserPreferences {
+    this.logger.debug('[workspace:get-preferences] called');
     return this.workspaceService.getPreferences();
   }
 }

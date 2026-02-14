@@ -175,6 +175,7 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
    * Used when sessions are created through other gateways (e.g., SessionGateway).
    */
   registerClientSession(clientId: string, sessionId: number): void {
+    this.logger.debug(`[registerClientSession] clientId=${clientId}, sessionId=${sessionId}`);
     let sessions = this.clientSessions.get(clientId);
     if (!sessions) {
       sessions = new Set();
@@ -311,6 +312,7 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
 
   @OnEvent(InternalTerminalEvents.CLOSED)
   handleTerminalClosed(event: TerminalClosedEvent): void {
+    this.logger.debug(`[terminal:closed] sessionId=${event.sessionId}, exitCode=${event.exitCode}`);
     const room = `terminal:${event.sessionId}`;
     const payload = {
       sessionId: event.sessionId,
@@ -346,6 +348,7 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
     @ConnectedSocket() _client: Socket,
     @MessageBody() payload: { sessionId: number }
   ): SuccessResponse {
+    this.logger.debug(`[terminal:cancel] sessionId=${payload.sessionId}`);
     const { sessionId } = payload;
 
     if (!isValidSessionId(sessionId)) {

@@ -29,7 +29,7 @@ export class GitBaseService {
     timeoutMs: number = GIT_TIMEOUT_MS
   ): Promise<ExecResult> {
     const commandStr = `git ${args.join(' ')}`;
-    this.logger.debug(`execGit: ${commandStr} (cwd: ${repoPath})`);
+    this.logger.debug(`[execGit] starting: ${commandStr} (cwd: ${repoPath})`);
 
     try {
       const result = await execFileAsync('git', args, {
@@ -42,6 +42,7 @@ export class GitBaseService {
         maxBuffer: 10 * 1024 * 1024, // 10MB buffer for large outputs
       });
 
+      this.logger.debug(`[execGit] completed: ${commandStr}`);
       return {
         stdout: result.stdout,
         stderr: result.stderr,

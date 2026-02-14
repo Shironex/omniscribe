@@ -78,6 +78,7 @@ export class UsageGateway implements OnGatewayInit {
     @ConnectedSocket() _client: Socket,
     @MessageBody() payload?: { refresh?: boolean }
   ): Promise<{ status: ClaudeCliStatus; error?: string }> {
+    this.logger.debug(`[usage:claude-status] refresh=${payload?.refresh ?? false}`);
     try {
       const status = await this.usageService.getStatus(payload?.refresh);
       return { status };

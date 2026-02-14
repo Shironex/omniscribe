@@ -51,6 +51,7 @@ export class GithubGateway implements OnGatewayInit {
     @ConnectedSocket() _client: Socket,
     @MessageBody() payload: GithubStatusPayload
   ): Promise<GithubStatusResponse> {
+    this.logger.debug(`[github:status] refresh=${payload?.refresh ?? false}`);
     try {
       if (payload?.refresh) {
         this.githubService.clearCache();
@@ -83,6 +84,7 @@ export class GithubGateway implements OnGatewayInit {
     @ConnectedSocket() _client: Socket,
     @MessageBody() payload: GithubProjectPayload
   ): Promise<GithubRepoInfoResponse> {
+    this.logger.debug(`[github:repo-info] projectPath=${payload.projectPath}`);
     try {
       const { projectPath } = payload;
       const pathError = validatePath(projectPath);
@@ -116,6 +118,7 @@ export class GithubGateway implements OnGatewayInit {
     @ConnectedSocket() _client: Socket,
     @MessageBody() payload: GithubListPRsPayload
   ): Promise<GithubPRsResponse> {
+    this.logger.debug(`[github:prs] projectPath=${payload.projectPath}, state=${payload.state}`);
     try {
       const { projectPath, state, limit } = payload;
       const pathError = validatePath(projectPath);
@@ -149,6 +152,9 @@ export class GithubGateway implements OnGatewayInit {
     @ConnectedSocket() _client: Socket,
     @MessageBody() payload: GithubGetPRPayload
   ): Promise<GithubPRResponse> {
+    this.logger.debug(
+      `[github:pr] projectPath=${payload.projectPath}, prNumber=${payload.prNumber}`
+    );
     try {
       const { projectPath, prNumber } = payload;
       const pathError = validatePath(projectPath);
@@ -185,6 +191,9 @@ export class GithubGateway implements OnGatewayInit {
     @ConnectedSocket() _client: Socket,
     @MessageBody() payload: GithubCreatePRPayload
   ): Promise<GithubCreatePRResponse> {
+    this.logger.debug(
+      `[github:create-pr] projectPath=${payload.projectPath}, title=${payload.title?.slice(0, 50)}`
+    );
     try {
       const { projectPath, title, body, base, head, draft } = payload;
       const pathError = validatePath(projectPath);
@@ -229,6 +238,7 @@ export class GithubGateway implements OnGatewayInit {
     @ConnectedSocket() _client: Socket,
     @MessageBody() payload: GithubListIssuesPayload
   ): Promise<GithubIssuesResponse> {
+    this.logger.debug(`[github:issues] projectPath=${payload.projectPath}, state=${payload.state}`);
     try {
       const { projectPath, state, limit, labels } = payload;
       const pathError = validatePath(projectPath);
@@ -266,6 +276,9 @@ export class GithubGateway implements OnGatewayInit {
     @ConnectedSocket() _client: Socket,
     @MessageBody() payload: GithubGetIssuePayload
   ): Promise<GithubIssueResponse> {
+    this.logger.debug(
+      `[github:issue] projectPath=${payload.projectPath}, issueNumber=${payload.issueNumber}`
+    );
     try {
       const { projectPath, issueNumber } = payload;
       const pathError = validatePath(projectPath);
