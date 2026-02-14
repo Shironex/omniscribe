@@ -2,7 +2,9 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { Server, Socket } from 'socket.io';
 import { SessionGateway } from './session.gateway';
-import { SessionService, BackendSessionConfig } from './session.service';
+import { SessionService } from './session.service';
+import { SessionLauncherService } from './session-launcher.service';
+import { BackendSessionConfig } from './types';
 import { TerminalGateway } from '../terminal/terminal.gateway';
 import { WorktreeService } from '../git/worktree.service';
 import { GitService } from '../git/git.service';
@@ -73,9 +75,12 @@ const mockSessionService = {
   remove: jest.fn(),
   update: jest.fn(),
   assignBranch: jest.fn(),
-  launchSession: jest.fn(),
   getRunningSessions: jest.fn().mockReturnValue([]),
   getIdleSessions: jest.fn().mockReturnValue([]),
+};
+
+const mockSessionLauncherService = {
+  launchSession: jest.fn(),
 };
 
 const mockTerminalGateway = {
@@ -118,6 +123,7 @@ describe('SessionGateway', () => {
       providers: [
         SessionGateway,
         { provide: SessionService, useValue: mockSessionService },
+        { provide: SessionLauncherService, useValue: mockSessionLauncherService },
         { provide: TerminalGateway, useValue: mockTerminalGateway },
         { provide: WorktreeService, useValue: mockWorktreeService },
         { provide: GitService, useValue: mockGitService },
@@ -160,7 +166,7 @@ describe('SessionGateway', () => {
       mockWorkspaceService.getPreferences.mockReturnValue({
         worktree: { mode: 'never', location: 'project', autoCleanup: false },
       });
-      mockSessionService.launchSession.mockResolvedValue({
+      mockSessionLauncherService.launchSession.mockResolvedValue({
         success: true,
         terminalSessionId: 1,
       });
@@ -177,7 +183,7 @@ describe('SessionGateway', () => {
         mcpServers: undefined,
       });
       expect(mockWorktreeService.prepare).not.toHaveBeenCalled();
-      expect(mockSessionService.launchSession).toHaveBeenCalledWith(
+      expect(mockSessionLauncherService.launchSession).toHaveBeenCalledWith(
         'session-1-1700000000000',
         '/project',
         '/project', // workingDir = session.workingDirectory when no worktree
@@ -231,7 +237,7 @@ describe('SessionGateway', () => {
         'main',
         '/project/.worktrees/main-12345678'
       );
-      expect(mockSessionService.launchSession).toHaveBeenCalledWith(
+      expect(mockSessionLauncherService.launchSession).toHaveBeenCalledWith(
         'session-1-1700000000000',
         '/project',
         '/project/.worktrees/main-12345678',
@@ -330,7 +336,7 @@ describe('SessionGateway', () => {
       const result = await gateway.handleCreate(basePayload, client);
 
       // Should still launch with session.workingDirectory (no worktree)
-      expect(mockSessionService.launchSession).toHaveBeenCalledWith(
+      expect(mockSessionLauncherService.launchSession).toHaveBeenCalledWith(
         'session-1-1700000000000',
         '/project',
         '/project',
@@ -351,7 +357,7 @@ describe('SessionGateway', () => {
 
       // Should skip worktree entirely but still launch
       expect(mockWorktreeService.prepare).not.toHaveBeenCalled();
-      expect(mockSessionService.launchSession).toHaveBeenCalled();
+      expect(mockSessionLauncherService.launchSession).toHaveBeenCalled();
       expect(result.error).toBeUndefined();
       expect(result.warning).toBeDefined();
       expect(result.warning).toContain('not a git repo');
@@ -376,7 +382,7 @@ describe('SessionGateway', () => {
     });
 
     it('should return error when launch fails', async () => {
-      mockSessionService.launchSession.mockResolvedValue({
+      mockSessionLauncherService.launchSession.mockResolvedValue({
         success: false,
         error: 'CLI not found',
       });
@@ -387,7 +393,7 @@ describe('SessionGateway', () => {
     });
 
     it('should return generic error when launch fails without message', async () => {
-      mockSessionService.launchSession.mockResolvedValue({
+      mockSessionLauncherService.launchSession.mockResolvedValue({
         success: false,
       });
 
@@ -397,7 +403,7 @@ describe('SessionGateway', () => {
     });
 
     it('should not join terminal room when terminalSessionId is undefined', async () => {
-      mockSessionService.launchSession.mockResolvedValue({
+      mockSessionLauncherService.launchSession.mockResolvedValue({
         success: true,
         terminalSessionId: undefined,
       });
@@ -685,7 +691,7 @@ describe('SessionGateway', () => {
       mockWorkspaceService.getPreferences.mockReturnValue({
         worktree: { mode: 'never', location: 'project', autoCleanup: false },
       });
-      mockSessionService.launchSession.mockResolvedValue({
+      mockSessionLauncherService.launchSession.mockResolvedValue({
         success: true,
         terminalSessionId: 1,
       });
@@ -744,7 +750,7 @@ describe('SessionGateway', () => {
       mockWorkspaceService.getPreferences.mockReturnValue({
         worktree: { mode: 'never', location: 'project', autoCleanup: false },
       });
-      mockSessionService.launchSession.mockResolvedValue({
+      mockSessionLauncherService.launchSession.mockResolvedValue({
         success: true,
         terminalSessionId: 1,
       });
@@ -786,7 +792,7 @@ describe('SessionGateway', () => {
     });
 
     it('should return error when launch fails', async () => {
-      mockSessionService.launchSession.mockResolvedValue({
+      mockSessionLauncherService.launchSession.mockResolvedValue({
         success: false,
         error: 'CLI not found',
       });

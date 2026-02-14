@@ -17,6 +17,7 @@ import {
 } from '../../../test/integration/helpers/socket-client';
 import { SessionGateway } from './session.gateway';
 import { SessionService } from './session.service';
+import { SessionLauncherService } from './session-launcher.service';
 import { TerminalGateway } from '../terminal/terminal.gateway';
 import { WorktreeService } from '../git/worktree.service';
 import { GitService } from '../git/git.service';
@@ -39,6 +40,7 @@ describe('SessionGateway (integration)', () => {
   let app: INestApplication;
   let client: Socket;
   let mockSessionService: Record<string, jest.Mock>;
+  let mockSessionLauncherService: Record<string, jest.Mock>;
 
   beforeAll(async () => {
     mockSessionService = {
@@ -51,11 +53,14 @@ describe('SessionGateway (integration)', () => {
       remove: jest.fn().mockResolvedValue(true),
       updateStatus: jest.fn().mockReturnValue(mockSession),
       assignBranch: jest.fn().mockReturnValue(mockSession),
-      launchSession: jest.fn().mockResolvedValue({ success: true, terminalSessionId: 1 }),
       stopSession: jest.fn().mockResolvedValue(true),
       writeToSession: jest.fn().mockReturnValue(true),
       resizeSession: jest.fn().mockReturnValue(true),
       isSessionRunning: jest.fn().mockReturnValue(true),
+    };
+
+    mockSessionLauncherService = {
+      launchSession: jest.fn().mockResolvedValue({ success: true, terminalSessionId: 1 }),
     };
 
     const mockTerminalGateway = {
@@ -90,6 +95,7 @@ describe('SessionGateway (integration)', () => {
       providers: [
         SessionGateway,
         { provide: SessionService, useValue: mockSessionService },
+        { provide: SessionLauncherService, useValue: mockSessionLauncherService },
         { provide: TerminalGateway, useValue: mockTerminalGateway },
         { provide: WorktreeService, useValue: mockWorktreeService },
         { provide: GitService, useValue: mockGitService },
@@ -120,7 +126,10 @@ describe('SessionGateway (integration)', () => {
     mockSessionService.getForProject.mockReturnValue([mockSession]);
     mockSessionService.getRunningSessions.mockReturnValue([]);
     mockSessionService.remove.mockResolvedValue(true);
-    mockSessionService.launchSession.mockResolvedValue({ success: true, terminalSessionId: 1 });
+    mockSessionLauncherService.launchSession.mockResolvedValue({
+      success: true,
+      terminalSessionId: 1,
+    });
   });
 
   afterEach(() => {

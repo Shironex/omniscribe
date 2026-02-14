@@ -13,7 +13,9 @@ import { Server, Socket } from 'socket.io';
 import { OnEvent } from '@nestjs/event-emitter';
 import * as crypto from 'crypto';
 import { validatePath } from '../shared/validation';
-import { SessionService, BackendSessionConfig } from './session.service';
+import { SessionService } from './session.service';
+import { SessionLauncherService } from './session-launcher.service';
+import { BackendSessionConfig } from './types';
 import { TerminalGateway } from '../terminal';
 import { WorktreeService, GitService } from '../git';
 import { WorkspaceService } from '../workspace';
@@ -82,6 +84,7 @@ export class SessionGateway implements OnGatewayInit {
 
   constructor(
     private readonly sessionService: SessionService,
+    private readonly sessionLauncherService: SessionLauncherService,
     @Inject(forwardRef(() => TerminalGateway))
     private readonly terminalGateway: TerminalGateway,
     private readonly worktreeService: WorktreeService,
@@ -236,7 +239,7 @@ export class SessionGateway implements OnGatewayInit {
 
   /**
    * Broadcast Claude session ID captured event.
-   * Fired by SessionService.pollForClaudeSessionId when a new Claude session is detected.
+   * Fired by ClaudeSessionTrackerService when a new Claude session is detected.
    */
   @OnEvent(InternalSessionEvents.CLAUDE_ID_CAPTURED)
   onClaudeSessionIdCaptured(payload: ClaudeSessionIdCapturedEvent): void {
@@ -445,7 +448,7 @@ export class SessionGateway implements OnGatewayInit {
 
     // Launch
     const workingDir = worktreePath ?? session.workingDirectory;
-    const launchResult = await this.sessionService.launchSession(
+    const launchResult = await this.sessionLauncherService.launchSession(
       session.id,
       payload.projectPath,
       workingDir,

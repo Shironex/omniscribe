@@ -2,25 +2,16 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { SessionService } from './session.service';
 import { TerminalService } from '../terminal/terminal.service';
-import { McpWriterService, McpDiscoveryService } from '../mcp';
 import { WorktreeService } from '../git/worktree.service';
 import { WorkspaceService } from '../workspace/workspace.service';
-import { CliCommandService } from './cli-command.service';
-import { ClaudeSessionReaderService } from './claude-session-reader.service';
-import { HookManagerService } from './hook-manager.service';
 import type { SessionStatus } from '@omniscribe/shared';
 
 describe('SessionService', () => {
   let service: SessionService;
   let eventEmitter: jest.Mocked<EventEmitter2>;
   let terminalService: jest.Mocked<TerminalService>;
-  let mcpWriterService: jest.Mocked<McpWriterService>;
-  let mcpDiscoveryService: jest.Mocked<McpDiscoveryService>;
   let worktreeService: jest.Mocked<WorktreeService>;
   let workspaceService: jest.Mocked<WorkspaceService>;
-  let cliCommandService: jest.Mocked<CliCommandService>;
-  let claudeSessionReader: jest.Mocked<ClaudeSessionReaderService>;
-  let hookManager: jest.Mocked<HookManagerService>;
 
   beforeEach(async () => {
     eventEmitter = {
@@ -37,15 +28,6 @@ describe('SessionService', () => {
       resize: jest.fn(),
     } as unknown as jest.Mocked<TerminalService>;
 
-    mcpWriterService = {
-      writeConfig: jest.fn().mockResolvedValue(undefined),
-      generateProjectHash: jest.fn().mockReturnValue('abc123'),
-    } as unknown as jest.Mocked<McpWriterService>;
-
-    mcpDiscoveryService = {
-      discoverServers: jest.fn().mockResolvedValue([]),
-    } as unknown as jest.Mocked<McpDiscoveryService>;
-
     worktreeService = {
       cleanup: jest.fn().mockResolvedValue(undefined),
     } as unknown as jest.Mocked<WorktreeService>;
@@ -60,39 +42,13 @@ describe('SessionService', () => {
       addSessionHistory: jest.fn(),
     } as unknown as jest.Mocked<WorkspaceService>;
 
-    cliCommandService = {
-      getCliConfig: jest.fn().mockReturnValue({
-        command: 'claude',
-        args: ['--model', 'opus'],
-      }),
-      getAiModeName: jest.fn().mockReturnValue('Claude'),
-    } as unknown as jest.Mocked<CliCommandService>;
-
-    claudeSessionReader = {
-      readSessionsIndex: jest.fn().mockResolvedValue([]),
-      findNewSession: jest.fn().mockResolvedValue(null),
-      watchSessionsIndex: jest.fn().mockReturnValue(() => {}),
-    } as unknown as jest.Mocked<ClaudeSessionReaderService>;
-
-    hookManager = {
-      registerHooks: jest.fn().mockResolvedValue(undefined),
-      unregisterHooks: jest.fn().mockResolvedValue(undefined),
-      startWatching: jest.fn(),
-      stopWatching: jest.fn(),
-    } as unknown as jest.Mocked<HookManagerService>;
-
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         SessionService,
         { provide: EventEmitter2, useValue: eventEmitter },
         { provide: TerminalService, useValue: terminalService },
-        { provide: McpWriterService, useValue: mcpWriterService },
-        { provide: McpDiscoveryService, useValue: mcpDiscoveryService },
         { provide: WorktreeService, useValue: worktreeService },
         { provide: WorkspaceService, useValue: workspaceService },
-        { provide: CliCommandService, useValue: cliCommandService },
-        { provide: ClaudeSessionReaderService, useValue: claudeSessionReader },
-        { provide: HookManagerService, useValue: hookManager },
       ],
     }).compile();
 
@@ -247,13 +203,14 @@ describe('SessionService', () => {
   });
 
   describe('getRunningSessions', () => {
-    it('should return sessions with active terminals', async () => {
+    it('should return sessions with active terminals', () => {
       const session1 = service.create('claude', '/project');
       const session2 = service.create('claude', '/project');
       service.create('claude', '/project'); // session3 - not launched
 
-      await service.launchSession(session1.id, '/project', '/worktree', 'claude');
-      await service.launchSession(session2.id, '/project', '/worktree', 'claude');
+      // Simulate terminal registration (normally done by launcher)
+      service.registerTerminal(session1.id, 1, '/worktree');
+      service.registerTerminal(session2.id, 2, '/worktree');
 
       const running = service.getRunningSessions();
 
@@ -270,9 +227,9 @@ describe('SessionService', () => {
       expect(running).toHaveLength(0);
     });
 
-    it('should not count sessions whose terminal no longer exists', async () => {
+    it('should not count sessions whose terminal no longer exists', () => {
       const session = service.create('claude', '/project');
-      await service.launchSession(session.id, '/project', '/worktree', 'claude');
+      service.registerTerminal(session.id, 1, '/worktree');
 
       // Terminal no longer exists
       terminalService.hasSession.mockReturnValue(false);
@@ -284,16 +241,17 @@ describe('SessionService', () => {
   });
 
   describe('getIdleSessions', () => {
-    it('should return running sessions with idle or needs_input status', async () => {
+    it('should return running sessions with idle or needs_input status', () => {
       const session1 = service.create('claude', '/project');
       const session2 = service.create('claude', '/project');
       const session3 = service.create('claude', '/project');
 
-      await service.launchSession(session1.id, '/project', '/worktree', 'claude');
-      await service.launchSession(session2.id, '/project', '/worktree', 'claude');
-      await service.launchSession(session3.id, '/project', '/worktree', 'claude');
+      // Simulate terminal registration
+      service.registerTerminal(session1.id, 1, '/worktree');
+      service.registerTerminal(session2.id, 2, '/worktree');
+      service.registerTerminal(session3.id, 3, '/worktree');
 
-      // session1 is idle (default after launch)
+      // session1 is idle (default after create)
       // session2 is working
       service.updateStatus(session2.id, 'working', 'Processing...');
       // session3 needs input
@@ -306,73 +264,14 @@ describe('SessionService', () => {
       expect(idle.map(s => s.id)).toContain(session3.id);
     });
 
-    it('should return empty array when no idle sessions', async () => {
+    it('should return empty array when no idle sessions', () => {
       const session = service.create('claude', '/project');
-      await service.launchSession(session.id, '/project', '/worktree', 'claude');
+      service.registerTerminal(session.id, 1, '/worktree');
       service.updateStatus(session.id, 'working', 'Processing...');
 
       const idle = service.getIdleSessions();
 
       expect(idle).toHaveLength(0);
-    });
-  });
-
-  describe('launchSession', () => {
-    it('should discover MCP servers and spawn a terminal', async () => {
-      const session = service.create('claude', '/project');
-
-      const result = await service.launchSession(session.id, '/project', '/worktree', 'claude');
-
-      expect(result.success).toBe(true);
-      expect(result.terminalSessionId).toBe(1);
-      expect(mcpDiscoveryService.discoverServers).toHaveBeenCalledWith('/project');
-      expect(mcpWriterService.writeConfig).toHaveBeenCalledWith(
-        '/worktree',
-        session.id,
-        '/project',
-        []
-      );
-      expect(terminalService.spawnCommand).toHaveBeenCalledWith(
-        'claude',
-        ['--model', 'opus'],
-        '/worktree',
-        expect.objectContaining({
-          OMNISCRIBE_SESSION_ID: session.id,
-          OMNISCRIBE_PROJECT_PATH: '/project',
-        }),
-        session.id
-      );
-    });
-
-    it('should return error for non-existent session', async () => {
-      const result = await service.launchSession('nonexistent', '/project', '/worktree', 'claude');
-
-      expect(result.success).toBe(false);
-      expect(result.error).toContain('Session not found');
-    });
-
-    it('should prevent launching when terminal already active', async () => {
-      const session = service.create('claude', '/project');
-      await service.launchSession(session.id, '/project', '/worktree', 'claude');
-
-      const result = await service.launchSession(session.id, '/project', '/worktree', 'claude');
-
-      expect(result.success).toBe(false);
-      expect(result.error).toContain('already has an active terminal');
-    });
-
-    it('should handle launch errors gracefully', async () => {
-      const session = service.create('claude', '/project');
-      terminalService.spawnCommand.mockImplementation(() => {
-        throw new Error('PTY spawn failed');
-      });
-
-      const result = await service.launchSession(session.id, '/project', '/worktree', 'claude');
-
-      expect(result.success).toBe(false);
-      expect(result.error).toBe('PTY spawn failed');
-      // Session should be in error state
-      expect(service.get(session.id)?.status).toBe('error');
     });
   });
 
@@ -388,7 +287,7 @@ describe('SessionService', () => {
 
     it('should kill terminal when removing a running session', async () => {
       const session = service.create('claude', '/project');
-      await service.launchSession(session.id, '/project', '/worktree', 'claude');
+      service.registerTerminal(session.id, 1, '/worktree');
 
       await service.remove(session.id);
 
@@ -462,9 +361,9 @@ describe('SessionService', () => {
   });
 
   describe('writeToSession / resizeSession', () => {
-    it('should write data to a running session terminal', async () => {
+    it('should write data to a running session terminal', () => {
       const session = service.create('claude', '/project');
-      await service.launchSession(session.id, '/project', '/worktree', 'claude');
+      service.registerTerminal(session.id, 1, '/worktree');
 
       const result = service.writeToSession(session.id, 'hello\n');
 
@@ -477,9 +376,9 @@ describe('SessionService', () => {
       expect(service.writeToSession(session.id, 'hello')).toBe(false);
     });
 
-    it('should resize a running session terminal', async () => {
+    it('should resize a running session terminal', () => {
       const session = service.create('claude', '/project');
-      await service.launchSession(session.id, '/project', '/worktree', 'claude');
+      service.registerTerminal(session.id, 1, '/worktree');
 
       const result = service.resizeSession(session.id, 120, 40);
 
@@ -489,9 +388,9 @@ describe('SessionService', () => {
   });
 
   describe('isSessionRunning', () => {
-    it('should return true when session has active terminal', async () => {
+    it('should return true when session has active terminal', () => {
       const session = service.create('claude', '/project');
-      await service.launchSession(session.id, '/project', '/worktree', 'claude');
+      service.registerTerminal(session.id, 1, '/worktree');
 
       expect(service.isSessionRunning(session.id)).toBe(true);
     });
@@ -510,7 +409,7 @@ describe('SessionService', () => {
   describe('stopSession', () => {
     it('should stop a running session', async () => {
       const session = service.create('claude', '/project');
-      await service.launchSession(session.id, '/project', '/worktree', 'claude');
+      service.registerTerminal(session.id, 1, '/worktree');
 
       const stopped = await service.stopSession(session.id);
 
@@ -561,88 +460,23 @@ describe('SessionService', () => {
     });
   });
 
-  describe('onModuleDestroy', () => {
-    it('should snapshot active sessions with Claude session IDs', async () => {
-      const session = service.create('claude', '/project', { name: 'Test' });
-      await service.launchSession(session.id, '/project', '/worktree', 'claude');
-      // Manually set claudeSessionId (normally done by polling)
-      const storedSession = service.get(session.id);
-      if (storedSession) storedSession.claudeSessionId = 'claude-id-123';
+  describe('registerTerminal', () => {
+    it('should register terminal reference for a session', () => {
+      const session = service.create('claude', '/project');
+      service.registerTerminal(session.id, 42, '/worktree');
 
-      service.onModuleDestroy();
-
-      expect(workspaceService.saveActiveSessionsSnapshot).toHaveBeenCalledWith(
-        expect.arrayContaining([
-          expect.objectContaining({
-            claudeSessionId: 'claude-id-123',
-            projectPath: '/project',
-            name: 'Test',
-          }),
-        ])
-      );
-    });
-
-    it('should not include sessions without Claude session IDs', async () => {
-      service.create('claude', '/project');
-      // No claudeSessionId set
-
-      service.onModuleDestroy();
-
-      expect(workspaceService.saveActiveSessionsSnapshot).toHaveBeenCalledWith([]);
+      const updated = service.get(session.id);
+      expect(updated?.terminalSessionId).toBe(42);
+      expect(updated?.worktreePath).toBe('/worktree');
     });
   });
 
-  describe('launchSession with hooks', () => {
-    it('should register hooks and start watching for claude sessions', async () => {
+  describe('setClaudeSessionId', () => {
+    it('should set Claude session ID for a session', () => {
       const session = service.create('claude', '/project');
+      service.setClaudeSessionId(session.id, 'claude-abc-123');
 
-      await service.launchSession(session.id, '/project', '/worktree', 'claude');
-
-      expect(hookManager.registerHooks).toHaveBeenCalledWith('/project');
-      expect(hookManager.startWatching).toHaveBeenCalled();
-    });
-
-    it('should not register hooks for plain mode sessions', async () => {
-      cliCommandService.getCliConfig.mockReturnValue({
-        command: '/bin/bash',
-        args: ['-l'],
-      });
-      cliCommandService.getAiModeName.mockReturnValue('Plain Terminal');
-
-      const session = service.create('plain', '/project');
-
-      await service.launchSession(session.id, '/project', '/worktree', 'plain');
-
-      expect(hookManager.registerHooks).not.toHaveBeenCalled();
-      expect(hookManager.startWatching).not.toHaveBeenCalled();
-    });
-
-    it('should snapshot Claude sessions for non-resumed sessions', async () => {
-      const session = service.create('claude', '/project');
-
-      await service.launchSession(session.id, '/project', '/worktree', 'claude');
-
-      expect(claudeSessionReader.readSessionsIndex).toHaveBeenCalledWith('/project');
-    });
-
-    it('should snapshot Claude sessions for fork sessions', async () => {
-      const session = service.create('claude', '/project', {
-        forkSessionId: 'fork-id',
-      });
-
-      await service.launchSession(session.id, '/project', '/worktree', 'claude');
-
-      expect(claudeSessionReader.readSessionsIndex).toHaveBeenCalledWith('/project');
-    });
-
-    it('should snapshot Claude sessions for continue-last sessions', async () => {
-      const session = service.create('claude', '/project', {
-        continueLastSession: true,
-      });
-
-      await service.launchSession(session.id, '/project', '/worktree', 'claude');
-
-      expect(claudeSessionReader.readSessionsIndex).toHaveBeenCalledWith('/project');
+      expect(service.get(session.id)?.claudeSessionId).toBe('claude-abc-123');
     });
   });
 });
