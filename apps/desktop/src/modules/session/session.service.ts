@@ -1,16 +1,12 @@
-import { Injectable, Inject, forwardRef, OnModuleDestroy } from '@nestjs/common';
+import { Injectable, Inject, forwardRef } from '@nestjs/common';
 import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
 import {
   SessionStatus,
-  SessionHistoryEntry,
-  ActiveSessionSnapshot,
   AiMode,
   CreateSessionOptions,
   UpdateSessionOptions,
   WorktreeSettings,
   DEFAULT_WORKTREE_SETTINGS,
-  ExtendedSessionConfig,
-  LaunchSessionResult,
   SessionStatusUpdate,
   MAX_SESSION_NAME_LENGTH,
   MAX_MODEL_LENGTH,
@@ -20,27 +16,13 @@ import {
   normalizePath,
 } from '@omniscribe/shared';
 import { TerminalService } from '../terminal';
-import { McpWriterService, McpDiscoveryService } from '../mcp';
 import { WorktreeService } from '../git';
 import { WorkspaceService } from '../workspace';
-import { CliCommandService } from './cli-command.service';
-import { ClaudeSessionReaderService } from './claude-session-reader.service';
-import { HookManagerService } from './hook-manager.service';
 import { InternalSessionEvents, InternalTerminalEvents } from '../shared/events';
+import { BackendSessionConfig } from './types';
 
-/**
- * Backend-specific extension with fields not shared with frontend
- */
-export interface BackendSessionConfig extends ExtendedSessionConfig {
-  /** Timestamp of last terminal output (for health checks) */
-  lastOutputAt?: Date;
-  /** Claude Code session UUID to resume (used during launch) */
-  resumeSessionId?: string;
-  /** Claude Code session UUID to fork (used during launch) */
-  forkSessionId?: string;
-  /** Whether this session continues the most recent Claude session */
-  continueLastSession?: boolean;
-}
+// Re-export for backwards compatibility
+export type { BackendSessionConfig } from './types';
 
 /**
  * Valid session status transitions.
@@ -99,7 +81,7 @@ const VALID_TRANSITIONS: Record<SessionStatus, Set<SessionStatus>> = {
 };
 
 @Injectable()
-export class SessionService implements OnModuleDestroy {
+export class SessionService {
   private readonly logger = createLogger('SessionService');
   private sessions = new Map<string, BackendSessionConfig>();
   private terminalToSession = new Map<number, string>();
@@ -108,14 +90,9 @@ export class SessionService implements OnModuleDestroy {
   constructor(
     private readonly eventEmitter: EventEmitter2,
     private readonly terminalService: TerminalService,
-    private readonly mcpWriterService: McpWriterService,
-    private readonly mcpDiscoveryService: McpDiscoveryService,
     private readonly worktreeService: WorktreeService,
     @Inject(forwardRef(() => WorkspaceService))
-    private readonly workspaceService: WorkspaceService,
-    private readonly cliCommandService: CliCommandService,
-    private readonly claudeSessionReader: ClaudeSessionReaderService,
-    private readonly hookManager: HookManagerService
+    private readonly workspaceService: WorkspaceService
   ) {
     // Listen for terminal close events to update session status
     this.eventEmitter.on(InternalTerminalEvents.CLOSED, this.handleTerminalClosed.bind(this));
@@ -132,7 +109,10 @@ export class SessionService implements OnModuleDestroy {
   /**
    * Clear the terminal reference from a session and remove the reverse lookup entry.
    */
-  private clearTerminalRef(session: BackendSessionConfig): void {
+  clearTerminalRef(sessionId: string): void {
+    const session = this.sessions.get(sessionId);
+    if (!session) return;
+
     if (session.terminalSessionId !== undefined) {
       this.terminalToSession.delete(session.terminalSessionId);
       session.terminalSessionId = undefined;
@@ -140,41 +120,8 @@ export class SessionService implements OnModuleDestroy {
   }
 
   /**
-   * On module destroy, save a final snapshot as a fallback.
-   */
-  onModuleDestroy(): void {
-    this.refreshActiveSessionsSnapshot('shutdown');
-  }
-
-  /**
-   * Eagerly refresh the active sessions snapshot whenever sessions change.
-   * Called when a Claude session ID is captured, a terminal closes, or a session is removed.
-   * This ensures the snapshot is always up-to-date regardless of how the process exits.
-   */
-  private refreshActiveSessionsSnapshot(reason: string): void {
-    try {
-      const activeSessions = this.getRunningSessions();
-      const snapshots: ActiveSessionSnapshot[] = activeSessions
-        .filter(s => s.claudeSessionId)
-        .map(s => ({
-          claudeSessionId: s.claudeSessionId!,
-          projectPath: s.projectPath,
-          branch: s.branch,
-          name: s.name,
-        }));
-
-      this.workspaceService.saveActiveSessionsSnapshot(snapshots);
-      this.logger.debug(
-        `Refreshed active sessions snapshot (${snapshots.length} sessions, reason: ${reason})`
-      );
-    } catch (error) {
-      const msg = extractErrorMessage(error);
-      this.logger.warn(`Failed to save active sessions snapshot: ${msg}`);
-    }
-  }
-
-  /**
-   * Handle terminal closed events
+   * Handle terminal closed events.
+   * Updates session state and emits an event for the tracker to handle persistence.
    */
   private handleTerminalClosed(event: {
     sessionId: number;
@@ -192,46 +139,17 @@ export class SessionService implements OnModuleDestroy {
             : `Session exited with code ${event.exitCode}`;
 
         this.updateStatus(event.externalId, status, message);
-        this.clearTerminalRef(session);
+        this.clearTerminalRef(event.externalId);
 
-        // Persist session history if we captured a Claude session ID
-        if (session.claudeSessionId) {
-          this.persistSessionHistory(session, event.exitCode);
-        }
-
-        // Session is no longer running — update snapshot
-        this.refreshActiveSessionsSnapshot('terminal-closed');
+        // Emit event for ClaudeSessionTrackerService to handle persistence and snapshot
+        this.eventEmitter.emit(InternalSessionEvents.TERMINAL_CLOSED_WITH_SESSION, {
+          sessionId: event.externalId,
+          claudeSessionId: session.claudeSessionId,
+          exitCode: event.exitCode,
+        });
 
         this.logger.log(`Session ${event.externalId} terminal closed (exit=${event.exitCode})`);
       }
-    }
-  }
-
-  /**
-   * Persist a session's history entry to the workspace store.
-   * Called when a terminal closes and a Claude session ID was captured.
-   */
-  private persistSessionHistory(session: BackendSessionConfig, exitCode: number): void {
-    try {
-      const entry: SessionHistoryEntry = {
-        omniscribeSessionId: session.id,
-        claudeSessionId: session.claudeSessionId!,
-        projectPath: session.projectPath,
-        name: session.name,
-        lastStatus: session.status,
-        createdAt: session.createdAt.toISOString(),
-        lastActiveAt: session.lastActiveAt.toISOString(),
-        branch: session.branch,
-        exitCode,
-      };
-
-      this.workspaceService.addSessionHistory(entry);
-      this.logger.info(
-        `Persisted session history for ${session.id} (claude: ${session.claudeSessionId})`
-      );
-    } catch (error) {
-      const errorMessage = extractErrorMessage(error);
-      this.logger.warn(`Failed to persist session history for ${session.id}: ${errorMessage}`);
     }
   }
 
@@ -487,7 +405,7 @@ export class SessionService implements OnModuleDestroy {
       if (this.terminalService.hasSession(session.terminalSessionId)) {
         await this.terminalService.kill(session.terminalSessionId);
       }
-      this.clearTerminalRef(session);
+      this.clearTerminalRef(sessionId);
     }
 
     // Cleanup worktree if auto-cleanup is enabled (with reference counting — Bug #6)
@@ -530,9 +448,6 @@ export class SessionService implements OnModuleDestroy {
     // to keep it there for future sessions
 
     this.sessions.delete(sessionId);
-
-    // Session removed — update snapshot
-    this.refreshActiveSessionsSnapshot('session-removed');
 
     this.eventEmitter.emit(InternalSessionEvents.REMOVED, { sessionId });
 
@@ -598,157 +513,27 @@ export class SessionService implements OnModuleDestroy {
   }
 
   /**
-   * Launch a session by spawning the appropriate AI CLI in a terminal
-   * @param sessionId The session ID to launch
-   * @param projectPath The project directory path
-   * @param worktreePath The worktree directory (working directory for the CLI)
-   * @param aiMode The AI mode determining which CLI to spawn
-   * @returns Launch result with terminal session ID or error
+   * Register a terminal reference for a session.
+   * Called by SessionLauncherService after spawning a terminal.
    */
-  async launchSession(
-    sessionId: string,
-    projectPath: string,
-    worktreePath: string,
-    aiMode: AiMode
-  ): Promise<LaunchSessionResult> {
+  registerTerminal(sessionId: string, terminalSessionId: number, worktreePath: string): void {
     const session = this.sessions.get(sessionId);
-
-    if (!session) {
-      return {
-        success: false,
-        error: `Session not found: ${sessionId}`,
-      };
-    }
-
-    // Check if session already has an active terminal
-    if (session.terminalSessionId !== undefined) {
-      if (this.terminalService.hasSession(session.terminalSessionId)) {
-        return {
-          success: false,
-          error: 'Session already has an active terminal',
-        };
-      }
-      // Terminal no longer exists, clear the reference
-      this.clearTerminalRef(session);
-    }
-
-    // Update status to connecting
-    this.updateStatus(sessionId, 'connecting', 'Starting AI session...');
-
-    // Snapshot current Claude session IDs before spawning (for non-resumed sessions, forks, and continue)
-    // so we can detect which new Claude session was created by this launch.
-    // Fork creates a new session (sidechain), so we poll for it. Continue also creates/resumes.
-    const shouldPollForNewSession =
-      aiMode === 'claude' &&
-      (!session.isResumed || session.forkSessionId || session.continueLastSession);
-    let previousSessionIds: Set<string> | null = null;
-    if (shouldPollForNewSession) {
-      try {
-        const currentEntries = await this.claudeSessionReader.readSessionsIndex(projectPath);
-        previousSessionIds = new Set(currentEntries.map(e => e.sessionId));
-        this.logger.debug(
-          `Snapshotted ${previousSessionIds.size} existing Claude sessions for ${sessionId}`
-        );
-      } catch (error) {
-        const msg = extractErrorMessage(error);
-        this.logger.warn(`Failed to snapshot Claude sessions for ${sessionId}: ${msg}`);
-      }
-    }
-
-    try {
-      // Register hooks for instant session ID capture (fire-and-forget)
-      if (aiMode === 'claude') {
-        this.hookManager.registerHooks(projectPath).catch(err => {
-          const msg = err instanceof Error ? err.message : String(err);
-          this.logger.warn(`Failed to register hooks for ${sessionId}: ${msg}`);
-        });
-        this.hookManager.startWatching();
-      }
-
-      // Only discover and write MCP config for Claude sessions.
-      // Plain terminals don't use Claude Code and don't read .mcp.json.
-      // Writing for all modes causes a race condition where the plain session
-      // overwrites the Claude session's ID in .mcp.json.
-      if (aiMode === 'claude') {
-        const allServers = await this.mcpDiscoveryService.discoverServers(projectPath);
-        this.logger.log(`Discovered ${allServers.length} MCP servers for session ${sessionId}`);
-
-        await this.mcpWriterService.writeConfig(worktreePath, sessionId, projectPath, allServers);
-
-        this.logger.log(`MCP config written to ${worktreePath}/.mcp.json`);
-      }
-
-      // Get CLI configuration for the AI mode
-      const cliConfig = this.cliCommandService.getCliConfig(aiMode, session);
-
-      // Generate project hash for MCP status file identification
-      const projectHash = this.mcpWriterService.generateProjectHash(projectPath);
-
-      // Build environment variables for the spawned terminal process.
-      // Note: OMNISCRIBE_SESSION_ID is also written to .mcp.json env for Claude sessions
-      // so the MCP server subprocess can identify which session it belongs to.
-      const env: Record<string, string> = {
-        OMNISCRIBE_SESSION_ID: sessionId,
-        OMNISCRIBE_PROJECT_HASH: projectHash,
-        OMNISCRIBE_PROJECT_PATH: projectPath,
-        OMNISCRIBE_WORKTREE_PATH: worktreePath,
-        OMNISCRIBE_AI_MODE: aiMode,
-      };
-
-      // Add model if specified
-      if (session.model) {
-        env.OMNISCRIBE_MODEL = session.model;
-      }
-
-      this.logger.log(
-        `Launching session ${sessionId}: ${cliConfig.command} ${cliConfig.args.join(' ')} in ${worktreePath}`
-      );
-
-      // Spawn the terminal with the AI CLI
-      const terminalSessionId = this.terminalService.spawnCommand(
-        cliConfig.command,
-        cliConfig.args,
-        worktreePath,
-        env,
-        sessionId // Link terminal to session
-      );
-
-      // Update session with terminal reference
+    if (session) {
       session.terminalSessionId = terminalSessionId;
       this.terminalToSession.set(terminalSessionId, session.id);
       session.worktreePath = worktreePath;
       session.lastActiveAt = new Date();
+    }
+  }
 
-      // Update status to idle (session is waiting for user input)
-      // MCP will report actual status (working/planning) when user sends a prompt
-      this.updateStatus(
-        sessionId,
-        'idle',
-        `Running ${this.cliCommandService.getAiModeName(aiMode)}`
-      );
-
-      this.logger.log(`Session ${sessionId} launched with terminal ${terminalSessionId}`);
-
-      // Poll for new Claude session ID (fire-and-forget, does not block launch)
-      if (shouldPollForNewSession && previousSessionIds) {
-        this.pollForClaudeSessionId(sessionId, projectPath, previousSessionIds);
-      }
-
-      return {
-        success: true,
-        terminalSessionId,
-      };
-    } catch (error) {
-      const errorMessage = extractErrorMessage(error);
-
-      this.logger.error(`Failed to launch session ${sessionId}`, error);
-
-      this.updateStatus(sessionId, 'error', `Launch failed: ${errorMessage}`);
-
-      return {
-        success: false,
-        error: errorMessage,
-      };
+  /**
+   * Set the Claude session ID for a session.
+   * Called by ClaudeSessionTrackerService when a new Claude session is detected.
+   */
+  setClaudeSessionId(sessionId: string, claudeSessionId: string): void {
+    const session = this.sessions.get(sessionId);
+    if (session) {
+      session.claudeSessionId = claudeSessionId;
     }
   }
 
@@ -776,7 +561,7 @@ export class SessionService implements OnModuleDestroy {
       this.logger.debug(
         `stopSession: terminal ${terminalId} for session ${sessionId} no longer exists`
       );
-      this.clearTerminalRef(session);
+      this.clearTerminalRef(sessionId);
       return false;
     }
 
@@ -784,7 +569,7 @@ export class SessionService implements OnModuleDestroy {
 
     await this.terminalService.kill(terminalId);
 
-    this.clearTerminalRef(session);
+    this.clearTerminalRef(sessionId);
     this.updateStatus(sessionId, 'idle', 'Session stopped');
 
     this.logger.log(`Session ${sessionId} stopped`);
@@ -842,69 +627,5 @@ export class SessionService implements OnModuleDestroy {
     }
 
     return this.terminalService.hasSession(session.terminalSessionId);
-  }
-
-  /**
-   * Poll for a newly created Claude session ID after launching a CLI process.
-   * Polls every 2 seconds for up to 30 seconds. When found, updates the session
-   * and emits an event so the frontend can track it.
-   *
-   * This is fire-and-forget -- it does not block session launch.
-   */
-  private async pollForClaudeSessionId(
-    sessionId: string,
-    projectPath: string,
-    previousSessionIds: Set<string>
-  ): Promise<void> {
-    const POLL_INTERVAL_MS = 2000;
-    const MAX_POLLS = 15; // 15 * 2s = 30s total
-
-    for (let i = 0; i < MAX_POLLS; i++) {
-      await new Promise<void>(resolve => setTimeout(resolve, POLL_INTERVAL_MS));
-
-      // Check if session still exists (might have been removed during polling)
-      const session = this.sessions.get(sessionId);
-      if (!session) {
-        this.logger.debug(`Session ${sessionId} removed during Claude session ID polling`);
-        return;
-      }
-
-      // Check if session already has a Claude session ID (e.g., set by resume)
-      if (session.claudeSessionId) {
-        this.logger.debug(`Session ${sessionId} already has Claude session ID, stopping poll`);
-        return;
-      }
-
-      try {
-        const newSession = await this.claudeSessionReader.findNewSession(
-          projectPath,
-          previousSessionIds
-        );
-
-        if (newSession) {
-          session.claudeSessionId = newSession.sessionId;
-          this.logger.info(`Captured Claude session ID for ${sessionId}: ${newSession.sessionId}`);
-
-          // Emit event so the gateway can broadcast to frontend
-          this.eventEmitter.emit(InternalSessionEvents.CLAUDE_ID_CAPTURED, {
-            sessionId,
-            claudeSessionId: newSession.sessionId,
-          });
-
-          // Session is now resumable — eagerly update the snapshot
-          this.refreshActiveSessionsSnapshot('claude-id-captured');
-
-          return;
-        }
-      } catch (error) {
-        const msg = extractErrorMessage(error);
-        this.logger.warn(`Poll error for Claude session ID (${sessionId}): ${msg}`);
-        // Continue polling despite errors
-      }
-    }
-
-    this.logger.debug(
-      `Claude session ID polling timed out for ${sessionId} after ${(MAX_POLLS * POLL_INTERVAL_MS) / 1000}s`
-    );
   }
 }
