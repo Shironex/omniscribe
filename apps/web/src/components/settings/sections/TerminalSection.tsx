@@ -1,5 +1,6 @@
 import { useTerminalStore, type CursorStyle } from '@/stores/useTerminalStore';
 import { terminalThemes, type TerminalThemeName } from '@/lib/terminal-themes';
+import { cn } from '@/lib/utils';
 
 const CURSOR_STYLES: { value: CursorStyle; label: string }[] = [
   { value: 'block', label: 'Block' },
@@ -77,11 +78,12 @@ export function TerminalSection() {
             <button
               key={opt.value}
               onClick={() => setCursorStyle(opt.value)}
-              className={`px-3 py-1.5 rounded-md text-sm border transition-colors ${
+              className={cn(
+                'px-3 py-1.5 rounded-md text-sm border transition-colors',
                 cursorStyle === opt.value
                   ? 'bg-primary text-primary-foreground border-primary'
                   : 'bg-card border-border text-foreground hover:bg-muted'
-              }`}
+              )}
             >
               {opt.label}
             </button>
@@ -96,14 +98,16 @@ export function TerminalSection() {
           role="switch"
           aria-checked={cursorBlink}
           onClick={() => setCursorBlink(!cursorBlink)}
-          className={`relative w-10 h-5 rounded-full transition-colors ${
+          className={cn(
+            'relative w-10 h-5 rounded-full transition-colors',
             cursorBlink ? 'bg-primary' : 'bg-muted-foreground/30'
-          }`}
+          )}
         >
           <span
-            className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${
-              cursorBlink ? 'translate-x-5' : ''
-            }`}
+            className={cn(
+              'absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform',
+              cursorBlink && 'translate-x-5'
+            )}
           />
         </button>
       </div>
@@ -139,11 +143,12 @@ export function TerminalSection() {
               <button
                 key={key}
                 onClick={() => setTerminalThemeName(key)}
-                className={`flex items-center gap-2 p-2 rounded-md border text-sm transition-colors ${
+                className={cn(
+                  'flex items-center gap-2 p-2 rounded-md border text-sm transition-colors',
                   isSelected
                     ? 'border-primary bg-primary/10'
                     : 'border-border bg-card hover:bg-muted'
-                }`}
+                )}
               >
                 <div className="flex gap-0.5">
                   <div

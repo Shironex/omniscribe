@@ -1,5 +1,4 @@
-import { clsx } from 'clsx';
-import { twMerge } from 'tailwind-merge';
+import { cn } from '@/lib/utils';
 import { LucideIcon } from 'lucide-react';
 
 export interface QuickAction {
@@ -27,7 +26,7 @@ export function QuickActionPills({ actions, onRunAction, className }: QuickActio
   if (actions.length === 0) return null;
 
   return (
-    <div className={twMerge(clsx('flex items-center gap-1.5 flex-wrap', className))}>
+    <div className={cn('flex items-center gap-1.5 flex-wrap', className)}>
       {actions.map(action => {
         const Icon = action.icon;
         const variant = action.variant || 'default';
@@ -36,7 +35,7 @@ export function QuickActionPills({ actions, onRunAction, className }: QuickActio
           <button
             key={action.id}
             onClick={() => onRunAction(action.id)}
-            className={clsx(
+            className={cn(
               'flex items-center gap-1.5 px-2.5 py-1 rounded-full',
               'text-xs font-medium',
               'border border-transparent',

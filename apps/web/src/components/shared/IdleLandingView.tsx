@@ -1,5 +1,4 @@
-import { clsx } from 'clsx';
-import { twMerge } from 'tailwind-merge';
+import { cn } from '@/lib/utils';
 import { BrainCircuit, Plus } from 'lucide-react';
 import { useMemo } from 'react';
 import { getGreeting } from '@/lib/date-utils';
@@ -25,12 +24,10 @@ export function IdleLandingView({
 
   return (
     <div
-      className={twMerge(
-        clsx(
-          'flex flex-col items-center justify-center h-full w-full',
-          'bg-background relative overflow-hidden',
-          className
-        )
+      className={cn(
+        'flex flex-col items-center justify-center h-full w-full',
+        'bg-background relative overflow-hidden',
+        className
       )}
     >
       {/* Background gradient blobs for glassmorphism effect - uses theme colors */}
@@ -42,7 +39,7 @@ export function IdleLandingView({
 
       {/* Glassmorphism card */}
       <div
-        className={clsx(
+        className={cn(
           'relative flex flex-col items-center',
           'px-12 py-10 rounded-2xl',
           'bg-background/95 backdrop-blur-xl',
@@ -56,7 +53,7 @@ export function IdleLandingView({
         {/* Icon */}
         <div className="mb-6">
           <div
-            className={clsx(
+            className={cn(
               'w-24 h-24 rounded-full',
               'bg-linear-to-br from-primary/20 to-brand-600/20',
               'flex items-center justify-center'

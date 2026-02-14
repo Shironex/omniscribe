@@ -1,4 +1,4 @@
-import { clsx } from 'clsx';
+import { cn } from '@/lib/utils';
 import { MoreVertical, Settings, X } from 'lucide-react';
 
 interface MoreMenuDropdownProps {
@@ -19,7 +19,7 @@ export function MoreMenuDropdown({
       <button
         type="button"
         onClick={onToggle}
-        className={clsx(
+        className={cn(
           'p-1 rounded',
           'text-muted-foreground hover:text-foreground',
           'hover:bg-card transition-colors',

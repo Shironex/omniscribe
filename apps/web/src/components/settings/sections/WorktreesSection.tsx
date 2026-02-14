@@ -6,7 +6,7 @@ import {
   FlaskConical,
   AlertTriangle,
 } from 'lucide-react';
-import { clsx } from 'clsx';
+import { cn } from '@/lib/utils';
 import { useWorkspaceStore } from '@/stores';
 import type { WorktreeMode, WorktreeLocation, WorktreeSettings } from '@omniscribe/shared';
 import { DEFAULT_WORKTREE_SETTINGS, USER_DATA_DIR, WORKTREES_DIR } from '@omniscribe/shared';
@@ -86,7 +86,7 @@ export function WorktreesSection() {
       {/* Section Header */}
       <div className="flex items-center gap-3">
         <div
-          className={clsx(
+          className={cn(
             'w-10 h-10 rounded-xl flex items-center justify-center',
             'bg-linear-to-br from-primary/20 to-brand-600/10',
             'ring-1'
@@ -121,7 +121,7 @@ export function WorktreesSection() {
           {WORKTREE_MODE_OPTIONS.map(option => (
             <label
               key={option.value}
-              className={clsx(
+              className={cn(
                 'flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-colors',
                 worktreeSettings.mode === option.value
                   ? 'bg-primary/10 border border-primary/30'
@@ -155,7 +155,7 @@ export function WorktreesSection() {
             return (
               <label
                 key={option.value}
-                className={clsx(
+                className={cn(
                   'flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-colors',
                   worktreeSettings.location === option.value
                     ? 'bg-primary/10 border border-primary/30'
@@ -198,7 +198,7 @@ export function WorktreesSection() {
             </div>
             <button
               onClick={handleAutoCleanupToggle}
-              className={clsx(
+              className={cn(
                 'relative w-11 h-6 rounded-full transition-colors duration-200',
                 worktreeSettings.autoCleanup ? 'bg-primary' : 'bg-border'
               )}
@@ -206,7 +206,7 @@ export function WorktreesSection() {
               aria-checked={worktreeSettings.autoCleanup}
             >
               <div
-                className={clsx(
+                className={cn(
                   'absolute top-1 w-4 h-4 rounded-full bg-white transition-transform duration-200',
                   worktreeSettings.autoCleanup ? 'translate-x-6' : 'translate-x-1'
                 )}

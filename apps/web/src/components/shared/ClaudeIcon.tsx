@@ -1,4 +1,4 @@
-import { clsx } from 'clsx';
+import { cn } from '@/lib/utils';
 
 interface ClaudeIconProps {
   className?: string;
@@ -15,7 +15,7 @@ export function ClaudeIcon({ className, size = 24 }: ClaudeIconProps) {
       viewBox="0 0 248 248"
       width={size}
       height={size}
-      className={clsx('inline-block', className)}
+      className={cn('inline-block', className)}
       aria-hidden="true"
       focusable="false"
     >

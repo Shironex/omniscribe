@@ -1,6 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { clsx } from 'clsx';
-import { twMerge } from 'tailwind-merge';
+import { cn } from '@/lib/utils';
 import { ChevronDown, Search, GitBranch, Check, Plus } from 'lucide-react';
 
 export interface Branch {
@@ -83,12 +82,12 @@ export function BranchSelector({
     !branches.some(b => b.name.toLowerCase() === searchQuery.toLowerCase());
 
   return (
-    <div ref={containerRef} className={twMerge(clsx('relative', className))}>
+    <div ref={containerRef} className={cn('relative', className)}>
       {/* Trigger button */}
       <button
         onClick={() => !disabled && setIsOpen(!isOpen)}
         disabled={disabled}
-        className={clsx(
+        className={cn(
           'flex items-center gap-2 px-3 py-1.5 rounded',
           'bg-card border border-border',
           'text-sm text-foreground',
@@ -102,14 +101,14 @@ export function BranchSelector({
         <span className="truncate max-w-32">{currentBranch}</span>
         <ChevronDown
           size={14}
-          className={clsx('text-muted-foreground transition-transform', isOpen && 'rotate-180')}
+          className={cn('text-muted-foreground transition-transform', isOpen && 'rotate-180')}
         />
       </button>
 
       {/* Dropdown */}
       {isOpen && (
         <div
-          className={clsx(
+          className={cn(
             'absolute top-full left-0 mt-1 z-50',
             'w-64 max-h-80 overflow-hidden',
             'bg-muted border border-border rounded-lg shadow-xl',
@@ -129,7 +128,7 @@ export function BranchSelector({
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 placeholder="Search branches..."
-                className={clsx(
+                className={cn(
                   'w-full pl-8 pr-3 py-1.5 rounded',
                   'bg-card border border-border',
                   'text-sm text-foreground placeholder:text-muted-foreground',
@@ -151,7 +150,7 @@ export function BranchSelector({
                   <button
                     key={branch.name}
                     onClick={() => handleSelect(branch.name)}
-                    className={clsx(
+                    className={cn(
                       'w-full flex items-center gap-2 px-3 py-1.5',
                       'text-sm text-left transition-colors',
                       branch.name === currentBranch
@@ -179,7 +178,7 @@ export function BranchSelector({
                   <button
                     key={branch.name}
                     onClick={() => handleSelect(branch.name)}
-                    className={clsx(
+                    className={cn(
                       'w-full flex items-center gap-2 px-3 py-1.5',
                       'text-sm text-left transition-colors',
                       branch.name === currentBranch
@@ -210,7 +209,7 @@ export function BranchSelector({
             <div className="border-t border-border">
               <button
                 onClick={handleCreateBranch}
-                className={clsx(
+                className={cn(
                   'w-full flex items-center gap-2 px-3 py-2',
                   'text-sm text-primary',
                   'hover:bg-card transition-colors'

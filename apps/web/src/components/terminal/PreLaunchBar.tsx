@@ -1,5 +1,4 @@
-import { clsx } from 'clsx';
-import { twMerge } from 'tailwind-merge';
+import { cn } from '@/lib/utils';
 import { Play, X, Terminal, ChevronDown } from 'lucide-react';
 import { useState, useRef, useEffect, type ComponentType } from 'react';
 import type { Branch } from '@/components/shared/BranchSelector';
@@ -79,12 +78,10 @@ export function PreLaunchBar({
 
   return (
     <div
-      className={twMerge(
-        clsx(
-          'flex items-center gap-2 px-3 py-2',
-          'bg-card border border-border rounded-lg',
-          className
-        )
+      className={cn(
+        'flex items-center gap-2 px-3 py-2',
+        'bg-card border border-border rounded-lg',
+        className
       )}
     >
       {/* AI Mode selector */}
@@ -99,7 +96,7 @@ export function PreLaunchBar({
           <span data-testid="ai-mode-label">{selectedMode.label}</span>
           <ChevronDown
             size={12}
-            className={clsx(
+            className={cn(
               'text-muted-foreground transition-transform ml-auto',
               isAIModeOpen && 'rotate-180'
             )}
@@ -109,7 +106,7 @@ export function PreLaunchBar({
         {/* AI Mode dropdown */}
         {isAIModeOpen && (
           <div
-            className={clsx(
+            className={cn(
               'absolute bottom-full left-0 mb-1 z-50',
               'bg-muted border border-border rounded-lg shadow-xl',
               'overflow-hidden animate-fade-in min-w-[120px]'
@@ -130,7 +127,7 @@ export function PreLaunchBar({
                   }}
                   disabled={isDisabled}
                   title={isDisabled ? 'Claude CLI is not installed' : undefined}
-                  className={clsx(
+                  className={cn(
                     'w-full justify-start text-xs',
                     option.value === slot.aiMode && 'bg-primary/10 text-primary'
                   )}

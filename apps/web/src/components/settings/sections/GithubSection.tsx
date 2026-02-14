@@ -12,7 +12,7 @@ import {
   Loader2,
   User,
 } from 'lucide-react';
-import { clsx } from 'clsx';
+import { cn } from '@/lib/utils';
 import { useSettingsStore } from '@/stores';
 
 export function GithubSection() {
@@ -54,7 +54,7 @@ export function GithubSection() {
       {/* Section Header */}
       <div className="flex items-center gap-3">
         <div
-          className={clsx(
+          className={cn(
             'w-10 h-10 rounded-xl flex items-center justify-center',
             'bg-linear-to-br from-primary/20 to-brand-600/10',
             'ring-1'
@@ -76,7 +76,7 @@ export function GithubSection() {
           aria-label="Refresh GitHub CLI status"
           onClick={refreshStatus}
           disabled={isLoading}
-          className={clsx(
+          className={cn(
             'p-2 rounded-lg transition-colors',
             'hover:bg-muted text-muted-foreground hover:text-foreground',
             'disabled:opacity-50 disabled:cursor-not-allowed'

@@ -1,4 +1,4 @@
-import { clsx } from 'clsx';
+import { cn } from '@/lib/utils';
 import { useMemo } from 'react';
 import { getLayout } from '@/lib/terminal-layout';
 import { Button } from '@/components/ui/button';
@@ -19,7 +19,7 @@ export function GridPresetCard({ count, selected, disabled, onClick }: GridPrese
       onClick={onClick}
       disabled={disabled}
       title={`${count} ${count === 1 ? 'session' : 'sessions'}`}
-      className={clsx(
+      className={cn(
         'flex flex-col items-center p-2.5 h-auto',
         'transition-all duration-200',
         selected
@@ -34,7 +34,7 @@ export function GridPresetCard({ count, selected, disabled, onClick }: GridPrese
             {row.map(cellIndex => (
               <div
                 key={cellIndex}
-                className={clsx(
+                className={cn(
                   'flex-1 rounded-[3px] border',
                   selected
                     ? 'bg-primary/30 border-primary/50'

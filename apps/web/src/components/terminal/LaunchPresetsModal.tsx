@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
-import { clsx } from 'clsx';
 import { Terminal, ChevronDown, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
@@ -154,7 +153,7 @@ export function LaunchPresetsModal({
                     <span>{aiMode === 'claude' ? 'Claude' : 'Plain'}</span>
                     <ChevronDown
                       size={12}
-                      className={clsx(
+                      className={cn(
                         'text-muted-foreground transition-transform ml-auto',
                         isAIModeOpen && 'rotate-180'
                       )}
@@ -163,7 +162,7 @@ export function LaunchPresetsModal({
 
                   {isAIModeOpen && (
                     <div
-                      className={clsx(
+                      className={cn(
                         'absolute top-full left-0 mt-1 z-50',
                         'bg-muted border border-border rounded-lg shadow-xl',
                         'overflow-hidden animate-fade-in min-w-[120px]'
@@ -183,7 +182,7 @@ export function LaunchPresetsModal({
                             }}
                             disabled={isDisabled}
                             title={isDisabled ? 'Claude CLI is not installed' : undefined}
-                            className={clsx(
+                            className={cn(
                               'w-full justify-start text-xs',
                               mode === aiMode && 'bg-primary/10 text-primary'
                             )}

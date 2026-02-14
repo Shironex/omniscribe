@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useCallback, useState, useMemo } from 'react';
 import { X, ChevronUp, ChevronDown, CaseSensitive, Regex } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { debounce } from '@/lib/debounce';
 
 interface TerminalSearchBarProps {
@@ -72,9 +73,10 @@ export const TerminalSearchBar: React.FC<TerminalSearchBarProps> = ({
       <button
         type="button"
         onClick={() => setCaseSensitive(v => !v)}
-        className={`p-0.5 rounded hover:bg-muted transition-colors ${
+        className={cn(
+          'p-0.5 rounded hover:bg-muted transition-colors',
           caseSensitive ? 'text-primary bg-muted' : 'text-muted-foreground'
-        }`}
+        )}
         title="Case Sensitive"
       >
         <CaseSensitive size={14} />
@@ -83,9 +85,10 @@ export const TerminalSearchBar: React.FC<TerminalSearchBarProps> = ({
       <button
         type="button"
         onClick={() => setRegex(v => !v)}
-        className={`p-0.5 rounded hover:bg-muted transition-colors ${
+        className={cn(
+          'p-0.5 rounded hover:bg-muted transition-colors',
           regex ? 'text-primary bg-muted' : 'text-muted-foreground'
-        }`}
+        )}
         title="Regex"
       >
         <Regex size={14} />

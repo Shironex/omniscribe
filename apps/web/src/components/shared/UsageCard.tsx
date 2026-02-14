@@ -1,4 +1,4 @@
-import { clsx } from 'clsx';
+import { cn } from '@/lib/utils';
 import { CheckCircle, AlertTriangle, XCircle, Clock } from 'lucide-react';
 import { ProgressBar } from './ProgressBar';
 
@@ -39,7 +39,7 @@ export function UsageCard({
 
   return (
     <div
-      className={clsx(
+      className={cn(
         'rounded-xl border bg-card/50 p-4 transition-opacity',
         isPrimary ? 'border-border shadow-xs' : 'border-border/60',
         (stale || !isValidPercentage) && 'opacity-50'
@@ -47,14 +47,14 @@ export function UsageCard({
     >
       <div className="flex items-start justify-between mb-3">
         <div>
-          <h4 className={clsx('font-semibold', isPrimary ? 'text-sm' : 'text-xs')}>{title}</h4>
+          <h4 className={cn('font-semibold', isPrimary ? 'text-sm' : 'text-xs')}>{title}</h4>
           <p className="text-[10px] text-muted-foreground">{subtitle}</p>
         </div>
         {isValidPercentage ? (
           <div className="flex items-center gap-1.5">
-            <StatusIcon className={clsx('w-3.5 h-3.5', status.color)} />
+            <StatusIcon className={cn('w-3.5 h-3.5', status.color)} />
             <span
-              className={clsx(
+              className={cn(
                 'font-mono font-bold',
                 status.color,
                 isPrimary ? 'text-base' : 'text-sm'

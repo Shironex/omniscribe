@@ -1,5 +1,4 @@
-import { clsx } from 'clsx';
-import { twMerge } from 'tailwind-merge';
+import { cn } from '@/lib/utils';
 
 export type SessionStatus =
   | 'starting'
@@ -38,7 +37,7 @@ interface StatusLegendProps {
 
 export function StatusLegend({ counts, showCounts = true, className }: StatusLegendProps) {
   return (
-    <div className={twMerge(clsx('flex items-center gap-3 flex-wrap', className))}>
+    <div className={cn('flex items-center gap-3 flex-wrap', className)}>
       {(Object.entries(statusConfig) as [SessionStatus, { label: string; color: string }][]).map(
         ([status, config]) => {
           const count = counts?.[status] ?? 0;
@@ -46,7 +45,7 @@ export function StatusLegend({ counts, showCounts = true, className }: StatusLeg
 
           return (
             <div key={status} className="flex items-center gap-1.5">
-              <span className={clsx('w-2 h-2 rounded-full', config.color)} />
+              <span className={cn('w-2 h-2 rounded-full', config.color)} />
               <span className="text-xs text-foreground-secondary">
                 {config.label}
                 {showCounts && count > 0 && (
@@ -73,7 +72,7 @@ export function StatusDot({
   const config = statusConfig[status];
   return (
     <span
-      className={twMerge(clsx('w-2 h-2 rounded-full inline-block', config.color, className))}
+      className={cn('w-2 h-2 rounded-full inline-block', config.color, className)}
       title={title ?? config.label}
     />
   );

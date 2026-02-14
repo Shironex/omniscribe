@@ -1,5 +1,4 @@
-import { clsx } from 'clsx';
-import { twMerge } from 'tailwind-merge';
+import { cn } from '@/lib/utils';
 import { FolderOpen, Clock, Sparkles } from 'lucide-react';
 import { useEffect, useMemo } from 'react';
 import type { ProjectTab } from '@omniscribe/shared';
@@ -54,12 +53,10 @@ export function WelcomeView({
 
   return (
     <div
-      className={twMerge(
-        clsx(
-          'flex flex-col items-center justify-center h-full w-full',
-          'bg-background relative overflow-hidden',
-          className
-        )
+      className={cn(
+        'flex flex-col items-center justify-center h-full w-full',
+        'bg-background relative overflow-hidden',
+        className
       )}
     >
       {/* Background gradient blobs for glassmorphism effect */}
@@ -73,7 +70,7 @@ export function WelcomeView({
       <div className="relative z-10 flex flex-col items-center max-w-2xl w-full px-8">
         {/* Hero section */}
         <div
-          className={clsx(
+          className={cn(
             'flex flex-col items-center',
             'px-12 py-10 rounded-2xl mb-8',
             'bg-background/95 backdrop-blur-xl',
@@ -87,7 +84,7 @@ export function WelcomeView({
           {/* Logo/Icon */}
           <div className="mb-6">
             <div
-              className={clsx(
+              className={cn(
                 'w-20 h-20 rounded-full',
                 'bg-linear-to-br from-primary/20 to-brand-600/20',
                 'flex items-center justify-center'
@@ -117,7 +114,7 @@ export function WelcomeView({
                   key={project.id}
                   variant="outline"
                   onClick={() => onSelectProject(project.id)}
-                  className={clsx(
+                  className={cn(
                     'w-full justify-start h-auto px-4 py-3',
                     'bg-card/50 backdrop-blur-lg',
                     'border-border/60',
@@ -127,7 +124,7 @@ export function WelcomeView({
                   )}
                 >
                   <div
-                    className={clsx(
+                    className={cn(
                       'w-8 h-8 rounded-md flex items-center justify-center',
                       'bg-primary/10 text-primary',
                       'group-hover:bg-primary/20 transition-colors'
@@ -159,7 +156,7 @@ export function WelcomeView({
         <Button
           variant="default"
           onClick={onOpenProject}
-          className={clsx(
+          className={cn(
             'gap-3 px-6 py-3 rounded-xl',
             'bg-linear-to-r from-primary to-brand-600',
             'text-white font-medium',

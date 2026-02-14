@@ -1,5 +1,5 @@
 import { Monitor, AlertTriangle, RotateCcw, FlaskConical } from 'lucide-react';
-import { clsx } from 'clsx';
+import { cn } from '@/lib/utils';
 import { useWorkspaceStore } from '@/stores';
 import type { AiMode, SessionSettings } from '@omniscribe/shared';
 import { DEFAULT_SESSION_SETTINGS } from '@omniscribe/shared';
@@ -56,7 +56,7 @@ export function SessionsSection() {
       {/* Section Header */}
       <div className="flex items-center gap-3">
         <div
-          className={clsx(
+          className={cn(
             'w-10 h-10 rounded-xl flex items-center justify-center',
             'bg-linear-to-br from-primary/20 to-brand-600/10',
             'ring-1'
@@ -85,7 +85,7 @@ export function SessionsSection() {
           {AI_MODE_OPTIONS.map(option => (
             <label
               key={option.value}
-              className={clsx(
+              className={cn(
                 'flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-colors',
                 sessionSettings.defaultMode === option.value
                   ? 'bg-primary/10 border border-primary/30'
@@ -131,7 +131,7 @@ export function SessionsSection() {
             <button
               type="button"
               onClick={handleSkipPermissionsToggle}
-              className={clsx(
+              className={cn(
                 'relative w-11 h-6 rounded-full transition-colors duration-200',
                 skipPermissions ? 'bg-primary' : 'bg-border'
               )}
@@ -140,7 +140,7 @@ export function SessionsSection() {
               aria-labelledby="skip-permissions-label"
             >
               <div
-                className={clsx(
+                className={cn(
                   'absolute top-1 w-4 h-4 rounded-full bg-white transition-transform duration-200',
                   skipPermissions ? 'translate-x-6' : 'translate-x-1'
                 )}
@@ -185,7 +185,7 @@ export function SessionsSection() {
             <button
               type="button"
               onClick={handleAutoResumeToggle}
-              className={clsx(
+              className={cn(
                 'relative w-11 h-6 rounded-full transition-colors duration-200',
                 autoResume ? 'bg-primary' : 'bg-border'
               )}
@@ -194,7 +194,7 @@ export function SessionsSection() {
               aria-labelledby="auto-resume-label"
             >
               <div
-                className={clsx(
+                className={cn(
                   'absolute top-1 w-4 h-4 rounded-full bg-white transition-transform duration-200',
                   autoResume ? 'translate-x-6' : 'translate-x-1'
                 )}
