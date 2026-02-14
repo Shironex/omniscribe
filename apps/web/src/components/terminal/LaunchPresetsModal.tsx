@@ -10,7 +10,7 @@ import { BranchAutocomplete } from '@/components/shared/BranchAutocomplete';
 import { ClaudeIcon } from '@/components/shared/ClaudeIcon';
 import { useClickOutside } from '@/hooks/useClickOutside';
 import { GridPresetCard } from './GridPresetCard';
-import type { AiMode } from '@omniscribe/shared';
+import type { AiMode, WorktreeMode } from '@omniscribe/shared';
 import type { Branch } from '@/components/shared/BranchSelector';
 
 const GRID_PRESETS = [1, 2, 3, 4, 6, 8, 9, 12] as const;
@@ -23,6 +23,8 @@ interface LaunchPresetsModalProps {
   currentBranch: string;
   defaultAiMode: AiMode;
   existingSessionCount: number;
+  /** Worktree mode — hides branch selector when 'never' */
+  worktreeMode?: WorktreeMode;
   onCreateSessions: (count: number, aiMode: AiMode, branch: string) => void;
 }
 
@@ -34,6 +36,7 @@ export function LaunchPresetsModal({
   currentBranch,
   defaultAiMode,
   existingSessionCount,
+  worktreeMode,
   onCreateSessions,
 }: LaunchPresetsModalProps) {
   const [selectedCount, setSelectedCount] = useState<number | null>(null);
@@ -203,14 +206,16 @@ export function LaunchPresetsModal({
                   )}
                 </div>
 
-                {/* Branch selector */}
-                <BranchAutocomplete
-                  branches={branches}
-                  value={branch}
-                  onChange={setBranch}
-                  placeholder="Select branch"
-                  className="h-8 w-[220px] text-xs"
-                />
+                {/* Branch selector — hidden when worktrees are disabled */}
+                {worktreeMode !== 'never' && (
+                  <BranchAutocomplete
+                    branches={branches}
+                    value={branch}
+                    onChange={setBranch}
+                    placeholder="Select branch"
+                    className="h-8 w-[220px] text-xs"
+                  />
+                )}
               </div>
             </div>
           </div>

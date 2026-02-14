@@ -7,7 +7,7 @@ import { BranchAutocomplete } from '@/components/shared/BranchAutocomplete';
 import { ClaudeIcon } from '@/components/shared/ClaudeIcon';
 import { getPrelaunchShortcutForIndex } from '@/lib/prelaunch-shortcuts';
 import { Button } from '@/components/ui/button';
-import type { AiMode } from '@omniscribe/shared';
+import type { AiMode, WorktreeMode } from '@omniscribe/shared';
 
 export interface PreLaunchSlot {
   id: string;
@@ -23,6 +23,8 @@ interface PreLaunchBarProps {
   isLaunching?: boolean;
   /** Whether Claude CLI is available (controls Claude mode option) */
   claudeAvailable?: boolean;
+  /** Worktree mode — hides branch selector when 'never' */
+  worktreeMode?: WorktreeMode;
   onUpdate: (slotId: string, updates: Partial<Pick<PreLaunchSlot, 'aiMode' | 'branch'>>) => void;
   onLaunch: (slotId: string) => void;
   onRemove: (slotId: string) => void;
@@ -48,6 +50,7 @@ export function PreLaunchBar({
   branches,
   isLaunching = false,
   claudeAvailable = true,
+  worktreeMode,
   onUpdate,
   onLaunch,
   onRemove,
@@ -144,16 +147,18 @@ export function PreLaunchBar({
         )}
       </div>
 
-      {/* Branch selector */}
-      <BranchAutocomplete
-        branches={branches}
-        value={slot.branch}
-        onChange={branchName => onUpdate(slot.id, { branch: branchName })}
-        onCreateBranch={onCreateBranch}
-        placeholder="Select branch"
-        side="top"
-        className="h-8 w-[240px] text-xs"
-      />
+      {/* Branch selector — hidden when worktrees are disabled */}
+      {worktreeMode !== 'never' && (
+        <BranchAutocomplete
+          branches={branches}
+          value={slot.branch}
+          onChange={branchName => onUpdate(slot.id, { branch: branchName })}
+          onCreateBranch={onCreateBranch}
+          placeholder="Select branch"
+          side="top"
+          className="h-8 w-[240px] text-xs"
+        />
+      )}
 
       {/* Spacer */}
       <div className="flex-1" />

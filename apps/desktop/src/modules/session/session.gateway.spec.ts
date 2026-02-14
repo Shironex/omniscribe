@@ -223,7 +223,8 @@ describe('SessionGateway', () => {
       expect(mockWorktreeService.prepare).toHaveBeenCalledWith(
         '/project',
         'main-12345678',
-        'project'
+        'project',
+        'main'
       );
       expect(mockSessionService.assignBranch).toHaveBeenCalledWith(
         'session-1-1700000000000',
@@ -251,7 +252,8 @@ describe('SessionGateway', () => {
       expect(mockWorktreeService.prepare).toHaveBeenCalledWith(
         '/project',
         'feature-12345678',
-        'central'
+        'central',
+        'main'
       );
       // Branch is assigned from payload.branch
       expect(mockSessionService.assignBranch).toHaveBeenCalledWith(
@@ -271,7 +273,12 @@ describe('SessionGateway', () => {
       const payload = { ...basePayload, branch: 'feature-x' };
       await gateway.handleCreate(payload, client);
 
-      expect(mockWorktreeService.prepare).toHaveBeenCalledWith('/project', 'feature-x', 'project');
+      expect(mockWorktreeService.prepare).toHaveBeenCalledWith(
+        '/project',
+        'feature-x',
+        'project',
+        'main'
+      );
       expect(mockSessionService.assignBranch).toHaveBeenCalledWith(
         'session-1-1700000000000',
         'feature-x',
@@ -297,16 +304,20 @@ describe('SessionGateway', () => {
       );
     });
 
-    it('should NOT create worktree for mode=branch when no branch specified', async () => {
+    it('should NOT create worktree for mode=branch when no branch specified but still assign current branch', async () => {
       mockWorkspaceService.getPreferences.mockReturnValue({
         worktree: { mode: 'branch', location: 'project', autoCleanup: false },
       });
+      mockGitService.getCurrentBranch.mockResolvedValue('main');
 
       await gateway.handleCreate(basePayload, client);
 
       expect(mockWorktreeService.prepare).not.toHaveBeenCalled();
-      // No branch in payload and no worktreePath, so assignBranch is not called
-      expect(mockSessionService.assignBranch).not.toHaveBeenCalled();
+      // No worktree needed, but session is still labelled with current branch
+      expect(mockSessionService.assignBranch).toHaveBeenCalledWith(
+        'session-1-1700000000000',
+        'main'
+      );
     });
 
     it('should fall back to main project dir when worktree creation fails', async () => {
@@ -324,6 +335,42 @@ describe('SessionGateway', () => {
         '/project',
         '/project',
         'claude'
+      );
+      expect(result.error).toBeUndefined();
+      expect(result.warning).toBeDefined();
+      expect(result.warning).toContain('disk full');
+    });
+
+    it('should skip worktree setup when getCurrentBranch fails', async () => {
+      mockWorkspaceService.getPreferences.mockReturnValue({
+        worktree: { mode: 'always', location: 'project', autoCleanup: false },
+      });
+      mockGitService.getCurrentBranch.mockRejectedValue(new Error('not a git repo'));
+
+      const result = await gateway.handleCreate(basePayload, client);
+
+      // Should skip worktree entirely but still launch
+      expect(mockWorktreeService.prepare).not.toHaveBeenCalled();
+      expect(mockSessionService.launchSession).toHaveBeenCalled();
+      expect(result.error).toBeUndefined();
+      expect(result.warning).toBeDefined();
+      expect(result.warning).toContain('not a git repo');
+    });
+
+    it('should assign payload.branch when getCurrentBranch fails', async () => {
+      mockWorkspaceService.getPreferences.mockReturnValue({
+        worktree: { mode: 'branch', location: 'project', autoCleanup: false },
+      });
+      mockGitService.getCurrentBranch.mockRejectedValue(new Error('git error'));
+
+      const payload = { ...basePayload, branch: 'feature-x' };
+      const result = await gateway.handleCreate(payload, client);
+
+      // Should still assign the user-specified branch without worktree
+      expect(mockWorktreeService.prepare).not.toHaveBeenCalled();
+      expect(mockSessionService.assignBranch).toHaveBeenCalledWith(
+        'session-1-1700000000000',
+        'feature-x'
       );
       expect(result.error).toBeUndefined();
     });

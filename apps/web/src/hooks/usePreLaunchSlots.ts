@@ -60,6 +60,9 @@ export function usePreLaunchSlots(
   // Derived default AI mode (shared with App.tsx)
   const { defaultAiMode } = useDefaultAiMode();
 
+  // Track previous currentBranch to auto-update stale slots (Bug #3)
+  const prevBranchRef = useRef(currentBranch);
+
   // Listen to add slot requests from other components (e.g., sidebar + button)
   const addSlotRequestCounter = useTerminalStore(state => state.addSlotRequestCounter);
   const prevCounterRef = useRef(addSlotRequestCounter);
@@ -120,6 +123,22 @@ export function usePreLaunchSlots(
     },
     []
   );
+
+  // Auto-update pre-launch slots when currentBranch changes (Bug #3: stale branch)
+  // Only updates slots that still have the previous current branch (not user-customized ones)
+  // Returns same reference when no slots need updating to avoid unnecessary re-render
+  useEffect(() => {
+    const prevBranch = prevBranchRef.current;
+    if (prevBranch !== currentBranch) {
+      prevBranchRef.current = currentBranch;
+      setPreLaunchSlots(prev => {
+        if (!prev.some(slot => slot.branch === prevBranch)) return prev;
+        return prev.map(slot =>
+          slot.branch === prevBranch ? { ...slot, branch: currentBranch } : slot
+        );
+      });
+    }
+  }, [currentBranch]);
 
   // Listen to external add slot requests (from sidebar + button)
   useEffect(() => {

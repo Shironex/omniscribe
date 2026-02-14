@@ -23,7 +23,7 @@ import {
 import { useUpdateToast } from '@/hooks/useUpdateToast';
 import { useTerminalStore, useWorkspaceStore, useSettingsStore, useSessionStore } from '@/stores';
 import { resumeSession } from '@/lib/session';
-import { extractErrorMessage } from '@omniscribe/shared';
+import { extractErrorMessage, DEFAULT_WORKTREE_SETTINGS } from '@omniscribe/shared';
 import { toast } from 'sonner';
 
 function App() {
@@ -165,6 +165,11 @@ function App() {
   // Default AI mode for modal
   const { defaultAiMode, claudeAvailable } = useDefaultAiMode();
 
+  // Worktree mode (for conditional branch selector visibility)
+  const worktreeMode = useWorkspaceStore(
+    state => (state.preferences.worktree ?? DEFAULT_WORKTREE_SETTINGS).mode
+  );
+
   // Resume session handler
   const handleResume = useCallback(
     async (sessionId: string) => {
@@ -246,6 +251,7 @@ function App() {
                 preLaunchSlots={preLaunchSlots}
                 launchingSlotIds={launchingSlotIds}
                 branches={branches}
+                worktreeMode={worktreeMode}
                 quickActions={quickActionsForTerminal}
                 focusedSessionId={focusedSessionId}
                 onFocusSession={handleFocusSession}
@@ -280,6 +286,7 @@ function App() {
           isOpen={isHistoryOpen}
           onClose={() => setIsHistoryOpen(false)}
           projectPath={activeProjectPath}
+          currentBranch={currentBranch}
         />
       </main>
 
@@ -293,6 +300,7 @@ function App() {
         currentBranch={currentBranch}
         defaultAiMode={defaultAiMode}
         existingSessionCount={terminalSessions.length}
+        worktreeMode={worktreeMode}
         onCreateSessions={handleBatchAddSessions}
       />
     </div>

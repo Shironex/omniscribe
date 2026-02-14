@@ -27,6 +27,8 @@ interface SessionHistoryPanelProps {
   isOpen: boolean;
   onClose: () => void;
   projectPath: string | null;
+  /** Current git branch — passed to continueLastSession */
+  currentBranch?: string;
   className?: string;
 }
 
@@ -38,6 +40,7 @@ export function SessionHistoryPanel({
   isOpen,
   onClose,
   projectPath,
+  currentBranch,
   className,
 }: SessionHistoryPanelProps) {
   const sessions = useSessionHistoryStore(selectSessionHistory);
@@ -171,7 +174,7 @@ export function SessionHistoryPanel({
   const handleContinueLast = useCallback(async () => {
     if (!projectPath) return;
     try {
-      const session = await continueLastSession(projectPath);
+      const session = await continueLastSession(projectPath, currentBranch);
       if (session.terminalSessionId !== undefined) {
         updateSession(session.id, { terminalSessionId: session.terminalSessionId });
       }
@@ -181,7 +184,7 @@ export function SessionHistoryPanel({
       logger.error('Continue last failed:', err);
       toast.error(msg);
     }
-  }, [projectPath, updateSession]);
+  }, [projectPath, currentBranch, updateSession]);
 
   return (
     <div

@@ -384,6 +384,10 @@ export interface SessionStatusUpdate {
   status: import('./session').SessionStatus;
   message?: string;
   needsInputPrompt?: boolean;
+  /** Branch assigned to the session (set after worktree setup) */
+  branch?: string;
+  /** Worktree path (set after worktree setup) */
+  worktreePath?: string;
 }
 
 // ============================================

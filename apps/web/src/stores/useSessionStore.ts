@@ -69,7 +69,9 @@ interface SessionActions extends SocketStoreActions {
     sessionId: string,
     status: SessionStatus,
     message?: string,
-    needsInputPrompt?: boolean
+    needsInputPrompt?: boolean,
+    branch?: string,
+    worktreePath?: string
   ) => void;
   /** Set sessions list (bulk update) */
   setSessions: (sessions: FrontendSessionConfig[]) => void;
@@ -121,7 +123,9 @@ export const useSessionStore = create<SessionStore>()(
                   update.sessionId,
                   update.status,
                   update.message,
-                  update.needsInputPrompt
+                  update.needsInputPrompt,
+                  update.branch,
+                  update.worktreePath
                 );
               },
             },
@@ -265,7 +269,7 @@ export const useSessionStore = create<SessionStore>()(
           );
         },
 
-        updateStatus: (sessionId, status, message, needsInputPrompt) => {
+        updateStatus: (sessionId, status, message, needsInputPrompt, branch, worktreePath) => {
           logger.debug('updateStatus', sessionId, status);
           set(
             state => {
@@ -278,7 +282,10 @@ export const useSessionStore = create<SessionStore>()(
                 return {
                   pendingStatusUpdates: {
                     ...state.pendingStatusUpdates,
-                    [sessionId]: [...pending, { sessionId, status, message, needsInputPrompt }],
+                    [sessionId]: [
+                      ...pending,
+                      { sessionId, status, message, needsInputPrompt, branch, worktreePath },
+                    ],
                   },
                 };
               }
@@ -292,6 +299,9 @@ export const useSessionStore = create<SessionStore>()(
                         // Only update statusMessage if a new message is provided
                         statusMessage: message ?? session.statusMessage,
                         needsInputPrompt,
+                        // Apply branch/worktreePath when present (Bug #4)
+                        ...(branch !== undefined && { branch }),
+                        ...(worktreePath !== undefined && { worktreePath }),
                         lastActiveAt: new Date(),
                       }
                     : session
@@ -321,7 +331,9 @@ export const useSessionStore = create<SessionStore>()(
               update.sessionId,
               update.status,
               update.message,
-              update.needsInputPrompt
+              update.needsInputPrompt,
+              update.branch,
+              update.worktreePath
             );
           }
 

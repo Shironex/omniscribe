@@ -17,6 +17,7 @@ import {
   MAX_SYSTEM_PROMPT_LENGTH,
   createLogger,
   extractErrorMessage,
+  normalizePath,
 } from '@omniscribe/shared';
 import { TerminalService } from '../terminal';
 import { McpWriterService, McpDiscoveryService } from '../mcp';
@@ -457,12 +458,15 @@ export class SessionService implements OnModuleDestroy {
     session.worktreePath = worktreePath;
     session.lastActiveAt = new Date();
 
-    // Emit status update to notify about branch assignment
-    this.eventEmitter.emit(InternalSessionEvents.STATUS, {
+    // Emit status update to notify about branch assignment (includes branch/worktreePath for frontend)
+    const statusUpdate: SessionStatusUpdate = {
       sessionId,
       status: session.status,
       message: `Branch assigned: ${branch}`,
-    });
+      branch,
+      worktreePath,
+    };
+    this.eventEmitter.emit(InternalSessionEvents.STATUS, statusUpdate);
 
     return session;
   }
@@ -486,21 +490,37 @@ export class SessionService implements OnModuleDestroy {
       this.clearTerminalRef(session);
     }
 
-    // Cleanup worktree if auto-cleanup is enabled
+    // Cleanup worktree if auto-cleanup is enabled (with reference counting — Bug #6)
     if (session.worktreePath) {
       const preferences = this.workspaceService.getPreferences();
       const worktreeSettings: WorktreeSettings = preferences.worktree ?? DEFAULT_WORKTREE_SETTINGS;
 
       if (worktreeSettings.autoCleanup) {
-        try {
-          await this.worktreeService.cleanup(session.projectPath, session.worktreePath);
-          this.logger.log(
-            `Cleaned up worktree at ${session.worktreePath} for session ${sessionId}`
+        // Check if other sessions are still using the same worktree path
+        // Use normalizePath for cross-platform comparison (Windows backslash vs forward slash)
+        const normalizedPath = normalizePath(session.worktreePath);
+        const otherSessionsUsingWorktree = Array.from(this.sessions.values()).filter(
+          s =>
+            s.id !== sessionId && s.worktreePath && normalizePath(s.worktreePath) === normalizedPath
+        );
+
+        if (otherSessionsUsingWorktree.length === 0) {
+          try {
+            await this.worktreeService.cleanup(session.projectPath, session.worktreePath);
+            this.logger.log(
+              `Cleaned up worktree at ${session.worktreePath} for session ${sessionId}`
+            );
+          } catch (error) {
+            const errorMessage = extractErrorMessage(error);
+            this.logger.warn(
+              `Failed to cleanup worktree for session ${sessionId}: ${errorMessage}`
+            );
+            // Continue with session removal even if worktree cleanup fails
+          }
+        } else {
+          this.logger.info(
+            `Skipping worktree cleanup for ${session.worktreePath} — still in use by ${otherSessionsUsingWorktree.length} other session(s)`
           );
-        } catch (error) {
-          const errorMessage = extractErrorMessage(error);
-          this.logger.warn(`Failed to cleanup worktree for session ${sessionId}: ${errorMessage}`);
-          // Continue with session removal even if worktree cleanup fails
         }
       }
     }
