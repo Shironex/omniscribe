@@ -460,6 +460,44 @@ describe('SessionService', () => {
     });
   });
 
+  describe('handleTerminalClosed', () => {
+    it('should emit TERMINAL_CLOSED_WITH_SESSION when terminal closes', () => {
+      // Create and register a session with a terminal
+      const session = service.create('claude', '/project');
+      service.registerTerminal(session.id, 42, '/worktree');
+      service.setClaudeSessionId(session.id, 'claude-abc');
+
+      // Extract the terminal.closed listener registered in the constructor
+      const onCall = eventEmitter.on.mock.calls.find(call => call[0] === 'terminal.closed');
+      expect(onCall).toBeDefined();
+      const terminalClosedHandler = onCall![1] as (event: {
+        sessionId: number;
+        externalId?: string;
+        exitCode: number;
+      }) => void;
+
+      // Clear previous emit calls (from create, registerTerminal, setClaudeSessionId)
+      eventEmitter.emit.mockClear();
+
+      // Simulate terminal close
+      terminalClosedHandler({
+        sessionId: 42,
+        externalId: session.id,
+        exitCode: 0,
+      });
+
+      // Should emit session.status and session.terminal-closed-with-session
+      expect(eventEmitter.emit).toHaveBeenCalledWith(
+        'session.terminal-closed-with-session',
+        expect.objectContaining({
+          sessionId: session.id,
+          claudeSessionId: 'claude-abc',
+          exitCode: 0,
+        })
+      );
+    });
+  });
+
   describe('registerTerminal', () => {
     it('should register terminal reference for a session', () => {
       const session = service.create('claude', '/project');

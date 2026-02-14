@@ -22,7 +22,7 @@ export const InternalSessionEvents = {
   /** Emitted by McpStatusServerService when an MCP status HTTP POST arrives.
    *  SessionService listens and calls updateStatus() to keep backend state in sync. */
   MCP_STATUS_RECEIVED: 'session.mcp-status-received',
-  /** Emitted by SessionService when a terminal closes and the session had a claudeSessionId.
+  /** Emitted by SessionService when a terminal closes for any session.
    *  ClaudeSessionTrackerService listens to persist history and refresh snapshot. */
   TERMINAL_CLOSED_WITH_SESSION: 'session.terminal-closed-with-session',
 } as const;

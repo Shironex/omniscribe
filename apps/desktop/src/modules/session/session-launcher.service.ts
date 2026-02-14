@@ -55,7 +55,7 @@ export class SessionLauncherService {
         };
       }
       // Terminal no longer exists, clear the reference
-      this.sessionService.clearTerminalRef(session);
+      this.sessionService.clearTerminalRef(sessionId);
     }
 
     // Update status to connecting

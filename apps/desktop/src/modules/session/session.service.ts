@@ -109,7 +109,10 @@ export class SessionService {
   /**
    * Clear the terminal reference from a session and remove the reverse lookup entry.
    */
-  clearTerminalRef(session: BackendSessionConfig): void {
+  clearTerminalRef(sessionId: string): void {
+    const session = this.sessions.get(sessionId);
+    if (!session) return;
+
     if (session.terminalSessionId !== undefined) {
       this.terminalToSession.delete(session.terminalSessionId);
       session.terminalSessionId = undefined;
@@ -136,7 +139,7 @@ export class SessionService {
             : `Session exited with code ${event.exitCode}`;
 
         this.updateStatus(event.externalId, status, message);
-        this.clearTerminalRef(session);
+        this.clearTerminalRef(event.externalId);
 
         // Emit event for ClaudeSessionTrackerService to handle persistence and snapshot
         this.eventEmitter.emit(InternalSessionEvents.TERMINAL_CLOSED_WITH_SESSION, {
@@ -402,7 +405,7 @@ export class SessionService {
       if (this.terminalService.hasSession(session.terminalSessionId)) {
         await this.terminalService.kill(session.terminalSessionId);
       }
-      this.clearTerminalRef(session);
+      this.clearTerminalRef(sessionId);
     }
 
     // Cleanup worktree if auto-cleanup is enabled (with reference counting — Bug #6)
@@ -558,7 +561,7 @@ export class SessionService {
       this.logger.debug(
         `stopSession: terminal ${terminalId} for session ${sessionId} no longer exists`
       );
-      this.clearTerminalRef(session);
+      this.clearTerminalRef(sessionId);
       return false;
     }
 
@@ -566,7 +569,7 @@ export class SessionService {
 
     await this.terminalService.kill(terminalId);
 
-    this.clearTerminalRef(session);
+    this.clearTerminalRef(sessionId);
     this.updateStatus(sessionId, 'idle', 'Session stopped');
 
     this.logger.log(`Session ${sessionId} stopped`);

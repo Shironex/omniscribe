@@ -22,13 +22,6 @@ import { HookManagerService } from './hook-manager.service';
     SessionLauncherService,
     SessionGateway,
   ],
-  exports: [
-    SessionService,
-    SessionLauncherService,
-    ClaudeSessionTrackerService,
-    CliCommandService,
-    ClaudeSessionReaderService,
-    HookManagerService,
-  ],
+  exports: [SessionService, CliCommandService, ClaudeSessionReaderService, HookManagerService],
 })
 export class SessionModule {}

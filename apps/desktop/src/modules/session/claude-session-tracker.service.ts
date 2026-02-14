@@ -15,6 +15,9 @@ import { BackendSessionConfig } from './types';
 @Injectable()
 export class ClaudeSessionTrackerService implements OnModuleDestroy {
   private readonly logger = createLogger('ClaudeSessionTracker');
+  private readonly POLL_INTERVAL_MS = 2000;
+  private readonly MAX_POLLS = 15; // 15 * 2s = 30s total
+  private destroyed = false;
 
   constructor(
     private readonly eventEmitter: EventEmitter2,
@@ -25,9 +28,10 @@ export class ClaudeSessionTrackerService implements OnModuleDestroy {
   ) {}
 
   /**
-   * On module destroy, save a final snapshot as a fallback.
+   * On module destroy, cancel active polling and save a final snapshot as a fallback.
    */
   onModuleDestroy(): void {
+    this.destroyed = true;
     this.refreshActiveSessionsSnapshot('shutdown');
   }
 
@@ -43,11 +47,14 @@ export class ClaudeSessionTrackerService implements OnModuleDestroy {
     projectPath: string,
     previousSessionIds: Set<string>
   ): Promise<void> {
-    const POLL_INTERVAL_MS = 2000;
-    const MAX_POLLS = 15; // 15 * 2s = 30s total
+    for (let i = 0; i < this.MAX_POLLS; i++) {
+      await new Promise<void>(resolve => setTimeout(resolve, this.POLL_INTERVAL_MS));
 
-    for (let i = 0; i < MAX_POLLS; i++) {
-      await new Promise<void>(resolve => setTimeout(resolve, POLL_INTERVAL_MS));
+      // Stop polling if the module is being destroyed
+      if (this.destroyed) {
+        this.logger.debug(`Polling cancelled for ${sessionId} (module destroying)`);
+        return;
+      }
 
       // Check if session still exists (might have been removed during polling)
       const session = this.sessionService.get(sessionId);
@@ -91,7 +98,7 @@ export class ClaudeSessionTrackerService implements OnModuleDestroy {
     }
 
     this.logger.debug(
-      `Claude session ID polling timed out for ${sessionId} after ${(MAX_POLLS * POLL_INTERVAL_MS) / 1000}s`
+      `Claude session ID polling timed out for ${sessionId} after ${(this.MAX_POLLS * this.POLL_INTERVAL_MS) / 1000}s`
     );
   }
 
@@ -110,7 +117,7 @@ export class ClaudeSessionTrackerService implements OnModuleDestroy {
 
     // Persist session history if we captured a Claude session ID
     if (event.claudeSessionId) {
-      this.persistSessionHistory(session, event.exitCode);
+      this.persistSessionHistory(session, event.claudeSessionId, event.exitCode);
     }
 
     // Session is no longer running — update snapshot
@@ -155,11 +162,15 @@ export class ClaudeSessionTrackerService implements OnModuleDestroy {
    * Persist a session's history entry to the workspace store.
    * Called when a terminal closes and a Claude session ID was captured.
    */
-  private persistSessionHistory(session: BackendSessionConfig, exitCode: number): void {
+  private persistSessionHistory(
+    session: BackendSessionConfig,
+    claudeSessionId: string,
+    exitCode: number
+  ): void {
     try {
       const entry: SessionHistoryEntry = {
         omniscribeSessionId: session.id,
-        claudeSessionId: session.claudeSessionId!,
+        claudeSessionId,
         projectPath: session.projectPath,
         name: session.name,
         lastStatus: session.status,
@@ -170,9 +181,7 @@ export class ClaudeSessionTrackerService implements OnModuleDestroy {
       };
 
       this.workspaceService.addSessionHistory(entry);
-      this.logger.info(
-        `Persisted session history for ${session.id} (claude: ${session.claudeSessionId})`
-      );
+      this.logger.info(`Persisted session history for ${session.id} (claude: ${claudeSessionId})`);
     } catch (error) {
       const errorMessage = extractErrorMessage(error);
       this.logger.warn(`Failed to persist session history for ${session.id}: ${errorMessage}`);

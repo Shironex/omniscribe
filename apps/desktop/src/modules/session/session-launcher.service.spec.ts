@@ -214,5 +214,15 @@ describe('SessionLauncherService', () => {
 
       expect(claudeSessionReader.readSessionsIndex).toHaveBeenCalledWith('/project');
     });
+
+    it('should skip snapshot for resumed sessions without fork or continue', async () => {
+      const session = createMockSession({ isResumed: true });
+      sessionService.get.mockReturnValue(session);
+
+      await service.launchSession(session.id, '/project', '/worktree', 'claude');
+
+      expect(claudeSessionReader.readSessionsIndex).not.toHaveBeenCalled();
+      expect(claudeSessionTracker.startTracking).not.toHaveBeenCalled();
+    });
   });
 });
