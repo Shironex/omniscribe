@@ -1,23 +1,15 @@
 import { useEffect, useMemo, useCallback, useState, useRef } from 'react';
-import { clsx } from 'clsx';
-import { twMerge } from 'tailwind-merge';
-import {
-  X,
-  RotateCcw,
-  MessageSquare,
-  GitBranch,
-  RefreshCw,
-  Search,
-  ArrowUpDown,
-  PlayCircle,
-  GitFork,
-} from 'lucide-react';
+import { X, RefreshCw, PlayCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { createLogger, type ClaudeSessionEntry } from '@omniscribe/shared';
 import { useSessionHistoryStore, selectSessionHistory } from '@/stores';
 import { useSessionStore } from '@/stores';
 import { resumeSession, forkSession, continueLastSession } from '@/lib/session';
-import { formatRelativeTime } from '@/lib/date-utils';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import { SessionHistoryFilters } from './SessionHistoryFilters';
+import { SessionHistoryItem } from './SessionHistoryItem';
 
 const logger = createLogger('SessionHistoryPanel');
 
@@ -188,12 +180,10 @@ export function SessionHistoryPanel({
 
   return (
     <div
-      className={twMerge(
-        clsx(
-          'h-full border-l border-border bg-muted flex flex-col',
-          'transition-all duration-200 ease-in-out overflow-hidden',
-          isOpen ? 'w-80' : 'w-0'
-        ),
+      className={cn(
+        'h-full border-l border-border bg-muted flex flex-col',
+        'transition-all duration-200 ease-in-out overflow-hidden',
+        isOpen ? 'w-80' : 'w-0',
         className
       )}
     >
@@ -203,86 +193,59 @@ export function SessionHistoryPanel({
           Session History
         </span>
         <div className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={() => projectPath && fetchHistory(projectPath)}
-            className="p-1 rounded hover:bg-muted-foreground/10 text-muted-foreground hover:text-foreground-secondary transition-colors"
-            title="Refresh"
-            aria-label="Refresh session history"
-          >
-            <RefreshCw size={13} />
-          </button>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1 rounded hover:bg-muted-foreground/10 text-muted-foreground hover:text-foreground-secondary transition-colors"
-            title="Close"
-            aria-label="Close session history panel"
-          >
-            <X size={14} />
-          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => projectPath && fetchHistory(projectPath)}
+                className="h-auto w-auto p-1"
+                aria-label="Refresh session history"
+              >
+                <RefreshCw size={13} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">Refresh</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onClose}
+                className="h-auto w-auto p-1"
+                aria-label="Close session history panel"
+              >
+                <X size={14} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">Close</TooltipContent>
+          </Tooltip>
         </div>
       </div>
 
       {/* Continue Last Button */}
       <div className="px-3 py-2 border-b border-border shrink-0">
-        <button
-          type="button"
+        <Button
           onClick={handleContinueLast}
           disabled={!projectPath}
-          className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 h-auto text-xs font-medium bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 hover:text-emerald-400"
         >
           <PlayCircle size={13} />
           Continue Last Conversation
-        </button>
+        </Button>
       </div>
 
       {/* Search & Filter Bar */}
-      <div className="px-3 py-2 border-b border-border shrink-0 space-y-1.5">
-        {/* Search input */}
-        <div className="relative">
-          <Search
-            size={12}
-            className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground"
-          />
-          <input
-            type="text"
-            placeholder="Search sessions..."
-            value={searchText}
-            onChange={e => setSearchText(e.target.value)}
-            className="w-full pl-6 pr-2 py-1 text-xs bg-card border border-border rounded text-foreground-secondary placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-            aria-label="Search sessions"
-          />
-        </div>
-
-        {/* Branch filter + sort toggle */}
-        <div className="flex items-center gap-1.5">
-          <select
-            value={selectedBranch}
-            onChange={e => setSelectedBranch(e.target.value)}
-            className="flex-1 text-2xs bg-card border border-border rounded px-1.5 py-0.5 text-foreground-secondary focus:outline-none focus:ring-1 focus:ring-ring"
-            aria-label="Filter by branch"
-          >
-            <option value="">All branches</option>
-            {uniqueBranches.map(b => (
-              <option key={b} value={b}>
-                {b}
-              </option>
-            ))}
-          </select>
-          <button
-            type="button"
-            onClick={() => setSortNewestFirst(prev => !prev)}
-            className="p-1 rounded hover:bg-muted-foreground/10 text-muted-foreground hover:text-foreground-secondary transition-colors"
-            title={sortNewestFirst ? 'Showing newest first' : 'Showing oldest first'}
-            aria-label={
-              sortNewestFirst ? 'Sort: showing newest first' : 'Sort: showing oldest first'
-            }
-          >
-            <ArrowUpDown size={12} />
-          </button>
-        </div>
-      </div>
+      <SessionHistoryFilters
+        searchText={searchText}
+        onSearchChange={setSearchText}
+        selectedBranch={selectedBranch}
+        onBranchChange={setSelectedBranch}
+        uniqueBranches={uniqueBranches}
+        sortNewestFirst={sortNewestFirst}
+        onToggleSort={() => setSortNewestFirst(prev => !prev)}
+      />
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-2 space-y-1">
@@ -301,53 +264,12 @@ export function SessionHistoryPanel({
         )}
 
         {filteredSessions.map(entry => (
-          <div
+          <SessionHistoryItem
             key={entry.sessionId}
-            className="group px-2 py-2 rounded hover:bg-card transition-colors"
-          >
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0 flex-1">
-                <p className="text-xs text-foreground-secondary truncate">
-                  {entry.summary || entry.firstPrompt || 'Untitled session'}
-                </p>
-                <div className="flex items-center gap-2 mt-1">
-                  {entry.gitBranch && (
-                    <span className="flex items-center gap-0.5 text-2xs text-muted-foreground">
-                      <GitBranch size={10} />
-                      <span className="truncate max-w-16">{entry.gitBranch}</span>
-                    </span>
-                  )}
-                  <span className="flex items-center gap-0.5 text-2xs text-muted-foreground">
-                    <MessageSquare size={10} />
-                    {entry.messageCount}
-                  </span>
-                  <span className="text-2xs text-muted-foreground">
-                    {formatRelativeTime(new Date(entry.modified))}
-                  </span>
-                </div>
-              </div>
-              <div className="flex items-center gap-0.5 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => handleFork(entry)}
-                  className="p-1 rounded opacity-0 group-hover:opacity-100 focus:opacity-100 text-blue-400 hover:bg-blue-500/10 transition-all"
-                  title="Fork this session"
-                  aria-label="Fork this session"
-                >
-                  <GitFork size={13} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleResume(entry)}
-                  className="p-1 rounded opacity-0 group-hover:opacity-100 focus:opacity-100 text-emerald-400 hover:bg-emerald-500/10 transition-all"
-                  title="Resume this session"
-                  aria-label="Resume this session"
-                >
-                  <RotateCcw size={13} />
-                </button>
-              </div>
-            </div>
-          </div>
+            entry={entry}
+            onResume={handleResume}
+            onFork={handleFork}
+          />
         ))}
       </div>
     </div>
