@@ -1,12 +1,8 @@
 // ---- Mocks ----
 
-const mockLogger = {
-  info: jest.fn(),
-  warn: jest.fn(),
-  error: jest.fn(),
-  debug: jest.fn(),
-  log: jest.fn(),
-};
+import { createLoggerMock } from '../../../test/mocks/logger.mock';
+
+const mockLogger = createLoggerMock();
 
 jest.mock('@omniscribe/shared', () => ({
   createLogger: () => mockLogger,
@@ -81,8 +77,10 @@ describe('IPC:Store', () => {
     it('should allow nested key access via prefix matching', () => {
       handlers['store:set'](mockEvent, 'workspace.tabs', { '0': { name: 'test' } });
       // workspace.tabs.0.name starts with 'workspace.tabs.' so should be allowed
-      handlers['store:get'](mockEvent, 'workspace.tabs.0.name');
-      // The value won't exist at that nested path in the mock, but the key should be allowed
+      const result = handlers['store:get'](mockEvent, 'workspace.tabs.0.name');
+      // MockStore uses a flat Map and doesn't support dot-notation traversal
+      // like the real electron-store, so the nested key returns undefined
+      expect(result).toBeUndefined();
       expect(mockLogger.warn).not.toHaveBeenCalled();
     });
 
@@ -205,9 +203,21 @@ describe('IPC:Store', () => {
       'workspace', // Not in the set (only 'workspace.tabs' etc.)
     ];
 
-    it.each(blockedKeys)('should block access to "%s"', key => {
+    it.each(blockedKeys)('should block store:get for "%s"', key => {
       const result = handlers['store:get'](mockEvent, key);
       expect(result).toBeUndefined();
+    });
+
+    it.each(blockedKeys)('should block store:set for "%s"', key => {
+      mockLogger.warn.mockClear();
+      handlers['store:set'](mockEvent, key, 'value');
+      expect(mockLogger.warn).toHaveBeenCalled();
+    });
+
+    it.each(blockedKeys)('should block store:delete for "%s"', key => {
+      mockLogger.warn.mockClear();
+      handlers['store:delete'](mockEvent, key);
+      expect(mockLogger.warn).toHaveBeenCalled();
     });
   });
 });

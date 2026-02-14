@@ -218,6 +218,20 @@ describe('IPC:Dialog', () => {
       const passedOptions = mockShowOpenDialog.mock.calls[0][1];
       expect(passedOptions.properties).toEqual(['openFile']);
     });
+
+    it('should sanitize options (title truncation, defaultPath filtering)', async () => {
+      mockShowOpenDialog.mockResolvedValue({ canceled: true, filePaths: [] });
+      const longTitle = 'X'.repeat(300);
+
+      await handlers['dialog:open-file'](mockEvent, {
+        title: longTitle,
+        defaultPath: 'path<script>"test"',
+      });
+
+      const passedOptions = mockShowOpenDialog.mock.calls[0][1];
+      expect(passedOptions.title).toHaveLength(200);
+      expect(passedOptions.defaultPath).toBe('pathscripttest');
+    });
   });
 
   // ================================================================

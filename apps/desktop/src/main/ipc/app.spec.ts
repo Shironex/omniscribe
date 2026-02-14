@@ -1,17 +1,13 @@
 // ---- Mocks ----
 
-const mockLogger = {
-  info: jest.fn(),
-  warn: jest.fn(),
-  error: jest.fn(),
-  debug: jest.fn(),
-  log: jest.fn(),
-};
+import { createLoggerMock } from '../../../test/mocks/logger.mock';
 
+const mockLogger = createLoggerMock();
+
+const actualShared = jest.requireActual('@omniscribe/shared');
 jest.mock('@omniscribe/shared', () => ({
+  ...actualShared,
   createLogger: () => mockLogger,
-  LOG_FILE_PREFIX: 'omniscribe',
-  LOG_MAX_FILE_SIZE: 10 * 1024 * 1024, // 10MB
 }));
 
 const mockExistsSync = jest.fn();
@@ -29,8 +25,9 @@ jest.mock('fs/promises', () => ({
 }));
 
 const mockCheckCliAvailable = jest.fn();
+const actualUtils = jest.requireActual('../utils');
 jest.mock('../utils', () => ({
-  CLI_TOOLS: ['claude', 'npm', 'node', 'git', 'gh', 'pnpm'],
+  ...actualUtils,
   checkCliAvailable: (...args: unknown[]) => mockCheckCliAvailable(...args),
 }));
 
@@ -337,17 +334,10 @@ describe('IPC:App', () => {
       );
     });
 
-    it('should handle filenames with null bytes (passed through to fs)', async () => {
-      // Note: The validation doesn't explicitly check for null bytes,
-      // but 'omniscribe\0.log' passes string checks. The OS/fs layer
-      // would reject null bytes. We verify the validation doesn't catch it
-      // so the caller relies on fs-level rejection.
-      mockStat.mockResolvedValue({ size: 1024 });
-      mockReadFile.mockResolvedValue('content');
-
-      // This passes validation since it starts with 'omniscribe' and ends with '.log'
-      const result = await handlers['app:read-log-file'](mockEvent, 'omniscribe\0.log');
-      expect(result).toBe('content');
+    it('should reject filenames with null bytes', async () => {
+      await expect(handlers['app:read-log-file'](mockEvent, 'omniscribe\0.log')).rejects.toThrow(
+        'Invalid log file name'
+      );
     });
 
     it('should enforce file size limit', async () => {

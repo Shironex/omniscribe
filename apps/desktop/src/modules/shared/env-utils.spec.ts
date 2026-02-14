@@ -8,7 +8,7 @@ describe('env-utils', () => {
     process.env = {};
   });
 
-  afterAll(() => {
+  afterEach(() => {
     process.env = originalEnv;
   });
 
@@ -51,7 +51,9 @@ describe('env-utils', () => {
     it('should be a non-empty array of RegExp', () => {
       expect(Array.isArray(ENV_BLOCKLIST_PATTERNS)).toBe(true);
       expect(ENV_BLOCKLIST_PATTERNS.length).toBeGreaterThan(0);
-      ENV_BLOCKLIST_PATTERNS.forEach(p => expect(p).toBeInstanceOf(RegExp));
+      for (const p of ENV_BLOCKLIST_PATTERNS) {
+        expect(p).toBeInstanceOf(RegExp);
+      }
     });
 
     it('should match Electron internals', () => {
@@ -120,17 +122,14 @@ describe('env-utils', () => {
       expect(result.MY_CUSTOM_SETTING).toBeUndefined();
     });
 
-    it('should exclude allowlisted variables that match blocklist patterns', () => {
-      // SSH_AUTH_SOCK is in the allowlist, but if a variable name
-      // happens to match blocklist patterns it should be filtered.
-      // Let's test with hypothetical blocklist matches:
-      // None of the current allowlist entries match the blocklist, so we
-      // verify the mechanism by adding a custom allowlist-matching-blocklist test
-
-      // NODE_OPTIONS is NOT in allowlist, so it won't appear regardless
-      process.env = { PATH: '/usr/bin', NODE_OPTIONS: '--inspect' };
+    it('should not leak blocklisted vars even if set in process.env', () => {
+      // NODE_OPTIONS and ELECTRON_RUN_AS_NODE are not in the allowlist,
+      // but we verify they don't appear even when present in process.env
+      process.env = { PATH: '/usr/bin', NODE_OPTIONS: '--inspect', ELECTRON_RUN_AS_NODE: '1' };
       const result = buildSafeEnv();
       expect(result.NODE_OPTIONS).toBeUndefined();
+      expect(result.ELECTRON_RUN_AS_NODE).toBeUndefined();
+      expect(result.PATH).toBe('/usr/bin');
     });
 
     it('should skip allowlisted variables not present in process.env', () => {

@@ -1,12 +1,8 @@
 // ---- Mocks ----
 
-const mockLogger = {
-  info: jest.fn(),
-  warn: jest.fn(),
-  error: jest.fn(),
-  debug: jest.fn(),
-  log: jest.fn(),
-};
+import { createLoggerMock } from '../../../test/mocks/logger.mock';
+
+const mockLogger = createLoggerMock();
 
 jest.mock('@omniscribe/shared', () => ({
   createLogger: () => mockLogger,

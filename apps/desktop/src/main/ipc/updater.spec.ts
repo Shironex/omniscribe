@@ -1,12 +1,8 @@
 // ---- Mocks ----
 
-const mockLogger = {
-  info: jest.fn(),
-  warn: jest.fn(),
-  error: jest.fn(),
-  debug: jest.fn(),
-  log: jest.fn(),
-};
+import { createLoggerMock } from '../../../test/mocks/logger.mock';
+
+const mockLogger = createLoggerMock();
 
 jest.mock('@omniscribe/shared', () => ({
   createLogger: () => mockLogger,
@@ -156,6 +152,14 @@ describe('IPC:Updater', () => {
       expect(result).toBe('stable');
       expect(mockGetUpdateChannel).toHaveBeenCalled();
     });
+
+    it('should propagate errors from getUpdateChannel', () => {
+      mockGetUpdateChannel.mockImplementation(() => {
+        throw new Error('Store read failed');
+      });
+
+      expect(() => handlers['updater:get-channel'](mockEvent)).toThrow('Store read failed');
+    });
   });
 
   // ================================================================
@@ -189,6 +193,18 @@ describe('IPC:Updater', () => {
     it('should reject empty string channel', async () => {
       await expect(handlers['updater:set-channel'](mockEvent, '')).rejects.toThrow(
         'Invalid update channel: '
+      );
+    });
+
+    it('should reject undefined channel', async () => {
+      await expect(handlers['updater:set-channel'](mockEvent, undefined)).rejects.toThrow(
+        'Invalid update channel'
+      );
+    });
+
+    it('should reject numeric channel', async () => {
+      await expect(handlers['updater:set-channel'](mockEvent, 42)).rejects.toThrow(
+        'Invalid update channel'
       );
     });
 

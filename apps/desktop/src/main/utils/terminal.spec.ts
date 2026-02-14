@@ -1,12 +1,8 @@
 // ---- Mocks ----
 
-const mockLogger = {
-  info: jest.fn(),
-  warn: jest.fn(),
-  error: jest.fn(),
-  debug: jest.fn(),
-  log: jest.fn(),
-};
+import { createLoggerMock } from '../../../test/mocks/logger.mock';
+
+const mockLogger = createLoggerMock();
 
 jest.mock('@omniscribe/shared', () => ({
   createLogger: () => mockLogger,
@@ -115,7 +111,8 @@ describe('terminal utilities', () => {
       await openTerminalWithCommand('echo hello');
 
       const spawnArgs = mockSpawn.mock.calls[0][1] as string[];
-      const encodedCommand = spawnArgs[5]; // The Base64 string after '-EncodedCommand'
+      const ecIndex = spawnArgs.indexOf('-EncodedCommand');
+      const encodedCommand = spawnArgs[ecIndex + 1];
 
       // Decode and verify
       const decoded = Buffer.from(encodedCommand, 'base64').toString('utf16le');
@@ -224,6 +221,10 @@ describe('terminal utilities', () => {
       expect(bashCommand).toContain("'it'\\''s a test'");
     });
 
+    // Note: The Linux implementation uses a fire-and-forget pattern where resolve()
+    // is called immediately after spawn+unref, before any error event can fire.
+    // The fallback chain (gnome-terminal → konsole → xterm) runs in error handlers
+    // after the promise has already resolved. These tests verify the fallback spawns occur.
     it('should fall back to konsole on gnome-terminal error', async () => {
       let gnomeErrorHandler: (err: Error) => void;
 

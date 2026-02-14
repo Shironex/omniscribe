@@ -1,16 +1,18 @@
 // ---- Mocks ----
 
-const handlers: Record<string, (...args: unknown[]) => unknown> = {};
-const listeners: Record<string, (...args: unknown[]) => unknown> = {};
+// handleCallbacks: request/response via ipcMain.handle (invoke/handle pattern)
+const handleCallbacks: Record<string, (...args: unknown[]) => unknown> = {};
+// onListeners: fire-and-forget via ipcMain.on (send/on pattern)
+const onListeners: Record<string, (...args: unknown[]) => unknown> = {};
 
 jest.mock('electron', () => ({
   BrowserWindow: jest.fn(),
   ipcMain: {
     handle: jest.fn((channel: string, handler: (...a: unknown[]) => unknown) => {
-      handlers[channel] = handler as (...args: unknown[]) => unknown;
+      handleCallbacks[channel] = handler as (...args: unknown[]) => unknown;
     }),
     on: jest.fn((channel: string, handler: (...a: unknown[]) => unknown) => {
-      listeners[channel] = handler as (...args: unknown[]) => unknown;
+      onListeners[channel] = handler as (...args: unknown[]) => unknown;
     }),
     removeHandler: jest.fn(),
     removeAllListeners: jest.fn(),
@@ -42,8 +44,8 @@ describe('IPC:Window', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    for (const key of Object.keys(handlers)) delete handlers[key];
-    for (const key of Object.keys(listeners)) delete listeners[key];
+    for (const key of Object.keys(handleCallbacks)) delete handleCallbacks[key];
+    for (const key of Object.keys(onListeners)) delete onListeners[key];
     for (const key of Object.keys(windowEventHandlers)) delete windowEventHandlers[key];
     registerWindowHandlers(mockMainWindow);
   });
@@ -73,7 +75,7 @@ describe('IPC:Window', () => {
   // ================================================================
   describe('window:minimize', () => {
     it('should minimize the window', () => {
-      listeners['window:minimize']();
+      onListeners['window:minimize']();
       expect(mockMainWindow.minimize).toHaveBeenCalled();
     });
   });
@@ -84,14 +86,14 @@ describe('IPC:Window', () => {
   describe('window:maximize', () => {
     it('should unmaximize when window is maximized', () => {
       (mockMainWindow.isMaximized as jest.Mock).mockReturnValue(true);
-      listeners['window:maximize']();
+      onListeners['window:maximize']();
       expect(mockMainWindow.unmaximize).toHaveBeenCalled();
       expect(mockMainWindow.maximize).not.toHaveBeenCalled();
     });
 
     it('should maximize when window is not maximized', () => {
       (mockMainWindow.isMaximized as jest.Mock).mockReturnValue(false);
-      listeners['window:maximize']();
+      onListeners['window:maximize']();
       expect(mockMainWindow.maximize).toHaveBeenCalled();
       expect(mockMainWindow.unmaximize).not.toHaveBeenCalled();
     });
@@ -102,7 +104,7 @@ describe('IPC:Window', () => {
   // ================================================================
   describe('window:close', () => {
     it('should close the window', () => {
-      listeners['window:close']();
+      onListeners['window:close']();
       expect(mockMainWindow.close).toHaveBeenCalled();
     });
   });
@@ -113,13 +115,13 @@ describe('IPC:Window', () => {
   describe('window:is-maximized', () => {
     it('should return true when window is maximized', () => {
       (mockMainWindow.isMaximized as jest.Mock).mockReturnValue(true);
-      const result = handlers['window:is-maximized']();
+      const result = handleCallbacks['window:is-maximized']();
       expect(result).toBe(true);
     });
 
     it('should return false when window is not maximized', () => {
       (mockMainWindow.isMaximized as jest.Mock).mockReturnValue(false);
-      const result = handlers['window:is-maximized']();
+      const result = handleCallbacks['window:is-maximized']();
       expect(result).toBe(false);
     });
   });
