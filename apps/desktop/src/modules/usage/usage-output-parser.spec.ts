@@ -348,17 +348,15 @@ describe('UsageOutputParser', () => {
       // When percentage and reset are on the same line
       const usage = parser.parseUsageOutput('Current session\n  25% used  Resets in 2h 15m\n');
 
-      if (usage.sessionResetText) {
-        expect(usage.sessionResetText).not.toMatch(/\d+%/);
-      }
+      expect(usage.sessionResetText).toBeTruthy();
+      expect(usage.sessionResetText).not.toMatch(/\d+%/);
     });
 
     it('should fix missing space between "Resets" and number', () => {
       const usage = parser.parseUsageOutput('Current session\n  25% used\n  Resets2h 15m\n');
 
-      if (usage.sessionResetText) {
-        expect(usage.sessionResetText).toMatch(/Resets?\s+\d/);
-      }
+      expect(usage.sessionResetText).toBeTruthy();
+      expect(usage.sessionResetText).toMatch(/Resets?\s+\d/);
     });
   });
 });

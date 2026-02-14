@@ -161,12 +161,13 @@ export class UsageService {
 
       let hasSentCommand = false;
       let hasApprovedTrust = false;
+      let cleanOutput = '';
 
       ptyProcess.onData((data: string) => {
         output += data;
 
-        // Strip ANSI codes for easier matching
-        const cleanOutput = stripAnsiCodes(output);
+        // Strip ANSI codes from the new chunk and append to clean buffer
+        cleanOutput += stripAnsiCodes(data);
 
         // Check for authentication errors
         const hasAuthError =

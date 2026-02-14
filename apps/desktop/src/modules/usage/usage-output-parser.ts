@@ -1,5 +1,8 @@
 import type { ClaudeUsage } from '@omniscribe/shared';
 
+/** Valid usage section types */
+type UsageType = 'session' | 'weekly' | 'sonnet';
+
 // ---- Regex patterns ----
 
 /** Matches percentage values: "25% used", "75% left", "60% remaining" */
@@ -14,8 +17,8 @@ const TIMEZONE_SUFFIX_REGEX = /\s*\([A-Za-z_/]+\)\s*$/;
 /** Matches missing space between "Resets" and a digit */
 const MISSING_SPACE_REGEX = /(resets?)(\d)/i;
 
-/** Matches duration format: "2h 15m", "3h", "45m", "2hours", "45min" */
-const DURATION_REGEX = /(\d+)\s*h(?:ours?)?(?:\s+(\d+)\s*m(?:in)?)?|(\d+)\s*m(?:in)?/i;
+/** Matches duration format: "in 2h 15m", "in 3h", "in 45m", "in 2hours", "in 45min" */
+const DURATION_REGEX = /\bin\s+(?:(\d+)\s*h(?:ours?)?(?:\s+(\d+)\s*m(?:in)?)?|(\d+)\s*m(?:in)?)/i;
 
 /** Matches simple time format: "Resets 11am", "Resets 3:30pm" */
 const SIMPLE_TIME_REGEX = /resets\s*(\d{1,2})(?::(\d{2}))?\s*(am|pm)/i;
@@ -56,11 +59,16 @@ export function stripAnsiCodes(text: string): string {
     .replace(/\r\n/g, '\n')
     .replace(/\r/g, '\n');
 
-  // Handle backspaces
-  while (clean.includes('\x08')) {
-    clean = clean.replace(/[^\x08]\x08/, '');
-    clean = clean.replace(/^\x08+/, '');
+  // Handle backspaces (single-pass)
+  const chars: string[] = [];
+  for (const char of clean) {
+    if (char === '\x08') {
+      chars.pop();
+    } else {
+      chars.push(char);
+    }
   }
+  clean = chars.join('');
 
   // Strip remaining control characters (except newline)
   clean = clean.replace(/[\x00-\x08\x0B-\x1F\x7F]/g, '');
@@ -93,25 +101,22 @@ export class UsageOutputParser {
     const weeklyData = this.parseSection(lines, 'Current week (all models)', 'weekly');
 
     // Parse Sonnet/Opus usage - try different labels
-    let sonnetData = this.parseSection(lines, 'Current week (Sonnet only)', 'sonnet');
-    if (sonnetData.percentage === 0) {
-      sonnetData = this.parseSection(lines, 'Current week (Sonnet)', 'sonnet');
-    }
-    if (sonnetData.percentage === 0) {
-      sonnetData = this.parseSection(lines, 'Current week (Opus)', 'sonnet');
-    }
+    const sonnetData =
+      this.parseSection(lines, 'Current week (Sonnet only)', 'sonnet') ??
+      this.parseSection(lines, 'Current week (Sonnet)', 'sonnet') ??
+      this.parseSection(lines, 'Current week (Opus)', 'sonnet');
 
     return {
-      sessionPercentage: sessionData.percentage,
-      sessionResetTime: sessionData.resetTime,
-      sessionResetText: sessionData.resetText,
+      sessionPercentage: sessionData?.percentage ?? 0,
+      sessionResetTime: sessionData?.resetTime ?? this.getDefaultResetTime('session'),
+      sessionResetText: sessionData?.resetText ?? '',
 
-      weeklyPercentage: weeklyData.percentage,
-      weeklyResetTime: weeklyData.resetTime,
-      weeklyResetText: weeklyData.resetText,
+      weeklyPercentage: weeklyData?.percentage ?? 0,
+      weeklyResetTime: weeklyData?.resetTime ?? this.getDefaultResetTime('weekly'),
+      weeklyResetText: weeklyData?.resetText ?? '',
 
-      sonnetWeeklyPercentage: sonnetData.percentage,
-      sonnetResetText: sonnetData.resetText,
+      sonnetWeeklyPercentage: sonnetData?.percentage ?? 0,
+      sonnetResetText: sonnetData?.resetText ?? '',
 
       lastUpdated: new Date().toISOString(),
       userTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -124,8 +129,8 @@ export class UsageOutputParser {
   private parseSection(
     lines: string[],
     sectionLabel: string,
-    type: string
-  ): { percentage: number; resetTime: string; resetText: string } {
+    type: UsageType
+  ): { percentage: number; resetTime: string; resetText: string } | null {
     let percentage: number | null = null;
     let resetTime = this.getDefaultResetTime(type);
     let resetText = '';
@@ -140,7 +145,7 @@ export class UsageOutputParser {
     }
 
     if (sectionIndex === -1) {
-      return { percentage: 0, resetTime, resetText };
+      return null;
     }
 
     // Look at the lines following the section header
@@ -184,7 +189,7 @@ export class UsageOutputParser {
   /**
    * Parse reset time from text like "Resets in 2h 15m" or "Resets Dec 22 at 8pm"
    */
-  private parseResetTime(text: string, type: string): string {
+  private parseResetTime(text: string, type: UsageType): string {
     const now = new Date();
 
     // Try duration format: "Resets in 2h 15m"
@@ -239,6 +244,7 @@ export class UsageOutputParser {
 
       if (month !== undefined) {
         const year = now.getFullYear();
+        // Intentionally uses local time — the CLI outputs times in the user's timezone
         const resetDate = new Date(year, month, day, hours, minutes);
         if (resetDate < now) {
           resetDate.setFullYear(year + 1);
@@ -253,7 +259,7 @@ export class UsageOutputParser {
   /**
    * Get default reset time based on usage type
    */
-  private getDefaultResetTime(type: string): string {
+  private getDefaultResetTime(type: UsageType): string {
     const now = new Date();
 
     if (type === 'session') {
