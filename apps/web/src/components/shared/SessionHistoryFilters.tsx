@@ -1,5 +1,15 @@
 import { Search, ArrowUpDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+
+const ALL_BRANCHES_VALUE = '__all__';
 
 interface SessionHistoryFiltersProps {
   searchText: string;
@@ -28,31 +38,37 @@ export function SessionHistoryFilters({
           size={12}
           className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground"
         />
-        <input
+        <Input
           type="text"
           placeholder="Search sessions..."
           value={searchText}
           onChange={e => onSearchChange(e.target.value)}
-          className="w-full pl-6 pr-2 py-1 text-xs bg-card border border-border rounded text-foreground-secondary placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+          className="h-auto pl-6 pr-2 py-1 text-xs bg-card border-border text-foreground-secondary"
           aria-label="Search sessions"
         />
       </div>
 
       {/* Branch filter + sort toggle */}
       <div className="flex items-center gap-1.5">
-        <select
-          value={selectedBranch}
-          onChange={e => onBranchChange(e.target.value)}
-          className="flex-1 text-2xs bg-card border border-border rounded px-1.5 py-0.5 text-foreground-secondary focus:outline-none focus:ring-1 focus:ring-ring"
-          aria-label="Filter by branch"
+        <Select
+          value={selectedBranch || ALL_BRANCHES_VALUE}
+          onValueChange={value => onBranchChange(value === ALL_BRANCHES_VALUE ? '' : value)}
         >
-          <option value="">All branches</option>
-          {uniqueBranches.map(b => (
-            <option key={b} value={b}>
-              {b}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger
+            className="h-auto flex-1 text-2xs bg-card border-border px-1.5 py-0.5 text-foreground-secondary"
+            aria-label="Filter by branch"
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL_BRANCHES_VALUE}>All branches</SelectItem>
+            {uniqueBranches.map(b => (
+              <SelectItem key={b} value={b}>
+                {b}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <Button
           variant="ghost"
           size="icon"
