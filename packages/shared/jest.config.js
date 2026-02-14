@@ -6,6 +6,7 @@ module.exports = {
   testMatch: ['<rootDir>/src/**/*.spec.ts'],
   setupFiles: ['<rootDir>/test/setup.ts'],
   clearMocks: true,
+  restoreMocks: true,
   collectCoverageFrom: ['src/**/*.ts', '!src/**/*.spec.ts', '!src/**/index.ts', '!src/types/**'],
   transform: {
     '^.+\\.ts$': [
