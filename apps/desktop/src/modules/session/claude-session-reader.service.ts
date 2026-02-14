@@ -318,8 +318,8 @@ export class ClaudeSessionReaderService implements OnModuleDestroy {
               }
             }
           }
-        } catch (error) {
-          this.logger.debug('Skipping unparseable JSONL line', error);
+        } catch {
+          this.logger.debug(`Skipping unparseable JSONL line: ${line.slice(0, 100)}`);
         }
       }
 

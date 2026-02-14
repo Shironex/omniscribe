@@ -478,8 +478,8 @@ export class TerminalService implements OnModuleDestroy {
       if (session.paused) {
         try {
           session.pty.resume();
-        } catch (error) {
-          this.logger.debug('Resume error during cleanup (expected)', error);
+        } catch {
+          this.logger.debug('Resume error during cleanup (expected)');
         }
         session.paused = false;
       }

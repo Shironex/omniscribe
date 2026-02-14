@@ -27,7 +27,7 @@ export class TerminalErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    logger.error('Terminal crashed:', error, errorInfo);
+    logger.error('Terminal crashed', error, errorInfo);
   }
 
   handleRestart = () => {

@@ -152,8 +152,8 @@ export class WorktreeService {
       try {
         await fs.access(worktreePath);
         return worktreePath;
-      } catch (error) {
-        this.logger.debug('Worktree directory missing, pruning stale ref', error);
+      } catch {
+        this.logger.debug('Worktree directory missing, pruning stale ref');
         await this.gitBase.execGit(projectPath, ['worktree', 'prune']);
       }
     }
