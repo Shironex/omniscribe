@@ -10,6 +10,7 @@ import {
   ExternalLink,
   FileText,
   FolderOpen,
+  ScrollText,
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import {
@@ -17,6 +18,7 @@ import {
   GITHUB_RELEASES_URL,
   UPDATE_ERROR_RELEASE_PENDING,
   createLogger,
+  formatFileSize,
 } from '@omniscribe/shared';
 import { Button } from '@/components/ui/button';
 import { Markdown } from '@/components/ui/markdown';
@@ -24,14 +26,9 @@ import { Progress } from '@/components/ui/progress';
 import { useUpdateStore } from '@/stores/useUpdateStore';
 import { useAppVersion } from '@/hooks/useAppVersion';
 import { IS_MAC } from '@/lib/platform';
+import { LogViewerModal } from '@/components/settings/LogViewerModal';
 
 const logger = createLogger('GeneralSection');
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
 
 function MacDownloadFallback({ message }: { message: string }) {
   return (
@@ -48,6 +45,7 @@ function MacDownloadFallback({ message }: { message: string }) {
 export function GeneralSection() {
   const version = useAppVersion();
   const [hasChecked, setHasChecked] = useState(false);
+  const [logViewerOpen, setLogViewerOpen] = useState(false);
   const {
     status,
     updateInfo,
@@ -113,22 +111,29 @@ export function GeneralSection() {
               </p>
             </div>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              try {
-                window.electronAPI?.app?.openLogsFolder();
-              } catch (err) {
-                logger.error('Failed to open logs folder:', err);
-              }
-            }}
-          >
-            <FolderOpen className="w-3.5 h-3.5" />
-            Open Log Folder
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => setLogViewerOpen(true)}>
+              <ScrollText className="w-3.5 h-3.5" />
+              View Logs
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                try {
+                  window.electronAPI?.app?.openLogsFolder();
+                } catch (err) {
+                  logger.error('Failed to open logs folder:', err);
+                }
+              }}
+            >
+              <FolderOpen className="w-3.5 h-3.5" />
+              Open Log Folder
+            </Button>
+          </div>
         </div>
       </div>
+      <LogViewerModal open={logViewerOpen} onOpenChange={setLogViewerOpen} />
 
       {/* Updates Card */}
       <div className="rounded-xl border border-border/50 bg-card/50 p-6 space-y-4">
@@ -252,9 +257,9 @@ export function GeneralSection() {
               {progress && (
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
                   <span>
-                    {formatBytes(progress.transferred)} / {formatBytes(progress.total)}
+                    {formatFileSize(progress.transferred)} / {formatFileSize(progress.total)}
                   </span>
-                  <span>{formatBytes(progress.bytesPerSecond)}/s</span>
+                  <span>{formatFileSize(progress.bytesPerSecond)}/s</span>
                 </div>
               )}
             </div>

@@ -46,6 +46,8 @@ interface ElectronAPI {
     openLogsFolder: () => Promise<void>;
     clipboardWrite: (text: string) => Promise<void>;
     getBackendPort: () => Promise<number>;
+    listLogFiles: () => Promise<Array<{ name: string; size: number; lastModified: number }>>;
+    readLogFile: (fileName: string) => Promise<string>;
   };
   claude?: {
     getStatus: () => Promise<ClaudeCliStatus>;
