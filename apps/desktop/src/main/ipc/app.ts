@@ -94,9 +94,10 @@ export function registerAppHandlers(): void {
   ipcMain.handle('app:read-log-file', async (_event, fileName: string) => {
     logger.debug(`app:read-log-file invoked for "${fileName}"`);
 
-    // Security: reject path traversal and invalid filenames
+    // Security: reject path traversal, null bytes, and invalid filenames
     if (
       typeof fileName !== 'string' ||
+      fileName.includes('\0') ||
       fileName.includes('/') ||
       fileName.includes('\\') ||
       fileName.includes('..') ||
