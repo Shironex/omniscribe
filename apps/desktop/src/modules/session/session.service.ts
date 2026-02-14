@@ -110,6 +110,7 @@ export class SessionService {
    * Clear the terminal reference from a session and remove the reverse lookup entry.
    */
   clearTerminalRef(sessionId: string): void {
+    this.logger.debug(`[clearTerminalRef] sessionId=${sessionId}`);
     const session = this.sessions.get(sessionId);
     if (!session) return;
 
@@ -285,6 +286,7 @@ export class SessionService {
    * Emits a status update event so the frontend is notified.
    */
   update(sessionId: string, updates: UpdateSessionOptions): BackendSessionConfig | undefined {
+    this.logger.debug(`[update] sessionId=${sessionId}, fields=${Object.keys(updates).join(',')}`);
     const session = this.sessions.get(sessionId);
 
     if (!session) {
@@ -366,6 +368,9 @@ export class SessionService {
     branch: string,
     worktreePath?: string
   ): BackendSessionConfig | undefined {
+    this.logger.debug(
+      `[assignBranch] sessionId=${sessionId}, branch=${branch}, worktreePath=${worktreePath}`
+    );
     const session = this.sessions.get(sessionId);
 
     if (!session) {
@@ -503,6 +508,7 @@ export class SessionService {
    * Remove all sessions for a project
    */
   async removeForProject(projectPath: string): Promise<number> {
+    this.logger.debug(`[removeForProject] projectPath=${projectPath}`);
     const sessionsToRemove = this.getForProject(projectPath);
 
     for (const session of sessionsToRemove) {
@@ -517,6 +523,9 @@ export class SessionService {
    * Called by SessionLauncherService after spawning a terminal.
    */
   registerTerminal(sessionId: string, terminalSessionId: number, worktreePath: string): void {
+    this.logger.debug(
+      `[registerTerminal] sessionId=${sessionId}, terminalSessionId=${terminalSessionId}`
+    );
     const session = this.sessions.get(sessionId);
     if (session) {
       session.terminalSessionId = terminalSessionId;
@@ -531,6 +540,9 @@ export class SessionService {
    * Called by ClaudeSessionTrackerService when a new Claude session is detected.
    */
   setClaudeSessionId(sessionId: string, claudeSessionId: string): void {
+    this.logger.debug(
+      `[setClaudeSessionId] sessionId=${sessionId}, claudeSessionId=${claudeSessionId}`
+    );
     const session = this.sessions.get(sessionId);
     if (session) {
       session.claudeSessionId = claudeSessionId;
@@ -604,6 +616,7 @@ export class SessionService {
    * @returns True if resize was successful
    */
   resizeSession(sessionId: string, cols: number, rows: number): boolean {
+    this.logger.debug(`[resizeSession] sessionId=${sessionId}, cols=${cols}, rows=${rows}`);
     const session = this.sessions.get(sessionId);
 
     if (!session || session.terminalSessionId === undefined) {

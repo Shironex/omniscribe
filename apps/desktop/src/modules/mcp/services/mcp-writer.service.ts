@@ -83,6 +83,7 @@ export class McpWriterService implements OnModuleDestroy {
     projectPath: string,
     servers: McpServerConfig[]
   ): Promise<string> {
+    this.logger.debug(`[writeConfig] workingDir=${workingDir}, sessionId=${sessionId}`);
     const configPath = path.join(workingDir, '.mcp.json');
     const mutex = this.getMutex(configPath);
 
@@ -177,6 +178,7 @@ export class McpWriterService implements OnModuleDestroy {
    * @returns True if omniscribe was removed, false if not found
    */
   async removeConfig(workingDir: string, sessionId?: string): Promise<boolean> {
+    this.logger.debug(`[removeConfig] workingDir=${workingDir}, sessionId=${sessionId}`);
     // Unregister session from registry (outside mutex - separate concern)
     if (sessionId) {
       this.sessionRegistry.unregisterSession(sessionId);

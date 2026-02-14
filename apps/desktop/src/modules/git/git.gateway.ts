@@ -59,6 +59,7 @@ export class GitGateway implements OnGatewayInit {
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: GitBranchesPayload
   ): Promise<GitBranchesResponse> {
+    this.logger.debug(`[git:branches] projectPath=${payload.projectPath}`);
     try {
       const { projectPath } = payload;
       const pathError = validatePath(projectPath);
@@ -101,6 +102,7 @@ export class GitGateway implements OnGatewayInit {
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: GitCommitsPayload
   ): Promise<GitCommitsResponse> {
+    this.logger.debug(`[git:commits] projectPath=${payload.projectPath}, limit=${payload.limit}`);
     try {
       const { projectPath, limit = 50, allBranches = true } = payload;
       const pathError = validatePath(projectPath);
@@ -136,6 +138,9 @@ export class GitGateway implements OnGatewayInit {
     @ConnectedSocket() _client: Socket,
     @MessageBody() payload: GitCheckoutPayload
   ): Promise<GitCheckoutResponse> {
+    this.logger.debug(
+      `[git:checkout] projectPath=${payload.projectPath}, branch=${payload.branch}`
+    );
     try {
       const { projectPath, branch } = payload;
       const pathError = validatePath(projectPath);
@@ -180,6 +185,9 @@ export class GitGateway implements OnGatewayInit {
     @ConnectedSocket() _client: Socket,
     @MessageBody() payload: GitCreateBranchPayload
   ): Promise<GitCreateBranchResponse> {
+    this.logger.debug(
+      `[git:create-branch] projectPath=${payload.projectPath}, name=${payload.name}`
+    );
     try {
       const { projectPath, name, startPoint } = payload;
       const pathError = validatePath(projectPath);
@@ -229,6 +237,7 @@ export class GitGateway implements OnGatewayInit {
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: GitCurrentBranchPayload
   ): Promise<GitCurrentBranchResponse> {
+    this.logger.debug(`[git:current-branch] projectPath=${payload.projectPath}`);
     try {
       const { projectPath } = payload;
       const pathError = validatePath(projectPath);
@@ -265,6 +274,7 @@ export class GitGateway implements OnGatewayInit {
     @ConnectedSocket() _client: Socket,
     @MessageBody() payload: GitWorktreesPayload
   ): Promise<GitWorktreesResponse> {
+    this.logger.debug(`[git:worktrees] projectPath=${payload.projectPath}`);
     try {
       const { projectPath } = payload;
       const pathError = validatePath(projectPath);
@@ -297,6 +307,9 @@ export class GitGateway implements OnGatewayInit {
     @ConnectedSocket() _client: Socket,
     @MessageBody() payload: GitWorktreeCleanupPayload
   ): Promise<SuccessResponse> {
+    this.logger.debug(
+      `[git:worktree:cleanup] projectPath=${payload.projectPath}, worktreePath=${payload.worktreePath}`
+    );
     try {
       const { projectPath, worktreePath } = payload;
       const projectPathError = validatePath(projectPath);

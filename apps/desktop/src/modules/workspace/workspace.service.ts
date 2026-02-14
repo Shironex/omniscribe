@@ -193,6 +193,7 @@ export class WorkspaceService implements OnModuleInit {
           activeSessionsSnapshot: [],
         },
       });
+      this.logger.debug(`Store initialized at ${this.store.path}`);
     } catch (error) {
       this.logger.error('Failed to initialize workspace store, resetting to defaults:', error);
       // Corruption or schema mismatch — clear and retry
@@ -224,6 +225,7 @@ export class WorkspaceService implements OnModuleInit {
     // Ensure quick actions exist
     const quickActions = this.store.get('quickActions');
     if (!quickActions || quickActions.length === 0) {
+      this.logger.debug('No quick actions found, applying defaults');
       this.store.set('quickActions', DEFAULT_QUICK_ACTIONS);
     }
   }
@@ -370,6 +372,7 @@ export class WorkspaceService implements OnModuleInit {
    * Select a tab
    */
   selectTab(tabId: string): ProjectTabDTO[] {
+    this.logger.debug(`[selectTab] tabId=${tabId}`);
     const tabs = this.getTabs();
     const updatedTabs = tabs.map(t => ({
       ...t,
@@ -385,6 +388,7 @@ export class WorkspaceService implements OnModuleInit {
    * Update a tab's theme
    */
   updateTabTheme(tabId: string, theme: string): ProjectTabDTO[] {
+    this.logger.debug(`[updateTabTheme] tabId=${tabId}, theme=${theme}`);
     const tabs = this.getTabs();
     const updatedTabs = tabs.map(t => (t.id === tabId ? { ...t, theme } : t));
     this.setTabs(updatedTabs);
@@ -406,6 +410,7 @@ export class WorkspaceService implements OnModuleInit {
    * Set quick actions
    */
   setQuickActions(actions: QuickAction[]): void {
+    this.logger.debug(`[setQuickActions] count=${actions.length}`);
     this.store.set('quickActions', actions);
   }
 
@@ -413,6 +418,7 @@ export class WorkspaceService implements OnModuleInit {
    * Reset quick actions to defaults
    */
   resetQuickActionsToDefaults(): void {
+    this.logger.debug('[resetQuickActionsToDefaults] resetting');
     this.store.set('quickActions', DEFAULT_QUICK_ACTIONS);
   }
 
@@ -431,6 +437,7 @@ export class WorkspaceService implements OnModuleInit {
    * Set all preferences
    */
   setPreferences(preferences: UserPreferences): void {
+    this.logger.debug('[setPreferences] updating preferences');
     this.store.set('preferences', preferences);
   }
 
@@ -446,6 +453,7 @@ export class WorkspaceService implements OnModuleInit {
    * Set a single preference
    */
   setPreference(key: string, value: unknown): UserPreferences {
+    this.logger.debug(`[setPreference] key=${key}`);
     const preferences = this.getPreferences();
     preferences[key] = value;
     this.store.set('preferences', preferences);
@@ -456,6 +464,7 @@ export class WorkspaceService implements OnModuleInit {
    * Delete a preference
    */
   deletePreference(key: string): void {
+    this.logger.debug(`[deletePreference] key=${key}`);
     const preferences = this.getPreferences();
     delete preferences[key];
     this.store.set('preferences', preferences);

@@ -42,6 +42,7 @@ export class GitBaseService {
         maxBuffer: 10 * 1024 * 1024, // 10MB buffer for large outputs
       });
 
+      this.logger.debug(`[execGit] completed: ${commandStr}`);
       return {
         stdout: result.stdout,
         stderr: result.stderr,
