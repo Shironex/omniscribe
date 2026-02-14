@@ -4,6 +4,7 @@ import type { Terminal } from '@xterm/xterm';
 import type { FitAddon } from '@xterm/addon-fit';
 import { resizeTerminal } from '@/lib/terminal';
 import { getTerminalTheme } from '@/lib/terminal-themes';
+import { cn } from '@/lib/utils';
 import { TerminalSearchBar } from './TerminalSearchBar';
 import { useTerminalSettings } from '@/hooks/useTerminalSettings';
 import { useTerminalSearch } from '@/hooks/useTerminalSearch';
@@ -156,7 +157,7 @@ export const TerminalView: React.FC<TerminalViewProps> = React.memo(
     return (
       <div
         data-testid={`terminal-view-${sessionId}`}
-        className={`terminal-view ${className}`}
+        className={cn('terminal-view', className)}
         style={{
           width: '100%',
           height: '100%',
