@@ -1,3 +1,4 @@
+import * as path from 'path';
 import { Test, TestingModule } from '@nestjs/testing';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InternalSessionEvents } from '../shared/events';
@@ -63,9 +64,10 @@ describe('HookManagerService', () => {
       await service.registerHooks('/my/project');
 
       // Should create the hooks directory
-      expect(mockFsPromises.mkdir).toHaveBeenCalledWith(expect.stringContaining('.claude/hooks'), {
-        recursive: true,
-      });
+      expect(mockFsPromises.mkdir).toHaveBeenCalledWith(
+        expect.stringContaining(path.join('.claude', 'hooks')),
+        { recursive: true }
+      );
 
       // Should write the hook script file
       expect(mockFsPromises.writeFile).toHaveBeenCalledWith(

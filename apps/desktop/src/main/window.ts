@@ -47,9 +47,9 @@ function setupContentSecurityPolicy(isDev: boolean, backendPort: number): void {
   });
 }
 
-const ALLOWED_EXTERNAL_PROTOCOLS = ['http:', 'https:'];
+const ALLOWED_EXTERNAL_PROTOCOLS = ['http:', 'https:', 'vscode:', 'vscode-insiders:', 'cursor:'];
 
-function isExternalUrlAllowed(url: string): boolean {
+export function isExternalUrlAllowed(url: string): boolean {
   try {
     const parsed = new URL(url);
     return ALLOWED_EXTERNAL_PROTOCOLS.includes(parsed.protocol);

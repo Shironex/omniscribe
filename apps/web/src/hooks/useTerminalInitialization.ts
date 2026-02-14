@@ -86,7 +86,9 @@ export function useTerminalInitialization(
       });
 
       fitAddon = new FitAddon();
-      const webLinksAddon = new WebLinksAddon();
+      const webLinksAddon = new WebLinksAddon((_event, uri) => {
+        window.open(uri, '_blank');
+      });
       searchAddon = new SearchAddon();
 
       terminal.loadAddon(fitAddon);
