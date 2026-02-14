@@ -9,6 +9,7 @@ import { GitService } from './git.service';
 import { WorktreeService } from './worktree.service';
 import { GithubService } from './github.service';
 import { GitGateway } from './git.gateway';
+import { GithubGateway } from './github.gateway';
 
 @Module({
   providers: [
@@ -26,6 +27,7 @@ import { GitGateway } from './git.gateway';
     WorktreeService,
     GithubService,
     GitGateway,
+    GithubGateway,
   ],
   exports: [
     GitBaseService,

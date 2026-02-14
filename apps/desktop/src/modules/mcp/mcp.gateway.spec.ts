@@ -156,7 +156,7 @@ describe('McpGateway', () => {
       const result = await gateway.handleDiscover({ projectPath: '' }, mockSocket);
 
       expect(result.servers).toEqual([]);
-      expect(result.error).toBe('projectPath is required');
+      expect(result.error).toBe('Invalid projectPath: must be a non-empty string');
       expect(discoveryService.discoverServers).not.toHaveBeenCalled();
       expect(projectCache.setServers).not.toHaveBeenCalled();
     });
@@ -165,7 +165,7 @@ describe('McpGateway', () => {
       const result = await gateway.handleDiscover(null as any, mockSocket);
 
       expect(result.servers).toEqual([]);
-      expect(result.error).toBe('projectPath is required');
+      expect(result.error).toBe('Invalid projectPath: must be a non-empty string');
       expect(discoveryService.discoverServers).not.toHaveBeenCalled();
     });
 
@@ -173,7 +173,7 @@ describe('McpGateway', () => {
       const result = await gateway.handleDiscover(undefined as any, mockSocket);
 
       expect(result.servers).toEqual([]);
-      expect(result.error).toBe('projectPath is required');
+      expect(result.error).toBe('Invalid projectPath: must be a non-empty string');
     });
 
     it('should return error when discoveryService throws', async () => {
