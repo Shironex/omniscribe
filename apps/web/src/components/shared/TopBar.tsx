@@ -1,18 +1,15 @@
-import { clsx } from 'clsx';
-import { twMerge } from 'tailwind-merge';
 import type { StatusCounts } from './StatusLegend';
-import type { SessionStatus } from './StatusLegend';
 import { ProjectTabs } from './ProjectTabs';
+import type { Tab } from './ProjectTabs';
 import { StatusBar } from './StatusBar';
 import { ActionBar } from './ActionBar';
 import { WindowControls } from './WindowControls';
+import { cn } from '@/lib/utils';
 import { IS_ELECTRON, IS_MAC } from '@/lib/platform';
 
-export interface Tab {
-  id: string;
-  label: string;
-  status?: SessionStatus;
-}
+export type { Tab };
+
+const CLOSE_TAB_SHORTCUT = IS_MAC ? '⌘ W' : 'Ctrl+W';
 
 interface TopBarProps {
   // Tab props
@@ -63,18 +60,14 @@ export function TopBar({
   isHistoryOpen,
   className,
 }: TopBarProps) {
-  const closeTabShortcut = IS_MAC ? '⌘ W' : 'Ctrl+W';
-
   return (
     <div
       data-testid="project-tabs"
-      className={twMerge(
-        clsx(
-          'h-11 bg-muted border-b border-border',
-          'flex items-center select-none drag',
-          IS_ELECTRON && IS_MAC && 'pl-[78px]',
-          className
-        )
+      className={cn(
+        'h-11 bg-muted border-b border-border',
+        'flex items-center select-none drag',
+        IS_ELECTRON && IS_MAC && 'pl-[78px]',
+        className
       )}
     >
       {/* Left: Project tabs */}
@@ -84,7 +77,7 @@ export function TopBar({
         onSelectTab={onSelectTab}
         onCloseTab={onCloseTab}
         onNewTab={onNewTab}
-        closeTabShortcut={closeTabShortcut}
+        closeTabShortcut={CLOSE_TAB_SHORTCUT}
       />
 
       {/* Center spacer */}

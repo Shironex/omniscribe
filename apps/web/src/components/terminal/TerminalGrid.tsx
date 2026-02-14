@@ -1,6 +1,5 @@
 import { useCallback, useMemo } from 'react';
-import { clsx } from 'clsx';
-import { twMerge } from 'tailwind-merge';
+import { cn } from '@/lib/utils';
 import { DndContext, DragOverlay, closestCenter } from '@dnd-kit/core';
 import { SortableContext, rectSwappingStrategy } from '@dnd-kit/sortable';
 import { SortableTerminalWrapper } from './SortableTerminalWrapper';
@@ -134,10 +133,7 @@ export function TerminalGrid({
   );
 
   return (
-    <div
-      data-testid="terminal-grid"
-      className={twMerge(clsx('h-full w-full flex flex-col', className))}
-    >
+    <div data-testid="terminal-grid" className={cn('h-full w-full flex flex-col', className)}>
       {/* Main grid area for active sessions */}
       <div className="flex-1 min-h-0 p-2">
         {sessionCount > 0 ? (

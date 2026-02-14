@@ -30,8 +30,8 @@ export function RowPrimaryLayout({
           )}
           <Panel
             id={`row-${rowIndex}`}
-            defaultSize={`${100 / rows.length}%`}
-            minSize="15%"
+            defaultSize={100 / rows.length}
+            minSize={15}
             className="min-h-0 min-w-0 overflow-hidden"
           >
             <Group
@@ -51,8 +51,8 @@ export function RowPrimaryLayout({
                     )}
                     <Panel
                       id={`cell-${rowIndex}-${colIndex}`}
-                      defaultSize={`${100 / row.length}%`}
-                      minSize="15%"
+                      defaultSize={100 / row.length}
+                      minSize={15}
                       className="min-h-0 min-w-0 overflow-hidden"
                     >
                       {renderTerminalCard(session)}

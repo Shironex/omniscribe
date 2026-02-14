@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useCallback, useState, useRef } from 'react';
-import { clsx } from 'clsx';
-import { twMerge } from 'tailwind-merge';
 import { X, RefreshCw, PlayCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { createLogger, type ClaudeSessionEntry } from '@omniscribe/shared';
 import { useSessionHistoryStore, selectSessionHistory } from '@/stores';
 import { useSessionStore } from '@/stores';
 import { resumeSession, forkSession, continueLastSession } from '@/lib/session';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { SessionHistoryFilters } from './SessionHistoryFilters';
 import { SessionHistoryItem } from './SessionHistoryItem';
 
@@ -180,12 +180,10 @@ export function SessionHistoryPanel({
 
   return (
     <div
-      className={twMerge(
-        clsx(
-          'h-full border-l border-border bg-muted flex flex-col',
-          'transition-all duration-200 ease-in-out overflow-hidden',
-          isOpen ? 'w-80' : 'w-0'
-        ),
+      className={cn(
+        'h-full border-l border-border bg-muted flex flex-col',
+        'transition-all duration-200 ease-in-out overflow-hidden',
+        isOpen ? 'w-80' : 'w-0',
         className
       )}
     >
@@ -195,31 +193,40 @@ export function SessionHistoryPanel({
           Session History
         </span>
         <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => projectPath && fetchHistory(projectPath)}
-            className="h-auto w-auto p-1"
-            aria-label="Refresh session history"
-          >
-            <RefreshCw size={13} />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onClose}
-            className="h-auto w-auto p-1"
-            aria-label="Close session history panel"
-          >
-            <X size={14} />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => projectPath && fetchHistory(projectPath)}
+                className="h-auto w-auto p-1"
+                aria-label="Refresh session history"
+              >
+                <RefreshCw size={13} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">Refresh</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onClose}
+                className="h-auto w-auto p-1"
+                aria-label="Close session history panel"
+              >
+                <X size={14} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">Close</TooltipContent>
+          </Tooltip>
         </div>
       </div>
 
       {/* Continue Last Button */}
       <div className="px-3 py-2 border-b border-border shrink-0">
         <Button
-          variant="ghost"
           onClick={handleContinueLast}
           disabled={!projectPath}
           className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 h-auto text-xs font-medium bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 hover:text-emerald-400"

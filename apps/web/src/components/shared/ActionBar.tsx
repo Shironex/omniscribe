@@ -1,4 +1,4 @@
-import { clsx } from 'clsx';
+import { cn } from '@/lib/utils';
 import { Settings, Play, LayoutGrid, History, Plus, Square } from 'lucide-react';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
@@ -6,6 +6,10 @@ import { useSettingsStore } from '@/stores';
 import { IS_MAC } from '@/lib/platform';
 
 const MAX_SESSIONS = 12;
+
+const STOP_SHORTCUT = IS_MAC ? '⌘ K' : 'Ctrl+K';
+const SETTINGS_SHORTCUT = IS_MAC ? '⌘ ,' : 'Ctrl+,';
+const HISTORY_SHORTCUT = IS_MAC ? '⌘ ⇧ H' : 'Ctrl+Shift+H';
 
 interface ActionBarProps {
   hasActiveProject: boolean;
@@ -39,10 +43,6 @@ export function ActionBar({
   const openSettings = useSettingsStore(state => state.openSettings);
   const canAddMore = hasActiveProject && sessionCount + preLaunchSlotCount < MAX_SESSIONS;
 
-  const stopShortcut = IS_MAC ? '⌘ K' : 'Ctrl+K';
-  const settingsShortcut = IS_MAC ? '⌘ ,' : 'Ctrl+,';
-  const historyShortcut = IS_MAC ? '⌘ ⇧ H' : 'Ctrl+Shift+H';
-
   return (
     <>
       {/* Session History toggle */}
@@ -53,7 +53,7 @@ export function ActionBar({
               variant="ghost"
               size="icon"
               onClick={onToggleHistory}
-              className={clsx('no-drag w-7 h-7', isHistoryOpen && 'bg-primary/10 text-primary')}
+              className={cn('no-drag w-7 h-7', isHistoryOpen && 'bg-primary/10 text-primary')}
               aria-label="Session history"
             >
               <History size={15} />
@@ -62,7 +62,7 @@ export function ActionBar({
           <TooltipContent side="bottom">
             Session history
             <kbd className="ml-1.5 px-1 py-0.5 text-[10px] bg-white/10 rounded">
-              {historyShortcut}
+              {HISTORY_SHORTCUT}
             </kbd>
           </TooltipContent>
         </Tooltip>
@@ -84,7 +84,7 @@ export function ActionBar({
         <TooltipContent side="bottom">
           Settings
           <kbd className="ml-1.5 px-1 py-0.5 text-[10px] bg-white/10 rounded">
-            {settingsShortcut}
+            {SETTINGS_SHORTCUT}
           </kbd>
         </TooltipContent>
       </Tooltip>
@@ -150,7 +150,9 @@ export function ActionBar({
           </TooltipTrigger>
           <TooltipContent side="bottom">
             Stop all sessions
-            <kbd className="ml-1.5 px-1 py-0.5 text-[10px] bg-white/10 rounded">{stopShortcut}</kbd>
+            <kbd className="ml-1.5 px-1 py-0.5 text-[10px] bg-white/10 rounded">
+              {STOP_SHORTCUT}
+            </kbd>
           </TooltipContent>
         </Tooltip>
       )}
@@ -164,7 +166,7 @@ export function ActionBar({
             data-testid="launch-button"
             onClick={onLaunch}
             disabled={!canLaunch || isLaunching}
-            className={clsx(
+            className={cn(
               'no-drag w-7 h-7',
               canLaunch && !isLaunching && 'text-primary hover:bg-primary/10'
             )}

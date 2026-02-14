@@ -1,9 +1,14 @@
-import { clsx } from 'clsx';
 import { X, Plus } from 'lucide-react';
-import { StatusDot } from './StatusLegend';
+import { StatusDot, type SessionStatus } from './StatusLegend';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
-import type { Tab } from './TopBar';
+import { cn } from '@/lib/utils';
+
+export interface Tab {
+  id: string;
+  label: string;
+  status?: SessionStatus;
+}
 
 interface ProjectTabsProps {
   tabs: Tab[];
@@ -30,7 +35,7 @@ export function ProjectTabs({
           role="tab"
           tabIndex={activeTabId === tab.id ? 0 : -1}
           aria-selected={activeTabId === tab.id}
-          className={clsx(
+          className={cn(
             'no-drag group flex items-center gap-2 px-3 h-full min-w-0',
             'cursor-pointer transition-colors border-r border-border',
             activeTabId === tab.id
