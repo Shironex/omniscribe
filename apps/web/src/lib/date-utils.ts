@@ -27,6 +27,7 @@ export function formatDate(timestamp: number): string {
 export function formatLogTimestamp(iso: string): string {
   try {
     const d = new Date(iso);
+    if (isNaN(d.getTime())) return iso;
     const time = d.toLocaleTimeString(undefined, {
       hour: '2-digit',
       minute: '2-digit',

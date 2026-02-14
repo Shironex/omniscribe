@@ -2,7 +2,7 @@ import { ipcMain, app, shell, clipboard } from 'electron';
 import { existsSync } from 'fs';
 import { readdir, stat, readFile } from 'fs/promises';
 import { join } from 'path';
-import { createLogger, LOG_FILE_PREFIX } from '@omniscribe/shared';
+import { createLogger, LOG_FILE_PREFIX, LOG_MAX_FILE_SIZE } from '@omniscribe/shared';
 import { CLI_TOOLS, checkCliAvailable, type CLITool } from '../utils';
 import { getLogsDir } from '../logger';
 import { getBackendPort } from '../backend-port';
@@ -107,8 +107,22 @@ export function registerAppHandlers(): void {
     }
 
     const filePath = join(getLogsDir(), fileName);
-    if (!existsSync(filePath)) {
-      throw new Error('Log file not found');
+
+    // Check file size before reading to avoid loading very large files
+    try {
+      const fileStat = await stat(filePath);
+      if (fileStat.size > LOG_MAX_FILE_SIZE) {
+        throw new Error(`Log file exceeds ${LOG_MAX_FILE_SIZE / (1024 * 1024)}MB limit`);
+      }
+    } catch (err: unknown) {
+      if (
+        err instanceof Error &&
+        'code' in err &&
+        (err as NodeJS.ErrnoException).code === 'ENOENT'
+      ) {
+        throw new Error('Log file not found');
+      }
+      throw err;
     }
 
     return readFile(filePath, 'utf-8');

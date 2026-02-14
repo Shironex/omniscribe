@@ -137,7 +137,15 @@ export function parseLogEntries(raw: string): LogEntry[] {
   const entries: LogEntry[] = [];
   for (const line of lines) {
     try {
-      entries.push(JSON.parse(line) as LogEntry);
+      const parsed = JSON.parse(line);
+      if (
+        typeof parsed.timestamp === 'string' &&
+        typeof parsed.level === 'string' &&
+        typeof parsed.context === 'string' &&
+        typeof parsed.message === 'string'
+      ) {
+        entries.push(parsed as LogEntry);
+      }
     } catch {
       // Skip malformed lines
     }

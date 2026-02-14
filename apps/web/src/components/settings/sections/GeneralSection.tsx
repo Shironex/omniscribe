@@ -18,6 +18,7 @@ import {
   GITHUB_RELEASES_URL,
   UPDATE_ERROR_RELEASE_PENDING,
   createLogger,
+  formatFileSize,
 } from '@omniscribe/shared';
 import { Button } from '@/components/ui/button';
 import { Markdown } from '@/components/ui/markdown';
@@ -28,12 +29,6 @@ import { IS_MAC } from '@/lib/platform';
 import { LogViewerModal } from '@/components/settings/LogViewerModal';
 
 const logger = createLogger('GeneralSection');
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
 
 function MacDownloadFallback({ message }: { message: string }) {
   return (
@@ -262,9 +257,9 @@ export function GeneralSection() {
               {progress && (
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
                   <span>
-                    {formatBytes(progress.transferred)} / {formatBytes(progress.total)}
+                    {formatFileSize(progress.transferred)} / {formatFileSize(progress.total)}
                   </span>
-                  <span>{formatBytes(progress.bytesPerSecond)}/s</span>
+                  <span>{formatFileSize(progress.bytesPerSecond)}/s</span>
                 </div>
               )}
             </div>

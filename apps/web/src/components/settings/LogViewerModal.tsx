@@ -36,7 +36,7 @@ const LEVEL_STYLES: Record<string, string> = {
 
 function ExpandableData({ data }: { data: unknown }) {
   const [expanded, setExpanded] = useState(false);
-  const formatted = JSON.stringify(data, null, 2);
+  const collapsed = JSON.stringify(data);
 
   return (
     <button
@@ -50,11 +50,13 @@ function ExpandableData({ data }: { data: unknown }) {
         <ChevronRight className="w-3 h-3 mt-0.5 shrink-0" />
       )}
       {expanded ? (
-        <pre className="whitespace-pre-wrap break-all font-mono">{formatted}</pre>
+        <pre className="whitespace-pre-wrap break-all font-mono">
+          {JSON.stringify(data, null, 2)}
+        </pre>
       ) : (
         <span className="truncate max-w-[300px] font-mono">
-          {JSON.stringify(data).slice(0, 80)}
-          {JSON.stringify(data).length > 80 && '...'}
+          {collapsed.slice(0, 80)}
+          {collapsed.length > 80 && '...'}
         </span>
       )}
     </button>
@@ -95,13 +97,11 @@ export function LogViewerModal({ open, onOpenChange }: LogViewerModalProps) {
   const loadLogContent = useCallback(async (fileName: string) => {
     setIsLoading(true);
     setError(null);
+    setSelectedFile(fileName);
     try {
       const content = await window.electronAPI?.app?.readLogFile(fileName);
-      if (content) {
-        const parsed = parseLogEntries(content);
-        setEntries(parsed.slice(-MAX_DISPLAY_ENTRIES));
-      }
-      setSelectedFile(fileName);
+      const parsed = content ? parseLogEntries(content) : [];
+      setEntries(parsed.slice(-MAX_DISPLAY_ENTRIES));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to read log file');
     } finally {
@@ -137,6 +137,7 @@ export function LogViewerModal({ open, onOpenChange }: LogViewerModalProps) {
       <DialogPortal>
         <DialogOverlay className="bg-black/60 backdrop-blur-xs" />
         <DialogPrimitive.Content
+          aria-describedby={undefined}
           className={cn(
             'fixed left-[50%] top-[50%] z-60 translate-x-[-50%] translate-y-[-50%]',
             'w-full max-w-5xl mx-4',
