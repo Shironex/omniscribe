@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.7.2 (2026-02-14)
+
+### Bug Fixes
+
+- **Terminal URL links not opening in browser** — Fixed clickable URLs in terminal output opening `about:blank` instead of the actual URL; custom handler now passes the real URL to Electron's `setWindowOpenHandler` (#113, closes #112)
+- **Editor protocol support** — Added `vscode:`, `vscode-insiders:`, and `cursor:` protocols to allowed external protocols for editor URI links (#113)
+
 ## 0.7.1 (2026-02-13)
 
 ### Performance
