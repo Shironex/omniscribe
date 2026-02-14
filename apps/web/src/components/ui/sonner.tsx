@@ -7,7 +7,15 @@ type ToasterProps = React.ComponentProps<typeof Sonner>;
 
 const Toaster = ({ ...props }: ToasterProps) => {
   const effectiveTheme = useSettingsStore(selectEffectiveTheme);
-  const isDark = getThemeOption(effectiveTheme)?.isDark ?? true;
+  const themeOption = getThemeOption(effectiveTheme);
+
+  if (!themeOption && import.meta.env.DEV) {
+    console.warn(
+      `[Toaster] Theme "${effectiveTheme}" not found in themeOptions, defaulting to dark`
+    );
+  }
+
+  const isDark = themeOption?.isDark ?? true;
 
   return (
     <Sonner
@@ -16,6 +24,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
       position="bottom-right"
       style={
         {
+          // Remap Sonner's internal CSS vars to our theme vars
           '--normal-bg': 'var(--background)',
           '--normal-border': 'var(--border)',
           '--normal-text': 'var(--foreground)',
