@@ -1,5 +1,8 @@
 // ---- Mocks ----
 
+import { createLoggerMock } from '../../../test/mocks/logger.mock';
+
+const mockLogger = createLoggerMock();
 const mockExecFileAsync = jest.fn();
 
 jest.mock('child_process', () => ({
@@ -7,6 +10,7 @@ jest.mock('child_process', () => ({
 }));
 
 jest.mock('util', () => ({
+  ...jest.requireActual('util'),
   promisify:
     () =>
     (...args: unknown[]) =>
@@ -14,13 +18,7 @@ jest.mock('util', () => ({
 }));
 
 jest.mock('@omniscribe/shared', () => ({
-  createLogger: () => ({
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-    debug: jest.fn(),
-    log: jest.fn(),
-  }),
+  createLogger: () => mockLogger,
   extractErrorMessage: (err: unknown) => (err instanceof Error ? err.message : String(err)),
 }));
 
@@ -67,6 +65,23 @@ describe('github-detection', () => {
   // getGhCliPaths
   // ================================================================
   describe('getGhCliPaths', () => {
+    const savedProgramFiles = process.env['ProgramFiles'];
+    const savedLocalAppData = process.env['LOCALAPPDATA'];
+
+    afterEach(() => {
+      // Restore env vars to avoid leaks between tests
+      if (savedProgramFiles !== undefined) {
+        process.env['ProgramFiles'] = savedProgramFiles;
+      } else {
+        delete process.env['ProgramFiles'];
+      }
+      if (savedLocalAppData !== undefined) {
+        process.env['LOCALAPPDATA'] = savedLocalAppData;
+      } else {
+        delete process.env['LOCALAPPDATA'];
+      }
+    });
+
     it('should return Windows paths with .exe on Windows', () => {
       mockIsWindows.mockReturnValue(true);
       process.env['ProgramFiles'] = 'C:\\Program Files';
@@ -78,9 +93,6 @@ describe('github-detection', () => {
       const pathStr = result.join(' ');
       expect(pathStr).toContain('gh.exe');
       expect(pathStr).toContain('GitHub CLI');
-
-      delete process.env['ProgramFiles'];
-      delete process.env['LOCALAPPDATA'];
     });
 
     it('should use default paths when env vars not set on Windows', () => {

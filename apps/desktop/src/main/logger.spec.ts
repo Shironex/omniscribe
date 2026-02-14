@@ -127,14 +127,15 @@ describe('logger', () => {
       expect(mockAppendFile).not.toHaveBeenCalled();
     });
 
-    it('should force flush when buffer reaches max entries', () => {
+    it('should force flush when buffer reaches max entries', async () => {
       // Buffer 50 messages (LOG_BUFFER_MAX_ENTRIES)
       for (let i = 0; i < 50; i++) {
         mod.fileTransport(`message ${i}\n`);
       }
 
-      // doFlush should have been triggered (via .catch())
-      // We need to let the microtask queue drain
+      // Let the async doFlush() complete
+      await jest.advanceTimersByTimeAsync(0);
+
       expect(mockStat).toHaveBeenCalled();
     });
   });
@@ -221,21 +222,17 @@ describe('logger', () => {
   // Periodic flush timer
   // ================================================================
   describe('periodic flush', () => {
-    it('should set up a flush timer on initialization', () => {
-      // The module was already loaded in beforeEach which calls initialize().
-      // Verify that advancing timers triggers doFlush by checking side effects.
-      // Since doFlush is async inside setInterval, we test it indirectly via flushLogs.
+    it('should flush buffer when timer fires', async () => {
       mod.fileTransport('timer message\n');
       mockStat.mockResolvedValue({ size: 0 });
 
-      // The flush timer exists — verify by calling flushLogs directly
-      // (the timer itself calls doFlush which is the same internal function)
-      return mod.flushLogs().then(() => {
-        expect(mockAppendFile).toHaveBeenCalledWith(
-          expect.stringContaining('omniscribe-'),
-          'timer message\n'
-        );
-      });
+      // Advance past the flush interval to trigger the timer and let async doFlush() complete
+      await jest.advanceTimersByTimeAsync(100); // LOG_FLUSH_INTERVAL_MS
+
+      expect(mockAppendFile).toHaveBeenCalledWith(
+        expect.stringContaining('omniscribe-'),
+        'timer message\n'
+      );
     });
   });
 
@@ -248,13 +245,9 @@ describe('logger', () => {
       mod.setOnLoggingError(errorCallback);
 
       mod.fileTransport('data\n');
-      mockStat.mockRejectedValue(new Error('disk full'));
-
-      // The stat error should be caught by rotateIfNeeded which ignores
-      // non-ENOENT errors and calls handleLoggingError
-      // But actually the error in doFlush is from appendFile
-      mockAppendFile.mockRejectedValue(new Error('disk full'));
+      // Stat succeeds but appendFile fails
       mockStat.mockResolvedValue({ size: 0 });
+      mockAppendFile.mockRejectedValue(new Error('disk full'));
 
       await mod.flushLogs();
 

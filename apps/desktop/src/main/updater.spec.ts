@@ -58,13 +58,17 @@ describe('updater', () => {
   let downloadUpdate: typeof import('./updater').downloadUpdate;
   let quitAndInstall: typeof import('./updater').quitAndInstall;
 
+  const mockMainWindow = {
+    webContents: { send: jest.fn() },
+  } as unknown as Electron.BrowserWindow;
+
   beforeEach(() => {
     jest.clearAllMocks();
     jest.useFakeTimers();
 
-    // Reset autoUpdater mock state
-    mockAutoUpdater.autoDownload = false;
-    mockAutoUpdater.autoInstallOnAppQuit = true;
+    // Set opposite values so module init tests prove the module writes them
+    mockAutoUpdater.autoDownload = true;
+    mockAutoUpdater.autoInstallOnAppQuit = false;
     mockAutoUpdater.channel = 'latest';
     mockAutoUpdater.allowPrerelease = false;
     mockAutoUpdater.allowDowngrade = false;
@@ -137,10 +141,6 @@ describe('updater', () => {
   // initializeAutoUpdater
   // ================================================================
   describe('initializeAutoUpdater', () => {
-    const mockMainWindow = {
-      webContents: { send: jest.fn() },
-    } as unknown as Electron.BrowserWindow;
-
     it('should skip setup in development mode', () => {
       initializeAutoUpdater(mockMainWindow, true);
 
@@ -416,10 +416,6 @@ describe('updater', () => {
   // checkForUpdates
   // ================================================================
   describe('checkForUpdates', () => {
-    const mockMainWindow = {
-      webContents: { send: jest.fn() },
-    } as unknown as Electron.BrowserWindow;
-
     it('should skip when updater is not enabled', async () => {
       const result = await checkForUpdates();
 
