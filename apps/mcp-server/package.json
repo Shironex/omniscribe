@@ -1,6 +1,6 @@
 {
   "name": "@omniscribe/mcp-server",
-  "version": "0.7.3",
+  "version": "0.8.0",
   "description": "Omniscribe MCP server for Claude Code status reporting",
   "private": true,
   "type": "module",

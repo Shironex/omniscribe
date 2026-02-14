@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.8.0 (2026-02-14)
+
+### Features
+
+- **In-app log file viewer** — New "View Logs" button in Settings > About > Diagnostics opens a two-step modal: browse log files with metadata (name, size, modified date), then view parsed JSONL entries with colored level badges (error/warn/info/debug), timestamps, context names, and expandable data fields (#116, closes #110)
+- **Virtualized log list** — Log entries use `@tanstack/react-virtual` for smooth scrolling with thousands of entries, rendering only visible rows (#116)
+
+### Improvements
+
+- **Shared `formatFileSize` utility** — Extracted duplicate `formatBytes` logic into `@omniscribe/shared` and reused across GeneralSection and LogViewerModal (#116)
+- **Log entry shape validation** — `parseLogEntries` now validates JSON structure before accepting entries, preventing malformed lines from causing rendering issues (#116)
+- **File size guard** — `app:read-log-file` IPC handler checks file size against `LOG_MAX_FILE_SIZE` before reading, preventing excessive memory usage (#116)
+- **Invalid date handling** — `formatLogTimestamp` properly falls back to raw ISO string when given invalid date input (#116)
+
+### Security
+
+- **Path traversal protection** — `app:read-log-file` validates filenames against traversal patterns (`/`, `\`, `..`) and enforces naming convention before reading (#116)
+- **TOCTOU elimination** — Replaced `existsSync` + `readFile` with async `stat` + `ENOENT` catch to prevent race conditions (#116)
+
 ## 0.7.3 (2026-02-14)
 
 ### Bug Fixes
