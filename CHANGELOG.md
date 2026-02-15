@@ -2,6 +2,37 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.8.1-beta.1 (2026-02-15)
+
+### Features
+
+- **Debug logging (backend)** — Added structured debug logging to all backend services and gateways for improved observability (#139)
+- **Debug logging (frontend)** — Added debug logging to frontend stores, hooks, and MCP tools (#150)
+
+### Bug Fixes
+
+- **Silent catch blocks** — Eliminated silent catch blocks across the codebase and preserved error stack traces for better debugging (#134)
+- **Toast theme colors** — Toasts now follow the active theme colors instead of using hardcoded dark/light values (#118)
+
+### Refactoring
+
+- **Split large frontend components** — Decomposed TopBar, SessionHistoryPanel, and TerminalGrid into smaller, focused components (#141)
+- **Split SessionService** — Broke monolithic SessionService into focused, single-responsibility services (#137)
+- **Split GitGateway** — Extracted shared validation utilities from GitGateway (#136)
+- **Extract UsageOutputParser** — Separated output parsing logic from UsageService (#138)
+- **Store concerns & type safety** — Fixed store responsibility boundaries, improved type safety, and standardized error handling (#147)
+- **Simplify complex hooks** — Extracted sub-hooks and pure functions from overly complex hooks (#146)
+- **Shadcn component migration** — Replaced raw HTML form elements with shadcn components in SessionHistoryFilters (#145)
+- **cn() utility migration** — Migrated raw clsx/twMerge imports to the project's cn() utility (#144)
+
+### Testing
+
+- **IPC security tests** — Added unit tests for security-critical IPC handlers and utilities (#133)
+- **Shared package tests** — Added tests for shared package utilities (logger, error, format, path) (#135)
+- **Main process tests** — Added unit tests for backend main process utilities (#140)
+- **Frontend component tests** — Added component tests for ErrorBoundary, TopBar, SessionHistory, LaunchModal, TerminalHeader (#148)
+- **Frontend lib & hook tests** — Added tests for lib utilities and hooks (#149)
+
 ## 0.8.0 (2026-02-14)
 
 ### Features
