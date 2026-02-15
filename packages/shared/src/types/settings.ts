@@ -252,3 +252,34 @@ export const ALL_THEMES: Theme[] = [...DARK_THEMES, ...LIGHT_THEMES];
 export function isDarkTheme(theme: Theme): boolean {
   return DARK_THEMES.includes(theme);
 }
+
+/**
+ * Editor protocol identifier for file path links
+ */
+export type EditorProtocol = 'vscode' | 'vscode-insiders' | 'cursor';
+
+/**
+ * Editor option with display info and protocol mapping
+ */
+export interface EditorOption {
+  /** Protocol identifier */
+  id: EditorProtocol;
+  /** Human-readable display name */
+  name: string;
+  /** CLI command used for detection (e.g., 'code', 'cursor') */
+  cliCommand: string;
+}
+
+/**
+ * Supported editors with their protocol and CLI command mappings
+ */
+export const EDITOR_OPTIONS: readonly EditorOption[] = [
+  { id: 'vscode', name: 'VS Code', cliCommand: 'code' },
+  { id: 'vscode-insiders', name: 'VS Code Insiders', cliCommand: 'code-insiders' },
+  { id: 'cursor', name: 'Cursor', cliCommand: 'cursor' },
+];
+
+/**
+ * Default editor protocol when no preference is set
+ */
+export const DEFAULT_EDITOR_PROTOCOL: EditorProtocol = 'vscode';

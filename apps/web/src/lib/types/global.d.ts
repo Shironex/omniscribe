@@ -8,6 +8,7 @@ import type {
   UpdateInfo,
   UpdateDownloadProgress,
   UpdateChannel,
+  EditorProtocol,
 } from '@omniscribe/shared';
 
 /**
@@ -48,6 +49,7 @@ interface ElectronAPI {
     getBackendPort: () => Promise<number>;
     listLogFiles: () => Promise<Array<{ name: string; size: number; lastModified: number }>>;
     readLogFile: (fileName: string) => Promise<string>;
+    detectEditors: () => Promise<EditorProtocol[]>;
   };
   claude?: {
     getStatus: () => Promise<ClaudeCliStatus>;

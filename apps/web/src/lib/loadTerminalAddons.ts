@@ -3,7 +3,8 @@ import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import { SearchAddon } from '@xterm/addon-search';
 import { WebglAddon } from '@xterm/addon-webgl';
-import { createLogger } from '@omniscribe/shared';
+import { createLogger, DEFAULT_EDITOR_PROTOCOL } from '@omniscribe/shared';
+import type { EditorProtocol } from '@omniscribe/shared';
 import { FilePathLinkProvider } from '@/lib/terminal-link-provider';
 
 const logger = createLogger('TerminalInit');
@@ -23,7 +24,8 @@ export interface LoadedAddons {
 export function loadTerminalAddons(
   terminal: Terminal,
   container: HTMLElement,
-  sessionId: number
+  sessionId: number,
+  getEditorProtocol?: () => EditorProtocol
 ): LoadedAddons {
   const fitAddon = new FitAddon();
   // URI is validated by Electron's setWindowOpenHandler in the main process
@@ -52,8 +54,9 @@ export function loadTerminalAddons(
     logger.debug('WebGL addon failed, using canvas fallback');
   }
 
-  // Register file path link provider
-  terminal.registerLinkProvider(new FilePathLinkProvider(terminal));
+  // Register file path link provider with dynamic editor protocol
+  const protocolGetter = getEditorProtocol ?? (() => DEFAULT_EDITOR_PROTOCOL);
+  terminal.registerLinkProvider(new FilePathLinkProvider(terminal, protocolGetter));
 
   return { fitAddon, searchAddon };
 }

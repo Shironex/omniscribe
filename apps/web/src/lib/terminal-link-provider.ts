@@ -1,5 +1,5 @@
 import type { ILinkProvider, ILink, Terminal, IBufferCellPosition } from '@xterm/xterm';
-import { normalizePath } from '@omniscribe/shared';
+import { normalizePath, type EditorProtocol } from '@omniscribe/shared';
 
 // Matches file paths with optional line:col
 // Unix: /path/to/file.ts:123:45, ./relative.ts:10
@@ -11,7 +11,10 @@ const FILE_PATH_REGEX =
 const URL_PREFIXES = ['http://', 'https://', 'ws://', 'wss://'];
 
 export class FilePathLinkProvider implements ILinkProvider {
-  constructor(private readonly terminal: Terminal) {}
+  constructor(
+    private readonly terminal: Terminal,
+    private readonly getEditorProtocol: () => EditorProtocol = () => 'vscode'
+  ) {}
 
   provideLinks(y: number, callback: (links: ILink[] | undefined) => void): void {
     const line = this.terminal.buffer.active.getLine(y - 1);
@@ -55,8 +58,12 @@ export class FilePathLinkProvider implements ILinkProvider {
           const line = parts[2] ? parseInt(parts[2], 10) : undefined;
           const col = parts[3] ? parseInt(parts[3], 10) : undefined;
 
-          // Build VS Code URI
-          let uri = `vscode://file/${normalizePath(filePath)}`;
+          // Build editor URI using the configured protocol
+          // Strip leading slash to avoid double-slash (e.g. cursor://file//path)
+          // which Windows interprets as a UNC path (\\path)
+          const normalized = normalizePath(filePath);
+          const uriPath = normalized.startsWith('/') ? normalized.slice(1) : normalized;
+          let uri = `${this.getEditorProtocol()}://file/${uriPath}`;
           if (line !== undefined) {
             uri += `:${line}`;
             if (col !== undefined) {

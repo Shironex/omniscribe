@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { FilePathLinkProvider } from '../terminal-link-provider';
 import type { ILink } from '@xterm/xterm';
+import type { EditorProtocol } from '@omniscribe/shared';
 
 function createMockTerminal(lineContent: string | null) {
   return {
@@ -163,7 +164,7 @@ describe('FilePathLinkProvider', () => {
   });
 
   describe('activate handler', () => {
-    it('opens vscode:// URI for plain paths', async () => {
+    it('opens vscode:// URI by default', async () => {
       const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
       const terminal = createMockTerminal('/home/user/file.ts');
       const provider = new FilePathLinkProvider(terminal);
@@ -171,7 +172,7 @@ describe('FilePathLinkProvider', () => {
       const links = await getLinks(provider, 1);
       links![0].activate({} as MouseEvent, '/home/user/file.ts');
 
-      expect(openSpy).toHaveBeenCalledWith('vscode://file//home/user/file.ts', '_blank');
+      expect(openSpy).toHaveBeenCalledWith('vscode://file/home/user/file.ts', '_blank');
     });
 
     it('appends line number to URI', async () => {
@@ -182,7 +183,7 @@ describe('FilePathLinkProvider', () => {
       const links = await getLinks(provider, 1);
       links![0].activate({} as MouseEvent, '/home/user/file.ts:42');
 
-      expect(openSpy).toHaveBeenCalledWith('vscode://file//home/user/file.ts:42', '_blank');
+      expect(openSpy).toHaveBeenCalledWith('vscode://file/home/user/file.ts:42', '_blank');
     });
 
     it('appends line and column to URI', async () => {
@@ -193,7 +194,7 @@ describe('FilePathLinkProvider', () => {
       const links = await getLinks(provider, 1);
       links![0].activate({} as MouseEvent, '/home/user/file.ts:42:10');
 
-      expect(openSpy).toHaveBeenCalledWith('vscode://file//home/user/file.ts:42:10', '_blank');
+      expect(openSpy).toHaveBeenCalledWith('vscode://file/home/user/file.ts:42:10', '_blank');
     });
 
     it('normalizes Windows backslashes in URI', async () => {
@@ -205,6 +206,51 @@ describe('FilePathLinkProvider', () => {
       links![0].activate({} as MouseEvent, 'C:\\Users\\test\\file.ts');
 
       expect(openSpy).toHaveBeenCalledWith('vscode://file/C:/Users/test/file.ts', '_blank');
+    });
+
+    it('uses cursor:// protocol when configured', async () => {
+      const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
+      const terminal = createMockTerminal('/home/user/file.ts');
+      const provider = new FilePathLinkProvider(terminal, () => 'cursor');
+
+      const links = await getLinks(provider, 1);
+      links![0].activate({} as MouseEvent, '/home/user/file.ts');
+
+      expect(openSpy).toHaveBeenCalledWith('cursor://file/home/user/file.ts', '_blank');
+    });
+
+    it('uses vscode-insiders:// protocol when configured', async () => {
+      const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
+      const terminal = createMockTerminal('/home/user/file.ts:10:5');
+      const provider = new FilePathLinkProvider(terminal, () => 'vscode-insiders');
+
+      const links = await getLinks(provider, 1);
+      links![0].activate({} as MouseEvent, '/home/user/file.ts:10:5');
+
+      expect(openSpy).toHaveBeenCalledWith(
+        'vscode-insiders://file/home/user/file.ts:10:5',
+        '_blank'
+      );
+    });
+
+    it('reads protocol dynamically from getter on each activation', async () => {
+      const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
+      const terminal = createMockTerminal('/home/user/file.ts');
+      let currentProtocol: EditorProtocol = 'vscode';
+      const provider = new FilePathLinkProvider(terminal, () => currentProtocol);
+
+      const links = await getLinks(provider, 1);
+
+      // First activation uses vscode
+      links![0].activate({} as MouseEvent, '/home/user/file.ts');
+      expect(openSpy).toHaveBeenCalledWith('vscode://file/home/user/file.ts', '_blank');
+
+      // Change protocol
+      currentProtocol = 'cursor';
+
+      // Second activation uses cursor (same link instance, different protocol)
+      links![0].activate({} as MouseEvent, '/home/user/file.ts');
+      expect(openSpy).toHaveBeenCalledWith('cursor://file/home/user/file.ts', '_blank');
     });
   });
 });

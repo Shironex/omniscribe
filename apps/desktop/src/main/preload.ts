@@ -9,6 +9,7 @@ import type {
   UpdateInfo,
   UpdateDownloadProgress,
   UpdateChannel,
+  EditorProtocol,
 } from '@omniscribe/shared';
 
 export interface ElectronAPI {
@@ -46,6 +47,7 @@ export interface ElectronAPI {
     getBackendPort: () => Promise<number>;
     listLogFiles: () => Promise<Array<{ name: string; size: number; lastModified: number }>>;
     readLogFile: (fileName: string) => Promise<string>;
+    detectEditors: () => Promise<EditorProtocol[]>;
   };
   claude: {
     getStatus: () => Promise<ClaudeCliStatus>;
@@ -112,6 +114,7 @@ const electronAPI: ElectronAPI = {
     getBackendPort: () => ipcRenderer.invoke('app:get-backend-port') as Promise<number>,
     listLogFiles: () => ipcRenderer.invoke('app:list-log-files'),
     readLogFile: (fileName: string) => ipcRenderer.invoke('app:read-log-file', fileName),
+    detectEditors: () => ipcRenderer.invoke('app:detect-editors') as Promise<EditorProtocol[]>,
   },
   claude: {
     getStatus: () => ipcRenderer.invoke('claude:get-status') as Promise<ClaudeCliStatus>,
