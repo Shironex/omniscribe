@@ -178,7 +178,7 @@ describe('McpInternalService', () => {
       // Should check Windows-style path (AppData\Local)
       expect(checkedPaths.some(p => p.includes('AppData'))).toBe(true);
       // Should NOT check Unix paths
-      expect(checkedPaths.some(p => p === '/usr/local/lib/omniscribe/mcp-server/index.js')).toBe(
+      expect(checkedPaths.some(p => p === '/usr/local/lib/omniscribe/mcp-server/index.cjs')).toBe(
         false
       );
       expect(service.isAvailable()).toBe(false);

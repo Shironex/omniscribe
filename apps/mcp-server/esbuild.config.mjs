@@ -10,7 +10,7 @@ await esbuild.build({
   platform: 'node',
   target: 'node18',
   format: 'cjs',
-  outfile: 'dist/index.js',
+  outfile: 'dist/index.cjs',
   sourcemap: false,
   minify: true,
   define: {
@@ -22,4 +22,4 @@ await esbuild.build({
   },
 });
 
-console.log('MCP server bundled: dist/index.js');
+console.log('MCP server bundled: dist/index.cjs');

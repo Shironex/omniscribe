@@ -4,9 +4,9 @@
   "description": "Omniscribe MCP server for Claude Code status reporting",
   "private": true,
   "type": "module",
-  "main": "dist/index.js",
+  "main": "dist/index.cjs",
   "bin": {
-    "omniscribe-mcp": "dist/index.js"
+    "omniscribe-mcp": "dist/index.cjs"
   },
   "scripts": {
     "build": "node esbuild.config.mjs",
@@ -16,7 +16,7 @@
     "test": "jest",
     "test:cov": "jest --coverage",
     "test:watch": "jest --watch",
-    "start": "node dist/index.js",
+    "start": "node dist/index.cjs",
     "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\""
   },
   "dependencies": {
