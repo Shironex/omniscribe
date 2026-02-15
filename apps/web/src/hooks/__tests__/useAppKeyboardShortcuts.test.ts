@@ -1,13 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { useAppKeyboardShortcuts } from '../useAppKeyboardShortcuts';
-
-interface PreLaunchSlot {
-  id: string;
-  aiMode: string;
-  branch: string;
-  shortcutKey: string;
-}
+import type { PreLaunchSlot } from '@/components/terminal/TerminalGrid';
 
 function fireKey(
   key: string,
@@ -35,7 +29,7 @@ function createDefaultParams(overrides: Record<string, unknown> = {}) {
     isLaunching: false,
     hasActiveSessions: false,
     terminalSessionCount: 0,
-    preLaunchSlots: [] as PreLaunchSlot[],
+    preLaunchSlots: [] satisfies PreLaunchSlot[],
     launchingSlotIds: new Set<string>(),
     activeProjectPath: '/project',
     handleAddSession: vi.fn(),
@@ -172,7 +166,10 @@ describe('useAppKeyboardShortcuts', () => {
     it('N does not fire when at max capacity (12)', () => {
       const params = createDefaultParams({
         terminalSessionCount: 10,
-        preLaunchSlots: [{ id: '1' }, { id: '2' }] as PreLaunchSlot[],
+        preLaunchSlots: [
+          { id: '1', aiMode: 'claude', branch: 'main', shortcutKey: '1' },
+          { id: '2', aiMode: 'claude', branch: 'main', shortcutKey: '2' },
+        ] satisfies PreLaunchSlot[],
       });
       renderHook(() => useAppKeyboardShortcuts(params));
 
