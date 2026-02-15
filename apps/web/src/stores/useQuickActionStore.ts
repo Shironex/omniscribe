@@ -187,6 +187,7 @@ export const useQuickActionStore = create<QuickActionStore>()(
 
         // Actions
         setActions: (actions: QuickAction[]) => {
+          logger.debug('setActions', { actionIds: actions.map(a => a.id) });
           set({ actions }, undefined, 'quick-actions/setActions');
         },
 
@@ -206,6 +207,7 @@ export const useQuickActionStore = create<QuickActionStore>()(
         },
 
         updateAction: (id: string, updates: Partial<QuickAction>) => {
+          logger.debug('updateAction', id);
           set(
             state => ({
               actions: state.actions.map(action =>
@@ -218,6 +220,7 @@ export const useQuickActionStore = create<QuickActionStore>()(
         },
 
         removeAction: (id: string) => {
+          logger.debug('removeAction', id);
           set(
             state => ({
               actions: state.actions.filter(action => action.id !== id),
@@ -228,6 +231,7 @@ export const useQuickActionStore = create<QuickActionStore>()(
         },
 
         reorderActions: (fromIndex: number, toIndex: number) => {
+          logger.debug('reorderActions', fromIndex, '->', toIndex);
           set(
             state => {
               const actions = [...state.actions];

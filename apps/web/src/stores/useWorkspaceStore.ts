@@ -129,6 +129,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
               event: WorkspaceEvents.TABS_UPDATED,
               handler: (data, get) => {
                 const update = data as TabsUpdatedEvent;
+                logger.debug(WorkspaceEvents.TABS_UPDATED, update.tabs.length, 'tabs');
                 const tabs = update.tabs.map(convertBackendTab);
                 get().setTabs(tabs, update.activeTabId);
               },
@@ -137,6 +138,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
               event: WorkspaceEvents.PREFERENCES_UPDATED,
               handler: (data, get) => {
                 const update = data as PreferencesUpdatedEvent;
+                logger.debug(WorkspaceEvents.PREFERENCES_UPDATED);
                 get().setPreferences(update.preferences);
               },
             },
@@ -267,6 +269,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
         },
 
         updateTabTheme: (tabId: string, theme: Theme) => {
+          logger.debug('updateTabTheme', tabId, theme);
           getSocket().emit(
             WorkspaceEvents.UPDATE_TAB_THEME,
             { tabId, theme },
@@ -283,6 +286,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
         },
 
         addSessionToTab: (tabId: string, sessionId: string) => {
+          logger.debug('addSessionToTab', tabId, sessionId);
           set(
             state => ({
               tabs: state.tabs.map(tab =>
@@ -297,6 +301,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
         },
 
         removeSessionFromTab: (tabId: string, sessionId: string) => {
+          logger.debug('removeSessionFromTab', tabId, sessionId);
           set(
             state => ({
               tabs: state.tabs.map(tab =>
@@ -311,6 +316,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
         },
 
         clearStaleSessions: (validSessionIds: string[]) => {
+          logger.debug('clearStaleSessions', { validSessionIds });
           set(
             state => ({
               tabs: state.tabs.map(tab => ({
@@ -379,6 +385,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
         },
 
         updatePreference: (key: string, value: unknown) => {
+          logger.debug('updatePreference', key);
           getSocket().emit(
             WorkspaceEvents.UPDATE_PREFERENCE,
             { key, value },
@@ -391,10 +398,12 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
         },
 
         setTabs: (tabs: ProjectTab[], activeTabId: string | null) => {
+          logger.debug('setTabs', tabs.length, 'tabs, active:', activeTabId);
           set({ tabs, activeTabId }, undefined, 'workspace/setTabs');
         },
 
         setPreferences: (preferences: UserPreferences) => {
+          logger.debug('setPreferences');
           set({ preferences }, undefined, 'workspace/setPreferences');
         },
       };
