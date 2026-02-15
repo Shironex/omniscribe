@@ -283,6 +283,33 @@ describe('useTerminalStore', () => {
     });
   });
 
+  describe('setBackpressure', () => {
+    it('marks a terminal session as backpressured', () => {
+      useTerminalStore.getState().setBackpressure(1, true);
+      expect(useTerminalStore.getState().backpressured).toEqual({ 1: true });
+    });
+
+    it('removes backpressure when paused is false', () => {
+      useTerminalStore.getState().setBackpressure(1, true);
+      useTerminalStore.getState().setBackpressure(1, false);
+      expect(useTerminalStore.getState().backpressured).toEqual({});
+    });
+
+    it('handles multiple backpressured sessions independently', () => {
+      useTerminalStore.getState().setBackpressure(1, true);
+      useTerminalStore.getState().setBackpressure(2, true);
+      expect(useTerminalStore.getState().backpressured).toEqual({ 1: true, 2: true });
+
+      useTerminalStore.getState().setBackpressure(1, false);
+      expect(useTerminalStore.getState().backpressured).toEqual({ 2: true });
+    });
+
+    it('is a no-op when removing backpressure from a non-pressured terminal', () => {
+      useTerminalStore.getState().setBackpressure(99, false);
+      expect(useTerminalStore.getState().backpressured).toEqual({});
+    });
+  });
+
   describe('reorderSessions', () => {
     it('moves a session forward in the order', () => {
       useTerminalStore.getState().setSessionOrder(['a', 'b', 'c', 'd']);

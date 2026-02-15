@@ -375,7 +375,9 @@ export class GithubService {
     }
 
     const data = JSON.parse(stdout);
-    return data.map((pr: Record<string, unknown>) => this.mapPullRequest(pr));
+    return data
+      .map((pr: Record<string, unknown>) => this.mapPullRequest(pr))
+      .filter((pr: PullRequest | null): pr is PullRequest => pr !== null);
   }
 
   /**
@@ -412,8 +414,11 @@ export class GithubService {
 
     const { stdout } = await this.execGh(repoPath, args);
     const data = JSON.parse(stdout);
-
-    return this.mapPullRequest(data);
+    const pr = this.mapPullRequest(data);
+    if (!pr) {
+      throw new Error('Failed to parse created pull request');
+    }
+    return pr;
   }
 
   /**
@@ -446,7 +451,9 @@ export class GithubService {
     }
 
     const data = JSON.parse(stdout);
-    return data.map((issue: Record<string, unknown>) => this.mapIssue(issue));
+    return data
+      .map((issue: Record<string, unknown>) => this.mapIssue(issue))
+      .filter((issue: Issue | null): issue is Issue => issue !== null);
   }
 
   /**
@@ -495,9 +502,10 @@ export class GithubService {
    * Map raw gh CLI JSON output to a typed PullRequest object.
    * Includes runtime validation to guard against unexpected CLI output shapes.
    */
-  private mapPullRequest(pr: Record<string, unknown>): PullRequest {
+  private mapPullRequest(pr: Record<string, unknown>): PullRequest | null {
     if (typeof pr.number !== 'number' || typeof pr.title !== 'string') {
       this.logger.warn('Unexpected PR shape from gh CLI:', JSON.stringify(pr).slice(0, 200));
+      return null;
     }
 
     const author =
@@ -534,9 +542,10 @@ export class GithubService {
    * Map raw gh CLI JSON output to a typed Issue object.
    * Includes runtime validation to guard against unexpected CLI output shapes.
    */
-  private mapIssue(issue: Record<string, unknown>): Issue {
+  private mapIssue(issue: Record<string, unknown>): Issue | null {
     if (typeof issue.number !== 'number' || typeof issue.title !== 'string') {
       this.logger.warn('Unexpected issue shape from gh CLI:', JSON.stringify(issue).slice(0, 200));
+      return null;
     }
 
     const author =
