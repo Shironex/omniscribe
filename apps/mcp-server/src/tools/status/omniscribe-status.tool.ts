@@ -6,6 +6,7 @@
 import { z } from 'zod';
 import type { Tool, ToolDependencies, ToolMetadata, ToolResponse } from '../types.js';
 import type { OmniscribeHttpClient } from '../../http/index.js';
+import type { Logger } from '../../utils/index.js';
 import { SESSION_STATUS_STATES, type SessionStatusState } from '@omniscribe/shared';
 
 interface OmniscribeStatusInput {
@@ -38,13 +39,16 @@ export class OmniscribeStatusTool implements Tool<OmniscribeStatusInput> {
   };
 
   private readonly httpClient: OmniscribeHttpClient;
+  private readonly logger: Logger;
 
   constructor(deps: ToolDependencies) {
     this.httpClient = deps.httpClient;
+    this.logger = deps.logger;
   }
 
   async execute(input: OmniscribeStatusInput): Promise<ToolResponse> {
     const { state, message, needsInputPrompt } = input;
+    this.logger.debug('omniscribe_status:', state, '-', message);
 
     // Validate needsInputPrompt requirement
     if (state === 'needs_input' && !needsInputPrompt) {

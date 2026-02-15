@@ -179,20 +179,30 @@ export const useTerminalStore = create<TerminalStore>()(
             ),
           setTerminalThemeName: name =>
             set({ terminalThemeName: name }, undefined, 'terminal/setTerminalThemeName'),
-          resetToDefaults: () => set(getDefaultSettings(), undefined, 'terminal/resetToDefaults'),
+          resetToDefaults: () => {
+            logger.debug('resetToDefaults');
+            set(getDefaultSettings(), undefined, 'terminal/resetToDefaults');
+          },
 
           // Control actions
-          setFocusedSessionId: sessionId =>
-            set({ focusedSessionId: sessionId }, undefined, 'terminal/setFocusedSessionId'),
-          requestAddSlot: () =>
+          setFocusedSessionId: sessionId => {
+            logger.debug('setFocusedSessionId', sessionId);
+            set({ focusedSessionId: sessionId }, undefined, 'terminal/setFocusedSessionId');
+          },
+          requestAddSlot: () => {
+            logger.debug('requestAddSlot');
             set(
               state => ({ addSlotRequestCounter: state.addSlotRequestCounter + 1 }),
               undefined,
               'terminal/requestAddSlot'
-            ),
-          setSessionOrder: order =>
-            set({ sessionOrder: order }, undefined, 'terminal/setSessionOrder'),
+            );
+          },
+          setSessionOrder: order => {
+            logger.debug('setSessionOrder', order.length, 'sessions');
+            set({ sessionOrder: order }, undefined, 'terminal/setSessionOrder');
+          },
           reorderSessions: (activeId, overId) => {
+            logger.debug('reorderSessions', activeId, overId);
             const { sessionOrder } = get();
             const oldIndex = sessionOrder.indexOf(activeId);
             const newIndex = sessionOrder.indexOf(overId);

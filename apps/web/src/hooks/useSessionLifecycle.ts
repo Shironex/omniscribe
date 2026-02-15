@@ -48,6 +48,7 @@ export function useSessionLifecycle(
           }
           // Remove the session
           await removeSession(session.id);
+          logger.debug('Stopped session', session.id);
         } catch (error) {
           logger.error('Failed to stop session', session.id, error);
         }
@@ -65,6 +66,7 @@ export function useSessionLifecycle(
         killTerminal(session.terminalSessionId);
       }
       await removeSession(sessionId);
+      logger.debug('Killed session', sessionId);
     } catch (error) {
       logger.error('Failed to kill session', sessionId, error);
     }

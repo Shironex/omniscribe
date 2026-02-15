@@ -139,6 +139,7 @@ export const useSettingsStore = create<SettingsStore>()(
 
         // Actions
         openSettings: (section?: SettingsSectionId) => {
+          logger.debug('openSettings', section);
           set(
             {
               isOpen: true,
@@ -150,6 +151,7 @@ export const useSettingsStore = create<SettingsStore>()(
         },
 
         closeSettings: () => {
+          logger.debug('closeSettings');
           const state = get();
           // Clear preview theme when closing
           if (state.previewTheme) {
@@ -166,10 +168,12 @@ export const useSettingsStore = create<SettingsStore>()(
         },
 
         navigateToSection: (section: SettingsSectionId) => {
+          logger.debug('navigateToSection', section);
           set({ activeSection: section }, undefined, 'settings/navigateToSection');
         },
 
         setTheme: (theme: Theme) => {
+          logger.debug('setTheme', theme);
           set({ theme, previewTheme: null }, undefined, 'settings/setTheme');
           applyThemeToDOM(theme);
           persistTheme(theme);
@@ -192,6 +196,7 @@ export const useSettingsStore = create<SettingsStore>()(
         },
 
         setClaudeCliStatus: (status: ClaudeCliStatus | null) => {
+          logger.debug('setClaudeCliStatus', status?.installed, status?.version);
           set(
             { claudeCliStatus: status, isClaudeCliLoading: false },
             undefined,
@@ -204,6 +209,7 @@ export const useSettingsStore = create<SettingsStore>()(
         },
 
         setClaudeVersionCheck: (result: ClaudeVersionCheckResult | null) => {
+          logger.debug('setClaudeVersionCheck', result?.isOutdated);
           set(
             { claudeVersionCheck: result, isVersionCheckLoading: false },
             undefined,
@@ -216,6 +222,7 @@ export const useSettingsStore = create<SettingsStore>()(
         },
 
         setAvailableVersions: (versions: string[]) => {
+          logger.debug('setAvailableVersions', versions.length, 'versions');
           set(
             { availableVersions: versions, isVersionsLoading: false },
             undefined,
@@ -228,6 +235,7 @@ export const useSettingsStore = create<SettingsStore>()(
         },
 
         setGithubCliStatus: (status: GhCliStatus | null) => {
+          logger.debug('setGithubCliStatus', status?.installed, status?.version);
           set(
             { githubCliStatus: status, isGithubCliLoading: false },
             undefined,

@@ -269,6 +269,7 @@ export const useSessionStore = create<SessionStore>()(
         },
 
         updateSession: (sessionId, updates) => {
+          logger.debug('updateSession', sessionId);
           set(
             state => ({
               sessions: state.sessions.map(session =>

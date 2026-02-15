@@ -1,8 +1,10 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
-import { SessionEvents } from '@omniscribe/shared';
+import { createLogger, SessionEvents } from '@omniscribe/shared';
 import type { ClaudeSessionEntry, ClaudeSessionHistoryResponse } from '@omniscribe/shared';
 import { getSocket } from '@/lib/socket';
+
+const logger = createLogger('SessionHistoryStore');
 import {
   SocketStoreState,
   SocketStoreActions,
@@ -81,10 +83,12 @@ export const useSessionHistoryStore = create<SessionHistoryStore>()(
 
         // Custom actions
         setSessions: (sessions: ClaudeSessionEntry[]) => {
+          logger.debug('setSessions', sessions.length, 'sessions');
           set({ sessions }, undefined, 'sessionHistory/setSessions');
         },
 
         fetchHistory: (projectPath: string) => {
+          logger.debug('fetchHistory', projectPath);
           set({ isLoading: true }, undefined, 'sessionHistory/fetchHistory');
 
           const timeout = setTimeout(() => {
@@ -118,6 +122,7 @@ export const useSessionHistoryStore = create<SessionHistoryStore>()(
         },
 
         addResumable: (sessionId: string, claudeSessionId: string, sessionName: string) => {
+          logger.debug('addResumable', sessionId, claudeSessionId);
           set(
             state => ({
               resumableSessions: {
@@ -131,6 +136,7 @@ export const useSessionHistoryStore = create<SessionHistoryStore>()(
         },
 
         removeResumable: (sessionId: string) => {
+          logger.debug('removeResumable', sessionId);
           set(
             state => {
               const { [sessionId]: _removed, ...rest } = state.resumableSessions;
@@ -142,6 +148,7 @@ export const useSessionHistoryStore = create<SessionHistoryStore>()(
         },
 
         clearHistory: () => {
+          logger.debug('clearHistory');
           set({ sessions: [], resumableSessions: {} }, undefined, 'sessionHistory/clearHistory');
         },
       };

@@ -6,6 +6,7 @@
 import { z } from 'zod';
 import type { Tool, ToolDependencies, ToolMetadata, ToolResponse } from '../types.js';
 import type { OmniscribeHttpClient } from '../../http/index.js';
+import type { Logger } from '../../utils/index.js';
 import { TASK_STATUSES, type TaskItem, type TaskStatus } from '@omniscribe/shared';
 
 interface OmniscribeTasksInput {
@@ -37,13 +38,16 @@ export class OmniscribeTasksTool implements Tool<OmniscribeTasksInput> {
   };
 
   private readonly httpClient: OmniscribeHttpClient;
+  private readonly logger: Logger;
 
   constructor(deps: ToolDependencies) {
     this.httpClient = deps.httpClient;
+    this.logger = deps.logger;
   }
 
   async execute(input: OmniscribeTasksInput): Promise<ToolResponse> {
     const tasks: TaskItem[] = input.tasks;
+    this.logger.debug('omniscribe_tasks:', tasks.length, 'task(s)');
 
     const success = await this.httpClient.reportTasks(tasks);
 
