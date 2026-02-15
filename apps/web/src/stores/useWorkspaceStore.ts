@@ -316,7 +316,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
         },
 
         clearStaleSessions: (validSessionIds: string[]) => {
-          logger.debug('clearStaleSessions', validSessionIds.length, 'valid');
+          logger.debug('clearStaleSessions', { validSessionIds });
           set(
             state => ({
               tabs: state.tabs.map(tab => ({

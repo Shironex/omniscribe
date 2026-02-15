@@ -3,8 +3,6 @@ import { devtools } from 'zustand/middleware';
 import { createLogger, SessionEvents } from '@omniscribe/shared';
 import type { ClaudeSessionEntry, ClaudeSessionHistoryResponse } from '@omniscribe/shared';
 import { getSocket } from '@/lib/socket';
-
-const logger = createLogger('SessionHistoryStore');
 import {
   SocketStoreState,
   SocketStoreActions,
@@ -12,6 +10,8 @@ import {
   createSocketActions,
   createSocketListeners,
 } from './utils';
+
+const logger = createLogger('SessionHistoryStore');
 
 /**
  * Session history store state (extends common socket state)

@@ -198,7 +198,7 @@ export const useTerminalStore = create<TerminalStore>()(
             );
           },
           setSessionOrder: order => {
-            logger.debug('setSessionOrder', order.length, 'sessions');
+            logger.debug('setSessionOrder', { order });
             set({ sessionOrder: order }, undefined, 'terminal/setSessionOrder');
           },
           reorderSessions: (activeId, overId) => {

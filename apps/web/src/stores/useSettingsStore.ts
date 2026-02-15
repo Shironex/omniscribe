@@ -139,7 +139,7 @@ export const useSettingsStore = create<SettingsStore>()(
 
         // Actions
         openSettings: (section?: SettingsSectionId) => {
-          logger.debug('openSettings', section);
+          logger.debug('openSettings', section ?? '(default)');
           set(
             {
               isOpen: true,
@@ -222,7 +222,7 @@ export const useSettingsStore = create<SettingsStore>()(
         },
 
         setAvailableVersions: (versions: string[]) => {
-          logger.debug('setAvailableVersions', versions.length, 'versions');
+          logger.debug('setAvailableVersions', { versions });
           set(
             { availableVersions: versions, isVersionsLoading: false },
             undefined,

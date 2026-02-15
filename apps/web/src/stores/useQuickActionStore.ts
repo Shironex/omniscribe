@@ -187,7 +187,7 @@ export const useQuickActionStore = create<QuickActionStore>()(
 
         // Actions
         setActions: (actions: QuickAction[]) => {
-          logger.debug('setActions', actions.length, 'actions');
+          logger.debug('setActions', { actionIds: actions.map(a => a.id) });
           set({ actions }, undefined, 'quick-actions/setActions');
         },
 
