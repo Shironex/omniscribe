@@ -11,6 +11,9 @@ import {
   type ExtendedSessionConfig,
   type SessionStatusUpdate,
   type ClaudeSessionIdCapturedEvent,
+  type SessionRemovePayload,
+  type SessionHealthEvent,
+  type ZombieCleanupEvent,
 } from '@omniscribe/shared';
 import { toast } from 'sonner';
 import { getSocket } from '@/lib/socket';
@@ -48,10 +51,21 @@ export interface FrontendSessionConfig extends ExtendedSessionConfig {
 interface SessionState extends SocketStoreState {
   /** All sessions */
   sessions: FrontendSessionConfig[];
-  /** Pending status updates for race condition handling */
+  /**
+   * Buffer for status updates that arrive before their session is created.
+   *
+   * **Race condition:** The backend may emit `session:status` events before the
+   * `session:created` event has been processed by the store. When `updateStatus`
+   * is called for a session ID that doesn't exist yet, the update is buffered here.
+   *
+   * **Drain:** When `addSession` creates a new session, it schedules
+   * `processPendingUpdates(sessionId)` via `setTimeout(0)` so buffered updates
+   * are applied in the next microtask (after state is committed).
+   *
+   * **Cleanup:** `removeSession` deletes any pending updates for the removed
+   * session to prevent memory leaks.
+   */
   pendingStatusUpdates: Record<string, SessionStatusUpdate[]>;
-  /** Terminal session IDs currently under backpressure */
-  backpressured: Record<number, true>;
 }
 
 /**
@@ -64,7 +78,11 @@ interface SessionActions extends SocketStoreActions {
   removeSession: (sessionId: string) => void;
   /** Update an existing session */
   updateSession: (sessionId: string, updates: Partial<FrontendSessionConfig>) => void;
-  /** Update session status */
+  /**
+   * Update session status. If the session doesn't exist yet (race condition
+   * with `session:created`), the update is buffered in `pendingStatusUpdates`
+   * and replayed once the session is added.
+   */
   updateStatus: (
     sessionId: string,
     status: SessionStatus,
@@ -79,10 +97,14 @@ interface SessionActions extends SocketStoreActions {
   initListeners: () => void;
   /** Clean up socket listeners */
   cleanupListeners: () => void;
-  /** Process pending status updates for a session */
+  /**
+   * Apply buffered status updates for a session.
+   *
+   * Called by `addSession` via `setTimeout(0)` after a new session is added.
+   * Iterates all pending updates in order, applies each via `updateStatus`,
+   * then clears the buffer for that session.
+   */
   processPendingUpdates: (sessionId: string) => void;
-  /** Set backpressure state for a terminal */
-  setBackpressure: (terminalSessionId: number, paused: boolean) => void;
 }
 
 /**
@@ -132,23 +154,15 @@ export const useSessionStore = create<SessionStore>()(
             {
               event: SessionEvents.REMOVED,
               handler: (data, get) => {
-                const payload = data as { sessionId: string };
+                const payload = data as SessionRemovePayload;
                 logger.debug(SessionEvents.REMOVED, payload.sessionId);
                 get().removeSession(payload.sessionId);
               },
             },
             {
-              event: TerminalEvents.BACKPRESSURE,
-              handler: (data, get) => {
-                const payload = data as { sessionId: number; paused: boolean };
-                logger.debug(TerminalEvents.BACKPRESSURE, payload.sessionId, payload.paused);
-                get().setBackpressure(payload.sessionId, payload.paused);
-              },
-            },
-            {
               event: SessionEvents.HEALTH,
               handler: (data, get) => {
-                const payload = data as { sessionId: string; health: HealthLevel; reason?: string };
+                const payload = data as SessionHealthEvent;
                 logger.debug(SessionEvents.HEALTH, payload.sessionId, payload.health);
                 get().updateSession(payload.sessionId, { health: payload.health });
               },
@@ -170,7 +184,7 @@ export const useSessionStore = create<SessionStore>()(
             {
               event: ZombieEvents.CLEANUP,
               handler: data => {
-                const payload = data as { sessionId: string; sessionName: string; reason: string };
+                const payload = data as ZombieCleanupEvent;
                 logger.warn(ZombieEvents.CLEANUP, payload.sessionId, payload.reason);
                 const sessionName =
                   typeof payload.sessionName === 'string'
@@ -208,7 +222,6 @@ export const useSessionStore = create<SessionStore>()(
         ...initialSocketState,
         sessions: [],
         pendingStatusUpdates: {},
-        backpressured: {},
 
         // Common socket actions
         ...socketActions,
@@ -345,22 +358,6 @@ export const useSessionStore = create<SessionStore>()(
             },
             undefined,
             'session/clearPendingUpdates'
-          );
-        },
-
-        setBackpressure: (terminalSessionId, paused) => {
-          set(
-            state => {
-              if (paused) {
-                return {
-                  backpressured: { ...state.backpressured, [terminalSessionId]: true as const },
-                };
-              }
-              const { [terminalSessionId]: _removed, ...rest } = state.backpressured;
-              return { backpressured: rest as Record<number, true> };
-            },
-            undefined,
-            'session/setBackpressure'
           );
         },
       };

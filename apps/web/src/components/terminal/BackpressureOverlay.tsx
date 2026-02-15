@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Loader2, XCircle } from 'lucide-react';
 import { TerminalEvents } from '@omniscribe/shared';
-import { useSessionStore } from '@/stores/useSessionStore';
+import { useTerminalStore } from '@/stores/useTerminalStore';
 import { getSocket } from '@/lib/socket';
 
 const DEBOUNCE_MS = 500;
@@ -16,7 +16,7 @@ interface BackpressureOverlayProps {
  * on transient spikes. Disappears immediately when backpressure clears.
  */
 export function BackpressureOverlay({ terminalSessionId }: BackpressureOverlayProps) {
-  const isBackpressured = useSessionStore(state => !!state.backpressured[terminalSessionId]);
+  const isBackpressured = useTerminalStore(state => !!state.backpressured[terminalSessionId]);
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {

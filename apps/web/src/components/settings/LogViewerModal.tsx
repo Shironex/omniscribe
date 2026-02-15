@@ -14,7 +14,12 @@ import { cn } from '@/lib/utils';
 import { formatDate, formatLogTimestamp } from '@/lib/date-utils';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogOverlay, DialogPortal, DialogTitle } from '@/components/ui/dialog';
-import { type LogEntry, formatFileSize, parseLogEntries } from '@omniscribe/shared';
+import {
+  type LogEntry,
+  formatFileSize,
+  parseLogEntries,
+  extractErrorMessage,
+} from '@omniscribe/shared';
 
 interface LogFile {
   name: string;
@@ -88,7 +93,7 @@ export function LogViewerModal({ open, onOpenChange }: LogViewerModalProps) {
       const result = await window.electronAPI?.app?.listLogFiles();
       setFiles(result ?? []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to list log files');
+      setError(extractErrorMessage(err, 'Failed to list log files'));
     } finally {
       setIsLoading(false);
     }
@@ -103,7 +108,7 @@ export function LogViewerModal({ open, onOpenChange }: LogViewerModalProps) {
       const parsed = content ? parseLogEntries(content) : [];
       setEntries(parsed.slice(-MAX_DISPLAY_ENTRIES));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to read log file');
+      setError(extractErrorMessage(err, 'Failed to read log file'));
     } finally {
       setIsLoading(false);
     }

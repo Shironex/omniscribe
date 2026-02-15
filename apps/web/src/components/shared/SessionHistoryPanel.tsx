@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useCallback, useState, useRef } from 'react';
 import { X, RefreshCw, PlayCircle } from 'lucide-react';
 import { toast } from 'sonner';
-import { createLogger, type ClaudeSessionEntry } from '@omniscribe/shared';
+import { createLogger, extractErrorMessage, type ClaudeSessionEntry } from '@omniscribe/shared';
 import { useSessionHistoryStore, selectSessionHistory } from '@/stores';
 import { useSessionStore } from '@/stores';
 import { resumeSession, forkSession, continueLastSession } from '@/lib/session';
@@ -132,7 +132,7 @@ export function SessionHistoryPanel({
         }
         toast.success('Session resumed successfully');
       } catch (err) {
-        const msg = err instanceof Error ? err.message : 'Failed to resume session';
+        const msg = extractErrorMessage(err, 'Failed to resume session');
         logger.error('Resume failed:', err);
         toast.error(msg);
       }
@@ -155,7 +155,7 @@ export function SessionHistoryPanel({
         }
         toast.success('Session forked successfully');
       } catch (err) {
-        const msg = err instanceof Error ? err.message : 'Failed to fork session';
+        const msg = extractErrorMessage(err, 'Failed to fork session');
         logger.error('Fork failed:', err);
         toast.error(msg);
       }
@@ -172,7 +172,7 @@ export function SessionHistoryPanel({
       }
       toast.success('Continuing last session');
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Failed to continue last session';
+      const msg = extractErrorMessage(err, 'Failed to continue last session');
       logger.error('Continue last failed:', err);
       toast.error(msg);
     }

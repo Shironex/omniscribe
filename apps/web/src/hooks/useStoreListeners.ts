@@ -6,6 +6,7 @@ import { useMcpStore } from '@/stores/useMcpStore';
 import { useTaskStore } from '@/stores/useTaskStore';
 import { useSessionHistoryStore } from '@/stores/useSessionHistoryStore';
 import { useConnectionStore } from '@/stores/useConnectionStore';
+import { useTerminalStore } from '@/stores/useTerminalStore';
 
 export interface UseStoreListenersReturn {
   initAllListeners: () => void;
@@ -50,6 +51,10 @@ export function useStoreListeners(): UseStoreListenersReturn {
   const initConnectionListeners = useConnectionStore(state => state.initListeners);
   const cleanupConnectionListeners = useConnectionStore(state => state.cleanupListeners);
 
+  // Terminal store (backpressure events)
+  const initTerminalListeners = useTerminalStore(state => state.initListeners);
+  const cleanupTerminalListeners = useTerminalStore(state => state.cleanupListeners);
+
   const initAllListeners = useCallback(() => {
     initConnectionListeners();
     initSessionListeners();
@@ -58,6 +63,7 @@ export function useStoreListeners(): UseStoreListenersReturn {
     initMcpListeners();
     initTaskListeners();
     initSessionHistoryListeners();
+    initTerminalListeners();
   }, [
     initConnectionListeners,
     initSessionListeners,
@@ -66,6 +72,7 @@ export function useStoreListeners(): UseStoreListenersReturn {
     initMcpListeners,
     initTaskListeners,
     initSessionHistoryListeners,
+    initTerminalListeners,
   ]);
 
   const cleanupAllListeners = useCallback(() => {
@@ -76,6 +83,7 @@ export function useStoreListeners(): UseStoreListenersReturn {
     cleanupMcpListeners();
     cleanupTaskListeners();
     cleanupSessionHistoryListeners();
+    cleanupTerminalListeners();
   }, [
     cleanupConnectionListeners,
     cleanupSessionListeners,
@@ -84,6 +92,7 @@ export function useStoreListeners(): UseStoreListenersReturn {
     cleanupMcpListeners,
     cleanupTaskListeners,
     cleanupSessionHistoryListeners,
+    cleanupTerminalListeners,
   ]);
 
   return {

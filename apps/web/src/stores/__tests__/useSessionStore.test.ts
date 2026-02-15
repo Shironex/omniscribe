@@ -39,7 +39,6 @@ function createMockSession(overrides: Partial<FrontendSessionConfig> = {}): Fron
 const initialState = {
   sessions: [],
   pendingStatusUpdates: {},
-  backpressured: {},
   isLoading: false,
   error: null,
   listenersInitialized: false,
@@ -66,10 +65,6 @@ describe('useSessionStore', () => {
 
     it('has no pending status updates', () => {
       expect(useSessionStore.getState().pendingStatusUpdates).toEqual({});
-    });
-
-    it('has no backpressured terminals', () => {
-      expect(useSessionStore.getState().backpressured).toEqual({});
     });
 
     it('is not loading', () => {
@@ -301,24 +296,6 @@ describe('useSessionStore', () => {
       useSessionStore.getState().processPendingUpdates('sess-1');
 
       expect(useSessionStore.getState().sessions[0].status).toBe('idle');
-    });
-  });
-
-  describe('setBackpressure', () => {
-    it('marks a terminal as backpressured when paused=true', () => {
-      useSessionStore.getState().setBackpressure(42, true);
-      expect(useSessionStore.getState().backpressured[42]).toBe(true);
-    });
-
-    it('removes backpressure when paused=false', () => {
-      useSessionStore.setState({ backpressured: { 42: true as const } });
-      useSessionStore.getState().setBackpressure(42, false);
-      expect(useSessionStore.getState().backpressured[42]).toBeUndefined();
-    });
-
-    it('handles removing backpressure for non-pressured terminal', () => {
-      useSessionStore.getState().setBackpressure(42, false);
-      expect(useSessionStore.getState().backpressured[42]).toBeUndefined();
     });
   });
 

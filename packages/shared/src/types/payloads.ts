@@ -5,7 +5,7 @@
 import type { ProjectTabDTO, UserPreferences } from './project-tab';
 import type { QuickAction } from './workspace';
 import type { BranchInfo, CommitInfo, WorktreeInfo } from './git';
-import type { TaskItem } from './mcp';
+import type { TaskItem, McpServerConfig, McpServerState, McpServerStatus } from './mcp';
 import type { ClaudeSessionEntry } from './session';
 
 // ============================================
@@ -154,6 +154,16 @@ export interface GitCurrentBranchResponse {
 export interface GitWorktreesResponse {
   worktrees: WorktreeInfo[];
   error?: string;
+}
+
+/**
+ * Event emitted when git branches change for a project.
+ * Broadcast by the backend after branch operations.
+ */
+export interface GitBranchUpdateEvent {
+  projectPath: string;
+  branches?: BranchInfo[];
+  currentBranch: BranchInfo | null;
 }
 
 // ============================================
@@ -333,6 +343,32 @@ export interface McpStatusServerInfoResponse {
   port: number | null;
   statusUrl: string | null;
   instanceId: string;
+}
+
+/**
+ * Event emitted when MCP servers are discovered.
+ * Broadcast by the backend after discovery completes.
+ */
+export interface McpServersDiscoveredEvent {
+  servers: McpServerConfig[];
+}
+
+/**
+ * Event emitted when an MCP server's connection status changes.
+ */
+export interface McpStatusUpdateEvent {
+  serverId: string;
+  status: McpServerStatus;
+  errorMessage?: string;
+}
+
+/**
+ * Event emitted when an MCP server's full state updates
+ * (tools, resources, prompts).
+ */
+export interface McpServerStateUpdateEvent {
+  serverId: string;
+  state: McpServerState;
 }
 
 // ============================================

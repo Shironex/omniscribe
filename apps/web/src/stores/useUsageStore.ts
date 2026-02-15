@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import type { ClaudeUsage, UsageStatus, UsageError } from '@omniscribe/shared';
-import { createLogger, UsageEvents } from '@omniscribe/shared';
+import { createLogger, extractErrorMessage, UsageEvents } from '@omniscribe/shared';
 import { getSocket } from '@/lib/socket';
 import { emitAsync } from '@/lib/socketHelpers';
 
@@ -117,7 +117,7 @@ export const useUsageStore = create<UsageStore>()(
             );
           }
         } catch (err) {
-          const message = err instanceof Error ? err.message : String(err);
+          const message = extractErrorMessage(err);
           logger.error('Usage fetch failed:', message);
           set(
             {

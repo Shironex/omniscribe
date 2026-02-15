@@ -85,7 +85,7 @@ export class SessionLauncherService {
       // Register hooks for instant session ID capture (fire-and-forget)
       if (aiMode === 'claude') {
         this.hookManager.registerHooks(projectPath).catch(err => {
-          const msg = err instanceof Error ? err.message : String(err);
+          const msg = extractErrorMessage(err);
           this.logger.warn(`Failed to register hooks for ${sessionId}: ${msg}`);
         });
         this.hookManager.startWatching();

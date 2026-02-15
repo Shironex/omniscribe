@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import {
   createLogger,
+  extractErrorMessage,
   DEFAULT_PREFERENCES,
   WorkspaceEvents,
   normalizePath,
@@ -368,7 +369,7 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
               );
             }
           } catch (err) {
-            const message = err instanceof Error ? err.message : 'Restore timed out';
+            const message = extractErrorMessage(err, 'Restore timed out');
             set(
               { isLoading: false, isRestored: true, error: message },
               undefined,
