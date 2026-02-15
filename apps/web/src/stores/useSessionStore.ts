@@ -66,6 +66,8 @@ interface SessionState extends SocketStoreState {
    * session to prevent memory leaks.
    */
   pendingStatusUpdates: Record<string, SessionStatusUpdate[]>;
+  /** Custom user-defined titles for sessions (session ID → title). In-memory only. */
+  customTitles: Record<string, string>;
 }
 
 /**
@@ -78,6 +80,10 @@ interface SessionActions extends SocketStoreActions {
   removeSession: (sessionId: string) => void;
   /** Update an existing session */
   updateSession: (sessionId: string, updates: Partial<FrontendSessionConfig>) => void;
+  /** Set a custom title for a session. Empty/whitespace-only strings are ignored. */
+  setCustomTitle: (sessionId: string, title: string) => void;
+  /** Clear a custom title, reverting to the default display. */
+  clearCustomTitle: (sessionId: string) => void;
   /**
    * Update session status. If the session doesn't exist yet (race condition
    * with `session:created`), the update is buffered in `pendingStatusUpdates`
@@ -222,6 +228,7 @@ export const useSessionStore = create<SessionStore>()(
         ...initialSocketState,
         sessions: [],
         pendingStatusUpdates: {},
+        customTitles: {},
 
         // Common socket actions
         ...socketActions,
@@ -258,9 +265,11 @@ export const useSessionStore = create<SessionStore>()(
           set(
             state => {
               const { [sessionId]: _pending, ...restPending } = state.pendingStatusUpdates;
+              const { [sessionId]: _title, ...restTitles } = state.customTitles;
               return {
                 sessions: state.sessions.filter(s => s.id !== sessionId),
                 pendingStatusUpdates: restPending,
+                customTitles: restTitles,
               };
             },
             undefined,
@@ -329,6 +338,29 @@ export const useSessionStore = create<SessionStore>()(
 
         setSessions: sessions => {
           set({ sessions }, undefined, 'session/setSessions');
+        },
+
+        setCustomTitle: (sessionId, title) => {
+          const trimmed = title.trim();
+          if (!trimmed) return;
+          set(
+            state => ({
+              customTitles: { ...state.customTitles, [sessionId]: trimmed },
+            }),
+            undefined,
+            'session/setCustomTitle'
+          );
+        },
+
+        clearCustomTitle: sessionId => {
+          set(
+            state => {
+              const { [sessionId]: _, ...rest } = state.customTitles;
+              return { customTitles: rest };
+            },
+            undefined,
+            'session/clearCustomTitle'
+          );
         },
 
         processPendingUpdates: sessionId => {

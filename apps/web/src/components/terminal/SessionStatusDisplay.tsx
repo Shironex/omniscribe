@@ -8,10 +8,12 @@ import {
   ShieldOff,
   RotateCcw,
 } from 'lucide-react';
-import { type ComponentType } from 'react';
+import { useState, useRef, useEffect, useCallback, type ComponentType } from 'react';
 import { StatusDot } from '@/components/shared/StatusLegend';
 import { ClaudeIcon } from '@/components/shared/ClaudeIcon';
-import type { AiMode } from '@omniscribe/shared';
+import { Input } from '@/components/ui/input';
+import { useSessionStore } from '@/stores/useSessionStore';
+import { MAX_SESSION_NAME_LENGTH, type AiMode } from '@omniscribe/shared';
 import type { TerminalSession, GitBranchInfo } from './TerminalHeader';
 
 interface AIModeConfigItem {
@@ -33,10 +35,46 @@ interface SessionStatusDisplayProps {
 export function SessionStatusDisplay({ session, gitBranch }: SessionStatusDisplayProps) {
   const modeConfig = aiModeConfig[session.aiMode];
   const ModeIcon = modeConfig.icon;
+  const setCustomTitle = useSessionStore(state => state.setCustomTitle);
+  const clearCustomTitle = useSessionStore(state => state.clearCustomTitle);
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const defaultTitle = `${modeConfig.label} #${session.sessionNumber}`;
+  const displayTitle = session.customTitle ?? defaultTitle;
 
   const branchName = gitBranch?.name ?? session.branch;
   const ahead = gitBranch?.ahead;
   const behind = gitBranch?.behind;
+
+  const enterEditMode = useCallback(() => {
+    setEditValue(displayTitle);
+    setIsEditing(true);
+  }, [displayTitle]);
+
+  const confirmEdit = useCallback(() => {
+    const trimmed = editValue.trim();
+    if (trimmed && trimmed !== defaultTitle) {
+      setCustomTitle(session.id, trimmed);
+    } else {
+      clearCustomTitle(session.id);
+    }
+    setIsEditing(false);
+  }, [editValue, defaultTitle, session.id, setCustomTitle, clearCustomTitle]);
+
+  const cancelEdit = useCallback(() => {
+    setIsEditing(false);
+  }, []);
+
+  // Auto-focus and select all text when entering edit mode
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [isEditing]);
 
   return (
     <>
@@ -48,9 +86,36 @@ export function SessionStatusDisplay({ session, gitBranch }: SessionStatusDispla
       {/* AI Mode icon + Session label */}
       <div className="flex items-center gap-1 shrink-0">
         <ModeIcon size={14} className={cn('shrink-0', modeConfig.color)} />
-        <span className="text-xs font-medium text-foreground">
-          {modeConfig.label} #{session.sessionNumber}
-        </span>
+        {isEditing ? (
+          <Input
+            ref={inputRef}
+            value={editValue}
+            onChange={e => setEditValue(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                confirmEdit();
+              } else if (e.key === 'Escape') {
+                e.preventDefault();
+                cancelEdit();
+              }
+            }}
+            onBlur={confirmEdit}
+            onClick={e => e.stopPropagation()}
+            onMouseDown={e => e.stopPropagation()}
+            onDoubleClick={e => e.stopPropagation()}
+            maxLength={MAX_SESSION_NAME_LENGTH}
+            className="h-5 w-32 px-1 py-0 text-xs font-medium select-text border-primary rounded-sm"
+            aria-label="Rename session"
+          />
+        ) : (
+          <span
+            className="text-xs font-medium text-foreground cursor-default"
+            onDoubleClick={enterEditMode}
+          >
+            {displayTitle}
+          </span>
+        )}
       </div>
 
       {/* Git branch with ahead/behind indicators */}

@@ -1,9 +1,20 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+import { mockSocket } from '../../test/mocks/socket';
+
+// Mock the socket module (required by useSessionStore)
+vi.mock('@/lib/socket', () => ({
+  socket: mockSocket,
+  getSocket: vi.fn(() => mockSocket),
+  initializeSocket: vi.fn(() => mockSocket),
+  connectSocket: vi.fn(),
+  default: mockSocket,
+}));
 
 // ─── SessionStatusDisplay ────────────────────────────────────────────────────
 
 import { SessionStatusDisplay } from '../terminal/SessionStatusDisplay';
+import { useSessionStore } from '../../stores/useSessionStore';
 import type { TerminalSession, GitBranchInfo } from '../terminal/TerminalHeader';
 
 function makeSession(overrides: Partial<TerminalSession> = {}): TerminalSession {
@@ -61,6 +72,78 @@ describe('SessionStatusDisplay', () => {
   it('falls back to session.branch when gitBranch prop is omitted', () => {
     render(<SessionStatusDisplay session={makeSession({ branch: 'main' })} />);
     expect(screen.getByText('main')).toBeTruthy();
+  });
+
+  it('displays custom title when set on the session', () => {
+    render(<SessionStatusDisplay session={makeSession({ customTitle: 'My Custom Session' })} />);
+    expect(screen.getByText('My Custom Session')).toBeTruthy();
+  });
+
+  it('displays default title when no custom title is set', () => {
+    render(<SessionStatusDisplay session={makeSession({ sessionNumber: 2 })} />);
+    expect(screen.getByText('Claude #2')).toBeTruthy();
+  });
+
+  describe('inline editing', () => {
+    beforeEach(() => {
+      mockSocket.__reset();
+      useSessionStore.setState({ customTitles: {} });
+    });
+
+    it('enters edit mode on double-click', () => {
+      render(<SessionStatusDisplay session={makeSession()} />);
+      fireEvent.doubleClick(screen.getByText('Claude #1'));
+      expect(screen.getByRole('textbox', { name: /rename session/i })).toBeTruthy();
+    });
+
+    it('confirms edit on Enter and sets custom title', () => {
+      render(<SessionStatusDisplay session={makeSession({ id: 'sess-edit' })} />);
+      fireEvent.doubleClick(screen.getByText('Claude #1'));
+
+      const input = screen.getByRole('textbox', { name: /rename session/i });
+      fireEvent.change(input, { target: { value: 'New Title' } });
+      fireEvent.keyDown(input, { key: 'Enter' });
+
+      expect(useSessionStore.getState().customTitles['sess-edit']).toBe('New Title');
+    });
+
+    it('cancels edit on Escape without saving', () => {
+      useSessionStore.setState({ customTitles: { 'sess-1': 'Original' } });
+      render(<SessionStatusDisplay session={makeSession({ customTitle: 'Original' })} />);
+      fireEvent.doubleClick(screen.getByText('Original'));
+
+      const input = screen.getByRole('textbox', { name: /rename session/i });
+      fireEvent.change(input, { target: { value: 'Changed' } });
+      fireEvent.keyDown(input, { key: 'Escape' });
+
+      // Should still have the original title in the store
+      expect(useSessionStore.getState().customTitles['sess-1']).toBe('Original');
+    });
+
+    it('clears custom title when input is emptied and confirmed', () => {
+      useSessionStore.setState({ customTitles: { 'sess-1': 'Old Title' } });
+      render(<SessionStatusDisplay session={makeSession({ customTitle: 'Old Title' })} />);
+      fireEvent.doubleClick(screen.getByText('Old Title'));
+
+      const input = screen.getByRole('textbox', { name: /rename session/i });
+      fireEvent.change(input, { target: { value: '' } });
+      fireEvent.keyDown(input, { key: 'Enter' });
+
+      expect(useSessionStore.getState().customTitles['sess-1']).toBeUndefined();
+    });
+
+    it('reverts to default when input matches the default title', () => {
+      useSessionStore.setState({ customTitles: { 'sess-1': 'Custom' } });
+      render(<SessionStatusDisplay session={makeSession({ customTitle: 'Custom' })} />);
+      fireEvent.doubleClick(screen.getByText('Custom'));
+
+      const input = screen.getByRole('textbox', { name: /rename session/i });
+      fireEvent.change(input, { target: { value: 'Claude #1' } });
+      fireEvent.keyDown(input, { key: 'Enter' });
+
+      // Setting to default title should clear the custom title
+      expect(useSessionStore.getState().customTitles['sess-1']).toBeUndefined();
+    });
   });
 });
 

@@ -39,6 +39,7 @@ export function useProjectSessions(
   // Session store
   const sessions = useSessionStore(state => state.sessions);
   const updateSession = useSessionStore(state => state.updateSession);
+  const customTitles = useSessionStore(state => state.customTitles);
 
   // Focused session state
   const [focusedSessionId, setFocusedSessionId] = useState<string | null>(null);
@@ -63,8 +64,9 @@ export function useProjectSessions(
       skipPermissions: session.skipPermissions,
       claudeSessionId: session.claudeSessionId,
       isResumed: session.isResumed,
+      customTitle: customTitles[session.id],
     }));
-  }, [activeProjectSessions]);
+  }, [activeProjectSessions, customTitles]);
 
   // Check if we have any running sessions (sessions with a terminal)
   const hasActiveSessions = useMemo(
