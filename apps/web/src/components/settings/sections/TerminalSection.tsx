@@ -1,8 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type ComponentType, type ComponentProps } from 'react';
 import { useTerminalStore, type CursorStyle } from '@/stores/useTerminalStore';
 import { terminalThemes, type TerminalThemeName } from '@/lib/terminal-themes';
 import { EDITOR_OPTIONS, type EditorProtocol } from '@omniscribe/shared';
 import { cn } from '@/lib/utils';
+import { VSCodeIcon, VSCodeInsidersIcon, CursorIcon } from './editor-icons';
+
+const EDITOR_ICONS: Record<EditorProtocol, ComponentType<ComponentProps<'svg'>>> = {
+  vscode: VSCodeIcon,
+  'vscode-insiders': VSCodeInsidersIcon,
+  cursor: CursorIcon,
+};
 
 const CURSOR_STYLES: { value: CursorStyle; label: string }[] = [
   { value: 'block', label: 'Block' },
@@ -59,20 +66,22 @@ export function TerminalSection() {
           {EDITOR_OPTIONS.map(editor => {
             const isDetected = detectedEditors.includes(editor.id);
             const isSelected = editorProtocol === editor.id;
+            const Icon = EDITOR_ICONS[editor.id];
             return (
               <button
                 key={editor.id}
                 onClick={() => setEditorProtocol(editor.id)}
                 className={cn(
-                  'px-3 py-1.5 rounded-md text-sm border transition-colors',
+                  'flex items-center gap-2 px-3 py-1.5 rounded-md text-sm border transition-colors',
                   isSelected
                     ? 'bg-primary text-primary-foreground border-primary'
                     : 'bg-card border-border text-foreground hover:bg-muted'
                 )}
               >
+                <Icon className="w-4 h-4 shrink-0" />
                 {editor.name}
                 {!detectingEditors && isDetected && (
-                  <span className="ml-1.5 text-[10px] opacity-60">Detected</span>
+                  <span className="text-[10px] opacity-60">Detected</span>
                 )}
               </button>
             );

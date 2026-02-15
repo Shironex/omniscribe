@@ -171,7 +171,7 @@ describe('FilePathLinkProvider', () => {
       const links = await getLinks(provider, 1);
       links![0].activate({} as MouseEvent, '/home/user/file.ts');
 
-      expect(openSpy).toHaveBeenCalledWith('vscode://file//home/user/file.ts', '_blank');
+      expect(openSpy).toHaveBeenCalledWith('vscode://file/home/user/file.ts', '_blank');
     });
 
     it('appends line number to URI', async () => {
@@ -182,7 +182,7 @@ describe('FilePathLinkProvider', () => {
       const links = await getLinks(provider, 1);
       links![0].activate({} as MouseEvent, '/home/user/file.ts:42');
 
-      expect(openSpy).toHaveBeenCalledWith('vscode://file//home/user/file.ts:42', '_blank');
+      expect(openSpy).toHaveBeenCalledWith('vscode://file/home/user/file.ts:42', '_blank');
     });
 
     it('appends line and column to URI', async () => {
@@ -193,7 +193,7 @@ describe('FilePathLinkProvider', () => {
       const links = await getLinks(provider, 1);
       links![0].activate({} as MouseEvent, '/home/user/file.ts:42:10');
 
-      expect(openSpy).toHaveBeenCalledWith('vscode://file//home/user/file.ts:42:10', '_blank');
+      expect(openSpy).toHaveBeenCalledWith('vscode://file/home/user/file.ts:42:10', '_blank');
     });
 
     it('normalizes Windows backslashes in URI', async () => {
@@ -215,7 +215,7 @@ describe('FilePathLinkProvider', () => {
       const links = await getLinks(provider, 1);
       links![0].activate({} as MouseEvent, '/home/user/file.ts');
 
-      expect(openSpy).toHaveBeenCalledWith('cursor://file//home/user/file.ts', '_blank');
+      expect(openSpy).toHaveBeenCalledWith('cursor://file/home/user/file.ts', '_blank');
     });
 
     it('uses vscode-insiders:// protocol when configured', async () => {
@@ -227,7 +227,7 @@ describe('FilePathLinkProvider', () => {
       links![0].activate({} as MouseEvent, '/home/user/file.ts:10:5');
 
       expect(openSpy).toHaveBeenCalledWith(
-        'vscode-insiders://file//home/user/file.ts:10:5',
+        'vscode-insiders://file/home/user/file.ts:10:5',
         '_blank'
       );
     });
@@ -242,14 +242,14 @@ describe('FilePathLinkProvider', () => {
 
       // First activation uses vscode
       links![0].activate({} as MouseEvent, '/home/user/file.ts');
-      expect(openSpy).toHaveBeenCalledWith('vscode://file//home/user/file.ts', '_blank');
+      expect(openSpy).toHaveBeenCalledWith('vscode://file/home/user/file.ts', '_blank');
 
       // Change protocol
       currentProtocol = 'cursor';
 
       // Second activation uses cursor (same link instance, different protocol)
       links![0].activate({} as MouseEvent, '/home/user/file.ts');
-      expect(openSpy).toHaveBeenCalledWith('cursor://file//home/user/file.ts', '_blank');
+      expect(openSpy).toHaveBeenCalledWith('cursor://file/home/user/file.ts', '_blank');
     });
   });
 });

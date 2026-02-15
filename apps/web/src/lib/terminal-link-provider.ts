@@ -59,7 +59,11 @@ export class FilePathLinkProvider implements ILinkProvider {
           const col = parts[3] ? parseInt(parts[3], 10) : undefined;
 
           // Build editor URI using the configured protocol
-          let uri = `${this.getEditorProtocol()}://file/${normalizePath(filePath)}`;
+          // Strip leading slash to avoid double-slash (e.g. cursor://file//path)
+          // which Windows interprets as a UNC path (\\path)
+          const normalized = normalizePath(filePath);
+          const uriPath = normalized.startsWith('/') ? normalized.slice(1) : normalized;
+          let uri = `${this.getEditorProtocol()}://file/${uriPath}`;
           if (line !== undefined) {
             uri += `:${line}`;
             if (col !== undefined) {
