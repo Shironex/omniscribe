@@ -16,20 +16,22 @@ function fireKey(
   });
 
   if (target) {
-    Object.defineProperty(event, 'target', { value: target });
+    Object.defineProperty(event, 'target', { value: target, configurable: true });
   }
 
   window.dispatchEvent(event);
   return event;
 }
 
-function createDefaultParams(overrides: Record<string, unknown> = {}) {
+type ShortcutParams = Parameters<typeof useAppKeyboardShortcuts>[0];
+
+function createDefaultParams(overrides: Partial<ShortcutParams> = {}): ShortcutParams {
   return {
     canLaunch: false,
     isLaunching: false,
     hasActiveSessions: false,
     terminalSessionCount: 0,
-    preLaunchSlots: [] satisfies PreLaunchSlot[],
+    preLaunchSlots: [],
     launchingSlotIds: new Set<string>(),
     activeProjectPath: '/project',
     handleAddSession: vi.fn(),
@@ -152,6 +154,16 @@ describe('useAppKeyboardShortcuts', () => {
 
       const textarea = document.createElement('textarea');
       fireKey('n', {}, textarea);
+      expect(params.handleAddSession).not.toHaveBeenCalled();
+    });
+
+    it('N does not fire when target is contentEditable', () => {
+      const params = createDefaultParams();
+      renderHook(() => useAppKeyboardShortcuts(params));
+
+      const div = document.createElement('div');
+      Object.defineProperty(div, 'isContentEditable', { value: true });
+      fireKey('n', {}, div);
       expect(params.handleAddSession).not.toHaveBeenCalled();
     });
 

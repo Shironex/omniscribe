@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
+import type { DragStartEvent, DragEndEvent } from '@dnd-kit/core';
 
 vi.mock('@dnd-kit/core', () => ({
   PointerSensor: 'PointerSensor',
@@ -8,6 +9,17 @@ vi.mock('@dnd-kit/core', () => ({
 }));
 
 import { useTerminalGridDnd } from '../useTerminalGridDnd';
+
+function dragStart(id: string | number): DragStartEvent {
+  return { active: { id } } as unknown as DragStartEvent;
+}
+
+function dragEnd(activeId: string, overId: string | null): DragEndEvent {
+  return {
+    active: { id: activeId },
+    over: overId !== null ? { id: overId } : null,
+  } as unknown as DragEndEvent;
+}
 
 describe('useTerminalGridDnd', () => {
   beforeEach(() => {
@@ -28,7 +40,7 @@ describe('useTerminalGridDnd', () => {
       const { result } = renderHook(() => useTerminalGridDnd());
 
       act(() => {
-        result.current.handleDragStart({ active: { id: 'session-1' } } as never);
+        result.current.handleDragStart(dragStart('session-1'));
       });
 
       expect(result.current.activeId).toBe('session-1');
@@ -38,7 +50,7 @@ describe('useTerminalGridDnd', () => {
       const { result } = renderHook(() => useTerminalGridDnd());
 
       act(() => {
-        result.current.handleDragStart({ active: { id: 42 } } as never);
+        result.current.handleDragStart(dragStart(42));
       });
 
       expect(result.current.activeId).toBe('42');
@@ -50,7 +62,7 @@ describe('useTerminalGridDnd', () => {
       const { result } = renderHook(() => useTerminalGridDnd());
 
       act(() => {
-        result.current.handleDragStart({ active: { id: 'session-1' } } as never);
+        result.current.handleDragStart(dragStart('session-1'));
       });
       expect(result.current.activeId).toBe('session-1');
 
@@ -66,11 +78,11 @@ describe('useTerminalGridDnd', () => {
       const { result } = renderHook(() => useTerminalGridDnd());
 
       act(() => {
-        result.current.handleDragStart({ active: { id: 'session-1' } } as never);
+        result.current.handleDragStart(dragStart('session-1'));
       });
 
       act(() => {
-        result.current.handleDragEnd({ active: { id: 'session-1' }, over: null } as never);
+        result.current.handleDragEnd(dragEnd('session-1', null));
       });
 
       expect(result.current.activeId).toBeNull();
@@ -81,7 +93,7 @@ describe('useTerminalGridDnd', () => {
       const { result } = renderHook(() => useTerminalGridDnd(onReorder));
 
       act(() => {
-        result.current.handleDragEnd({ active: { id: 'a' }, over: null } as never);
+        result.current.handleDragEnd(dragEnd('a', null));
       });
 
       expect(onReorder).not.toHaveBeenCalled();
@@ -92,10 +104,7 @@ describe('useTerminalGridDnd', () => {
       const { result } = renderHook(() => useTerminalGridDnd(onReorder));
 
       act(() => {
-        result.current.handleDragEnd({
-          active: { id: 'a' },
-          over: { id: 'a' },
-        } as never);
+        result.current.handleDragEnd(dragEnd('a', 'a'));
       });
 
       expect(onReorder).not.toHaveBeenCalled();
@@ -106,10 +115,7 @@ describe('useTerminalGridDnd', () => {
       const { result } = renderHook(() => useTerminalGridDnd(onReorder));
 
       act(() => {
-        result.current.handleDragEnd({
-          active: { id: 'session-1' },
-          over: { id: 'session-2' },
-        } as never);
+        result.current.handleDragEnd(dragEnd('session-1', 'session-2'));
       });
 
       expect(onReorder).toHaveBeenCalledWith('session-1', 'session-2');
@@ -122,10 +128,7 @@ describe('useTerminalGridDnd', () => {
       const { result } = renderHook(() => useTerminalGridDnd(vi.fn()));
 
       act(() => {
-        result.current.handleDragEnd({
-          active: { id: 'a' },
-          over: { id: 'b' },
-        } as never);
+        result.current.handleDragEnd(dragEnd('a', 'b'));
       });
 
       // Default delays: [0, 80, 180]
@@ -140,7 +143,7 @@ describe('useTerminalGridDnd', () => {
       expect(listener).toHaveBeenCalledTimes(2);
 
       act(() => {
-        vi.advanceTimersByTime(100);
+        vi.advanceTimersByTime(100); // remaining 100ms to reach the 180ms delay
       });
       expect(listener).toHaveBeenCalledTimes(3);
 
@@ -170,7 +173,7 @@ describe('useTerminalGridDnd', () => {
       expect(listener).toHaveBeenCalledTimes(2);
 
       act(() => {
-        vi.advanceTimersByTime(100);
+        vi.advanceTimersByTime(100); // remaining 100ms to reach the 180ms delay
       });
       expect(listener).toHaveBeenCalledTimes(3);
 

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock socket.io-client before importing the module under test
 const mockManager = {
@@ -20,8 +20,6 @@ vi.mock('socket.io-client', () => ({
   io: vi.fn(() => mockSocketInstance),
 }));
 
-import { io } from 'socket.io-client';
-
 describe('socket module', () => {
   beforeEach(async () => {
     // Reset mock state
@@ -33,7 +31,6 @@ describe('socket module', () => {
     mockSocketInstance.connected = false;
     mockManager.on.mockClear().mockReturnThis();
     mockManager.removeAllListeners.mockClear();
-    vi.mocked(io).mockClear();
 
     // Fresh module for every test to reset the singleton
     vi.resetModules();
@@ -42,10 +39,6 @@ describe('socket module', () => {
     vi.doMock('socket.io-client', () => ({
       io: vi.fn(() => mockSocketInstance),
     }));
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
   });
 
   async function importSocket() {
@@ -192,7 +185,8 @@ describe('socket module', () => {
       const connectHandler = mockSocketInstance.on.mock.calls
         .filter(call => call[0] === 'connect')
         .pop();
-      if (connectHandler) connectHandler[1]();
+      expect(connectHandler).toBeDefined();
+      connectHandler![1]();
 
       await Promise.all([promise1, promise2]);
     });
