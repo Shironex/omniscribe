@@ -1,6 +1,12 @@
 import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
-import { createLogger, TerminalEvents, type TerminalBackpressureEvent } from '@omniscribe/shared';
+import {
+  createLogger,
+  TerminalEvents,
+  DEFAULT_EDITOR_PROTOCOL,
+  type TerminalBackpressureEvent,
+  type EditorProtocol,
+} from '@omniscribe/shared';
 import { IS_WINDOWS, IS_MAC } from '@/lib/platform';
 import type { TerminalThemeName } from '@/lib/terminal-themes';
 import {
@@ -26,6 +32,8 @@ interface TerminalState extends SocketStoreState {
   cursorBlink: boolean;
   scrollback: number;
   terminalThemeName: TerminalThemeName;
+  /** Preferred editor protocol for file path links */
+  editorProtocol: EditorProtocol;
   // Control
   focusedSessionId: string | null;
   addSlotRequestCounter: number;
@@ -45,6 +53,7 @@ interface TerminalActions extends SocketStoreActions {
   setCursorBlink: (blink: boolean) => void;
   setScrollback: (lines: number) => void;
   setTerminalThemeName: (name: TerminalThemeName) => void;
+  setEditorProtocol: (protocol: EditorProtocol) => void;
   resetToDefaults: () => void;
   // Control actions
   setFocusedSessionId: (sessionId: string | null) => void;
@@ -69,6 +78,7 @@ const COMMON_DEFAULTS = {
   cursorBlink: true,
   scrollback: 10000,
   terminalThemeName: 'tokyonight' as TerminalThemeName,
+  editorProtocol: DEFAULT_EDITOR_PROTOCOL,
 };
 
 function getDefaultSettings(): Omit<
@@ -179,6 +189,8 @@ export const useTerminalStore = create<TerminalStore>()(
             ),
           setTerminalThemeName: name =>
             set({ terminalThemeName: name }, undefined, 'terminal/setTerminalThemeName'),
+          setEditorProtocol: protocol =>
+            set({ editorProtocol: protocol }, undefined, 'terminal/setEditorProtocol'),
           resetToDefaults: () => {
             logger.debug('resetToDefaults');
             set(getDefaultSettings(), undefined, 'terminal/resetToDefaults');
@@ -245,6 +257,7 @@ export const useTerminalStore = create<TerminalStore>()(
           cursorBlink: state.cursorBlink,
           scrollback: state.scrollback,
           terminalThemeName: state.terminalThemeName,
+          editorProtocol: state.editorProtocol,
         }),
       }
     ),

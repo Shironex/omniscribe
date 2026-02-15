@@ -11,7 +11,10 @@ const FILE_PATH_REGEX =
 const URL_PREFIXES = ['http://', 'https://', 'ws://', 'wss://'];
 
 export class FilePathLinkProvider implements ILinkProvider {
-  constructor(private readonly terminal: Terminal) {}
+  constructor(
+    private readonly terminal: Terminal,
+    private readonly getEditorProtocol: () => string = () => 'vscode'
+  ) {}
 
   provideLinks(y: number, callback: (links: ILink[] | undefined) => void): void {
     const line = this.terminal.buffer.active.getLine(y - 1);
@@ -55,8 +58,8 @@ export class FilePathLinkProvider implements ILinkProvider {
           const line = parts[2] ? parseInt(parts[2], 10) : undefined;
           const col = parts[3] ? parseInt(parts[3], 10) : undefined;
 
-          // Build VS Code URI
-          let uri = `vscode://file/${normalizePath(filePath)}`;
+          // Build editor URI using the configured protocol
+          let uri = `${this.getEditorProtocol()}://file/${normalizePath(filePath)}`;
           if (line !== undefined) {
             uri += `:${line}`;
             if (col !== undefined) {

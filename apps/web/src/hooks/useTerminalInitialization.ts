@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { createLogger } from '@omniscribe/shared';
+import { useTerminalStore } from '@/stores/useTerminalStore';
 import type { Terminal } from '@xterm/xterm';
 import type { FitAddon } from '@xterm/addon-fit';
 import type { SearchAddon } from '@xterm/addon-search';
@@ -76,7 +77,8 @@ export function useTerminalInitialization(
       isInitialized = true;
 
       terminal = createTerminalInstance(settings, theme);
-      const addons = loadTerminalAddons(terminal, container, sessionId);
+      const getEditorProtocol = () => useTerminalStore.getState().editorProtocol;
+      const addons = loadTerminalAddons(terminal, container, sessionId, getEditorProtocol);
       fitAddon = addons.fitAddon;
 
       xtermRef.current = terminal;

@@ -1,5 +1,7 @@
+import { useState, useEffect } from 'react';
 import { useTerminalStore, type CursorStyle } from '@/stores/useTerminalStore';
 import { terminalThemes, type TerminalThemeName } from '@/lib/terminal-themes';
+import { EDITOR_OPTIONS, type EditorProtocol } from '@omniscribe/shared';
 import { cn } from '@/lib/utils';
 
 const CURSOR_STYLES: { value: CursorStyle; label: string }[] = [
@@ -15,6 +17,7 @@ export function TerminalSection() {
   const scrollback = useTerminalStore(s => s.scrollback);
   const lineHeight = useTerminalStore(s => s.lineHeight);
   const themeName = useTerminalStore(s => s.terminalThemeName);
+  const editorProtocol = useTerminalStore(s => s.editorProtocol);
 
   const setFontSize = useTerminalStore(s => s.setFontSize);
   const setCursorStyle = useTerminalStore(s => s.setCursorStyle);
@@ -22,7 +25,20 @@ export function TerminalSection() {
   const setScrollback = useTerminalStore(s => s.setScrollback);
   const setLineHeight = useTerminalStore(s => s.setLineHeight);
   const setTerminalThemeName = useTerminalStore(s => s.setTerminalThemeName);
+  const setEditorProtocol = useTerminalStore(s => s.setEditorProtocol);
   const resetToDefaults = useTerminalStore(s => s.resetToDefaults);
+
+  const [detectedEditors, setDetectedEditors] = useState<EditorProtocol[]>([]);
+  const [detectingEditors, setDetectingEditors] = useState(false);
+
+  useEffect(() => {
+    if (!window.electronAPI?.app?.detectEditors) return;
+    setDetectingEditors(true);
+    window.electronAPI.app.detectEditors().then(editors => {
+      setDetectedEditors(editors);
+      setDetectingEditors(false);
+    });
+  }, []);
 
   return (
     <div className="space-y-8">
@@ -31,6 +47,37 @@ export function TerminalSection() {
         <p className="text-sm text-muted-foreground">
           Customize the terminal appearance and behavior.
         </p>
+      </div>
+
+      {/* Editor for File Links */}
+      <div className="space-y-2">
+        <label className="text-sm font-medium text-foreground">Editor for File Links</label>
+        <p className="text-xs text-muted-foreground">
+          Choose which editor opens when clicking file paths in the terminal.
+        </p>
+        <div className="flex gap-2 flex-wrap">
+          {EDITOR_OPTIONS.map(editor => {
+            const isDetected = detectedEditors.includes(editor.id);
+            const isSelected = editorProtocol === editor.id;
+            return (
+              <button
+                key={editor.id}
+                onClick={() => setEditorProtocol(editor.id)}
+                className={cn(
+                  'px-3 py-1.5 rounded-md text-sm border transition-colors',
+                  isSelected
+                    ? 'bg-primary text-primary-foreground border-primary'
+                    : 'bg-card border-border text-foreground hover:bg-muted'
+                )}
+              >
+                {editor.name}
+                {!detectingEditors && isDetected && (
+                  <span className="ml-1.5 text-[10px] opacity-60">Detected</span>
+                )}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Font Size */}

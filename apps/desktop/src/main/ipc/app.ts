@@ -2,13 +2,46 @@ import { ipcMain, app, shell, clipboard } from 'electron';
 import { existsSync } from 'fs';
 import { readdir, stat, readFile } from 'fs/promises';
 import { join } from 'path';
-import { createLogger, LOG_FILE_PREFIX, LOG_MAX_FILE_SIZE } from '@omniscribe/shared';
-import { CLI_TOOLS, checkCliAvailable, type CLITool } from '../utils';
+import {
+  createLogger,
+  LOG_FILE_PREFIX,
+  LOG_MAX_FILE_SIZE,
+  EDITOR_OPTIONS,
+  type EditorProtocol,
+} from '@omniscribe/shared';
+import { CLI_TOOLS, checkCliAvailable, findCliInPath, type CLITool } from '../utils';
 import { getLogsDir } from '../logger';
 import { getBackendPort } from '../backend-port';
 import type { ProjectValidationResult } from './types';
 
 const logger = createLogger('IPC:App');
+
+/** Cached editor detection results */
+let editorCache: EditorProtocol[] | null = null;
+let editorCacheTime = 0;
+const EDITOR_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+/**
+ * Detect which supported editors are installed by checking CLI commands in PATH
+ */
+async function detectInstalledEditors(): Promise<EditorProtocol[]> {
+  const now = Date.now();
+  if (editorCache && now - editorCacheTime < EDITOR_CACHE_TTL) {
+    return editorCache;
+  }
+
+  const results = await Promise.all(
+    EDITOR_OPTIONS.map(async editor => {
+      const path = await findCliInPath(editor.cliCommand);
+      return path ? editor.id : null;
+    })
+  );
+
+  editorCache = results.filter((id): id is EditorProtocol => id !== null);
+  editorCacheTime = now;
+  logger.debug('Detected editors:', editorCache);
+  return editorCache;
+}
 
 /**
  * Register app-related IPC handlers
@@ -128,6 +161,11 @@ export function registerAppHandlers(): void {
 
     return readFile(filePath, 'utf-8');
   });
+
+  ipcMain.handle('app:detect-editors', async () => {
+    logger.debug('app:detect-editors invoked');
+    return detectInstalledEditors();
+  });
 }
 
 /**
@@ -143,4 +181,5 @@ export function cleanupAppHandlers(): void {
   ipcMain.removeHandler('app:get-backend-port');
   ipcMain.removeHandler('app:list-log-files');
   ipcMain.removeHandler('app:read-log-file');
+  ipcMain.removeHandler('app:detect-editors');
 }
