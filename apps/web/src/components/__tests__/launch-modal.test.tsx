@@ -1,16 +1,5 @@
-import { describe, it, expect, vi, beforeAll } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-
-// Polyfill ResizeObserver for jsdom
-beforeAll(() => {
-  if (typeof globalThis.ResizeObserver === 'undefined') {
-    globalThis.ResizeObserver = class ResizeObserver {
-      observe() {}
-      unobserve() {}
-      disconnect() {}
-    } as unknown as typeof globalThis.ResizeObserver;
-  }
-});
 
 // ─── Mock BranchAutocomplete ─────────────────────────────────────────────────
 vi.mock('@/components/shared/BranchAutocomplete', () => ({
@@ -114,8 +103,12 @@ describe('LaunchPresetsModal', () => {
     expect(onCreateSessions).toHaveBeenCalledWith(2, 'claude', 'main');
   });
 
-  it('shows Cancel button that closes the dialog', () => {
-    render(<LaunchPresetsModal {...defaultProps} open={true} />);
-    expect(screen.getByText('Cancel')).toBeTruthy();
+  it('closes the dialog when Cancel is clicked', () => {
+    const onOpenChange = vi.fn();
+    render(<LaunchPresetsModal {...defaultProps} open={true} onOpenChange={onOpenChange} />);
+
+    fireEvent.click(screen.getByText('Cancel'));
+
+    expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 });

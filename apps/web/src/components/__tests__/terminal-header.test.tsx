@@ -119,8 +119,8 @@ describe('TerminalHeader', () => {
   it('renders drag handle when dragHandleProps are provided', () => {
     const dragHandleProps = {
       setNodeRef: vi.fn(),
-      attributes: {},
-      listeners: {},
+      attributes: { role: 'button', tabIndex: 0, 'aria-roledescription': 'sortable' },
+      listeners: { onPointerDown: vi.fn() },
     };
     render(
       <TerminalHeader

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { createLogger } from '@omniscribe/shared';
 
@@ -11,10 +11,12 @@ const mockLogger = createLogger('test');
 // ─── ErrorBoundary ──────────────────────────────────────────────────────────
 
 describe('ErrorBoundary', () => {
-  let consoleSpy: ReturnType<typeof vi.spyOn>;
-
   beforeEach(() => {
-    consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it('calls logger.error via componentDidCatch when a child throws', () => {
@@ -33,7 +35,6 @@ describe('ErrorBoundary', () => {
     // The globally mocked createLogger returns a shared silentLogger,
     // so every logger instance shares the same mock functions.
     expect(mockLogger.error).toHaveBeenCalled();
-    consoleSpy.mockRestore();
   });
 
   it('calls window.location.reload when the Reload button is clicked', () => {
@@ -45,25 +46,26 @@ describe('ErrorBoundary', () => {
       configurable: true,
     });
 
-    const ThrowingComponent = () => {
-      throw new Error('Reload test');
-    };
+    try {
+      const ThrowingComponent = () => {
+        throw new Error('Reload test');
+      };
 
-    render(
-      <ErrorBoundary>
-        <ThrowingComponent />
-      </ErrorBoundary>
-    );
+      render(
+        <ErrorBoundary>
+          <ThrowingComponent />
+        </ErrorBoundary>
+      );
 
-    fireEvent.click(screen.getByText('Reload'));
-    expect(reloadMock).toHaveBeenCalledOnce();
-
-    Object.defineProperty(window, 'location', {
-      value: originalLocation,
-      writable: true,
-      configurable: true,
-    });
-    consoleSpy.mockRestore();
+      fireEvent.click(screen.getByText('Reload'));
+      expect(reloadMock).toHaveBeenCalledOnce();
+    } finally {
+      Object.defineProperty(window, 'location', {
+        value: originalLocation,
+        writable: true,
+        configurable: true,
+      });
+    }
   });
 
   it('renders the fallback UI with expected structure', () => {
@@ -89,18 +91,18 @@ describe('ErrorBoundary', () => {
     expect(pre!.textContent).toBe('Structure test');
     // Reload button
     expect(screen.getByText('Reload')).toBeTruthy();
-
-    consoleSpy.mockRestore();
   });
 });
 
 // ─── TerminalErrorBoundary ──────────────────────────────────────────────────
 
 describe('TerminalErrorBoundary', () => {
-  let consoleSpy: ReturnType<typeof vi.spyOn>;
-
   beforeEach(() => {
-    consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it('renders children when no error occurs', () => {
@@ -110,7 +112,6 @@ describe('TerminalErrorBoundary', () => {
       </TerminalErrorBoundary>
     );
     expect(screen.getByText('Terminal Content')).toBeTruthy();
-    consoleSpy.mockRestore();
   });
 
   it('shows "Terminal Crashed" fallback when a child throws', () => {
@@ -125,7 +126,6 @@ describe('TerminalErrorBoundary', () => {
     );
 
     expect(screen.getByText('Terminal Crashed')).toBeTruthy();
-    consoleSpy.mockRestore();
   });
 
   it('shows "Restart Terminal" button in fallback', () => {
@@ -140,7 +140,6 @@ describe('TerminalErrorBoundary', () => {
     );
 
     expect(screen.getByText('Restart Terminal')).toBeTruthy();
-    consoleSpy.mockRestore();
   });
 
   it('calls onRestart and resets error state when Restart Terminal is clicked', () => {
@@ -167,8 +166,6 @@ describe('TerminalErrorBoundary', () => {
     expect(onRestart).toHaveBeenCalledOnce();
     // After restart, children should render again
     expect(screen.getByText('Recovered')).toBeTruthy();
-
-    consoleSpy.mockRestore();
   });
 
   it('toggles Technical Details visibility', () => {
@@ -193,8 +190,6 @@ describe('TerminalErrorBoundary', () => {
     fireEvent.click(screen.getByText('Technical Details'));
     // The pre tag with error details should be gone
     expect(screen.queryByText('detail error message')).toBeNull();
-
-    consoleSpy.mockRestore();
   });
 
   it('works without onRestart prop (optional callback)', () => {
@@ -217,7 +212,5 @@ describe('TerminalErrorBoundary', () => {
     // Should not throw when clicking restart without onRestart prop
     fireEvent.click(screen.getByText('Restart Terminal'));
     expect(screen.getByText('Back')).toBeTruthy();
-
-    consoleSpy.mockRestore();
   });
 });

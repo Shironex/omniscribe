@@ -1,16 +1,5 @@
-import { describe, it, expect, vi, beforeAll } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-
-// Polyfill ResizeObserver for jsdom (used by BranchAutocomplete / Radix Popover)
-beforeAll(() => {
-  if (typeof globalThis.ResizeObserver === 'undefined') {
-    globalThis.ResizeObserver = class ResizeObserver {
-      observe() {}
-      unobserve() {}
-      disconnect() {}
-    } as unknown as typeof globalThis.ResizeObserver;
-  }
-});
 
 // ─── SessionStatusDisplay ────────────────────────────────────────────────────
 

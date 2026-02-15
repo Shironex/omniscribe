@@ -1,5 +1,14 @@
 import { vi } from 'vitest';
 
+// Polyfill ResizeObserver for jsdom (used by Radix UI dialogs, popovers, etc.)
+if (typeof globalThis.ResizeObserver === 'undefined') {
+  globalThis.ResizeObserver = class ResizeObserver {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  } as unknown as typeof globalThis.ResizeObserver;
+}
+
 // Mock sonner toast globally
 vi.mock('sonner', () => ({
   toast: Object.assign(vi.fn(), {

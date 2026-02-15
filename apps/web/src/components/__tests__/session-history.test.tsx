@@ -6,6 +6,10 @@ import type { ClaudeSessionEntry } from '@omniscribe/shared';
 let mockSessionHistoryState: Record<string, unknown> = {};
 let mockSessionState: Record<string, unknown> = {};
 
+// Mock the barrel re-export AND individual modules because:
+// - SessionHistoryPanel imports from '@/stores' (barrel)
+// - Sub-components or lib modules may import directly from individual files
+// Both need to resolve to the same mock state.
 vi.mock('@/stores', () => ({
   useSessionHistoryStore: vi.fn((sel?: unknown) => {
     if (typeof sel === 'function')
@@ -58,9 +62,14 @@ vi.mock('../shared/SessionHistoryItem', () => ({
 // ─── Tooltip provider (needed for Tooltip components) ─────────────────────────
 vi.mock('@/components/ui/tooltip', () => ({
   Tooltip: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  TooltipTrigger: ({ children, ...props }: { children: React.ReactNode; asChild?: boolean }) => (
-    <div {...props}>{children}</div>
-  ),
+  TooltipTrigger: ({
+    children,
+    asChild: _asChild,
+    ...props
+  }: {
+    children: React.ReactNode;
+    asChild?: boolean;
+  }) => <div {...props}>{children}</div>,
   TooltipContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
@@ -74,11 +83,17 @@ import { SessionHistoryPanel } from '../shared/SessionHistoryPanel';
 function makeSessions(count: number): ClaudeSessionEntry[] {
   return Array.from({ length: count }, (_, i) => ({
     sessionId: `session-${i + 1}`,
+    fullPath: `/projects/test/session-${i + 1}.json`,
+    fileMtime: Date.now() - i * 60_000,
     summary: `Session ${i + 1} summary`,
     firstPrompt: `Do task ${i + 1}`,
+    messageCount: i + 1,
+    created: new Date(Date.now() - i * 120_000).toISOString(),
     modified: new Date(Date.now() - i * 60_000).toISOString(),
     gitBranch: i % 2 === 0 ? 'main' : 'develop',
-  })) as ClaudeSessionEntry[];
+    projectPath: '/projects/test',
+    isSidechain: false,
+  }));
 }
 
 describe('SessionHistoryPanel', () => {
