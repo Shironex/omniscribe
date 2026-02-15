@@ -69,7 +69,7 @@ describe('useProjectSessions', () => {
   ) {
     vi.doMock('@/stores/useSessionStore', () => ({
       useSessionStore: (sel: Selector) =>
-        sel({ sessions: mockSessions, updateSession: mockUpdateSession }),
+        sel({ sessions: mockSessions, updateSession: mockUpdateSession, customTitles: {} }),
     }));
 
     const mod = await import('../useProjectSessions');

@@ -34,6 +34,8 @@ export interface TerminalSession {
   claudeSessionId?: string;
   /** Whether this session was resumed from a previous Claude Code session */
   isResumed?: boolean;
+  /** User-defined custom title (in-memory only) */
+  customTitle?: string;
 }
 
 interface TerminalHeaderProps {

@@ -39,6 +39,7 @@ function createMockSession(overrides: Partial<FrontendSessionConfig> = {}): Fron
 const initialState = {
   sessions: [],
   pendingStatusUpdates: {},
+  customTitles: {},
   isLoading: false,
   error: null,
   listenersInitialized: false,
@@ -65,6 +66,10 @@ describe('useSessionStore', () => {
 
     it('has no pending status updates', () => {
       expect(useSessionStore.getState().pendingStatusUpdates).toEqual({});
+    });
+
+    it('has no custom titles', () => {
+      expect(useSessionStore.getState().customTitles).toEqual({});
     });
 
     it('is not loading', () => {
@@ -140,6 +145,19 @@ describe('useSessionStore', () => {
       const pending = useSessionStore.getState().pendingStatusUpdates;
       expect(pending['sess-1']).toBeUndefined();
       expect(pending['sess-2']).toBeDefined();
+    });
+
+    it('clears custom title for the removed session', () => {
+      useSessionStore.setState({
+        sessions: [createMockSession({ id: 'sess-1' })],
+        customTitles: { 'sess-1': 'My Title', 'sess-2': 'Other Title' },
+      });
+
+      useSessionStore.getState().removeSession('sess-1');
+
+      const titles = useSessionStore.getState().customTitles;
+      expect(titles['sess-1']).toBeUndefined();
+      expect(titles['sess-2']).toBe('Other Title');
     });
 
     it('does nothing for a non-existent session', () => {
@@ -252,6 +270,59 @@ describe('useSessionStore', () => {
 
       expect(useSessionStore.getState().sessions).toHaveLength(2);
       expect(useSessionStore.getState().sessions[0].id).toBe('new-1');
+    });
+  });
+
+  describe('setCustomTitle', () => {
+    it('sets a custom title for a session', () => {
+      useSessionStore.getState().setCustomTitle('sess-1', 'My Custom Title');
+      expect(useSessionStore.getState().customTitles['sess-1']).toBe('My Custom Title');
+    });
+
+    it('trims whitespace from the title', () => {
+      useSessionStore.getState().setCustomTitle('sess-1', '  Trimmed Title  ');
+      expect(useSessionStore.getState().customTitles['sess-1']).toBe('Trimmed Title');
+    });
+
+    it('ignores empty strings', () => {
+      useSessionStore.getState().setCustomTitle('sess-1', '');
+      expect(useSessionStore.getState().customTitles['sess-1']).toBeUndefined();
+    });
+
+    it('ignores whitespace-only strings', () => {
+      useSessionStore.getState().setCustomTitle('sess-1', '   ');
+      expect(useSessionStore.getState().customTitles['sess-1']).toBeUndefined();
+    });
+
+    it('overwrites an existing custom title', () => {
+      useSessionStore.setState({ customTitles: { 'sess-1': 'Old Title' } });
+      useSessionStore.getState().setCustomTitle('sess-1', 'New Title');
+      expect(useSessionStore.getState().customTitles['sess-1']).toBe('New Title');
+    });
+  });
+
+  describe('clearCustomTitle', () => {
+    it('removes a custom title for a session', () => {
+      useSessionStore.setState({ customTitles: { 'sess-1': 'My Title' } });
+      useSessionStore.getState().clearCustomTitle('sess-1');
+      expect(useSessionStore.getState().customTitles['sess-1']).toBeUndefined();
+    });
+
+    it('preserves other custom titles', () => {
+      useSessionStore.setState({
+        customTitles: { 'sess-1': 'Title 1', 'sess-2': 'Title 2' },
+      });
+      useSessionStore.getState().clearCustomTitle('sess-1');
+
+      const titles = useSessionStore.getState().customTitles;
+      expect(titles['sess-1']).toBeUndefined();
+      expect(titles['sess-2']).toBe('Title 2');
+    });
+
+    it('does nothing for a non-existent session', () => {
+      useSessionStore.setState({ customTitles: { 'sess-1': 'Title 1' } });
+      useSessionStore.getState().clearCustomTitle('non-existent');
+      expect(useSessionStore.getState().customTitles['sess-1']).toBe('Title 1');
     });
   });
 
