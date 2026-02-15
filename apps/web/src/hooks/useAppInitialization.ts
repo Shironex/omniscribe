@@ -1,5 +1,10 @@
 import { useEffect } from 'react';
-import { createLogger, SessionEvents, type RestoreSnapshotResponse } from '@omniscribe/shared';
+import {
+  createLogger,
+  extractErrorMessage,
+  SessionEvents,
+  type RestoreSnapshotResponse,
+} from '@omniscribe/shared';
 import { useUpdateStore } from '@/stores/useUpdateStore';
 import { useSettingsStore } from '@/stores/useSettingsStore';
 import { connectSocket, getSocket, initializeSocket } from '@/lib/socket';
@@ -59,7 +64,7 @@ async function autoResumeOnRestart(): Promise<void> {
         );
         logger.info(`Auto-resumed session: ${snapshot.name}`);
       } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
+        const msg = extractErrorMessage(err);
         logger.warn(`Failed to auto-resume session ${snapshot.name}: ${msg}`);
       }
     }

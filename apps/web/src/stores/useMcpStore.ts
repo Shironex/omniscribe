@@ -5,10 +5,14 @@ import {
   McpServerState,
   McpServerStatus,
   createLogger,
+  extractErrorMessage,
   McpEvents,
   type McpInternalStatusResponse,
   type McpDiscoverPayload,
   type McpDiscoverResponse,
+  type McpServersDiscoveredEvent,
+  type McpStatusUpdateEvent,
+  type McpServerStateUpdateEvent,
 } from '@omniscribe/shared';
 import { getSocket } from '@/lib/socket';
 import { emitAsync } from '@/lib/socketHelpers';
@@ -22,30 +26,6 @@ import {
   createSocketListeners,
   createMemoizedSelector,
 } from './utils';
-
-/**
- * MCP server discovery result payload
- */
-interface McpDiscoveryResult {
-  servers: McpServerConfig[];
-}
-
-/**
- * MCP server status update payload
- */
-interface McpStatusUpdate {
-  serverId: string;
-  status: McpServerStatus;
-  errorMessage?: string;
-}
-
-/**
- * MCP server state update payload
- */
-interface McpServerStateUpdate {
-  serverId: string;
-  state: McpServerState;
-}
 
 /**
  * MCP store state (extends common socket state)
@@ -105,14 +85,14 @@ export const useMcpStore = create<McpStore>()(
           {
             event: 'mcp:servers:discovered',
             handler: (data, get) => {
-              const result = data as McpDiscoveryResult;
+              const result = data as McpServersDiscoveredEvent;
               get().setServers(result.servers);
             },
           },
           {
             event: 'mcp:status',
             handler: (data, get) => {
-              const update = data as McpStatusUpdate;
+              const update = data as McpStatusUpdateEvent;
               logger.debug('mcp:status', update.serverId, update.status);
               get().updateServerStatus(update.serverId, update.status, update.errorMessage);
             },
@@ -120,7 +100,7 @@ export const useMcpStore = create<McpStore>()(
           {
             event: 'mcp:state',
             handler: (data, get) => {
-              const update = data as McpServerStateUpdate;
+              const update = data as McpServerStateUpdateEvent;
               logger.debug('mcp:state', update.serverId);
               get().updateServerState(update.serverId, update.state);
             },
@@ -172,7 +152,7 @@ export const useMcpStore = create<McpStore>()(
               );
             }
           } catch (err) {
-            const message = err instanceof Error ? err.message : 'Discovery failed';
+            const message = extractErrorMessage(err, 'Discovery failed');
             logger.error('Discovery failed:', message);
             set({ error: message, isDiscovering: false }, undefined, 'mcp/discoverServersError');
           }

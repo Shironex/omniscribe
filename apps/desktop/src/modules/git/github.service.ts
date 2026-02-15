@@ -375,7 +375,9 @@ export class GithubService {
     }
 
     const data = JSON.parse(stdout);
-    return data.map((pr: Record<string, unknown>) => this.mapPullRequest(pr));
+    return data
+      .map((pr: Record<string, unknown>) => this.mapPullRequest(pr))
+      .filter((pr: PullRequest | null): pr is PullRequest => pr !== null);
   }
 
   /**
@@ -412,8 +414,11 @@ export class GithubService {
 
     const { stdout } = await this.execGh(repoPath, args);
     const data = JSON.parse(stdout);
-
-    return this.mapPullRequest(data);
+    const pr = this.mapPullRequest(data);
+    if (!pr) {
+      throw new Error('Failed to parse created pull request');
+    }
+    return pr;
   }
 
   /**
@@ -446,7 +451,9 @@ export class GithubService {
     }
 
     const data = JSON.parse(stdout);
-    return data.map((issue: Record<string, unknown>) => this.mapIssue(issue));
+    return data
+      .map((issue: Record<string, unknown>) => this.mapIssue(issue))
+      .filter((issue: Issue | null): issue is Issue => issue !== null);
   }
 
   /**
@@ -492,51 +499,87 @@ export class GithubService {
   }
 
   /**
-   * Map raw gh CLI JSON output to a typed PullRequest object
+   * Map raw gh CLI JSON output to a typed PullRequest object.
+   * Includes runtime validation to guard against unexpected CLI output shapes.
    */
-  private mapPullRequest(pr: Record<string, unknown>): PullRequest {
+  private mapPullRequest(pr: Record<string, unknown>): PullRequest | null {
+    if (typeof pr.number !== 'number' || typeof pr.title !== 'string') {
+      this.logger.warn('Unexpected PR shape from gh CLI:', JSON.stringify(pr).slice(0, 200));
+      return null;
+    }
+
+    const author =
+      typeof pr.author === 'object' && pr.author !== null
+        ? (pr.author as Record<string, unknown>)
+        : null;
+    const stateRaw = typeof pr.state === 'string' ? pr.state : 'open';
+    const normalizedState = stateRaw === 'MERGED' ? 'merged' : stateRaw.toLowerCase();
+    const validPrStates: PullRequestState[] = ['open', 'closed', 'merged'];
+    const state: PullRequestState = validPrStates.includes(normalizedState as PullRequestState)
+      ? (normalizedState as PullRequestState)
+      : 'open';
+
     return {
-      number: pr.number as number,
-      title: pr.title as string,
-      body: (pr.body as string) || undefined,
-      state: (pr.state === 'MERGED'
-        ? 'merged'
-        : (pr.state as string).toLowerCase()) as PullRequestState,
+      number: typeof pr.number === 'number' ? pr.number : 0,
+      title: typeof pr.title === 'string' ? pr.title : '',
+      body: typeof pr.body === 'string' ? pr.body : undefined,
+      state,
       author: {
-        login: ((pr.author as Record<string, unknown>)?.login as string) || 'unknown',
-        name: (pr.author as Record<string, unknown>)?.name as string | undefined,
+        login: typeof author?.login === 'string' ? author.login : 'unknown',
+        name: typeof author?.name === 'string' ? author.name : undefined,
       },
-      url: pr.url as string,
-      headRefName: pr.headRefName as string,
-      baseRefName: pr.baseRefName as string,
-      isDraft: (pr.isDraft as boolean) || false,
-      createdAt: pr.createdAt as string,
-      updatedAt: pr.updatedAt as string,
-      mergedAt: (pr.mergedAt as string) || undefined,
+      url: typeof pr.url === 'string' ? pr.url : '',
+      headRefName: typeof pr.headRefName === 'string' ? pr.headRefName : '',
+      baseRefName: typeof pr.baseRefName === 'string' ? pr.baseRefName : '',
+      isDraft: typeof pr.isDraft === 'boolean' ? pr.isDraft : false,
+      createdAt: typeof pr.createdAt === 'string' ? pr.createdAt : '',
+      updatedAt: typeof pr.updatedAt === 'string' ? pr.updatedAt : '',
+      mergedAt: typeof pr.mergedAt === 'string' ? pr.mergedAt : undefined,
     };
   }
 
   /**
-   * Map raw gh CLI JSON output to a typed Issue object
+   * Map raw gh CLI JSON output to a typed Issue object.
+   * Includes runtime validation to guard against unexpected CLI output shapes.
    */
-  private mapIssue(issue: Record<string, unknown>): Issue {
+  private mapIssue(issue: Record<string, unknown>): Issue | null {
+    if (typeof issue.number !== 'number' || typeof issue.title !== 'string') {
+      this.logger.warn('Unexpected issue shape from gh CLI:', JSON.stringify(issue).slice(0, 200));
+      return null;
+    }
+
+    const author =
+      typeof issue.author === 'object' && issue.author !== null
+        ? (issue.author as Record<string, unknown>)
+        : null;
+    const labels = Array.isArray(issue.labels) ? issue.labels : [];
+    const stateRaw = typeof issue.state === 'string' ? issue.state.toLowerCase() : 'open';
+    const validIssueStates: IssueState[] = ['open', 'closed'];
+    const issueState: IssueState = validIssueStates.includes(stateRaw as IssueState)
+      ? (stateRaw as IssueState)
+      : 'open';
+
     return {
-      number: issue.number as number,
-      title: issue.title as string,
-      body: (issue.body as string) || undefined,
-      state: (issue.state as string).toLowerCase() as IssueState,
+      number: typeof issue.number === 'number' ? issue.number : 0,
+      title: typeof issue.title === 'string' ? issue.title : '',
+      body: typeof issue.body === 'string' ? issue.body : undefined,
+      state: issueState,
       author: {
-        login: ((issue.author as Record<string, unknown>)?.login as string) || 'unknown',
-        name: (issue.author as Record<string, unknown>)?.name as string | undefined,
+        login: typeof author?.login === 'string' ? author.login : 'unknown',
+        name: typeof author?.name === 'string' ? author.name : undefined,
       },
-      url: issue.url as string,
-      labels: ((issue.labels as Array<Record<string, unknown>>) || []).map(label => ({
-        name: label.name as string,
-        color: label.color as string | undefined,
-      })),
-      createdAt: issue.createdAt as string,
-      updatedAt: issue.updatedAt as string,
-      closedAt: (issue.closedAt as string) || undefined,
+      url: typeof issue.url === 'string' ? issue.url : '',
+      labels: labels
+        .filter(
+          (label): label is Record<string, unknown> => label != null && typeof label === 'object'
+        )
+        .map(label => ({
+          name: typeof label.name === 'string' ? label.name : '',
+          color: typeof label.color === 'string' ? label.color : undefined,
+        })),
+      createdAt: typeof issue.createdAt === 'string' ? issue.createdAt : '',
+      updatedAt: typeof issue.updatedAt === 'string' ? issue.updatedAt : '',
+      closedAt: typeof issue.closedAt === 'string' ? issue.closedAt : undefined,
     };
   }
 }

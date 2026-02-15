@@ -27,13 +27,24 @@ vi.mock('@/stores/useConnectionStore', () => ({
 }));
 
 // ─── Session store mock ────────────────────────────────────────────────────────
-let mockSessionState: Record<string, unknown> = {};
+const mockSessionState: Record<string, unknown> = {};
 
 vi.mock('@/stores/useSessionStore', () => ({
   useSessionStore: vi.fn((sel?: unknown) => {
     if (typeof sel === 'function')
       return (sel as (s: typeof mockSessionState) => unknown)(mockSessionState);
     return mockSessionState;
+  }),
+}));
+
+// ─── Terminal store mock ──────────────────────────────────────────────────────
+let mockTerminalState: Record<string, unknown> = {};
+
+vi.mock('@/stores/useTerminalStore', () => ({
+  useTerminalStore: vi.fn((sel?: unknown) => {
+    if (typeof sel === 'function')
+      return (sel as (s: typeof mockTerminalState) => unknown)(mockTerminalState);
+    return mockTerminalState;
   }),
 }));
 
@@ -183,7 +194,7 @@ describe('ReconnectionOverlay', () => {
 describe('BackpressureOverlay', () => {
   beforeEach(() => {
     vi.useFakeTimers();
-    mockSessionState = { backpressured: {} };
+    mockTerminalState = { backpressured: {} };
   });
 
   afterEach(() => {
@@ -196,7 +207,7 @@ describe('BackpressureOverlay', () => {
   });
 
   it('shows overlay after debounce when backpressured', () => {
-    mockSessionState = { backpressured: { 1: true } };
+    mockTerminalState = { backpressured: { 1: true } };
     render(<BackpressureOverlay terminalSessionId={1} />);
 
     // Before debounce (500ms) — should be hidden
@@ -213,7 +224,7 @@ describe('BackpressureOverlay', () => {
 
   it('shows cancel button that emits terminal cancel event', async () => {
     const { getSocket } = await import('@/lib/socket');
-    mockSessionState = { backpressured: { 1: true } };
+    mockTerminalState = { backpressured: { 1: true } };
     render(<BackpressureOverlay terminalSessionId={1} />);
 
     act(() => {

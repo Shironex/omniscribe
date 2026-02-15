@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
-import { createLogger, GitEvents } from '@omniscribe/shared';
+import { createLogger, extractErrorMessage, GitEvents } from '@omniscribe/shared';
 import type {
   BranchInfo,
   CommitInfo,
@@ -12,6 +12,7 @@ import type {
   GitCheckoutResponse,
   GitCommitsPayload,
   GitCommitsResponse,
+  GitBranchUpdateEvent,
 } from '@omniscribe/shared';
 import { emitAsync } from '@/lib/socketHelpers';
 
@@ -23,15 +24,6 @@ import {
   createSocketActions,
   createSocketListeners,
 } from './utils';
-
-/**
- * Git branch update payload from socket
- */
-interface GitBranchUpdate {
-  projectPath: string;
-  branches?: BranchInfo[];
-  currentBranch: BranchInfo | null;
-}
 
 /**
  * Git store state (extends common socket state)
@@ -95,7 +87,7 @@ export const useGitStore = create<GitStore>()(
           {
             event: GitEvents.BRANCHES,
             handler: (data, get) => {
-              const update = data as GitBranchUpdate;
+              const update = data as GitBranchUpdateEvent;
               const currentProjectPath = get().projectPath;
               if (currentProjectPath && update.projectPath === currentProjectPath) {
                 if (update.branches) {
@@ -179,7 +171,7 @@ export const useGitStore = create<GitStore>()(
               );
             }
           } catch (err) {
-            const message = err instanceof Error ? err.message : 'Failed to fetch branches';
+            const message = extractErrorMessage(err, 'Failed to fetch branches');
             logger.error('fetchBranches error:', message);
             set({ error: message, isLoading: false }, undefined, 'git/fetchBranchesError');
           }
@@ -216,7 +208,7 @@ export const useGitStore = create<GitStore>()(
               );
             }
           } catch (err) {
-            const message = err instanceof Error ? err.message : 'Failed to fetch current branch';
+            const message = extractErrorMessage(err, 'Failed to fetch current branch');
             logger.error('fetchCurrentBranch error:', message);
             set({ error: message, isLoading: false }, undefined, 'git/fetchCurrentBranchError');
           }
@@ -244,7 +236,7 @@ export const useGitStore = create<GitStore>()(
               get().fetchCurrentBranch(projectPath);
             }
           } catch (err) {
-            const message = err instanceof Error ? err.message : 'Failed to checkout branch';
+            const message = extractErrorMessage(err, 'Failed to checkout branch');
             logger.error('checkout error:', message);
             set({ error: message, isLoading: false }, undefined, 'git/checkoutError');
           }
@@ -270,7 +262,7 @@ export const useGitStore = create<GitStore>()(
               );
             }
           } catch (err) {
-            const message = err instanceof Error ? err.message : 'Failed to fetch commits';
+            const message = extractErrorMessage(err, 'Failed to fetch commits');
             logger.error('fetchCommits error:', message);
             set({ error: message, isLoading: false }, undefined, 'git/fetchCommitsError');
           }

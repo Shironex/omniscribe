@@ -1,11 +1,21 @@
 import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
+import { createLogger, TerminalEvents, type TerminalBackpressureEvent } from '@omniscribe/shared';
 import { IS_WINDOWS, IS_MAC } from '@/lib/platform';
 import type { TerminalThemeName } from '@/lib/terminal-themes';
+import {
+  SocketStoreState,
+  SocketStoreActions,
+  initialSocketState,
+  createSocketActions,
+  createSocketListeners,
+} from './utils';
+
+const logger = createLogger('TerminalStore');
 
 export type CursorStyle = 'block' | 'underline' | 'bar';
 
-interface TerminalState {
+interface TerminalState extends SocketStoreState {
   // Settings
   fontSize: number;
   fontFamily: string[];
@@ -20,9 +30,11 @@ interface TerminalState {
   focusedSessionId: string | null;
   addSlotRequestCounter: number;
   sessionOrder: string[];
+  /** Terminal session IDs currently under backpressure */
+  backpressured: Record<number, true>;
 }
 
-interface TerminalActions {
+interface TerminalActions extends SocketStoreActions {
   // Settings actions
   setFontSize: (size: number) => void;
   setFontFamily: (family: string[]) => void;
@@ -39,6 +51,12 @@ interface TerminalActions {
   requestAddSlot: () => void;
   setSessionOrder: (order: string[]) => void;
   reorderSessions: (activeId: string, overId: string) => void;
+  /** Set backpressure state for a terminal */
+  setBackpressure: (terminalSessionId: number, paused: boolean) => void;
+  /** Initialize socket listeners */
+  initListeners: () => void;
+  /** Clean up socket listeners */
+  cleanupListeners: () => void;
 }
 
 type TerminalStore = TerminalState & TerminalActions;
@@ -55,7 +73,11 @@ const COMMON_DEFAULTS = {
 
 function getDefaultSettings(): Omit<
   TerminalState,
-  'focusedSessionId' | 'addSlotRequestCounter' | 'sessionOrder'
+  | 'focusedSessionId'
+  | 'addSlotRequestCounter'
+  | 'sessionOrder'
+  | 'backpressured'
+  | keyof SocketStoreState
 > {
   if (IS_WINDOWS) {
     return {
@@ -93,61 +115,116 @@ if (typeof window !== 'undefined') {
 export const useTerminalStore = create<TerminalStore>()(
   devtools(
     persist(
-      (set, get) => ({
-        // Settings state (from defaults)
-        ...defaults,
+      (set, get) => {
+        // Create common socket actions
+        const socketActions = createSocketActions<TerminalState>(set, 'terminal');
 
-        // Control state
-        focusedSessionId: null,
-        addSlotRequestCounter: 0,
-        sessionOrder: [],
+        // Create socket listeners
+        const { initListeners, cleanupListeners } = createSocketListeners<TerminalStore>(
+          get,
+          set,
+          'terminal',
+          {
+            listeners: [
+              {
+                event: TerminalEvents.BACKPRESSURE,
+                handler: (data, get) => {
+                  const payload = data as TerminalBackpressureEvent;
+                  logger.debug(TerminalEvents.BACKPRESSURE, payload.sessionId, payload.paused);
+                  get().setBackpressure(payload.sessionId, payload.paused);
+                },
+              },
+            ],
+            includeConnectionErrorHandler: false,
+          }
+        );
 
-        // Settings actions
-        setFontSize: size =>
-          set({ fontSize: Math.max(8, Math.min(24, size)) }, undefined, 'terminal/setFontSize'),
-        setFontFamily: family => set({ fontFamily: family }, undefined, 'terminal/setFontFamily'),
-        setFontWeight: weight => set({ fontWeight: weight }, undefined, 'terminal/setFontWeight'),
-        setLineHeight: height => set({ lineHeight: height }, undefined, 'terminal/setLineHeight'),
-        setLetterSpacing: spacing =>
-          set({ letterSpacing: spacing }, undefined, 'terminal/setLetterSpacing'),
-        setCursorStyle: style => set({ cursorStyle: style }, undefined, 'terminal/setCursorStyle'),
-        setCursorBlink: blink => set({ cursorBlink: blink }, undefined, 'terminal/setCursorBlink'),
-        setScrollback: lines =>
-          set(
-            { scrollback: Math.max(1000, Math.min(100000, lines)) },
-            undefined,
-            'terminal/setScrollback'
-          ),
-        setTerminalThemeName: name =>
-          set({ terminalThemeName: name }, undefined, 'terminal/setTerminalThemeName'),
-        resetToDefaults: () => set(getDefaultSettings(), undefined, 'terminal/resetToDefaults'),
+        return {
+          // Settings state (from defaults)
+          ...defaults,
 
-        // Control actions
-        setFocusedSessionId: sessionId =>
-          set({ focusedSessionId: sessionId }, undefined, 'terminal/setFocusedSessionId'),
-        requestAddSlot: () =>
-          set(
-            state => ({ addSlotRequestCounter: state.addSlotRequestCounter + 1 }),
-            undefined,
-            'terminal/requestAddSlot'
-          ),
-        setSessionOrder: order =>
-          set({ sessionOrder: order }, undefined, 'terminal/setSessionOrder'),
-        reorderSessions: (activeId, overId) => {
-          const { sessionOrder } = get();
-          const oldIndex = sessionOrder.indexOf(activeId);
-          const newIndex = sessionOrder.indexOf(overId);
-          if (oldIndex === -1 || newIndex === -1) return;
+          // Common socket state
+          ...initialSocketState,
 
-          const newOrder = [...sessionOrder];
-          const [removed] = newOrder.splice(oldIndex, 1);
-          newOrder.splice(newIndex, 0, removed);
-          set({ sessionOrder: newOrder }, undefined, 'terminal/reorderSessions');
-        },
-      }),
+          // Control state
+          focusedSessionId: null,
+          addSlotRequestCounter: 0,
+          sessionOrder: [],
+          backpressured: {},
+
+          // Common socket actions
+          ...socketActions,
+
+          // Socket listeners
+          initListeners,
+          cleanupListeners,
+
+          // Settings actions
+          setFontSize: size =>
+            set({ fontSize: Math.max(8, Math.min(24, size)) }, undefined, 'terminal/setFontSize'),
+          setFontFamily: family => set({ fontFamily: family }, undefined, 'terminal/setFontFamily'),
+          setFontWeight: weight => set({ fontWeight: weight }, undefined, 'terminal/setFontWeight'),
+          setLineHeight: height => set({ lineHeight: height }, undefined, 'terminal/setLineHeight'),
+          setLetterSpacing: spacing =>
+            set({ letterSpacing: spacing }, undefined, 'terminal/setLetterSpacing'),
+          setCursorStyle: style =>
+            set({ cursorStyle: style }, undefined, 'terminal/setCursorStyle'),
+          setCursorBlink: blink =>
+            set({ cursorBlink: blink }, undefined, 'terminal/setCursorBlink'),
+          setScrollback: lines =>
+            set(
+              { scrollback: Math.max(1000, Math.min(100000, lines)) },
+              undefined,
+              'terminal/setScrollback'
+            ),
+          setTerminalThemeName: name =>
+            set({ terminalThemeName: name }, undefined, 'terminal/setTerminalThemeName'),
+          resetToDefaults: () => set(getDefaultSettings(), undefined, 'terminal/resetToDefaults'),
+
+          // Control actions
+          setFocusedSessionId: sessionId =>
+            set({ focusedSessionId: sessionId }, undefined, 'terminal/setFocusedSessionId'),
+          requestAddSlot: () =>
+            set(
+              state => ({ addSlotRequestCounter: state.addSlotRequestCounter + 1 }),
+              undefined,
+              'terminal/requestAddSlot'
+            ),
+          setSessionOrder: order =>
+            set({ sessionOrder: order }, undefined, 'terminal/setSessionOrder'),
+          reorderSessions: (activeId, overId) => {
+            const { sessionOrder } = get();
+            const oldIndex = sessionOrder.indexOf(activeId);
+            const newIndex = sessionOrder.indexOf(overId);
+            if (oldIndex === -1 || newIndex === -1) return;
+
+            const newOrder = [...sessionOrder];
+            const [removed] = newOrder.splice(oldIndex, 1);
+            newOrder.splice(newIndex, 0, removed);
+            set({ sessionOrder: newOrder }, undefined, 'terminal/reorderSessions');
+          },
+
+          setBackpressure: (terminalSessionId, paused) => {
+            set(
+              state => {
+                if (paused) {
+                  return {
+                    backpressured: { ...state.backpressured, [terminalSessionId]: true as const },
+                  };
+                }
+                const { [terminalSessionId]: _removed, ...rest } = state.backpressured;
+                return { backpressured: rest as Record<number, true> };
+              },
+              undefined,
+              'terminal/setBackpressure'
+            );
+          },
+        };
+      },
       {
         name: 'omniscribe-terminal',
         version: 1,
+        // Only persist settings — control state, backpressure, and socket state are transient
         partialize: state => ({
           fontSize: state.fontSize,
           fontFamily: state.fontFamily,
