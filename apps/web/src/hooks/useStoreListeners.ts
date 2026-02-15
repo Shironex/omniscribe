@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import { useSessionStore } from '@/stores/useSessionStore';
 import { useWorkspaceStore } from '@/stores/useWorkspaceStore';
 import { useGitStore } from '@/stores/useGitStore';
@@ -49,7 +50,7 @@ export function useStoreListeners(): UseStoreListenersReturn {
   const initConnectionListeners = useConnectionStore(state => state.initListeners);
   const cleanupConnectionListeners = useConnectionStore(state => state.cleanupListeners);
 
-  const initAllListeners = () => {
+  const initAllListeners = useCallback(() => {
     initConnectionListeners();
     initSessionListeners();
     initGitListeners();
@@ -57,9 +58,17 @@ export function useStoreListeners(): UseStoreListenersReturn {
     initMcpListeners();
     initTaskListeners();
     initSessionHistoryListeners();
-  };
+  }, [
+    initConnectionListeners,
+    initSessionListeners,
+    initGitListeners,
+    initWorkspaceListeners,
+    initMcpListeners,
+    initTaskListeners,
+    initSessionHistoryListeners,
+  ]);
 
-  const cleanupAllListeners = () => {
+  const cleanupAllListeners = useCallback(() => {
     cleanupConnectionListeners();
     cleanupSessionListeners();
     cleanupGitListeners();
@@ -67,7 +76,15 @@ export function useStoreListeners(): UseStoreListenersReturn {
     cleanupMcpListeners();
     cleanupTaskListeners();
     cleanupSessionHistoryListeners();
-  };
+  }, [
+    cleanupConnectionListeners,
+    cleanupSessionListeners,
+    cleanupGitListeners,
+    cleanupWorkspaceListeners,
+    cleanupMcpListeners,
+    cleanupTaskListeners,
+    cleanupSessionHistoryListeners,
+  ]);
 
   return {
     initAllListeners,

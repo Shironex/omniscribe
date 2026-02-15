@@ -1,6 +1,6 @@
 import { Terminal } from '@xterm/xterm';
 import type { ITheme } from '@xterm/xterm';
-import type { UseTerminalSettingsReturn } from './useTerminalSettings';
+import type { UseTerminalSettingsReturn } from '@/hooks/useTerminalSettings';
 
 /**
  * Create a configured xterm.js Terminal instance from settings and theme.

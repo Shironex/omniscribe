@@ -6,8 +6,8 @@ import type { SearchAddon } from '@xterm/addon-search';
 import { writeToTerminal, resizeTerminal } from '@/lib/terminal';
 import { getTerminalTheme } from '@/lib/terminal-themes';
 import { safeFit } from './useTerminalResize';
-import { createTerminalInstance } from './createTerminalInstance';
-import { loadTerminalAddons } from './loadTerminalAddons';
+import { createTerminalInstance } from '@/lib/createTerminalInstance';
+import { loadTerminalAddons } from '@/lib/loadTerminalAddons';
 import { useTerminalRefitListener } from './useTerminalRefitListener';
 import type { UseTerminalSettingsReturn } from './useTerminalSettings';
 

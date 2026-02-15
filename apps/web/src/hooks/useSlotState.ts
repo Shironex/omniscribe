@@ -13,7 +13,9 @@ const MAX_PRELAUNCH_SLOTS = 12;
 
 export interface UseSlotStateReturn {
   preLaunchSlots: PreLaunchSlot[];
+  /** @internal Used by useSlotLaunch for cross-hook coordination */
   setPreLaunchSlots: React.Dispatch<React.SetStateAction<PreLaunchSlot[]>>;
+  /** @internal Used by useSlotLaunch for stale-closure avoidance */
   preLaunchSlotsRef: React.MutableRefObject<PreLaunchSlot[]>;
   canLaunch: boolean;
   handleAddSession: () => void;

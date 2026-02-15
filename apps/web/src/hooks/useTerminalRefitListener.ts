@@ -19,5 +19,5 @@ export function useTerminalRefitListener(
     return () => {
       window.removeEventListener('terminal-refit-all', handleRefitAll);
     };
-  }, [isDisposedRef, isReadyRef, handleResize]);
+  }, [handleResize]); // refs are always stable, only handleResize matters
 }

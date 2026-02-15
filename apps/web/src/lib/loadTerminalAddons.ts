@@ -18,7 +18,7 @@ export interface LoadedAddons {
  * Includes FitAddon, WebLinksAddon, SearchAddon, WebGL (with canvas fallback),
  * and FilePathLinkProvider.
  *
- * Pure function — no React hooks or side effects beyond terminal setup.
+ * Factory function — no React hooks. Performs terminal DOM setup as a side effect.
  */
 export function loadTerminalAddons(
   terminal: Terminal,
