@@ -9,14 +9,14 @@ await esbuild.build({
   bundle: true,
   platform: 'node',
   target: 'node18',
-  format: 'esm',
+  format: 'cjs',
   outfile: 'dist/index.js',
   sourcemap: false,
   minify: true,
   define: {
     __VERSION__: JSON.stringify(pkg.version),
   },
-  // Add banner for ESM compatibility and shebang
+  // Add shebang for CLI usage
   banner: {
     js: '#!/usr/bin/env node',
   },
