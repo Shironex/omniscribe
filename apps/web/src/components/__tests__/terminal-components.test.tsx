@@ -202,6 +202,37 @@ describe('MoreMenuDropdown', () => {
     fireEvent.click(screen.getByText('Settings'));
     expect(onSettingsClick).toHaveBeenCalledOnce();
   });
+
+  it('shows Open in Editor when onOpenInEditor is provided', () => {
+    render(
+      <MoreMenuDropdown
+        isOpen={true}
+        onToggle={vi.fn()}
+        onOpenInEditor={vi.fn()}
+        onClose={vi.fn()}
+      />
+    );
+    expect(screen.getByText('Open in Editor')).toBeTruthy();
+  });
+
+  it('does not show Open in Editor when onOpenInEditor is not provided', () => {
+    render(<MoreMenuDropdown isOpen={true} onToggle={vi.fn()} onClose={vi.fn()} />);
+    expect(screen.queryByText('Open in Editor')).toBeNull();
+  });
+
+  it('calls onOpenInEditor when Open in Editor is clicked', () => {
+    const onOpenInEditor = vi.fn();
+    render(
+      <MoreMenuDropdown
+        isOpen={true}
+        onToggle={vi.fn()}
+        onOpenInEditor={onOpenInEditor}
+        onClose={vi.fn()}
+      />
+    );
+    fireEvent.click(screen.getByText('Open in Editor'));
+    expect(onOpenInEditor).toHaveBeenCalledOnce();
+  });
 });
 
 // ─── QuickActionsDropdown ────────────────────────────────────────────────────

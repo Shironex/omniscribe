@@ -23,7 +23,7 @@ import {
 import { useUpdateToast } from '@/hooks/useUpdateToast';
 import { useTerminalStore, useWorkspaceStore, useSettingsStore, useSessionStore } from '@/stores';
 import { resumeSession } from '@/lib/session';
-import { extractErrorMessage, DEFAULT_WORKTREE_SETTINGS } from '@omniscribe/shared';
+import { extractErrorMessage, DEFAULT_WORKTREE_SETTINGS, EDITOR_OPTIONS } from '@omniscribe/shared';
 import { toast } from 'sonner';
 
 function App() {
@@ -195,6 +195,33 @@ function App() {
     [updateSession, activeProjectPath]
   );
 
+  // Open in editor handler
+  const handleOpenInEditor = useCallback(
+    async (sessionId: string) => {
+      const session = useSessionStore.getState().sessions.find(s => s.id === sessionId);
+      const folderPath = session?.worktreePath ?? activeProjectPath;
+      if (!folderPath) {
+        toast.error('No project path available');
+        return;
+      }
+
+      const editorProtocol = useTerminalStore.getState().editorProtocol;
+      const editor = EDITOR_OPTIONS.find(e => e.id === editorProtocol);
+      if (!editor) {
+        toast.error('No editor configured. Set one in Settings → Terminal.');
+        return;
+      }
+
+      try {
+        await window.electronAPI?.app?.openInEditor(editorProtocol, folderPath);
+      } catch (error) {
+        const msg = extractErrorMessage(error, 'Failed to open in editor');
+        toast.error(msg);
+      }
+    },
+    [activeProjectPath]
+  );
+
   useAppKeyboardShortcuts({
     canLaunch,
     isLaunching,
@@ -264,6 +291,7 @@ function App() {
                 onSessionClose={handleSessionClose}
                 onQuickAction={handleQuickAction}
                 onResume={handleResume}
+                onOpenInEditor={handleOpenInEditor}
                 onReorderSessions={handleReorderSessions}
               />
             ) : (

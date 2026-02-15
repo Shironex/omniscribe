@@ -24,6 +24,20 @@ jest.mock('fs/promises', () => ({
   readFile: (...args: unknown[]) => mockReadFile(...args),
 }));
 
+const mockSpawn = jest.fn(() => ({ unref: jest.fn(), on: jest.fn() }));
+const mockExec = jest.fn((_cmd: string, cb: (err: Error | null, result: unknown) => void) =>
+  cb(null, { stdout: '', stderr: '' })
+);
+const mockExecFile = jest.fn(
+  (_file: string, _args: string[], cb: (err: Error | null, result: unknown) => void) =>
+    cb(null, { stdout: '', stderr: '' })
+);
+jest.mock('child_process', () => ({
+  spawn: (...args: unknown[]) => mockSpawn(...args),
+  exec: (...args: unknown[]) => mockExec(...args),
+  execFile: (...args: unknown[]) => mockExecFile(...args),
+}));
+
 const mockCheckCliAvailable = jest.fn();
 const actualUtils = jest.requireActual('../utils');
 jest.mock('../utils', () => ({
@@ -82,7 +96,7 @@ describe('IPC:App', () => {
   // Handler registration
   // ================================================================
   describe('registerAppHandlers', () => {
-    it('should register all 9 IPC handlers', () => {
+    it('should register all IPC handlers', () => {
       expect(ipcMain.handle).toHaveBeenCalledWith('app:get-path', expect.any(Function));
       expect(ipcMain.handle).toHaveBeenCalledWith('app:get-version', expect.any(Function));
       expect(ipcMain.handle).toHaveBeenCalledWith('app:check-cli', expect.any(Function));
@@ -92,6 +106,8 @@ describe('IPC:App', () => {
       expect(ipcMain.handle).toHaveBeenCalledWith('app:get-backend-port', expect.any(Function));
       expect(ipcMain.handle).toHaveBeenCalledWith('app:list-log-files', expect.any(Function));
       expect(ipcMain.handle).toHaveBeenCalledWith('app:read-log-file', expect.any(Function));
+      expect(ipcMain.handle).toHaveBeenCalledWith('app:detect-editors', expect.any(Function));
+      expect(ipcMain.handle).toHaveBeenCalledWith('app:open-in-editor', expect.any(Function));
     });
   });
 
@@ -368,10 +384,79 @@ describe('IPC:App', () => {
   });
 
   // ================================================================
+  // app:open-in-editor
+  // ================================================================
+  describe('app:open-in-editor', () => {
+    it('should spawn the editor CLI with the folder path', async () => {
+      mockExistsSync.mockReturnValue(true);
+
+      await handlers['app:open-in-editor'](mockEvent, 'vscode', '/my/project');
+
+      expect(mockSpawn).toHaveBeenCalledWith('code', ['/my/project'], {
+        detached: true,
+        stdio: 'ignore',
+        shell: process.platform === 'win32',
+      });
+    });
+
+    it('should call unref on the spawned process', async () => {
+      mockExistsSync.mockReturnValue(true);
+      const mockUnref = jest.fn();
+      mockSpawn.mockReturnValue({ unref: mockUnref, on: jest.fn() });
+
+      await handlers['app:open-in-editor'](mockEvent, 'cursor', '/my/project');
+
+      expect(mockUnref).toHaveBeenCalled();
+    });
+
+    it('should attach an error listener on the spawned process', async () => {
+      mockExistsSync.mockReturnValue(true);
+      const mockOn = jest.fn();
+      mockSpawn.mockReturnValue({ unref: jest.fn(), on: mockOn });
+
+      await handlers['app:open-in-editor'](mockEvent, 'vscode', '/my/project');
+
+      expect(mockOn).toHaveBeenCalledWith('error', expect.any(Function));
+    });
+
+    it('should throw for relative folder path', async () => {
+      await expect(
+        handlers['app:open-in-editor'](mockEvent, 'vscode', 'relative/path')
+      ).rejects.toThrow('Invalid folder path');
+    });
+
+    it('should throw for unknown editor ID', async () => {
+      await expect(
+        handlers['app:open-in-editor'](mockEvent, 'unknown-editor', '/my/project')
+      ).rejects.toThrow('Unknown editor: unknown-editor');
+    });
+
+    it('should throw for empty folder path', async () => {
+      await expect(handlers['app:open-in-editor'](mockEvent, 'vscode', '')).rejects.toThrow(
+        'Invalid folder path'
+      );
+    });
+
+    it('should throw for folder path with null bytes', async () => {
+      await expect(
+        handlers['app:open-in-editor'](mockEvent, 'vscode', '/my/\0project')
+      ).rejects.toThrow('Invalid folder path');
+    });
+
+    it('should throw when folder path does not exist', async () => {
+      mockExistsSync.mockReturnValue(false);
+
+      await expect(
+        handlers['app:open-in-editor'](mockEvent, 'vscode', '/nonexistent/path')
+      ).rejects.toThrow('Folder path does not exist');
+    });
+  });
+
+  // ================================================================
   // cleanupAppHandlers
   // ================================================================
   describe('cleanupAppHandlers', () => {
-    it('should remove all 9 handlers', () => {
+    it('should remove all handlers', () => {
       cleanupAppHandlers();
 
       expect(ipcMain.removeHandler).toHaveBeenCalledWith('app:get-path');
@@ -383,6 +468,8 @@ describe('IPC:App', () => {
       expect(ipcMain.removeHandler).toHaveBeenCalledWith('app:get-backend-port');
       expect(ipcMain.removeHandler).toHaveBeenCalledWith('app:list-log-files');
       expect(ipcMain.removeHandler).toHaveBeenCalledWith('app:read-log-file');
+      expect(ipcMain.removeHandler).toHaveBeenCalledWith('app:detect-editors');
+      expect(ipcMain.removeHandler).toHaveBeenCalledWith('app:open-in-editor');
     });
   });
 });

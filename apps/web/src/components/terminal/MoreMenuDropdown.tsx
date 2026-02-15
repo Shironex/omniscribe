@@ -1,10 +1,11 @@
 import { cn } from '@/lib/utils';
-import { MoreVertical, Settings, X } from 'lucide-react';
+import { MoreVertical, Settings, X, SquareArrowOutUpRight } from 'lucide-react';
 
 interface MoreMenuDropdownProps {
   isOpen: boolean;
   onToggle: () => void;
   onSettingsClick?: () => void;
+  onOpenInEditor?: () => void;
   onClose: () => void;
 }
 
@@ -12,6 +13,7 @@ export function MoreMenuDropdown({
   isOpen,
   onToggle,
   onSettingsClick,
+  onOpenInEditor,
   onClose,
 }: MoreMenuDropdownProps) {
   return (
@@ -41,6 +43,18 @@ export function MoreMenuDropdown({
             >
               <Settings size={11} />
               Settings
+            </button>
+          )}
+          {onOpenInEditor && (
+            <button
+              type="button"
+              onClick={() => {
+                onOpenInEditor();
+              }}
+              className="w-full text-left px-3 py-1.5 text-xs text-foreground hover:bg-accent transition-colors flex items-center gap-2"
+            >
+              <SquareArrowOutUpRight size={11} />
+              Open in Editor
             </button>
           )}
           <button

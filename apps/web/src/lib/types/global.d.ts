@@ -50,6 +50,7 @@ interface ElectronAPI {
     listLogFiles: () => Promise<Array<{ name: string; size: number; lastModified: number }>>;
     readLogFile: (fileName: string) => Promise<string>;
     detectEditors: () => Promise<EditorProtocol[]>;
+    openInEditor: (editorId: string, folderPath: string) => Promise<void>;
   };
   claude?: {
     getStatus: () => Promise<ClaudeCliStatus>;
