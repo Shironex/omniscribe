@@ -43,6 +43,7 @@ interface TerminalHeaderProps {
   session: TerminalSession;
   gitBranch?: GitBranchInfo;
   onSettingsClick?: () => void;
+  onOpenInEditor?: () => void;
   onClose: () => void;
   onQuickAction?: (actionId: string) => void;
   onResume?: () => void;
@@ -55,6 +56,7 @@ export function TerminalHeader({
   gitBranch,
   quickActions = [],
   onSettingsClick,
+  onOpenInEditor,
   onClose,
   onQuickAction,
   onResume,
@@ -156,6 +158,14 @@ export function TerminalHeader({
                 ? () => {
                     setMoreMenuOpen(false);
                     onSettingsClick();
+                  }
+                : undefined
+            }
+            onOpenInEditor={
+              onOpenInEditor
+                ? () => {
+                    setMoreMenuOpen(false);
+                    onOpenInEditor();
                   }
                 : undefined
             }

@@ -48,6 +48,7 @@ export interface ElectronAPI {
     listLogFiles: () => Promise<Array<{ name: string; size: number; lastModified: number }>>;
     readLogFile: (fileName: string) => Promise<string>;
     detectEditors: () => Promise<EditorProtocol[]>;
+    openInEditor: (editorId: string, folderPath: string) => Promise<void>;
   };
   claude: {
     getStatus: () => Promise<ClaudeCliStatus>;
@@ -115,6 +116,8 @@ const electronAPI: ElectronAPI = {
     listLogFiles: () => ipcRenderer.invoke('app:list-log-files'),
     readLogFile: (fileName: string) => ipcRenderer.invoke('app:read-log-file', fileName),
     detectEditors: () => ipcRenderer.invoke('app:detect-editors') as Promise<EditorProtocol[]>,
+    openInEditor: (editorId: string, folderPath: string) =>
+      ipcRenderer.invoke('app:open-in-editor', editorId, folderPath) as Promise<void>,
   },
   claude: {
     getStatus: () => ipcRenderer.invoke('claude:get-status') as Promise<ClaudeCliStatus>,

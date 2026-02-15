@@ -2,6 +2,7 @@ import { ipcMain, app, shell, clipboard } from 'electron';
 import { existsSync } from 'fs';
 import { readdir, stat, readFile } from 'fs/promises';
 import { join } from 'path';
+import { spawn } from 'child_process';
 import {
   createLogger,
   LOG_FILE_PREFIX,
@@ -167,6 +168,36 @@ export function registerAppHandlers(): void {
     logger.debug('app:detect-editors invoked');
     return detectInstalledEditors();
   });
+
+  ipcMain.handle(
+    'app:open-in-editor',
+    async (_event, editorId: string, folderPath: string): Promise<void> => {
+      logger.debug(`app:open-in-editor invoked for editor="${editorId}" path="${folderPath}"`);
+
+      // Validate editorId is a known editor
+      const editor = EDITOR_OPTIONS.find(e => e.id === editorId);
+      if (!editor) {
+        throw new Error(`Unknown editor: ${editorId}`);
+      }
+
+      // Validate folderPath
+      if (typeof folderPath !== 'string' || folderPath.length === 0 || folderPath.includes('\0')) {
+        throw new Error('Invalid folder path');
+      }
+
+      if (!existsSync(folderPath)) {
+        throw new Error('Folder path does not exist');
+      }
+
+      // Spawn editor as detached process so Omniscribe doesn't wait for it
+      const child = spawn(editor.cliCommand, [folderPath], {
+        detached: true,
+        stdio: 'ignore',
+        shell: true,
+      });
+      child.unref();
+    }
+  );
 }
 
 /**
@@ -183,4 +214,5 @@ export function cleanupAppHandlers(): void {
   ipcMain.removeHandler('app:list-log-files');
   ipcMain.removeHandler('app:read-log-file');
   ipcMain.removeHandler('app:detect-editors');
+  ipcMain.removeHandler('app:open-in-editor');
 }

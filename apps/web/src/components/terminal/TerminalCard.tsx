@@ -24,6 +24,7 @@ interface TerminalCardProps {
   onSessionClose?: (sessionId: string, exitCode: number) => void;
   onQuickAction?: (sessionId: string, actionId: string) => void;
   onResume?: (sessionId: string) => void;
+  onOpenInEditor?: (sessionId: string) => void;
   dragHandleProps?: TerminalDragHandleProps;
 }
 
@@ -36,6 +37,7 @@ export const TerminalCard = React.memo(function TerminalCard({
   onSessionClose,
   onQuickAction,
   onResume,
+  onOpenInEditor,
   dragHandleProps,
 }: TerminalCardProps) {
   const handleFocus = React.useCallback(() => onFocus(session.id), [onFocus, session.id]);
@@ -49,6 +51,10 @@ export const TerminalCard = React.memo(function TerminalCard({
     [onQuickAction, session.id]
   );
   const handleResume = React.useCallback(() => onResume?.(session.id), [onResume, session.id]);
+  const handleOpenInEditor = React.useCallback(
+    () => onOpenInEditor?.(session.id),
+    [onOpenInEditor, session.id]
+  );
 
   return (
     <div
@@ -68,6 +74,7 @@ export const TerminalCard = React.memo(function TerminalCard({
         onClose={handleKill}
         onQuickAction={onQuickAction ? handleQuickAction : undefined}
         onResume={onResume ? handleResume : undefined}
+        onOpenInEditor={onOpenInEditor ? handleOpenInEditor : undefined}
         dragHandleProps={dragHandleProps}
       />
       <div className="relative flex-1 min-h-0">
