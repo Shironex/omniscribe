@@ -200,11 +200,17 @@ function App() {
     async (sessionId: string) => {
       const session = useSessionStore.getState().sessions.find(s => s.id === sessionId);
       const folderPath = session?.worktreePath ?? activeProjectPath;
-      if (!folderPath) return;
+      if (!folderPath) {
+        toast.error('No project path available');
+        return;
+      }
 
       const editorProtocol = useTerminalStore.getState().editorProtocol;
       const editor = EDITOR_OPTIONS.find(e => e.id === editorProtocol);
-      if (!editor) return;
+      if (!editor) {
+        toast.error('No editor configured. Set one in Settings → Terminal.');
+        return;
+      }
 
       try {
         await window.electronAPI?.app?.openInEditor(editorProtocol, folderPath);

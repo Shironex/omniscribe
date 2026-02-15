@@ -1,7 +1,7 @@
 import { ipcMain, app, shell, clipboard } from 'electron';
 import { existsSync } from 'fs';
 import { readdir, stat, readFile } from 'fs/promises';
-import { join } from 'path';
+import { isAbsolute, join } from 'path';
 import { spawn } from 'child_process';
 import {
   createLogger,
@@ -181,7 +181,12 @@ export function registerAppHandlers(): void {
       }
 
       // Validate folderPath
-      if (typeof folderPath !== 'string' || folderPath.length === 0 || folderPath.includes('\0')) {
+      if (
+        typeof folderPath !== 'string' ||
+        folderPath.length === 0 ||
+        folderPath.includes('\0') ||
+        !isAbsolute(folderPath)
+      ) {
         throw new Error('Invalid folder path');
       }
 
@@ -190,10 +195,14 @@ export function registerAppHandlers(): void {
       }
 
       // Spawn editor as detached process so Omniscribe doesn't wait for it
+      // Only use shell on Windows where .cmd wrappers (e.g. code.cmd) need it
       const child = spawn(editor.cliCommand, [folderPath], {
         detached: true,
         stdio: 'ignore',
-        shell: true,
+        shell: process.platform === 'win32',
+      });
+      child.on('error', err => {
+        logger.error(`Failed to open editor "${editor.name}":`, err);
       });
       child.unref();
     }

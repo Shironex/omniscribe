@@ -24,7 +24,7 @@ jest.mock('fs/promises', () => ({
   readFile: (...args: unknown[]) => mockReadFile(...args),
 }));
 
-const mockSpawn = jest.fn(() => ({ unref: jest.fn() }));
+const mockSpawn = jest.fn(() => ({ unref: jest.fn(), on: jest.fn() }));
 const mockExec = jest.fn((_cmd: string, cb: (err: Error | null, result: unknown) => void) =>
   cb(null, { stdout: '', stderr: '' })
 );
@@ -395,18 +395,34 @@ describe('IPC:App', () => {
       expect(mockSpawn).toHaveBeenCalledWith('code', ['/my/project'], {
         detached: true,
         stdio: 'ignore',
-        shell: true,
+        shell: process.platform === 'win32',
       });
     });
 
     it('should call unref on the spawned process', async () => {
       mockExistsSync.mockReturnValue(true);
       const mockUnref = jest.fn();
-      mockSpawn.mockReturnValue({ unref: mockUnref });
+      mockSpawn.mockReturnValue({ unref: mockUnref, on: jest.fn() });
 
       await handlers['app:open-in-editor'](mockEvent, 'cursor', '/my/project');
 
       expect(mockUnref).toHaveBeenCalled();
+    });
+
+    it('should attach an error listener on the spawned process', async () => {
+      mockExistsSync.mockReturnValue(true);
+      const mockOn = jest.fn();
+      mockSpawn.mockReturnValue({ unref: jest.fn(), on: mockOn });
+
+      await handlers['app:open-in-editor'](mockEvent, 'vscode', '/my/project');
+
+      expect(mockOn).toHaveBeenCalledWith('error', expect.any(Function));
+    });
+
+    it('should throw for relative folder path', async () => {
+      await expect(
+        handlers['app:open-in-editor'](mockEvent, 'vscode', 'relative/path')
+      ).rejects.toThrow('Invalid folder path');
     });
 
     it('should throw for unknown editor ID', async () => {
