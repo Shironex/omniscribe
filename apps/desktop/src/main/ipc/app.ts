@@ -27,6 +27,7 @@ const EDITOR_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 async function detectInstalledEditors(): Promise<EditorProtocol[]> {
   const now = Date.now();
   if (editorCache && now - editorCacheTime < EDITOR_CACHE_TTL) {
+    logger.debug('Returning cached editors:', editorCache);
     return editorCache;
   }
 

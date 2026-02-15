@@ -277,7 +277,7 @@ export const EDITOR_OPTIONS: readonly EditorOption[] = [
   { id: 'vscode', name: 'VS Code', cliCommand: 'code' },
   { id: 'vscode-insiders', name: 'VS Code Insiders', cliCommand: 'code-insiders' },
   { id: 'cursor', name: 'Cursor', cliCommand: 'cursor' },
-] as const;
+];
 
 /**
  * Default editor protocol when no preference is set

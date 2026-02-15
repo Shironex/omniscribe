@@ -41,10 +41,17 @@ export function TerminalSection() {
   useEffect(() => {
     if (!window.electronAPI?.app?.detectEditors) return;
     setDetectingEditors(true);
-    window.electronAPI.app.detectEditors().then(editors => {
-      setDetectedEditors(editors);
-      setDetectingEditors(false);
-    });
+    window.electronAPI.app
+      .detectEditors()
+      .then(editors => {
+        setDetectedEditors(editors);
+      })
+      .catch(err => {
+        console.error('Failed to detect editors:', err);
+      })
+      .finally(() => {
+        setDetectingEditors(false);
+      });
   }, []);
 
   return (
@@ -58,11 +65,13 @@ export function TerminalSection() {
 
       {/* Editor for File Links */}
       <div className="space-y-2">
-        <label className="text-sm font-medium text-foreground">Editor for File Links</label>
+        <span className="text-sm font-medium text-foreground" id="editor-links-label">
+          Editor for File Links
+        </span>
         <p className="text-xs text-muted-foreground">
           Choose which editor opens when clicking file paths in the terminal.
         </p>
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex gap-2 flex-wrap" role="group" aria-labelledby="editor-links-label">
           {EDITOR_OPTIONS.map(editor => {
             const isDetected = detectedEditors.includes(editor.id);
             const isSelected = editorProtocol === editor.id;
@@ -70,6 +79,7 @@ export function TerminalSection() {
             return (
               <button
                 key={editor.id}
+                type="button"
                 onClick={() => setEditorProtocol(editor.id)}
                 className={cn(
                   'flex items-center gap-2 px-3 py-1.5 rounded-md text-sm border transition-colors',

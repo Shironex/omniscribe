@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { FilePathLinkProvider } from '../terminal-link-provider';
 import type { ILink } from '@xterm/xterm';
+import type { EditorProtocol } from '@omniscribe/shared';
 
 function createMockTerminal(lineContent: string | null) {
   return {
@@ -235,7 +236,7 @@ describe('FilePathLinkProvider', () => {
     it('reads protocol dynamically from getter on each activation', async () => {
       const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
       const terminal = createMockTerminal('/home/user/file.ts');
-      let currentProtocol = 'vscode';
+      let currentProtocol: EditorProtocol = 'vscode';
       const provider = new FilePathLinkProvider(terminal, () => currentProtocol);
 
       const links = await getLinks(provider, 1);

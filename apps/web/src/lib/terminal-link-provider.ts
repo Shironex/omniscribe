@@ -1,5 +1,5 @@
 import type { ILinkProvider, ILink, Terminal, IBufferCellPosition } from '@xterm/xterm';
-import { normalizePath } from '@omniscribe/shared';
+import { normalizePath, type EditorProtocol } from '@omniscribe/shared';
 
 // Matches file paths with optional line:col
 // Unix: /path/to/file.ts:123:45, ./relative.ts:10
@@ -13,7 +13,7 @@ const URL_PREFIXES = ['http://', 'https://', 'ws://', 'wss://'];
 export class FilePathLinkProvider implements ILinkProvider {
   constructor(
     private readonly terminal: Terminal,
-    private readonly getEditorProtocol: () => string = () => 'vscode'
+    private readonly getEditorProtocol: () => EditorProtocol = () => 'vscode'
   ) {}
 
   provideLinks(y: number, callback: (links: ILink[] | undefined) => void): void {
