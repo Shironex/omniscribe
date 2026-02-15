@@ -41,6 +41,7 @@ export function SessionStatusDisplay({ session, gitBranch }: SessionStatusDispla
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
+  const cancelledRef = useRef(false);
 
   const defaultTitle = `${modeConfig.label} #${session.sessionNumber}`;
   const displayTitle = session.customTitle ?? defaultTitle;
@@ -55,6 +56,10 @@ export function SessionStatusDisplay({ session, gitBranch }: SessionStatusDispla
   }, [displayTitle]);
 
   const confirmEdit = useCallback(() => {
+    if (cancelledRef.current) {
+      cancelledRef.current = false;
+      return;
+    }
     const trimmed = editValue.trim();
     if (trimmed && trimmed !== defaultTitle) {
       setCustomTitle(session.id, trimmed);
@@ -65,8 +70,22 @@ export function SessionStatusDisplay({ session, gitBranch }: SessionStatusDispla
   }, [editValue, defaultTitle, session.id, setCustomTitle, clearCustomTitle]);
 
   const cancelEdit = useCallback(() => {
+    cancelledRef.current = true;
     setIsEditing(false);
   }, []);
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        confirmEdit();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        cancelEdit();
+      }
+    },
+    [confirmEdit, cancelEdit]
+  );
 
   // Auto-focus and select all text when entering edit mode
   useEffect(() => {
@@ -91,26 +110,18 @@ export function SessionStatusDisplay({ session, gitBranch }: SessionStatusDispla
             ref={inputRef}
             value={editValue}
             onChange={e => setEditValue(e.target.value)}
-            onKeyDown={e => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                confirmEdit();
-              } else if (e.key === 'Escape') {
-                e.preventDefault();
-                cancelEdit();
-              }
-            }}
+            onKeyDown={handleKeyDown}
             onBlur={confirmEdit}
             onClick={e => e.stopPropagation()}
             onMouseDown={e => e.stopPropagation()}
             onDoubleClick={e => e.stopPropagation()}
             maxLength={MAX_SESSION_NAME_LENGTH}
-            className="h-5 w-32 px-1 py-0 text-xs font-medium select-text border-primary rounded-sm"
+            className="h-5 min-w-32 max-w-48 px-1 py-0 text-xs font-medium select-text border-primary rounded-sm"
             aria-label="Rename session"
           />
         ) : (
           <span
-            className="text-xs font-medium text-foreground cursor-default"
+            className="text-xs font-medium text-foreground cursor-text"
             onDoubleClick={enterEditMode}
           >
             {displayTitle}

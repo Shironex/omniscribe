@@ -337,7 +337,19 @@ export const useSessionStore = create<SessionStore>()(
         },
 
         setSessions: sessions => {
-          set({ sessions }, undefined, 'session/setSessions');
+          const validIds = new Set(sessions.map(s => s.id));
+          set(
+            state => {
+              // Prune custom titles for sessions that no longer exist
+              const customTitles: Record<string, string> = {};
+              for (const [id, title] of Object.entries(state.customTitles)) {
+                if (validIds.has(id)) customTitles[id] = title;
+              }
+              return { sessions, customTitles };
+            },
+            undefined,
+            'session/setSessions'
+          );
         },
 
         setCustomTitle: (sessionId, title) => {
