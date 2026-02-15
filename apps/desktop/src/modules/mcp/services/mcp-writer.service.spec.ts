@@ -30,10 +30,10 @@ describe('McpWriterService', () => {
 
   beforeEach(async () => {
     internalService = {
-      getPath: jest.fn().mockReturnValue('/path/to/mcp-server/index.js'),
+      getPath: jest.fn().mockReturnValue('/path/to/mcp-server/index.cjs'),
       getInternalMcpInfo: jest.fn().mockReturnValue({
         available: true,
-        path: '/path/to/mcp-server/index.js',
+        path: '/path/to/mcp-server/index.cjs',
       }),
     } as unknown as jest.Mocked<McpInternalService>;
 
@@ -122,7 +122,9 @@ describe('McpWriterService', () => {
       expect(writtenConfig.mcpServers['omniscribe']).toBeDefined();
       expect(writtenConfig.mcpServers['omniscribe'].type).toBe('stdio');
       expect(writtenConfig.mcpServers['omniscribe'].command).toBe('node');
-      expect(writtenConfig.mcpServers['omniscribe'].args).toContain('/path/to/mcp-server/index.js');
+      expect(writtenConfig.mcpServers['omniscribe'].args).toContain(
+        '/path/to/mcp-server/index.cjs'
+      );
     });
 
     it('should include status URL and instance ID in env', async () => {
@@ -408,7 +410,7 @@ describe('McpWriterService', () => {
 
       expect(result).toEqual({
         available: true,
-        path: '/path/to/mcp-server/index.js',
+        path: '/path/to/mcp-server/index.cjs',
       });
       expect(internalService.getInternalMcpInfo).toHaveBeenCalled();
     });
