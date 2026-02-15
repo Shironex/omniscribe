@@ -19,7 +19,7 @@ function getVersion(): string {
   if (typeof __VERSION__ !== 'undefined') return __VERSION__;
   try {
     // In dev: dist/server.js is one level below package.json.
-    // process.argv[1] is the entry script (dist/index.js).
+    // process.argv[1] is the entry script (dist/index.cjs).
     const distDir = resolve(process.argv[1], '..');
     const pkg = JSON.parse(readFileSync(resolve(distDir, '..', 'package.json'), 'utf-8'));
     return pkg.version ?? '0.0.0-dev';

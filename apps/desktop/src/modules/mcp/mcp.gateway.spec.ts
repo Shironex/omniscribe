@@ -547,14 +547,14 @@ describe('McpGateway', () => {
     it('should return internal MCP info from writerService', () => {
       writerService.getInternalMcpInfo.mockReturnValue({
         available: true,
-        path: '/path/to/mcp-server/index.js',
+        path: '/path/to/mcp-server/index.cjs',
       });
 
       const result = gateway.handleGetInternalStatus();
 
       expect(result).toEqual({
         available: true,
-        path: '/path/to/mcp-server/index.js',
+        path: '/path/to/mcp-server/index.cjs',
       });
       expect(writerService.getInternalMcpInfo).toHaveBeenCalled();
     });

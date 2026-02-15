@@ -48,31 +48,31 @@ export class McpInternalService {
 
     // 1. Development: relative to desktop app
     candidates.push(
-      path.join(__dirname, '..', '..', '..', '..', '..', 'mcp-server', 'dist', 'index.js')
+      path.join(__dirname, '..', '..', '..', '..', '..', 'mcp-server', 'dist', 'index.cjs')
     );
 
     // 2. Development: from workspace root
     if (process.env.OMNISCRIBE_WORKSPACE_ROOT) {
       candidates.push(
-        path.join(process.env.OMNISCRIBE_WORKSPACE_ROOT, 'apps', 'mcp-server', 'dist', 'index.js')
+        path.join(process.env.OMNISCRIBE_WORKSPACE_ROOT, 'apps', 'mcp-server', 'dist', 'index.cjs')
       );
     }
 
     // 3. Bundled with app (production) - Electron provides resourcesPath
     const resourcesPath = (process as NodeJS.Process & { resourcesPath?: string }).resourcesPath;
     if (resourcesPath) {
-      candidates.push(path.join(resourcesPath, MCP_SERVER_DIR, 'index.js'));
+      candidates.push(path.join(resourcesPath, MCP_SERVER_DIR, 'index.cjs'));
     }
 
     // 4. Global install locations
     if (isWindows) {
       candidates.push(
-        path.join(os.homedir(), 'AppData', 'Local', APP_NAME_LOWER, MCP_SERVER_DIR, 'index.js')
+        path.join(os.homedir(), 'AppData', 'Local', APP_NAME_LOWER, MCP_SERVER_DIR, 'index.cjs')
       );
     } else {
-      candidates.push(`/usr/local/lib/${APP_NAME_LOWER}/${MCP_SERVER_DIR}/index.js`);
+      candidates.push(`/usr/local/lib/${APP_NAME_LOWER}/${MCP_SERVER_DIR}/index.cjs`);
       candidates.push(
-        path.join(os.homedir(), '.local', 'lib', APP_NAME_LOWER, MCP_SERVER_DIR, 'index.js')
+        path.join(os.homedir(), '.local', 'lib', APP_NAME_LOWER, MCP_SERVER_DIR, 'index.cjs')
       );
     }
 

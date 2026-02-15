@@ -9,17 +9,17 @@ await esbuild.build({
   bundle: true,
   platform: 'node',
   target: 'node18',
-  format: 'esm',
-  outfile: 'dist/index.js',
+  format: 'cjs',
+  outfile: 'dist/index.cjs',
   sourcemap: false,
   minify: true,
   define: {
     __VERSION__: JSON.stringify(pkg.version),
   },
-  // Add banner for ESM compatibility and shebang
+  // Add shebang for CLI usage
   banner: {
     js: '#!/usr/bin/env node',
   },
 });
 
-console.log('MCP server bundled: dist/index.js');
+console.log('MCP server bundled: dist/index.cjs');
