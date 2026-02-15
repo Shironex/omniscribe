@@ -37,6 +37,7 @@ const initialState = {
   focusedSessionId: null,
   addSlotRequestCounter: 0,
   sessionOrder: [],
+  backpressured: {},
 };
 
 describe('useTerminalStore', () => {

@@ -500,14 +500,22 @@ export class GithubService {
       this.logger.warn('Unexpected PR shape from gh CLI:', JSON.stringify(pr).slice(0, 200));
     }
 
-    const author = pr.author as Record<string, unknown> | null | undefined;
+    const author =
+      typeof pr.author === 'object' && pr.author !== null
+        ? (pr.author as Record<string, unknown>)
+        : null;
     const stateRaw = typeof pr.state === 'string' ? pr.state : 'open';
+    const normalizedState = stateRaw === 'MERGED' ? 'merged' : stateRaw.toLowerCase();
+    const validPrStates: PullRequestState[] = ['open', 'closed', 'merged'];
+    const state: PullRequestState = validPrStates.includes(normalizedState as PullRequestState)
+      ? (normalizedState as PullRequestState)
+      : 'open';
 
     return {
       number: typeof pr.number === 'number' ? pr.number : 0,
       title: typeof pr.title === 'string' ? pr.title : '',
       body: typeof pr.body === 'string' ? pr.body : undefined,
-      state: (stateRaw === 'MERGED' ? 'merged' : stateRaw.toLowerCase()) as PullRequestState,
+      state,
       author: {
         login: typeof author?.login === 'string' ? author.login : 'unknown',
         name: typeof author?.name === 'string' ? author.name : undefined,
@@ -531,23 +539,35 @@ export class GithubService {
       this.logger.warn('Unexpected issue shape from gh CLI:', JSON.stringify(issue).slice(0, 200));
     }
 
-    const author = issue.author as Record<string, unknown> | null | undefined;
+    const author =
+      typeof issue.author === 'object' && issue.author !== null
+        ? (issue.author as Record<string, unknown>)
+        : null;
     const labels = Array.isArray(issue.labels) ? issue.labels : [];
+    const stateRaw = typeof issue.state === 'string' ? issue.state.toLowerCase() : 'open';
+    const validIssueStates: IssueState[] = ['open', 'closed'];
+    const issueState: IssueState = validIssueStates.includes(stateRaw as IssueState)
+      ? (stateRaw as IssueState)
+      : 'open';
 
     return {
       number: typeof issue.number === 'number' ? issue.number : 0,
       title: typeof issue.title === 'string' ? issue.title : '',
       body: typeof issue.body === 'string' ? issue.body : undefined,
-      state: (typeof issue.state === 'string' ? issue.state.toLowerCase() : 'open') as IssueState,
+      state: issueState,
       author: {
         login: typeof author?.login === 'string' ? author.login : 'unknown',
         name: typeof author?.name === 'string' ? author.name : undefined,
       },
       url: typeof issue.url === 'string' ? issue.url : '',
-      labels: labels.map((label: Record<string, unknown>) => ({
-        name: typeof label.name === 'string' ? label.name : '',
-        color: typeof label.color === 'string' ? label.color : undefined,
-      })),
+      labels: labels
+        .filter(
+          (label): label is Record<string, unknown> => label != null && typeof label === 'object'
+        )
+        .map(label => ({
+          name: typeof label.name === 'string' ? label.name : '',
+          color: typeof label.color === 'string' ? label.color : undefined,
+        })),
       createdAt: typeof issue.createdAt === 'string' ? issue.createdAt : '',
       updatedAt: typeof issue.updatedAt === 'string' ? issue.updatedAt : '',
       closedAt: typeof issue.closedAt === 'string' ? issue.closedAt : undefined,

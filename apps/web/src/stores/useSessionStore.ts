@@ -60,7 +60,7 @@ interface SessionState extends SocketStoreState {
    *
    * **Drain:** When `addSession` creates a new session, it schedules
    * `processPendingUpdates(sessionId)` via `setTimeout(0)` so buffered updates
-   * are applied in the next microtask (after state is committed).
+   * are applied in the next macrotask (after state is committed).
    *
    * **Cleanup:** `removeSession` deletes any pending updates for the removed
    * session to prevent memory leaks.
