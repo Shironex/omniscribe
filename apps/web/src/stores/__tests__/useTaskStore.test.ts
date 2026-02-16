@@ -209,7 +209,7 @@ describe('useTaskStore', () => {
     it('registers socket event listeners', () => {
       useTaskStore.getState().initListeners();
 
-      const onCalls = mockSocket.on.mock.calls.map(([event]: [string, ...unknown[]]) => event);
+      const onCalls = mockSocket.on.mock.calls.map(([event]) => event);
       expect(onCalls).toContain('session:tasks');
       expect(onCalls).toContain('session:removed');
       expect(onCalls).toContain('connect');
@@ -243,7 +243,7 @@ describe('useTaskStore', () => {
       useTaskStore.getState().initListeners();
       useTaskStore.getState().cleanupListeners();
 
-      const offCalls = mockSocket.off.mock.calls.map(([event]: [string, ...unknown[]]) => event);
+      const offCalls = mockSocket.off.mock.calls.map(([event]) => event);
       expect(offCalls).toContain('session:tasks');
       expect(offCalls).toContain('session:removed');
       expect(offCalls).toContain('connect');
@@ -264,7 +264,7 @@ describe('useTaskStore', () => {
 
       useTaskStore.getState().initListeners();
 
-      const onCalls = mockSocket.on.mock.calls.map(([event]: [string, ...unknown[]]) => event);
+      const onCalls = mockSocket.on.mock.calls.map(([event]) => event);
       expect(onCalls).toContain('session:tasks');
       expect(onCalls).toContain('session:removed');
     });

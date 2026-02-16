@@ -14,29 +14,37 @@ const mockTerminal = {
   dispose: vi.fn(),
 };
 
+// In vitest v4, vi.fn() with arrow functions can't be used as constructors.
+// Use regular functions for mocks that are instantiated with `new`.
 vi.mock('@xterm/xterm', () => ({
-  Terminal: vi.fn(() => mockTerminal),
+  Terminal: vi.fn(function () {
+    return mockTerminal;
+  }),
 }));
 
 vi.mock('@xterm/addon-fit', () => ({
-  FitAddon: vi.fn(() => ({})),
+  FitAddon: vi.fn(function () {
+    return {};
+  }),
 }));
 
 vi.mock('@xterm/addon-web-links', () => ({
-  WebLinksAddon: vi.fn((handler?: (event: MouseEvent, uri: string) => void) => {
+  WebLinksAddon: vi.fn(function (handler?: (event: MouseEvent, uri: string) => void) {
     capturedWebLinksHandler = handler;
     return {};
   }),
 }));
 
 vi.mock('@xterm/addon-search', () => ({
-  SearchAddon: vi.fn(() => ({})),
+  SearchAddon: vi.fn(function () {
+    return {};
+  }),
 }));
 
 vi.mock('@xterm/addon-webgl', () => ({
-  WebglAddon: vi.fn(() => ({
-    onContextLoss: vi.fn(),
-  })),
+  WebglAddon: vi.fn(function () {
+    return { onContextLoss: vi.fn() };
+  }),
 }));
 
 vi.mock('@/lib/terminal', () => ({
@@ -56,24 +64,26 @@ vi.mock('../useTerminalResize', () => ({
   safeFit: vi.fn(() => ({ cols: 80, rows: 24 })),
 }));
 
-// Mock ResizeObserver
-vi.stubGlobal(
-  'ResizeObserver',
-  vi.fn(() => ({
-    observe: vi.fn(),
-    unobserve: vi.fn(),
-    disconnect: vi.fn(),
-  }))
-);
+// Mock ResizeObserver with a class so it's constructable with `new`
+class MockResizeObserver {
+  observe = vi.fn();
+  unobserve = vi.fn();
+  disconnect = vi.fn();
+  constructor() {}
+}
 
-// Mock requestAnimationFrame to run callbacks synchronously
-vi.stubGlobal(
-  'requestAnimationFrame',
-  vi.fn((cb: () => void) => {
-    cb();
-    return 1;
-  })
-);
+function stubRequiredGlobals() {
+  vi.stubGlobal('ResizeObserver', MockResizeObserver);
+  vi.stubGlobal(
+    'requestAnimationFrame',
+    vi.fn((cb: () => void) => {
+      cb();
+      return 1;
+    })
+  );
+}
+
+stubRequiredGlobals();
 
 import { useTerminalInitialization } from '../useTerminalInitialization';
 import { WebLinksAddon } from '@xterm/addon-web-links';
@@ -128,22 +138,8 @@ describe('useTerminalInitialization', () => {
 
     afterEach(() => {
       vi.unstubAllGlobals();
-      // Re-stub globals needed by other tests
-      vi.stubGlobal(
-        'ResizeObserver',
-        vi.fn(() => ({
-          observe: vi.fn(),
-          unobserve: vi.fn(),
-          disconnect: vi.fn(),
-        }))
-      );
-      vi.stubGlobal(
-        'requestAnimationFrame',
-        vi.fn((cb: () => void) => {
-          cb();
-          return 1;
-        })
-      );
+      // Re-stub globals needed by subsequent tests
+      stubRequiredGlobals();
     });
 
     it('should pass a custom handler to WebLinksAddon', () => {
