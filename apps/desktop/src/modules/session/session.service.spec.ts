@@ -167,28 +167,19 @@ describe('SessionService', () => {
         service.updateStatus(sessionId, 'finished');
       });
 
-      it.each<SessionStatus>(['working', 'planning', 'thinking', 'needs_input'])(
-        'should allow finished -> %s',
-        targetStatus => {
-          const updated = service.updateStatus(sessionId, targetStatus);
+      it.each<SessionStatus>([
+        'idle',
+        'connecting',
+        'working',
+        'planning',
+        'thinking',
+        'needs_input',
+        'error',
+        'disconnected',
+      ])('should allow finished -> %s', targetStatus => {
+        const updated = service.updateStatus(sessionId, targetStatus);
 
-          expect(updated?.status).toBe(targetStatus);
-        }
-      );
-
-      it('should allow finished -> idle', () => {
-        const updated = service.updateStatus(sessionId, 'idle');
-        expect(updated?.status).toBe('idle');
-      });
-
-      it('should allow finished -> error', () => {
-        const updated = service.updateStatus(sessionId, 'error');
-        expect(updated?.status).toBe('error');
-      });
-
-      it('should allow finished -> disconnected', () => {
-        const updated = service.updateStatus(sessionId, 'disconnected');
-        expect(updated?.status).toBe('disconnected');
+        expect(updated?.status).toBe(targetStatus);
       });
     });
 
@@ -202,14 +193,20 @@ describe('SessionService', () => {
         service.updateStatus(sessionId, 'error');
       });
 
-      it.each<SessionStatus>(['working', 'planning', 'thinking', 'needs_input', 'finished'])(
-        'should allow error -> %s',
-        targetStatus => {
-          const updated = service.updateStatus(sessionId, targetStatus);
+      it.each<SessionStatus>([
+        'idle',
+        'connecting',
+        'working',
+        'planning',
+        'thinking',
+        'needs_input',
+        'finished',
+        'disconnected',
+      ])('should allow error -> %s', targetStatus => {
+        const updated = service.updateStatus(sessionId, targetStatus);
 
-          expect(updated?.status).toBe(targetStatus);
-        }
-      );
+        expect(updated?.status).toBe(targetStatus);
+      });
 
       it('should allow error -> error (self-transition for zombie cleanup)', () => {
         const updated = service.updateStatus(sessionId, 'error', 'Zombie detected');
@@ -229,14 +226,20 @@ describe('SessionService', () => {
         service.updateStatus(sessionId, 'disconnected');
       });
 
-      it.each<SessionStatus>(['working', 'planning', 'thinking', 'needs_input', 'finished'])(
-        'should allow disconnected -> %s',
-        targetStatus => {
-          const updated = service.updateStatus(sessionId, targetStatus);
+      it.each<SessionStatus>([
+        'idle',
+        'connecting',
+        'working',
+        'planning',
+        'thinking',
+        'needs_input',
+        'error',
+        'finished',
+      ])('should allow disconnected -> %s', targetStatus => {
+        const updated = service.updateStatus(sessionId, targetStatus);
 
-          expect(updated?.status).toBe(targetStatus);
-        }
-      );
+        expect(updated?.status).toBe(targetStatus);
+      });
     });
 
     it('should support full lifecycle: idle -> working -> finished -> working -> finished', () => {
