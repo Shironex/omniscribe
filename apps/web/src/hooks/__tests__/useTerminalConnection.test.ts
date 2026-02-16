@@ -46,6 +46,7 @@ function createRefs() {
     xtermRef: { current: { write: mockWrite } as any },
     isDisposedRef: { current: false },
     onCloseRef: { current: vi.fn() },
+    isActiveRef: { current: true },
     mockWrite,
   };
 }
@@ -76,7 +77,7 @@ describe('useTerminalConnection', () => {
       const refs = createRefs();
 
       const { result } = renderHook(() =>
-        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef)
+        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef, refs.isActiveRef)
       );
 
       expect(result.current.status).toBe('connecting');
@@ -86,7 +87,7 @@ describe('useTerminalConnection', () => {
       const refs = createRefs();
 
       const { result } = renderHook(() =>
-        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef)
+        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef, refs.isActiveRef)
       );
 
       expect(result.current.connectionRef.current).toBeNull();
@@ -100,7 +101,7 @@ describe('useTerminalConnection', () => {
       const refs = createRefs();
 
       const { result } = renderHook(() =>
-        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef)
+        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef, refs.isActiveRef)
       );
 
       act(() => {
@@ -117,7 +118,7 @@ describe('useTerminalConnection', () => {
       const refs = createRefs();
 
       const { result } = renderHook(() =>
-        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef)
+        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef, refs.isActiveRef)
       );
 
       act(() => {
@@ -136,7 +137,7 @@ describe('useTerminalConnection', () => {
       const refs = createRefs();
 
       const { result } = renderHook(() =>
-        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef)
+        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef, refs.isActiveRef)
       );
 
       act(() => {
@@ -157,7 +158,7 @@ describe('useTerminalConnection', () => {
       const refs = createRefs();
 
       const { result } = renderHook(() =>
-        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef)
+        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef, refs.isActiveRef)
       );
 
       act(() => {
@@ -173,7 +174,7 @@ describe('useTerminalConnection', () => {
       const refs = createRefs();
 
       const { result } = renderHook(() =>
-        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef)
+        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef, refs.isActiveRef)
       );
 
       act(() => {
@@ -205,7 +206,7 @@ describe('useTerminalConnection', () => {
       refs.isDisposedRef.current = true;
 
       const { result } = renderHook(() =>
-        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef)
+        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef, refs.isActiveRef)
       );
 
       act(() => {
@@ -220,7 +221,7 @@ describe('useTerminalConnection', () => {
       const refs = createRefs();
 
       const { result } = renderHook(() =>
-        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef)
+        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef, refs.isActiveRef)
       );
 
       act(() => {
@@ -241,7 +242,7 @@ describe('useTerminalConnection', () => {
       const refs = createRefs();
 
       const { result } = renderHook(() =>
-        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef)
+        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef, refs.isActiveRef)
       );
 
       act(() => {
@@ -264,7 +265,7 @@ describe('useTerminalConnection', () => {
       });
 
       const { result } = renderHook(() =>
-        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef)
+        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef, refs.isActiveRef)
       );
 
       act(() => {
@@ -287,7 +288,7 @@ describe('useTerminalConnection', () => {
       const refs = createRefs();
 
       const { result } = renderHook(() =>
-        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef)
+        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef, refs.isActiveRef)
       );
 
       act(() => {
@@ -301,7 +302,7 @@ describe('useTerminalConnection', () => {
       const refs = createRefs();
 
       const { result } = renderHook(() =>
-        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef)
+        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef, refs.isActiveRef)
       );
 
       act(() => {
@@ -316,7 +317,7 @@ describe('useTerminalConnection', () => {
       const refs = createRefs();
 
       const { result } = renderHook(() =>
-        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef)
+        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef, refs.isActiveRef)
       );
 
       act(() => {
@@ -332,7 +333,7 @@ describe('useTerminalConnection', () => {
       refs.isDisposedRef.current = true;
 
       const { result } = renderHook(() =>
-        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef)
+        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef, refs.isActiveRef)
       );
 
       // Status should still be 'connecting' (initial)
@@ -350,7 +351,7 @@ describe('useTerminalConnection', () => {
       refs.onCloseRef.current = undefined as any;
 
       const { result } = renderHook(() =>
-        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef)
+        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef, refs.isActiveRef)
       );
 
       expect(() => {
@@ -370,7 +371,7 @@ describe('useTerminalConnection', () => {
       const refs = createRefs();
 
       const { result } = renderHook(() =>
-        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef)
+        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef, refs.isActiveRef)
       );
 
       act(() => {
@@ -389,7 +390,7 @@ describe('useTerminalConnection', () => {
       const refs = createRefs();
 
       const { result } = renderHook(() =>
-        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef)
+        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef, refs.isActiveRef)
       );
 
       act(() => {
@@ -403,7 +404,7 @@ describe('useTerminalConnection', () => {
       const refs = createRefs();
 
       const { result } = renderHook(() =>
-        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef)
+        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef, refs.isActiveRef)
       );
 
       act(() => {
@@ -417,7 +418,7 @@ describe('useTerminalConnection', () => {
       const refs = createRefs();
 
       const { result } = renderHook(() =>
-        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef)
+        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef, refs.isActiveRef)
       );
 
       await act(async () => {
@@ -434,7 +435,7 @@ describe('useTerminalConnection', () => {
       const refs = createRefs();
 
       const { result } = renderHook(() =>
-        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef)
+        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef, refs.isActiveRef)
       );
 
       await act(async () => {
@@ -459,7 +460,7 @@ describe('useTerminalConnection', () => {
       const refs = createRefs();
 
       const { result } = renderHook(() =>
-        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef)
+        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef, refs.isActiveRef)
       );
 
       await act(async () => {
@@ -479,7 +480,7 @@ describe('useTerminalConnection', () => {
       const refs = createRefs();
 
       const { result } = renderHook(() =>
-        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef)
+        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef, refs.isActiveRef)
       );
 
       await act(async () => {
@@ -499,7 +500,7 @@ describe('useTerminalConnection', () => {
       const refs = createRefs();
 
       const { result } = renderHook(() =>
-        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef)
+        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef, refs.isActiveRef)
       );
 
       act(() => {
@@ -525,7 +526,7 @@ describe('useTerminalConnection', () => {
       refs.isDisposedRef.current = true;
 
       const { result } = renderHook(() =>
-        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef)
+        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef, refs.isActiveRef)
       );
 
       act(() => {
@@ -542,7 +543,7 @@ describe('useTerminalConnection', () => {
       const refs = createRefs();
 
       const { result } = renderHook(() =>
-        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef)
+        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef, refs.isActiveRef)
       );
 
       // First call sets up the connection
@@ -569,7 +570,7 @@ describe('useTerminalConnection', () => {
       const refs = createRefs();
 
       const { result } = renderHook(() =>
-        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef)
+        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef, refs.isActiveRef)
       );
 
       // Should not throw
@@ -592,7 +593,7 @@ describe('useTerminalConnection', () => {
       const refs = createRefs();
 
       const { result, unmount } = renderHook(() =>
-        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef)
+        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef, refs.isActiveRef)
       );
 
       act(() => {
@@ -610,7 +611,7 @@ describe('useTerminalConnection', () => {
       const refs = createRefs();
 
       const { result, unmount } = renderHook(() =>
-        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef)
+        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef, refs.isActiveRef)
       );
 
       act(() => {
@@ -631,7 +632,7 @@ describe('useTerminalConnection', () => {
       const refs = createRefs();
 
       const { result, unmount } = renderHook(() =>
-        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef)
+        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef, refs.isActiveRef)
       );
 
       act(() => {
@@ -649,7 +650,7 @@ describe('useTerminalConnection', () => {
       const refs = createRefs();
 
       const { result, unmount } = renderHook(() =>
-        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef)
+        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef, refs.isActiveRef)
       );
 
       act(() => {
@@ -667,7 +668,7 @@ describe('useTerminalConnection', () => {
       const refs = createRefs();
 
       const { unmount } = renderHook(() =>
-        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef)
+        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef, refs.isActiveRef)
       );
 
       unmount();
@@ -683,7 +684,7 @@ describe('useTerminalConnection', () => {
       });
 
       const { result, unmount } = renderHook(() =>
-        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef)
+        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef, refs.isActiveRef)
       );
 
       act(() => {
@@ -702,7 +703,7 @@ describe('useTerminalConnection', () => {
       const refs = createRefs();
 
       const { result } = renderHook(() =>
-        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef)
+        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef, refs.isActiveRef)
       );
 
       act(() => {

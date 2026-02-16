@@ -23,6 +23,7 @@ export interface TerminalRefs {
   connectionRef: React.MutableRefObject<{ cleanup: () => void } | null>;
   isDisposedRef: React.MutableRefObject<boolean>;
   isReadyRef: React.MutableRefObject<boolean>;
+  isActiveRef: React.MutableRefObject<boolean>;
   resizeDebounceRef: React.MutableRefObject<ReturnType<typeof setTimeout> | null>;
 }
 
@@ -47,11 +48,12 @@ export function useTerminalInitialization(
     connectionRef,
     isDisposedRef,
     isReadyRef,
+    isActiveRef,
     resizeDebounceRef,
   } = refs;
 
   // Listen for refit-all events (from panel resizes, DnD)
-  useTerminalRefitListener(isDisposedRef, isReadyRef, handleResize);
+  useTerminalRefitListener(isDisposedRef, isReadyRef, isActiveRef, handleResize);
 
   useEffect(() => {
     if (!terminalRef.current) return;
@@ -136,7 +138,8 @@ export function useTerminalInitialization(
 
       if (!isInitialized) {
         initializeTerminal();
-      } else if (isReadyRef.current) {
+      } else if (isReadyRef.current && isActiveRef.current) {
+        // Skip resize for hidden terminals — they'll refit when shown
         handleResize();
       }
     });

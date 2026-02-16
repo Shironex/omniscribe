@@ -3,15 +3,18 @@ import { useEffect } from 'react';
 /**
  * Hook that listens for `terminal-refit-all` window events and triggers a resize.
  * These events are dispatched by panel resizes and drag-and-drop operations.
+ * Hidden terminals (isActiveRef.current === false) skip the refit — they'll
+ * refit once when their project tab becomes visible.
  */
 export function useTerminalRefitListener(
   isDisposedRef: React.MutableRefObject<boolean>,
   isReadyRef: React.MutableRefObject<boolean>,
+  isActiveRef: React.MutableRefObject<boolean>,
   handleResize: () => void
 ): void {
   useEffect(() => {
     const handleRefitAll = () => {
-      if (!isDisposedRef.current && isReadyRef.current) {
+      if (!isDisposedRef.current && isReadyRef.current && isActiveRef.current) {
         handleResize();
       }
     };
