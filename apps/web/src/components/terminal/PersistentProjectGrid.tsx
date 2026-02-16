@@ -63,12 +63,22 @@ export function PersistentProjectGrid({
   onResume,
   onOpenInEditor,
 }: PersistentProjectGridProps) {
-  // Use a shallow-compared selector so this component only re-renders when
-  // sessions for THIS project actually change, not on every global session update.
+  // Use shallow-compared selectors so this component only re-renders when
+  // sessions for THIS project actually change, not on every global session/title update.
   const projectSessions = useSessionStore(
     useShallow(state => state.sessions.filter(s => s.projectPath === projectPath))
   );
-  const customTitles = useSessionStore(state => state.customTitles);
+  const customTitles = useSessionStore(
+    useShallow(state => {
+      const titles: Record<string, string> = {};
+      for (const s of state.sessions) {
+        if (s.projectPath === projectPath && state.customTitles[s.id]) {
+          titles[s.id] = state.customTitles[s.id];
+        }
+      }
+      return titles;
+    })
+  );
   const sessionOrder = useTerminalStore(state => state.sessionOrder);
   const setSessionOrder = useTerminalStore(state => state.setSessionOrder);
 

@@ -61,7 +61,8 @@ export const TerminalView: React.FC<TerminalViewProps> = React.memo(
       fitAddonRef,
       sessionIdRef,
       isDisposedRef,
-      isReadyRef
+      isReadyRef,
+      isActiveRef
     );
 
     const attachKeyboardHandler = useTerminalKeyboard(sessionIdRef, setShowSearch);

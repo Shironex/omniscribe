@@ -45,7 +45,8 @@ export function useTerminalResize(
   fitAddonRef: React.MutableRefObject<FitAddon | null>,
   sessionIdRef: React.MutableRefObject<number>,
   isDisposedRef: React.MutableRefObject<boolean>,
-  isReadyRef: React.MutableRefObject<boolean>
+  isReadyRef: React.MutableRefObject<boolean>,
+  isActiveRef: React.MutableRefObject<boolean>
 ): UseTerminalResizeReturn {
   const resizeDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -70,7 +71,7 @@ export function useTerminalResize(
   // Handle window resize
   useEffect(() => {
     const handleWindowResize = () => {
-      if (!isDisposedRef.current && isReadyRef.current) {
+      if (!isDisposedRef.current && isReadyRef.current && isActiveRef.current) {
         handleResize();
       }
     };
@@ -79,7 +80,7 @@ export function useTerminalResize(
     return () => {
       window.removeEventListener('resize', handleWindowResize);
     };
-  }, [handleResize, isDisposedRef, isReadyRef]);
+  }, [handleResize, isDisposedRef, isReadyRef, isActiveRef]);
 
   return { resizeDebounceRef, handleResize };
 }

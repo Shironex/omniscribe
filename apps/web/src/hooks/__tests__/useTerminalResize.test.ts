@@ -41,6 +41,7 @@ function createRefs(overrides: Record<string, unknown> = {}) {
     sessionIdRef: { current: 42 },
     isDisposedRef: { current: false },
     isReadyRef: { current: true },
+    isActiveRef: { current: true },
     ...overrides,
   };
 }
@@ -177,7 +178,8 @@ describe('useTerminalResize', () => {
         refs.fitAddonRef,
         refs.sessionIdRef,
         refs.isDisposedRef,
-        refs.isReadyRef
+        refs.isReadyRef,
+        refs.isActiveRef
       )
     );
 
@@ -202,7 +204,8 @@ describe('useTerminalResize', () => {
         refs.fitAddonRef,
         refs.sessionIdRef,
         refs.isDisposedRef,
-        refs.isReadyRef
+        refs.isReadyRef,
+        refs.isActiveRef
       )
     );
 
@@ -227,7 +230,8 @@ describe('useTerminalResize', () => {
         refs.fitAddonRef,
         refs.sessionIdRef,
         refs.isDisposedRef,
-        refs.isReadyRef
+        refs.isReadyRef,
+        refs.isActiveRef
       )
     );
 
@@ -255,7 +259,8 @@ describe('useTerminalResize', () => {
         refs.fitAddonRef,
         refs.sessionIdRef,
         refs.isDisposedRef,
-        refs.isReadyRef
+        refs.isReadyRef,
+        refs.isActiveRef
       )
     );
 
@@ -283,7 +288,8 @@ describe('useTerminalResize', () => {
         refs.fitAddonRef,
         refs.sessionIdRef,
         refs.isDisposedRef,
-        refs.isReadyRef
+        refs.isReadyRef,
+        refs.isActiveRef
       )
     );
 
@@ -318,7 +324,8 @@ describe('useTerminalResize', () => {
         refs.fitAddonRef,
         refs.sessionIdRef,
         refs.isDisposedRef,
-        refs.isReadyRef
+        refs.isReadyRef,
+        refs.isActiveRef
       )
     );
 
@@ -343,7 +350,8 @@ describe('useTerminalResize', () => {
         refs.fitAddonRef,
         refs.sessionIdRef,
         refs.isDisposedRef,
-        refs.isReadyRef
+        refs.isReadyRef,
+        refs.isActiveRef
       )
     );
 
@@ -374,7 +382,8 @@ describe('useTerminalResize', () => {
         refs.fitAddonRef,
         refs.sessionIdRef,
         refs.isDisposedRef,
-        refs.isReadyRef
+        refs.isReadyRef,
+        refs.isActiveRef
       )
     );
 
@@ -420,7 +429,8 @@ describe('useTerminalResize', () => {
         refs.fitAddonRef,
         refs.sessionIdRef,
         refs.isDisposedRef,
-        refs.isReadyRef
+        refs.isReadyRef,
+        refs.isActiveRef
       )
     );
 
@@ -452,7 +462,8 @@ describe('useTerminalResize', () => {
         refs.fitAddonRef,
         refs.sessionIdRef,
         refs.isDisposedRef,
-        refs.isReadyRef
+        refs.isReadyRef,
+        refs.isActiveRef
       )
     );
 
@@ -478,7 +489,8 @@ describe('useTerminalResize', () => {
         refs.fitAddonRef,
         refs.sessionIdRef,
         refs.isDisposedRef,
-        refs.isReadyRef
+        refs.isReadyRef,
+        refs.isActiveRef
       )
     );
 
@@ -498,7 +510,8 @@ describe('useTerminalResize', () => {
         refs.fitAddonRef,
         refs.sessionIdRef,
         refs.isDisposedRef,
-        refs.isReadyRef
+        refs.isReadyRef,
+        refs.isActiveRef
       )
     );
 
@@ -519,7 +532,8 @@ describe('useTerminalResize', () => {
         refs.fitAddonRef,
         refs.sessionIdRef,
         refs.isDisposedRef,
-        refs.isReadyRef
+        refs.isReadyRef,
+        refs.isActiveRef
       )
     );
 
@@ -544,7 +558,34 @@ describe('useTerminalResize', () => {
         refs.fitAddonRef,
         refs.sessionIdRef,
         refs.isDisposedRef,
-        refs.isReadyRef
+        refs.isReadyRef,
+        refs.isActiveRef
+      )
+    );
+
+    act(() => {
+      window.dispatchEvent(new Event('resize'));
+    });
+
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
+
+    expect(mockResizeTerminal).not.toHaveBeenCalled();
+  });
+
+  it('ignores window resize events when not active (hidden terminal)', () => {
+    const refs = createRefs({ isActiveRef: { current: false } });
+
+    renderHook(() =>
+      useTerminalResize(
+        refs.terminalRef,
+        refs.xtermRef,
+        refs.fitAddonRef,
+        refs.sessionIdRef,
+        refs.isDisposedRef,
+        refs.isReadyRef,
+        refs.isActiveRef
       )
     );
 
@@ -569,7 +610,8 @@ describe('useTerminalResize', () => {
         refs.fitAddonRef,
         refs.sessionIdRef,
         refs.isDisposedRef,
-        refs.isReadyRef
+        refs.isReadyRef,
+        refs.isActiveRef
       )
     );
 
