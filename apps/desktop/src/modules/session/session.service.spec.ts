@@ -145,6 +145,118 @@ describe('SessionService', () => {
 
       expect(updated?.lastActiveAt.getTime()).toBeGreaterThanOrEqual(originalTime.getTime());
     });
+
+    it('should reject invalid transitions', () => {
+      const session = service.create('claude', '/project');
+
+      // idle -> disconnected is not valid
+      const result = service.updateStatus(session.id, 'disconnected');
+
+      expect(result).toBeUndefined();
+      expect(service.get(session.id)?.status).toBe('idle');
+    });
+
+    describe('transitions from finished state', () => {
+      let sessionId: string;
+
+      beforeEach(() => {
+        const session = service.create('claude', '/project');
+        sessionId = session.id;
+        // idle -> working -> finished
+        service.updateStatus(sessionId, 'working');
+        service.updateStatus(sessionId, 'finished');
+      });
+
+      it.each<SessionStatus>([
+        'idle',
+        'connecting',
+        'working',
+        'planning',
+        'thinking',
+        'needs_input',
+        'error',
+        'disconnected',
+      ])('should allow finished -> %s', targetStatus => {
+        const updated = service.updateStatus(sessionId, targetStatus);
+
+        expect(updated?.status).toBe(targetStatus);
+      });
+    });
+
+    describe('transitions from error state', () => {
+      let sessionId: string;
+
+      beforeEach(() => {
+        const session = service.create('claude', '/project');
+        sessionId = session.id;
+        // idle -> error
+        service.updateStatus(sessionId, 'error');
+      });
+
+      it.each<SessionStatus>([
+        'idle',
+        'connecting',
+        'working',
+        'planning',
+        'thinking',
+        'needs_input',
+        'finished',
+        'disconnected',
+      ])('should allow error -> %s', targetStatus => {
+        const updated = service.updateStatus(sessionId, targetStatus);
+
+        expect(updated?.status).toBe(targetStatus);
+      });
+
+      it('should allow error -> error (self-transition for zombie cleanup)', () => {
+        const updated = service.updateStatus(sessionId, 'error', 'Zombie detected');
+        expect(updated?.status).toBe('error');
+        expect(updated?.statusMessage).toBe('Zombie detected');
+      });
+    });
+
+    describe('transitions from disconnected state', () => {
+      let sessionId: string;
+
+      beforeEach(() => {
+        const session = service.create('claude', '/project');
+        sessionId = session.id;
+        // idle -> working -> disconnected
+        service.updateStatus(sessionId, 'working');
+        service.updateStatus(sessionId, 'disconnected');
+      });
+
+      it.each<SessionStatus>([
+        'idle',
+        'connecting',
+        'working',
+        'planning',
+        'thinking',
+        'needs_input',
+        'error',
+        'finished',
+      ])('should allow disconnected -> %s', targetStatus => {
+        const updated = service.updateStatus(sessionId, targetStatus);
+
+        expect(updated?.status).toBe(targetStatus);
+      });
+    });
+
+    it('should support full lifecycle: idle -> working -> finished -> working -> finished', () => {
+      const session = service.create('claude', '/project');
+
+      const s1 = service.updateStatus(session.id, 'working', 'First task');
+      expect(s1?.status).toBe('working');
+
+      const s2 = service.updateStatus(session.id, 'finished', 'Task complete');
+      expect(s2?.status).toBe('finished');
+
+      const s3 = service.updateStatus(session.id, 'working', 'Follow-up task');
+      expect(s3?.status).toBe('working');
+
+      const s4 = service.updateStatus(session.id, 'finished', 'All done');
+      expect(s4?.status).toBe('finished');
+    });
   });
 
   describe('assignBranch', () => {
