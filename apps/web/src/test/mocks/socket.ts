@@ -1,4 +1,4 @@
-import { vi } from 'vitest';
+import { vi, type Mock } from 'vitest';
 
 /**
  * Mock socket factory for testing.
@@ -11,7 +11,20 @@ type Listener = (...args: unknown[]) => void;
 
 const listeners = new Map<string, Set<Listener>>();
 
-export const mockSocket = {
+interface MockSocket {
+  connected: boolean;
+  recovered: boolean;
+  on: Mock;
+  off: Mock;
+  emit: Mock;
+  connect: Mock;
+  disconnect: Mock;
+  __simulateEvent(event: string, ...data: unknown[]): void;
+  __reset(): void;
+  __listenerCount(event: string): number;
+}
+
+export const mockSocket: MockSocket = {
   connected: false,
   recovered: false,
 
@@ -74,7 +87,20 @@ export const mockSocket = {
  * vi.mock factory for '@/lib/socket'.
  * Use: vi.mock('@/lib/socket', () => mockSocketModule)
  */
-export const mockSocketModule = {
+interface MockSocketModule {
+  socket: MockSocket;
+  getSocket: Mock;
+  initializeSocket: Mock;
+  resetSocket: Mock;
+  connectSocket: Mock;
+  disconnectSocket: Mock;
+  default: MockSocket;
+  emitAsync: Mock;
+  emitWithErrorHandling: Mock;
+  emitWithSuccessHandling: Mock;
+}
+
+export const mockSocketModule: MockSocketModule = {
   socket: mockSocket,
   getSocket: vi.fn(() => mockSocket),
   initializeSocket: vi.fn(() => mockSocket),
