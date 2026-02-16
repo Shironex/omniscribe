@@ -94,14 +94,18 @@ function App() {
     [workspaceTabs]
   );
 
-  // Unique project paths that have active sessions (for persistent grids)
-  const projectPathsWithSessions = useMemo(() => {
+  // Unique project paths that need a persistent grid (sessions or pre-launch slots)
+  const projectPathsWithGrids = useMemo(() => {
     const paths = new Set<string>();
     for (const session of allSessions) {
       paths.add(session.projectPath);
     }
+    // Include active project when it has pre-launch slots (before any sessions exist)
+    if (activeProjectPath && preLaunchSlots.length > 0) {
+      paths.add(activeProjectPath);
+    }
     return [...paths];
-  }, [allSessions]);
+  }, [allSessions, activeProjectPath, preLaunchSlots.length]);
 
   const hasContent = terminalSessions.length > 0 || preLaunchSlots.length > 0;
 
@@ -264,7 +268,7 @@ function App() {
         {/* Main content area — relative container for stacked persistent grids */}
         <div className="flex-1 min-w-0 relative">
           {/* Persistent terminal grids for all projects with sessions */}
-          {projectPathsWithSessions.map(projectPath => {
+          {projectPathsWithGrids.map(projectPath => {
             const isActiveGrid = projectPath === activeProjectPath;
             return (
               <PersistentProjectGrid
