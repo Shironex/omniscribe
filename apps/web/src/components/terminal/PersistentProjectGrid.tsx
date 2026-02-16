@@ -1,8 +1,9 @@
 import { useMemo, useState, useCallback } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { cn } from '@/lib/utils';
 import { useSessionStore } from '@/stores/useSessionStore';
 import { useTerminalStore } from '@/stores/useTerminalStore';
-import { mapSessionStatus } from '@omniscribe/shared';
+import { mapToTerminalSessions } from '@/lib/session-mappers';
 import { TerminalGrid } from './TerminalGrid';
 import type { PreLaunchSlot } from './PreLaunchBar';
 import type { Branch } from '@/components/shared/BranchSelector';
@@ -62,7 +63,11 @@ export function PersistentProjectGrid({
   onResume,
   onOpenInEditor,
 }: PersistentProjectGridProps) {
-  const sessions = useSessionStore(state => state.sessions);
+  // Use a shallow-compared selector so this component only re-renders when
+  // sessions for THIS project actually change, not on every global session update.
+  const projectSessions = useSessionStore(
+    useShallow(state => state.sessions.filter(s => s.projectPath === projectPath))
+  );
   const customTitles = useSessionStore(state => state.customTitles);
   const sessionOrder = useTerminalStore(state => state.sessionOrder);
   const setSessionOrder = useTerminalStore(state => state.setSessionOrder);
@@ -73,35 +78,22 @@ export function PersistentProjectGrid({
     setFocusedSessionId(sessionId);
   }, []);
 
-  // Derive terminal sessions for this project
+  // Map sessions to TerminalSession format using shared utility
   const terminalSessions = useMemo(() => {
-    return sessions
-      .filter(s => s.projectPath === projectPath)
-      .map((session, index) => ({
-        id: session.id,
-        sessionNumber: index + 1,
-        aiMode: session.aiMode,
-        status: mapSessionStatus(session.status),
-        branch: session.branch,
-        statusMessage: session.statusMessage,
-        terminalSessionId: session.terminalSessionId,
-        worktreePath: session.worktreePath,
-        skipPermissions: session.skipPermissions,
-        claudeSessionId: session.claudeSessionId,
-        isResumed: session.isResumed,
-        customTitle: customTitles[session.id],
-      }));
-  }, [sessions, projectPath, customTitles]);
+    return mapToTerminalSessions(projectSessions, customTitles);
+  }, [projectSessions, customTitles]);
 
   // Order sessions using global session order
   const orderedSessions = useMemo(() => {
     if (sessionOrder.length === 0) return terminalSessions;
     const orderMap = new Map(sessionOrder.map((id, idx) => [id, idx]));
-    return [...terminalSessions].sort((a, b) => {
-      const aIndex = orderMap.get(a.id) ?? Number.MAX_SAFE_INTEGER;
-      const bIndex = orderMap.get(b.id) ?? Number.MAX_SAFE_INTEGER;
-      return aIndex - bIndex;
-    });
+    return [...terminalSessions]
+      .sort((a, b) => {
+        const aIndex = orderMap.get(a.id) ?? Number.MAX_SAFE_INTEGER;
+        const bIndex = orderMap.get(b.id) ?? Number.MAX_SAFE_INTEGER;
+        return aIndex - bIndex;
+      })
+      .map((session, idx) => ({ ...session, sessionNumber: idx + 1 }));
   }, [terminalSessions, sessionOrder]);
 
   // Reorder by swapping IDs in the global session order

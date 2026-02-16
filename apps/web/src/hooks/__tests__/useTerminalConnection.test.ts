@@ -281,6 +281,154 @@ describe('useTerminalConnection', () => {
     });
   });
 
+  // --- hidden terminal (isActive=false) ---
+
+  describe('hidden terminal (isActive=false)', () => {
+    it('does not schedule RAF when terminal is hidden', () => {
+      const refs = createRefs();
+      refs.isActiveRef.current = false;
+
+      const { result } = renderHook(() =>
+        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef, refs.isActiveRef)
+      );
+
+      act(() => {
+        result.current.handleOutput('hidden data');
+      });
+
+      expect(requestAnimationFrame).not.toHaveBeenCalled();
+      expect(refs.mockWrite).not.toHaveBeenCalled();
+    });
+
+    it('caps buffer at MAX_HIDDEN_BUFFER_SIZE when hidden', () => {
+      const refs = createRefs();
+      refs.isActiveRef.current = false;
+
+      const { result } = renderHook(() =>
+        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef, refs.isActiveRef)
+      );
+
+      // Write more than 1MB of data
+      const largeChunk = 'x'.repeat(600_000);
+      act(() => {
+        result.current.handleOutput(largeChunk);
+        result.current.handleOutput(largeChunk);
+      });
+
+      // Buffer should have been capped (no RAF scheduled, but data is buffered internally)
+      expect(requestAnimationFrame).not.toHaveBeenCalled();
+
+      // Transition to active and flush to verify buffer was capped
+      refs.isActiveRef.current = true;
+      act(() => {
+        result.current.flushBuffer();
+      });
+
+      act(() => {
+        flushRAF();
+      });
+
+      // The written data should be <= MAX_HIDDEN_BUFFER_SIZE (1MB)
+      expect(refs.mockWrite).toHaveBeenCalledOnce();
+      expect(refs.mockWrite.mock.calls[0][0].length).toBeLessThanOrEqual(1_048_576);
+    });
+
+    it('flushBuffer schedules RAF to flush accumulated data', () => {
+      const refs = createRefs();
+      refs.isActiveRef.current = false;
+
+      const { result } = renderHook(() =>
+        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef, refs.isActiveRef)
+      );
+
+      act(() => {
+        result.current.handleOutput('buffered while hidden');
+      });
+
+      expect(requestAnimationFrame).not.toHaveBeenCalled();
+
+      // Call flushBuffer (as TerminalView does when becoming visible)
+      act(() => {
+        result.current.flushBuffer();
+      });
+
+      expect(requestAnimationFrame).toHaveBeenCalledOnce();
+
+      act(() => {
+        flushRAF();
+      });
+
+      expect(refs.mockWrite).toHaveBeenCalledOnce();
+      expect(refs.mockWrite).toHaveBeenCalledWith('buffered while hidden');
+    });
+
+    it('writes buffered data after transitioning from inactive to active', () => {
+      const refs = createRefs();
+      refs.isActiveRef.current = false;
+
+      const { result } = renderHook(() =>
+        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef, refs.isActiveRef)
+      );
+
+      // Accumulate data while hidden
+      act(() => {
+        result.current.handleOutput('line 1\n');
+        result.current.handleOutput('line 2\n');
+      });
+
+      expect(refs.mockWrite).not.toHaveBeenCalled();
+      expect(requestAnimationFrame).not.toHaveBeenCalled();
+
+      // Simulate becoming visible
+      refs.isActiveRef.current = true;
+      act(() => {
+        result.current.flushBuffer();
+      });
+
+      act(() => {
+        flushRAF();
+      });
+
+      expect(refs.mockWrite).toHaveBeenCalledOnce();
+      expect(refs.mockWrite).toHaveBeenCalledWith('line 1\nline 2\n');
+    });
+
+    it('flushBuffer does nothing when buffer is empty', () => {
+      const refs = createRefs();
+
+      const { result } = renderHook(() =>
+        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef, refs.isActiveRef)
+      );
+
+      act(() => {
+        result.current.flushBuffer();
+      });
+
+      expect(requestAnimationFrame).not.toHaveBeenCalled();
+    });
+
+    it('flushBuffer does nothing when disposed', () => {
+      const refs = createRefs();
+      refs.isActiveRef.current = false;
+
+      const { result } = renderHook(() =>
+        useTerminalConnection(refs.xtermRef, refs.isDisposedRef, refs.onCloseRef, refs.isActiveRef)
+      );
+
+      act(() => {
+        result.current.handleOutput('data');
+      });
+
+      refs.isDisposedRef.current = true;
+
+      act(() => {
+        result.current.flushBuffer();
+      });
+
+      expect(requestAnimationFrame).not.toHaveBeenCalled();
+    });
+  });
+
   // --- handleClose ---
 
   describe('handleClose', () => {

@@ -180,17 +180,17 @@ describe('TerminalService', () => {
       expect(service.getScrollback(sessionId)).toBeNull();
     });
 
-    it('should trim scrollback at MAX_SCROLLBACK_SIZE (50KB)', () => {
+    it('should trim scrollback at MAX_SCROLLBACK_SIZE (500KB)', () => {
       const sessionId = service.spawnCommand('bash', [], '/home');
       const ptyInstance = mockPtyInstances[0];
 
-      // Simulate 60KB of data
-      const bigData = 'x'.repeat(60_000);
+      // Simulate 600KB of data
+      const bigData = 'x'.repeat(600_000);
       ptyInstance.simulateData(bigData);
 
       const scrollback = service.getScrollback(sessionId);
       expect(scrollback).not.toBeNull();
-      expect(scrollback!.length).toBeLessThanOrEqual(50_000);
+      expect(scrollback!.length).toBeLessThanOrEqual(500_000);
     });
   });
 

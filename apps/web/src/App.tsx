@@ -69,19 +69,19 @@ function App() {
 
   // Session order reconciliation — use ALL sessions to preserve order across tab switches
   const allSessions = useSessionStore(state => state.sessions);
-  const sessionOrder = useTerminalStore(state => state.sessionOrder);
   const setSessionOrder = useTerminalStore(state => state.setSessionOrder);
 
   useEffect(() => {
+    const currentOrder = useTerminalStore.getState().sessionOrder;
     const allIds = allSessions.map(session => session.id);
     const allIdSet = new Set(allIds);
-    const validOrder = sessionOrder.filter(id => allIdSet.has(id));
-    const newIds = allIds.filter(id => !sessionOrder.includes(id));
+    const validOrder = currentOrder.filter(id => allIdSet.has(id));
+    const newIds = allIds.filter(id => !currentOrder.includes(id));
 
-    if (newIds.length > 0 || validOrder.length !== sessionOrder.length) {
+    if (newIds.length > 0 || validOrder.length !== currentOrder.length) {
       setSessionOrder([...validOrder, ...newIds]);
     }
-  }, [allSessions, sessionOrder, setSessionOrder]);
+  }, [allSessions, setSessionOrder]);
 
   const { handleStopAll, handleKillSession } = useSessionLifecycle(activeProjectSessions);
 
@@ -153,11 +153,11 @@ function App() {
   const handleResume = useCallback(
     async (sessionId: string) => {
       const session = useSessionStore.getState().sessions.find(s => s.id === sessionId);
-      if (!session?.claudeSessionId || !activeProjectPath) return;
+      if (!session?.claudeSessionId || !session.projectPath) return;
       try {
         const resumed = await resumeSession(
           session.claudeSessionId,
-          activeProjectPath,
+          session.projectPath,
           session.branch
         );
         if (resumed.terminalSessionId !== undefined) {
@@ -171,7 +171,7 @@ function App() {
         toast.error(msg);
       }
     },
-    [updateSession, activeProjectPath]
+    [updateSession]
   );
 
   // Open in editor handler
@@ -220,14 +220,16 @@ function App() {
     handleSelectTabByIndex,
   });
 
-  // Trigger refit when switching tabs so terminals recalculate dimensions
+  // Trigger refit when switching tabs so terminals recalculate dimensions.
+  // Use double-rAF to ensure CSS visibility change has painted before refitting.
   useEffect(() => {
     if (activeProjectPath) {
-      // Small delay to let CSS visibility change propagate
-      const timeout = setTimeout(() => {
-        window.dispatchEvent(new CustomEvent('terminal-refit-all'));
-      }, 50);
-      return () => clearTimeout(timeout);
+      let rafId = requestAnimationFrame(() => {
+        rafId = requestAnimationFrame(() => {
+          window.dispatchEvent(new CustomEvent('terminal-refit-all'));
+        });
+      });
+      return () => cancelAnimationFrame(rafId);
     }
   }, [activeProjectPath]);
 

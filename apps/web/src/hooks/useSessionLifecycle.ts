@@ -1,6 +1,6 @@
 import { useCallback, useRef, useEffect } from 'react';
 import { createLogger } from '@omniscribe/shared';
-import type { FrontendSessionConfig } from '@/stores/useSessionStore';
+import { useSessionStore, type FrontendSessionConfig } from '@/stores/useSessionStore';
 import { removeSession } from '@/lib/session';
 import { killTerminal } from '@/lib/terminal';
 
@@ -56,12 +56,14 @@ export function useSessionLifecycle(
     );
   }, []);
 
-  // Kill a session handler
+  // Kill a session handler — searches all sessions from the store
+  // so it works for background (non-active) project sessions too
   const handleKillSession = useCallback(async (sessionId: string) => {
     logger.info('Killing session', sessionId);
     try {
-      // Find the session to get the correct terminalSessionId
-      const session = sessionsRef.current.find(s => s.id === sessionId);
+      // Search all sessions from the store, not just active project sessions
+      const allSessions = useSessionStore.getState().sessions;
+      const session = allSessions.find(s => s.id === sessionId);
       if (session?.terminalSessionId !== undefined) {
         killTerminal(session.terminalSessionId);
       }

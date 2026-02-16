@@ -60,9 +60,12 @@ export function useTerminalConnection(
       if (isDisposedRef.current) return;
       writeBufferRef.current += data;
 
-      // Cap buffer size when hidden to prevent unbounded memory growth
+      // Cap buffer size when hidden to prevent unbounded memory growth.
+      // Trim to a newline boundary to avoid splitting mid-line or mid-ANSI escape.
       if (!isActiveRef.current && writeBufferRef.current.length > MAX_HIDDEN_BUFFER_SIZE) {
-        writeBufferRef.current = writeBufferRef.current.slice(-MAX_HIDDEN_BUFFER_SIZE);
+        const trimmed = writeBufferRef.current.slice(-MAX_HIDDEN_BUFFER_SIZE);
+        const firstNewline = trimmed.indexOf('\n');
+        writeBufferRef.current = firstNewline > 0 ? trimmed.slice(firstNewline) : trimmed;
       }
 
       // Only schedule RAF when terminal is visible

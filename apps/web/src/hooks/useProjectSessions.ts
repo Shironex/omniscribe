@@ -1,11 +1,11 @@
 import { useState, useCallback, useMemo } from 'react';
-import { createLogger } from '@omniscribe/shared';
+import { createLogger, mapSessionStatus } from '@omniscribe/shared';
 import { useSessionStore, type FrontendSessionConfig } from '@/stores/useSessionStore';
+import { mapToTerminalSessions } from '@/lib/session-mappers';
 
 const logger = createLogger('ProjectSessions');
 import type { StatusCounts } from '@/components';
 import type { TerminalSession, PreLaunchSlot } from '@/components/terminal/TerminalGrid';
-import { mapSessionStatus } from '@omniscribe/shared';
 
 interface UseProjectSessionsReturn {
   /** All sessions from store */
@@ -52,20 +52,7 @@ export function useProjectSessions(
 
   // Convert sessions to TerminalSession format for TerminalGrid
   const terminalSessions: TerminalSession[] = useMemo(() => {
-    return activeProjectSessions.map((session, index) => ({
-      id: session.id,
-      sessionNumber: index + 1,
-      aiMode: session.aiMode,
-      status: mapSessionStatus(session.status),
-      branch: session.branch,
-      statusMessage: session.statusMessage,
-      terminalSessionId: session.terminalSessionId,
-      worktreePath: session.worktreePath,
-      skipPermissions: session.skipPermissions,
-      claudeSessionId: session.claudeSessionId,
-      isResumed: session.isResumed,
-      customTitle: customTitles[session.id],
-    }));
+    return mapToTerminalSessions(activeProjectSessions, customTitles);
   }, [activeProjectSessions, customTitles]);
 
   // Check if we have any running sessions (sessions with a terminal)
