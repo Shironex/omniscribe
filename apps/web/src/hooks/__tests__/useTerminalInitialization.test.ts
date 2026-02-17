@@ -104,6 +104,7 @@ function createRefs() {
     connectionRef: { current: null },
     isDisposedRef: { current: false },
     isReadyRef: { current: false },
+    isActiveRef: { current: true },
     resizeDebounceRef: { current: null },
   };
 }

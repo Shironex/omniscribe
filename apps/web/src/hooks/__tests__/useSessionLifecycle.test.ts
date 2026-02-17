@@ -6,12 +6,25 @@ import { renderHook, act } from '@testing-library/react';
 const mockRemoveSession = vi.fn().mockResolvedValue(undefined);
 const mockKillTerminal = vi.fn();
 
+// Mutable store sessions — handleKillSession reads from useSessionStore.getState()
+let mockStoreSessions: any[] = [];
+
 vi.mock('@/lib/session', () => ({
   removeSession: (...args: unknown[]) => mockRemoveSession(...args),
 }));
 
 vi.mock('@/lib/terminal', () => ({
   killTerminal: (...args: unknown[]) => mockKillTerminal(...args),
+}));
+
+vi.mock('@/stores/useSessionStore', () => ({
+  useSessionStore: Object.assign(
+    (selector: (state: Record<string, unknown>) => unknown) =>
+      selector({ sessions: mockStoreSessions }),
+    {
+      getState: () => ({ sessions: mockStoreSessions }),
+    }
+  ),
 }));
 
 // ---- Import under test (after mocks) ----
@@ -57,6 +70,7 @@ describe('useSessionLifecycle', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     sessionCounter = 0;
+    mockStoreSessions = [];
   });
 
   // ================================================================
@@ -231,6 +245,7 @@ describe('useSessionLifecycle', () => {
         createMockSession({ id: 'target', status: 'working', terminalSessionId: 5 }),
         createMockSession({ id: 'other', status: 'idle', terminalSessionId: 6 }),
       ] as any[];
+      mockStoreSessions = sessions;
 
       const { result } = renderHook(() => useSessionLifecycle(sessions));
 
@@ -246,6 +261,7 @@ describe('useSessionLifecycle', () => {
 
     it('calls killTerminal when session has terminalSessionId', async () => {
       const sessions = [createMockSession({ id: 'with-terminal', terminalSessionId: 42 })] as any[];
+      mockStoreSessions = sessions;
 
       const { result } = renderHook(() => useSessionLifecycle(sessions));
 
@@ -261,6 +277,7 @@ describe('useSessionLifecycle', () => {
       const sessions = [
         createMockSession({ id: 'no-terminal' }), // no terminalSessionId
       ] as any[];
+      mockStoreSessions = sessions;
 
       const { result } = renderHook(() => useSessionLifecycle(sessions));
 
@@ -272,8 +289,9 @@ describe('useSessionLifecycle', () => {
       expect(mockRemoveSession).toHaveBeenCalledWith('no-terminal');
     });
 
-    it('calls removeSession even when session is not found in ref', async () => {
+    it('calls removeSession even when session is not found in store', async () => {
       const sessions = [createMockSession({ id: 'existing' })] as any[];
+      mockStoreSessions = sessions;
 
       const { result } = renderHook(() => useSessionLifecycle(sessions));
 
@@ -291,6 +309,7 @@ describe('useSessionLifecycle', () => {
       mockRemoveSession.mockRejectedValueOnce(new Error('remove failed'));
 
       const sessions = [createMockSession({ id: 'error-session', terminalSessionId: 7 })] as any[];
+      mockStoreSessions = sessions;
 
       const { result } = renderHook(() => useSessionLifecycle(sessions));
 
@@ -309,6 +328,7 @@ describe('useSessionLifecycle', () => {
       });
 
       const sessions = [createMockSession({ id: 'kill-error', terminalSessionId: 8 })] as any[];
+      mockStoreSessions = sessions;
 
       const { result } = renderHook(() => useSessionLifecycle(sessions));
 
@@ -326,6 +346,7 @@ describe('useSessionLifecycle', () => {
 
     it('handles terminalSessionId of 0 (falsy but valid)', async () => {
       const sessions = [createMockSession({ id: 'zero-terminal', terminalSessionId: 0 })] as any[];
+      mockStoreSessions = sessions;
 
       const { result } = renderHook(() => useSessionLifecycle(sessions));
 
@@ -373,27 +394,27 @@ describe('useSessionLifecycle', () => {
       expect(mockKillTerminal).not.toHaveBeenCalledWith(1);
     });
 
-    it('handleKillSession uses updated sessions after re-render', async () => {
+    it('handleKillSession uses sessions from the store', async () => {
       const initialSessions = [
         createMockSession({ id: 'sess-a', terminalSessionId: 100 }),
       ] as any[];
+      mockStoreSessions = initialSessions;
 
-      const { result, rerender } = renderHook(({ sessions }) => useSessionLifecycle(sessions), {
+      const { result } = renderHook(({ sessions }) => useSessionLifecycle(sessions), {
         initialProps: { sessions: initialSessions },
       });
 
-      // Re-render with different session that has same ID but different terminalSessionId
+      // Update the store sessions (simulating a session update in the global store)
       const updatedSessions = [
         createMockSession({ id: 'sess-a', terminalSessionId: 200 }),
       ] as any[];
-
-      rerender({ sessions: updatedSessions });
+      mockStoreSessions = updatedSessions;
 
       await act(async () => {
         await result.current.handleKillSession('sess-a');
       });
 
-      // Should use the updated terminalSessionId (200), not the original (100)
+      // Should use the store's terminalSessionId (200), not the original (100)
       expect(mockKillTerminal).toHaveBeenCalledWith(200);
       expect(mockKillTerminal).not.toHaveBeenCalledWith(100);
       expect(mockRemoveSession).toHaveBeenCalledWith('sess-a');

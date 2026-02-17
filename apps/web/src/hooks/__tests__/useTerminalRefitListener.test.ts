@@ -11,12 +11,15 @@ describe('useTerminalRefitListener', () => {
     vi.restoreAllMocks();
   });
 
-  it('calls handleResize when ready and not disposed', () => {
+  it('calls handleResize when ready, active, and not disposed', () => {
     const handleResize = vi.fn();
     const isDisposedRef = { current: false };
     const isReadyRef = { current: true };
+    const isActiveRef = { current: true };
 
-    renderHook(() => useTerminalRefitListener(isDisposedRef, isReadyRef, handleResize));
+    renderHook(() =>
+      useTerminalRefitListener(isDisposedRef, isReadyRef, isActiveRef, handleResize)
+    );
 
     dispatchRefitEvent();
     expect(handleResize).toHaveBeenCalledTimes(1);
@@ -26,8 +29,11 @@ describe('useTerminalRefitListener', () => {
     const handleResize = vi.fn();
     const isDisposedRef = { current: true };
     const isReadyRef = { current: true };
+    const isActiveRef = { current: true };
 
-    renderHook(() => useTerminalRefitListener(isDisposedRef, isReadyRef, handleResize));
+    renderHook(() =>
+      useTerminalRefitListener(isDisposedRef, isReadyRef, isActiveRef, handleResize)
+    );
 
     dispatchRefitEvent();
     expect(handleResize).not.toHaveBeenCalled();
@@ -37,8 +43,25 @@ describe('useTerminalRefitListener', () => {
     const handleResize = vi.fn();
     const isDisposedRef = { current: false };
     const isReadyRef = { current: false };
+    const isActiveRef = { current: true };
 
-    renderHook(() => useTerminalRefitListener(isDisposedRef, isReadyRef, handleResize));
+    renderHook(() =>
+      useTerminalRefitListener(isDisposedRef, isReadyRef, isActiveRef, handleResize)
+    );
+
+    dispatchRefitEvent();
+    expect(handleResize).not.toHaveBeenCalled();
+  });
+
+  it('does not call handleResize when not active (hidden terminal)', () => {
+    const handleResize = vi.fn();
+    const isDisposedRef = { current: false };
+    const isReadyRef = { current: true };
+    const isActiveRef = { current: false };
+
+    renderHook(() =>
+      useTerminalRefitListener(isDisposedRef, isReadyRef, isActiveRef, handleResize)
+    );
 
     dispatchRefitEvent();
     expect(handleResize).not.toHaveBeenCalled();
@@ -48,8 +71,11 @@ describe('useTerminalRefitListener', () => {
     const handleResize = vi.fn();
     const isDisposedRef = { current: true };
     const isReadyRef = { current: false };
+    const isActiveRef = { current: true };
 
-    renderHook(() => useTerminalRefitListener(isDisposedRef, isReadyRef, handleResize));
+    renderHook(() =>
+      useTerminalRefitListener(isDisposedRef, isReadyRef, isActiveRef, handleResize)
+    );
 
     dispatchRefitEvent();
     expect(handleResize).not.toHaveBeenCalled();
@@ -59,9 +85,10 @@ describe('useTerminalRefitListener', () => {
     const handleResize = vi.fn();
     const isDisposedRef = { current: false };
     const isReadyRef = { current: true };
+    const isActiveRef = { current: true };
 
     const { unmount } = renderHook(() =>
-      useTerminalRefitListener(isDisposedRef, isReadyRef, handleResize)
+      useTerminalRefitListener(isDisposedRef, isReadyRef, isActiveRef, handleResize)
     );
 
     unmount();
@@ -74,9 +101,11 @@ describe('useTerminalRefitListener', () => {
     const handleResize2 = vi.fn();
     const isDisposedRef = { current: false };
     const isReadyRef = { current: true };
+    const isActiveRef = { current: true };
 
     const { rerender } = renderHook(
-      ({ handleResize }) => useTerminalRefitListener(isDisposedRef, isReadyRef, handleResize),
+      ({ handleResize }) =>
+        useTerminalRefitListener(isDisposedRef, isReadyRef, isActiveRef, handleResize),
       { initialProps: { handleResize: handleResize1 } }
     );
 

@@ -18,6 +18,8 @@ const logger = createLogger('TerminalView');
 
 export interface TerminalViewProps {
   sessionId: number;
+  /** Whether this terminal's project tab is currently active/visible */
+  isActive?: boolean;
   onClose?: (exitCode: number, signal?: number) => void;
   isFocused?: boolean;
   className?: string;
@@ -26,13 +28,15 @@ export interface TerminalViewProps {
 type TerminalStatus = 'connecting' | 'connected' | 'disconnected' | 'error';
 
 export const TerminalView: React.FC<TerminalViewProps> = React.memo(
-  ({ sessionId, onClose, isFocused = false, className = '' }) => {
+  ({ sessionId, isActive = true, onClose, isFocused = false, className = '' }) => {
     const terminalRef = useRef<HTMLDivElement>(null);
     const xtermRef = useRef<Terminal | null>(null);
     const fitAddonRef = useRef<FitAddon | null>(null);
     const resizeObserverRef = useRef<ResizeObserver | null>(null);
     const isDisposedRef = useRef<boolean>(false);
     const isReadyRef = useRef<boolean>(false);
+    const isActiveRef = useRef(isActive);
+    isActiveRef.current = isActive;
     const sessionIdRef = useRef(sessionId);
     sessionIdRef.current = sessionId;
 
@@ -57,15 +61,17 @@ export const TerminalView: React.FC<TerminalViewProps> = React.memo(
       fitAddonRef,
       sessionIdRef,
       isDisposedRef,
-      isReadyRef
+      isReadyRef,
+      isActiveRef
     );
 
     const attachKeyboardHandler = useTerminalKeyboard(sessionIdRef, setShowSearch);
 
-    const { status, connectionRef, connectAndJoin } = useTerminalConnection(
+    const { status, connectionRef, connectAndJoin, flushBuffer } = useTerminalConnection(
       xtermRef,
       isDisposedRef,
-      onCloseRef
+      onCloseRef,
+      isActiveRef
     );
 
     useTerminalInitialization(
@@ -80,6 +86,7 @@ export const TerminalView: React.FC<TerminalViewProps> = React.memo(
         connectionRef,
         isDisposedRef,
         isReadyRef,
+        isActiveRef,
         resizeDebounceRef,
       },
       handleResize,
@@ -125,6 +132,14 @@ export const TerminalView: React.FC<TerminalViewProps> = React.memo(
       settings.scrollback,
       settings.terminalThemeName,
     ]);
+
+    // When terminal becomes visible, flush buffered output and refit
+    useEffect(() => {
+      if (isActive && isReadyRef.current && !isDisposedRef.current) {
+        flushBuffer();
+        handleResize();
+      }
+    }, [isActive, flushBuffer, handleResize]);
 
     // Handle focus changes
     useEffect(() => {

@@ -1,12 +1,12 @@
 import { useCallback, useMemo, useEffect, useState } from 'react';
 import {
   TopBar,
-  TerminalGrid,
   IdleLandingView,
   WelcomeView,
   SettingsModal,
   LaunchPresetsModal,
   SessionHistoryPanel,
+  PersistentProjectGrid,
 } from '@/components';
 import {
   useAppInitialization,
@@ -61,59 +61,29 @@ function App() {
     activeProjectSessions,
     hasActiveSessions,
     statusCounts,
-    focusedSessionId,
-    handleFocusSession,
     handleSessionClose,
   } = useProjectSessions(activeProjectPath, preLaunchSlots);
 
   // Stable store action for handleResume (no need for a second hook call)
   const updateSession = useSessionStore(state => state.updateSession);
 
-  const sessionOrder = useTerminalStore(state => state.sessionOrder);
+  // Session order reconciliation — use ALL sessions to preserve order across tab switches
+  const allSessions = useSessionStore(state => state.sessions);
   const setSessionOrder = useTerminalStore(state => state.setSessionOrder);
 
-  const orderedTerminalSessions = useMemo(() => {
-    if (sessionOrder.length === 0) {
-      return terminalSessions;
-    }
-
-    const orderMap = new Map(sessionOrder.map((id, idx) => [id, idx]));
-    return [...terminalSessions].sort((a, b) => {
-      const aIndex = orderMap.get(a.id) ?? Number.MAX_SAFE_INTEGER;
-      const bIndex = orderMap.get(b.id) ?? Number.MAX_SAFE_INTEGER;
-      return aIndex - bIndex;
-    });
-  }, [terminalSessions, sessionOrder]);
-
-  const { handleStopAll, handleKillSession } = useSessionLifecycle(activeProjectSessions);
-
   useEffect(() => {
-    const currentIds = terminalSessions.map(session => session.id);
-    const currentIdSet = new Set(currentIds);
-    const validOrder = sessionOrder.filter(id => currentIdSet.has(id));
-    const newIds = currentIds.filter(id => !sessionOrder.includes(id));
+    const currentOrder = useTerminalStore.getState().sessionOrder;
+    const allIds = allSessions.map(session => session.id);
+    const allIdSet = new Set(allIds);
+    const validOrder = currentOrder.filter(id => allIdSet.has(id));
+    const newIds = allIds.filter(id => !currentOrder.includes(id));
 
-    if (newIds.length > 0 || validOrder.length !== sessionOrder.length) {
+    if (newIds.length > 0 || validOrder.length !== currentOrder.length) {
       setSessionOrder([...validOrder, ...newIds]);
     }
-  }, [terminalSessions, sessionOrder, setSessionOrder]);
+  }, [allSessions, setSessionOrder]);
 
-  const handleReorderSessions = useCallback(
-    (activeId: string, overId: string) => {
-      const currentOrder = orderedTerminalSessions.map(session => session.id);
-      const oldIndex = currentOrder.indexOf(activeId);
-      const newIndex = currentOrder.indexOf(overId);
-
-      if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) return;
-
-      const nextOrder = [...currentOrder];
-      const temp = nextOrder[oldIndex];
-      nextOrder[oldIndex] = nextOrder[newIndex];
-      nextOrder[newIndex] = temp;
-      setSessionOrder(nextOrder);
-    },
-    [orderedTerminalSessions, setSessionOrder]
-  );
+  const { handleStopAll, handleKillSession } = useSessionLifecycle(activeProjectSessions);
 
   const { quickActionsForTerminal, handleQuickAction } = useQuickActionExecution(terminalSessions);
 
@@ -123,6 +93,19 @@ function App() {
       [...workspaceTabs].sort((a, b) => b.lastAccessedAt.getTime() - a.lastAccessedAt.getTime()),
     [workspaceTabs]
   );
+
+  // Unique project paths that need a persistent grid (sessions or pre-launch slots)
+  const projectPathsWithGrids = useMemo(() => {
+    const paths = new Set<string>();
+    for (const session of allSessions) {
+      paths.add(session.projectPath);
+    }
+    // Include active project when it has pre-launch slots (before any sessions exist)
+    if (activeProjectPath && preLaunchSlots.length > 0) {
+      paths.add(activeProjectPath);
+    }
+    return [...paths];
+  }, [allSessions, activeProjectPath, preLaunchSlots.length]);
 
   const hasContent = terminalSessions.length > 0 || preLaunchSlots.length > 0;
 
@@ -174,11 +157,11 @@ function App() {
   const handleResume = useCallback(
     async (sessionId: string) => {
       const session = useSessionStore.getState().sessions.find(s => s.id === sessionId);
-      if (!session?.claudeSessionId || !activeProjectPath) return;
+      if (!session?.claudeSessionId || !session.projectPath) return;
       try {
         const resumed = await resumeSession(
           session.claudeSessionId,
-          activeProjectPath,
+          session.projectPath,
           session.branch
         );
         if (resumed.terminalSessionId !== undefined) {
@@ -192,7 +175,7 @@ function App() {
         toast.error(msg);
       }
     },
-    [updateSession, activeProjectPath]
+    [updateSession]
   );
 
   // Open in editor handler
@@ -241,6 +224,19 @@ function App() {
     handleSelectTabByIndex,
   });
 
+  // Trigger refit when switching tabs so terminals recalculate dimensions.
+  // Use double-rAF to ensure CSS visibility change has painted before refitting.
+  useEffect(() => {
+    if (activeProjectPath) {
+      let rafId = requestAnimationFrame(() => {
+        rafId = requestAnimationFrame(() => {
+          window.dispatchEvent(new CustomEvent('terminal-refit-all'));
+        });
+      });
+      return () => cancelAnimationFrame(rafId);
+    }
+  }, [activeProjectPath]);
+
   return (
     <div
       data-testid="app-ready"
@@ -269,19 +265,21 @@ function App() {
       />
 
       <main className="flex-1 flex overflow-hidden bg-background">
-        {/* Main content area */}
-        <div className="flex-1 min-w-0">
-          {activeProjectPath ? (
-            hasContent ? (
-              <TerminalGrid
-                sessions={orderedTerminalSessions}
-                preLaunchSlots={preLaunchSlots}
-                launchingSlotIds={launchingSlotIds}
-                branches={branches}
-                worktreeMode={worktreeMode}
-                quickActions={quickActionsForTerminal}
-                focusedSessionId={focusedSessionId}
-                onFocusSession={handleFocusSession}
+        {/* Main content area — relative container for stacked persistent grids */}
+        <div className="flex-1 min-w-0 relative">
+          {/* Persistent terminal grids for all projects with sessions */}
+          {projectPathsWithGrids.map(projectPath => {
+            const isActiveGrid = projectPath === activeProjectPath;
+            return (
+              <PersistentProjectGrid
+                key={projectPath}
+                projectPath={projectPath}
+                isActive={isActiveGrid}
+                preLaunchSlots={isActiveGrid ? preLaunchSlots : undefined}
+                launchingSlotIds={isActiveGrid ? launchingSlotIds : undefined}
+                branches={isActiveGrid ? branches : undefined}
+                worktreeMode={isActiveGrid ? worktreeMode : undefined}
+                quickActions={isActiveGrid ? quickActionsForTerminal : undefined}
                 onAddSlot={handleAddSession}
                 onOpenLaunchModal={handleOpenLaunchModal}
                 onRemoveSlot={handleRemoveSlot}
@@ -292,13 +290,19 @@ function App() {
                 onQuickAction={handleQuickAction}
                 onResume={handleResume}
                 onOpenInEditor={handleOpenInEditor}
-                onReorderSessions={handleReorderSessions}
               />
-            ) : (
-              <IdleLandingView
-                onAddSession={handleAddSession}
-                onOpenLaunchModal={handleOpenLaunchModal}
-              />
+            );
+          })}
+
+          {/* Overlay views shown on top of grids when appropriate */}
+          {activeProjectPath ? (
+            !hasContent && (
+              <div className="absolute inset-0 z-20">
+                <IdleLandingView
+                  onAddSession={handleAddSession}
+                  onOpenLaunchModal={handleOpenLaunchModal}
+                />
+              </div>
             )
           ) : (
             <WelcomeView

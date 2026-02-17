@@ -22,5 +22,7 @@ export { SessionStatusDisplay } from './SessionStatusDisplay';
 
 export { ReconnectionOverlay } from './ReconnectionOverlay';
 
+export { PersistentProjectGrid } from './PersistentProjectGrid';
+
 export { GridPresetCard } from './GridPresetCard';
 export { LaunchPresetsModal } from './LaunchPresetsModal';

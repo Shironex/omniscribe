@@ -18,6 +18,8 @@ export interface QuickActionItem {
 interface TerminalCardProps {
   session: TerminalSession;
   quickActions: QuickActionItem[];
+  /** Whether this terminal's project tab is currently active/visible */
+  isActive?: boolean;
   isFocused: boolean;
   onFocus: (sessionId: string) => void;
   onKill: (sessionId: string) => void;
@@ -31,6 +33,7 @@ interface TerminalCardProps {
 export const TerminalCard = React.memo(function TerminalCard({
   session,
   quickActions,
+  isActive = true,
   isFocused,
   onFocus,
   onKill,
@@ -82,6 +85,7 @@ export const TerminalCard = React.memo(function TerminalCard({
           <TerminalErrorBoundary sessionId={session.terminalSessionId}>
             <TerminalView
               sessionId={session.terminalSessionId}
+              isActive={isActive}
               isFocused={isFocused}
               onClose={handleSessionClose}
             />

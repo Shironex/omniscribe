@@ -30,6 +30,8 @@ interface TerminalGridProps {
   /** Worktree mode — hides branch selector when 'never' */
   worktreeMode?: WorktreeMode;
   quickActions?: QuickActionItem[];
+  /** Whether this grid's project tab is currently active/visible */
+  isActive?: boolean;
   focusedSessionId: string | null;
   onFocusSession: (sessionId: string) => void;
   onAddSlot: () => void;
@@ -57,6 +59,7 @@ export function TerminalGrid({
   claudeAvailable,
   worktreeMode,
   quickActions = [],
+  isActive = true,
   focusedSessionId,
   onFocusSession,
   onAddSlot,
@@ -128,6 +131,7 @@ export function TerminalGrid({
       <TerminalCard
         session={session}
         quickActions={quickActions}
+        isActive={isActive}
         isFocused={focusedSessionId === session.id}
         onFocus={handleFocusSession}
         onKill={handleKill}

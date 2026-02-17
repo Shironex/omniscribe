@@ -7,6 +7,9 @@ const logger = createLogger('TerminalConnection');
 
 type TerminalStatus = 'connecting' | 'connected' | 'disconnected' | 'error';
 
+/** Max buffer size for hidden terminals to prevent unbounded growth (1MB) */
+const MAX_HIDDEN_BUFFER_SIZE = 1_048_576;
+
 export interface UseTerminalConnectionReturn {
   status: TerminalStatus;
   setStatus: React.Dispatch<React.SetStateAction<TerminalStatus>>;
@@ -14,6 +17,8 @@ export interface UseTerminalConnectionReturn {
   handleOutput: (data: string) => void;
   handleClose: (exitCode: number, signal?: number) => void;
   connectAndJoin: (sessionId: number) => void;
+  /** Flush any accumulated write buffer data (call when terminal becomes visible) */
+  flushBuffer: () => void;
 }
 
 /**
@@ -21,11 +26,16 @@ export interface UseTerminalConnectionReturn {
  * Uses requestAnimationFrame buffering to coalesce multiple socket events
  * into a single xterm.write() per frame, reducing CPU pressure from ~250
  * writes/sec to ~60 writes/sec.
+ *
+ * When `isActiveRef.current` is false (hidden terminal), RAF scheduling is
+ * paused and data accumulates in the write buffer. Call `flushBuffer()` when
+ * the terminal becomes visible to write all buffered data at once.
  */
 export function useTerminalConnection(
   xtermRef: React.MutableRefObject<Terminal | null>,
   isDisposedRef: React.MutableRefObject<boolean>,
-  onCloseRef: React.MutableRefObject<((exitCode: number, signal?: number) => void) | undefined>
+  onCloseRef: React.MutableRefObject<((exitCode: number, signal?: number) => void) | undefined>,
+  isActiveRef: React.MutableRefObject<boolean>
 ): UseTerminalConnectionReturn {
   const connectionRef = useRef<ReturnType<typeof connectTerminal> | null>(null);
   const [status, setStatus] = useState<TerminalStatus>('connecting');
@@ -49,13 +59,29 @@ export function useTerminalConnection(
     (data: string) => {
       if (isDisposedRef.current) return;
       writeBufferRef.current += data;
-      // Schedule a single flush per animation frame
-      if (rafIdRef.current === null) {
+
+      // Cap buffer size when hidden to prevent unbounded memory growth.
+      // Trim to a newline boundary to avoid splitting mid-line or mid-ANSI escape.
+      if (!isActiveRef.current && writeBufferRef.current.length > MAX_HIDDEN_BUFFER_SIZE) {
+        const trimmed = writeBufferRef.current.slice(-MAX_HIDDEN_BUFFER_SIZE);
+        const firstNewline = trimmed.indexOf('\n');
+        writeBufferRef.current = firstNewline > 0 ? trimmed.slice(firstNewline) : trimmed;
+      }
+
+      // Only schedule RAF when terminal is visible
+      if (isActiveRef.current && rafIdRef.current === null) {
         rafIdRef.current = requestAnimationFrame(flushWriteBuffer);
       }
     },
-    [isDisposedRef, flushWriteBuffer]
+    [isDisposedRef, isActiveRef, flushWriteBuffer]
   );
+
+  // Expose a method to flush the buffer (called when terminal becomes visible)
+  const flushBuffer = useCallback(() => {
+    if (writeBufferRef.current.length > 0 && rafIdRef.current === null && !isDisposedRef.current) {
+      rafIdRef.current = requestAnimationFrame(flushWriteBuffer);
+    }
+  }, [flushWriteBuffer, isDisposedRef]);
 
   // Clean up RAF on unmount
   useEffect(() => {
@@ -98,7 +124,7 @@ export function useTerminalConnection(
             if (success && scrollback && xtermRef.current && !isDisposedRef.current) {
               // Use buffered write for scrollback too
               writeBufferRef.current += scrollback;
-              if (rafIdRef.current === null) {
+              if (isActiveRef.current && rafIdRef.current === null) {
                 rafIdRef.current = requestAnimationFrame(flushWriteBuffer);
               }
             }
@@ -108,7 +134,7 @@ export function useTerminalConnection(
           });
       }
     },
-    [handleOutput, handleClose, xtermRef, isDisposedRef, flushWriteBuffer]
+    [handleOutput, handleClose, xtermRef, isDisposedRef, isActiveRef, flushWriteBuffer]
   );
 
   return {
@@ -118,5 +144,6 @@ export function useTerminalConnection(
     handleOutput,
     handleClose,
     connectAndJoin,
+    flushBuffer,
   };
 }
