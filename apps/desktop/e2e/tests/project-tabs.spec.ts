@@ -86,19 +86,18 @@ test.describe('Project Tabs', () => {
     await launchButton.click();
 
     // Wait for session card to appear in tab 1
-    await page.waitForSelector('[data-testid^="session-card-"]', { timeout: 30_000 });
-    const tab1Sessions = await page.locator('[data-testid^="session-card-"]').count();
+    // Use :visible to ignore hidden cards from inactive PersistentProjectGrids
+    const visibleCards = page.locator('[data-testid^="session-card-"]:visible');
+    await visibleCards.first().waitFor({ timeout: 30_000 });
+    const tab1Sessions = await visibleCards.count();
     expect(tab1Sessions).toBeGreaterThanOrEqual(1);
 
     // Switch to the second tab
     await tabLabels.nth(1).click();
-    await page.waitForFunction(
-      () => document.querySelectorAll('[data-testid^="session-card-"]').length === 0,
-      { timeout: 10_000 }
-    );
+    await expect(visibleCards).toHaveCount(0, { timeout: 10_000 });
 
-    // Verify: no session cards in tab 2 (sessions are scoped per project)
-    const tab2Sessions = await page.locator('[data-testid^="session-card-"]').count();
+    // Verify: no visible session cards in tab 2 (sessions are scoped per project)
+    const tab2Sessions = await visibleCards.count();
     expect(tab2Sessions).toBe(0);
 
     // Create a session in tab 2 (press N to add a pre-launch slot)
@@ -108,19 +107,16 @@ test.describe('Project Tabs', () => {
     await launchButton.click();
 
     // Wait for session card in tab 2
-    await page.waitForSelector('[data-testid^="session-card-"]', { timeout: 30_000 });
-    const tab2SessionsAfter = await page.locator('[data-testid^="session-card-"]').count();
+    await visibleCards.first().waitFor({ timeout: 30_000 });
+    const tab2SessionsAfter = await visibleCards.count();
     expect(tab2SessionsAfter).toBeGreaterThanOrEqual(1);
 
     // Switch back to tab 1
     await tabLabels.nth(0).click();
-    await page.waitForFunction(
-      () => document.querySelectorAll('[data-testid^="session-card-"]').length >= 1,
-      { timeout: 10_000 }
-    );
+    await visibleCards.first().waitFor({ timeout: 10_000 });
 
     // Verify: tab 1's session is still visible
-    const tab1SessionsAfter = await page.locator('[data-testid^="session-card-"]').count();
+    const tab1SessionsAfter = await visibleCards.count();
     expect(tab1SessionsAfter).toBeGreaterThanOrEqual(1);
   });
 });
