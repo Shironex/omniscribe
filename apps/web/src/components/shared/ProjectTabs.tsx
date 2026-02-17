@@ -171,7 +171,7 @@ export function ProjectTabs({
           {draggedTab ? (
             <div
               className={cn(
-                'no-drag flex items-center gap-2 px-3 h-9 min-w-0',
+                'no-drag flex items-center gap-2 px-3 h-11 min-w-0',
                 'bg-card text-foreground border border-border rounded shadow-lg'
               )}
             >

@@ -274,9 +274,19 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
           logger.debug('reorderTabs', tabIds);
           const previousTabs = get().tabs;
 
-          // Optimistic reorder
+          // Optimistic reorder (mirrors backend safety net: appends missing tabs)
           const tabMap = new Map(previousTabs.map(t => [t.id, t]));
-          const reordered = tabIds.map(id => tabMap.get(id)).filter(Boolean) as ProjectTab[];
+          const reordered: ProjectTab[] = [];
+          for (const id of tabIds) {
+            const tab = tabMap.get(id);
+            if (tab) {
+              reordered.push(tab);
+              tabMap.delete(id);
+            }
+          }
+          for (const tab of tabMap.values()) {
+            reordered.push(tab);
+          }
           set({ tabs: reordered }, undefined, 'workspace/reorderTabsOptimistic');
 
           getSocket().emit(WorkspaceEvents.REORDER_TABS, { tabIds }, (response: TabsResponse) => {
