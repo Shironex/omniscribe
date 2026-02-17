@@ -2,6 +2,32 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.10.0 (2026-02-17)
+
+### Features
+
+- **Preserve terminal output on tab switch** — Terminal instances are now hidden via CSS instead of destroyed when switching project tabs, eliminating output loss; hidden terminals pause rendering to save CPU/GPU and flush buffered output on restore (#165)
+- **Open in Editor** — New "Open in Editor" option in the session terminal dropdown menu opens the session's worktree path (or project root) in your preferred code editor (#157, closes #62)
+- **Auto-detect editor for file links** — Automatically detects installed editors (VS Code, VS Code Insiders, Cursor) and uses the correct protocol for clickable file path links in terminal output; configurable in Settings > Terminal (#156)
+
+### Bug Fixes
+
+- **Session status stuck at Done** — Expanded state machine transitions so `finished`, `error`, and `disconnected` states can transition back to active states, fixing the UI staying stuck at "Done" when Claude resumes work via MCP status updates (#164)
+
+### Performance
+
+- **Backend scrollback buffer** — Increased from 50KB to 500KB per session as a safety net for edge cases; hidden terminal write buffer capped at 1MB to prevent unbounded memory growth (#165)
+
+### Dependencies
+
+- Upgrade `vitest` from v3 to v4 and `jsdom` from v25 to v28 (#163)
+- Bump `lucide-react`, `react-resizable-panels`, and `tailwind-merge` to latest (#163)
+
+### Stats
+
+- 5 PRs merged
+- 42 files changed — +1,698 / −602 lines
+
 ## 0.9.0 (2026-02-15)
 
 ### Features
