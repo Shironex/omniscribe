@@ -109,14 +109,14 @@ describe('useWorkspaceTabs', () => {
   // ---- tab status ----
 
   describe('tab status', () => {
-    it('is idle when there are no sessions', () => {
+    it('is undefined when there are no sessions', () => {
       setupTabs();
       mockSessions = [];
 
       const { result } = renderHook(() => useWorkspaceTabs());
 
-      expect(result.current.tabs[0].status).toBe('idle');
-      expect(result.current.tabs[1].status).toBe('idle');
+      expect(result.current.tabs[0].status).toBeUndefined();
+      expect(result.current.tabs[1].status).toBeUndefined();
     });
 
     it('is idle when all sessions for the project are idle', () => {
@@ -167,22 +167,85 @@ describe('useWorkspaceTabs', () => {
       expect(result.current.tabs[0].status).toBe('working');
     });
 
-    it('is working when a session has needs_input status', () => {
+    it('is needsInput when a session has needs_input status', () => {
       setupTabs();
       mockSessions = [{ id: 's1', projectPath: '/path/a', status: 'needs_input' }];
 
       const { result } = renderHook(() => useWorkspaceTabs());
 
-      expect(result.current.tabs[0].status).toBe('working');
+      expect(result.current.tabs[0].status).toBe('needsInput');
     });
 
-    it('is working when a session has error status', () => {
+    it('is error when a session has error status', () => {
       setupTabs();
       mockSessions = [{ id: 's1', projectPath: '/path/a', status: 'error' }];
 
       const { result } = renderHook(() => useWorkspaceTabs());
 
-      expect(result.current.tabs[0].status).toBe('working');
+      expect(result.current.tabs[0].status).toBe('error');
+    });
+
+    it('is done when a session has finished status', () => {
+      setupTabs();
+      mockSessions = [{ id: 's1', projectPath: '/path/a', status: 'finished' }];
+
+      const { result } = renderHook(() => useWorkspaceTabs());
+
+      expect(result.current.tabs[0].status).toBe('done');
+    });
+
+    it('is starting when a session has connecting status', () => {
+      setupTabs();
+      mockSessions = [{ id: 's1', projectPath: '/path/a', status: 'connecting' }];
+
+      const { result } = renderHook(() => useWorkspaceTabs());
+
+      expect(result.current.tabs[0].status).toBe('starting');
+    });
+
+    it('is planning when a session has planning status', () => {
+      setupTabs();
+      mockSessions = [{ id: 's1', projectPath: '/path/a', status: 'planning' }];
+
+      const { result } = renderHook(() => useWorkspaceTabs());
+
+      expect(result.current.tabs[0].status).toBe('planning');
+    });
+
+    it('shows error over working when both exist (priority)', () => {
+      setupTabs();
+      mockSessions = [
+        { id: 's1', projectPath: '/path/a', status: 'working' },
+        { id: 's2', projectPath: '/path/a', status: 'error' },
+      ];
+
+      const { result } = renderHook(() => useWorkspaceTabs());
+
+      expect(result.current.tabs[0].status).toBe('error');
+    });
+
+    it('shows needsInput over working when both exist (priority)', () => {
+      setupTabs();
+      mockSessions = [
+        { id: 's1', projectPath: '/path/a', status: 'working' },
+        { id: 's2', projectPath: '/path/a', status: 'needs_input' },
+      ];
+
+      const { result } = renderHook(() => useWorkspaceTabs());
+
+      expect(result.current.tabs[0].status).toBe('needsInput');
+    });
+
+    it('shows done over idle when both exist (priority)', () => {
+      setupTabs();
+      mockSessions = [
+        { id: 's1', projectPath: '/path/a', status: 'idle' },
+        { id: 's2', projectPath: '/path/a', status: 'finished' },
+      ];
+
+      const { result } = renderHook(() => useWorkspaceTabs());
+
+      expect(result.current.tabs[0].status).toBe('done');
     });
 
     it('only considers sessions matching the tab projectPath', () => {
@@ -206,8 +269,8 @@ describe('useWorkspaceTabs', () => {
 
       const { result } = renderHook(() => useWorkspaceTabs());
 
-      expect(result.current.tabs[0].status).toBe('idle');
-      expect(result.current.tabs[1].status).toBe('idle');
+      expect(result.current.tabs[0].status).toBeUndefined();
+      expect(result.current.tabs[1].status).toBeUndefined();
     });
   });
 

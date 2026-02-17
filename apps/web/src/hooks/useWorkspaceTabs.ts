@@ -1,12 +1,21 @@
 import { useCallback, useMemo } from 'react';
 import { arrayMove } from '@dnd-kit/sortable';
-import { createLogger } from '@omniscribe/shared';
+import { createLogger, mapSessionStatus, type UISessionStatus } from '@omniscribe/shared';
 import { useWorkspaceStore, type ProjectTab } from '@/stores/useWorkspaceStore';
 import { useSessionStore } from '@/stores/useSessionStore';
 import type { Tab } from '@/components';
-import type { UISessionStatus } from '@omniscribe/shared';
 
 const logger = createLogger('WorkspaceTabs');
+
+const STATUS_PRIORITY: Record<UISessionStatus, number> = {
+  idle: 0,
+  done: 1,
+  starting: 2,
+  planning: 3,
+  working: 4,
+  needsInput: 5,
+  error: 6,
+};
 
 interface UseWorkspaceTabsReturn {
   /** All workspace tabs in UI format */
@@ -55,17 +64,21 @@ export function useWorkspaceTabs(): UseWorkspaceTabsReturn {
   // Convert workspace tabs to UI tabs format
   const tabs: Tab[] = useMemo(() => {
     return workspaceTabs.map(tab => {
-      // Count sessions for this project
       const projectSessions = sessions.filter(s => s.projectPath === tab.projectPath);
-      const hasActive = projectSessions.some(
-        s => s.status !== 'idle' && s.status !== 'disconnected'
-      );
+      if (projectSessions.length === 0) {
+        return { id: tab.id, label: tab.name, status: undefined };
+      }
 
-      return {
-        id: tab.id,
-        label: tab.name,
-        status: hasActive ? ('working' as UISessionStatus) : ('idle' as UISessionStatus),
-      };
+      // Pick the highest-priority status across all sessions
+      let topStatus: UISessionStatus = 'idle';
+      for (const session of projectSessions) {
+        const uiStatus = mapSessionStatus(session.status);
+        if (STATUS_PRIORITY[uiStatus] > STATUS_PRIORITY[topStatus]) {
+          topStatus = uiStatus;
+        }
+      }
+
+      return { id: tab.id, label: tab.name, status: topStatus };
     });
   }, [workspaceTabs, sessions]);
 
