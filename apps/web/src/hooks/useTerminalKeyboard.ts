@@ -1,8 +1,9 @@
 import { useCallback } from 'react';
-import { createLogger, stripAnsiCodes } from '@omniscribe/shared';
+import { createLogger } from '@omniscribe/shared';
 import type { Terminal } from '@xterm/xterm';
 import { toast } from 'sonner';
 import { writeToTerminal, writeToTerminalChunked } from '@/lib/terminal';
+import { copyTerminalSelection } from '@/lib/terminal-clipboard';
 import { LARGE_PASTE_WARNING_THRESHOLD } from '@/lib/terminal-constants';
 import { IS_MAC } from '@/lib/platform';
 
@@ -22,20 +23,6 @@ function pasteFromClipboard(sessionIdRef: React.MutableRefObject<number>): void 
     .catch(() => {
       logger.debug('Clipboard read failed (permission denied or unavailable)');
     });
-}
-
-function copySelection(terminal: Terminal): void {
-  const raw = terminal.getSelection();
-  const clean = stripAnsiCodes(raw);
-  navigator.clipboard
-    .writeText(clean)
-    .then(() => {
-      toast.success('Copied to clipboard');
-    })
-    .catch(() => {
-      toast.error('Failed to copy to clipboard');
-    });
-  terminal.clearSelection();
 }
 
 /**
@@ -62,7 +49,7 @@ export function useTerminalKeyboard(
         // Primary+C: copy if selected, otherwise use default handling
         if (isPrimaryModifier && !e.shiftKey && key === 'c' && e.type === 'keydown') {
           if (terminal.hasSelection()) {
-            copySelection(terminal);
+            copyTerminalSelection(terminal);
             return false;
           }
           return true;
@@ -77,7 +64,7 @@ export function useTerminalKeyboard(
         // Ctrl+Shift+C/V: Linux-style copy/paste
         if (e.ctrlKey && e.shiftKey && key === 'c' && e.type === 'keydown') {
           if (terminal.hasSelection()) {
-            copySelection(terminal);
+            copyTerminalSelection(terminal);
           }
           return false;
         }

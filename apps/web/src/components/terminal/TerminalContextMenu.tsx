@@ -2,8 +2,8 @@ import { useEffect, useRef, useCallback } from 'react';
 import type { Terminal } from '@xterm/xterm';
 import { Copy, ClipboardPaste, MousePointerClick, Eraser } from 'lucide-react';
 import { toast } from 'sonner';
-import { stripAnsiCodes } from '@omniscribe/shared';
 import { writeToTerminal, writeToTerminalChunked } from '@/lib/terminal';
+import { copyTerminalSelection } from '@/lib/terminal-clipboard';
 import { LARGE_PASTE_WARNING_THRESHOLD } from '@/lib/terminal-constants';
 import { cn } from '@/lib/utils';
 
@@ -33,14 +33,7 @@ export function TerminalContextMenu({
   const handleCopy = useCallback(() => {
     const terminal = xtermRef.current;
     if (!terminal?.hasSelection()) return;
-
-    const raw = terminal.getSelection();
-    const clean = stripAnsiCodes(raw);
-    navigator.clipboard
-      .writeText(clean)
-      .then(() => toast.success('Copied to clipboard'))
-      .catch(() => toast.error('Failed to copy to clipboard'));
-    terminal.clearSelection();
+    copyTerminalSelection(terminal);
     onClose();
   }, [xtermRef, onClose]);
 
@@ -57,8 +50,10 @@ export function TerminalContextMenu({
       })
       .catch(() => {
         toast.error('Failed to read clipboard');
+      })
+      .finally(() => {
+        onClose();
       });
-    onClose();
   }, [sessionIdRef, onClose]);
 
   const handleSelectAll = useCallback(() => {
@@ -126,9 +121,10 @@ export function TerminalContextMenu({
 
   // Clamp position to keep menu within viewport
   const menuWidth = 160;
-  const menuHeight = actions.length * 32 + 8; // approximate
-  const x = Math.min(position.x, window.innerWidth - menuWidth - 8);
-  const y = Math.min(position.y, window.innerHeight - menuHeight - 8);
+  const separatorCount = actions.filter((a, i) => a.separator && i > 0).length;
+  const menuHeight = actions.length * 32 + separatorCount * 9 + 8;
+  const x = Math.max(8, Math.min(position.x, window.innerWidth - menuWidth - 8));
+  const y = Math.max(8, Math.min(position.y, window.innerHeight - menuHeight - 8));
 
   return (
     <div

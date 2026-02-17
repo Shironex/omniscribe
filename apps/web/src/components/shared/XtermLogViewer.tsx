@@ -38,17 +38,21 @@ export const XtermLogViewer = forwardRef<XtermLogViewerHandle, XtermLogViewerPro
     const settings = useTerminalSettings();
 
     // Expose imperative API
-    useImperativeHandle(ref, () => ({
-      append(data: string) {
-        terminalRef.current?.write(data);
-      },
-      clear() {
-        terminalRef.current?.clear();
-      },
-      scrollToBottom() {
-        terminalRef.current?.scrollToBottom();
-      },
-    }));
+    useImperativeHandle(
+      ref,
+      () => ({
+        append(data: string) {
+          terminalRef.current?.write(data);
+        },
+        clear() {
+          terminalRef.current?.clear();
+        },
+        scrollToBottom() {
+          terminalRef.current?.scrollToBottom();
+        },
+      }),
+      []
+    );
 
     // Initialize terminal
     useEffect(() => {
@@ -111,8 +115,7 @@ export const XtermLogViewer = forwardRef<XtermLogViewerHandle, XtermLogViewerPro
         terminalRef.current = null;
         fitAddonRef.current = null;
       };
-      // Only run once on mount — settings changes are applied in a separate effect
-    }, []);
+    }, []); // Intentionally empty — run once on mount; settings changes are applied in a separate effect
 
     // Apply settings changes live
     useEffect(() => {

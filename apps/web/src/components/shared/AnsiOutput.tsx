@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { cn } from '@/lib/utils';
 
 /** A styled text segment produced by parsing ANSI escape codes */
 interface AnsiSegment {
@@ -41,7 +42,10 @@ function color256ToHex(index: number): string | undefined {
     const r = Math.floor(i / 36);
     const g = Math.floor((i % 36) / 6);
     const b = i % 6;
-    const toHex = (v: number) => (v === 0 ? 0 : 55 + v * 40).toString(16).padStart(2, '0');
+    const toHex = (v: number) => {
+      const value = v === 0 ? 0 : 55 + v * 40;
+      return value.toString(16).padStart(2, '0');
+    };
     return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
   }
 
@@ -73,8 +77,13 @@ function applySgr(params: number[], state: StyleState): StyleState {
     const code = params[i];
 
     if (code === 0) {
-      // Reset
-      return {};
+      // Reset: clear all style properties and continue processing remaining params
+      delete next.color;
+      delete next.backgroundColor;
+      delete next.fontWeight;
+      delete next.fontStyle;
+      delete next.textDecoration;
+      delete next.opacity;
     } else if (code === 1) {
       next.fontWeight = 'bold';
     } else if (code === 2) {
@@ -181,7 +190,7 @@ export function AnsiOutput({ text, className }: AnsiOutputProps) {
   const segments = useMemo(() => parseAnsi(text), [text]);
 
   return (
-    <span className={className}>
+    <span className={cn('whitespace-pre-wrap', className)}>
       {segments.map((seg, i) => (
         <span key={i} style={seg.style}>
           {seg.text}

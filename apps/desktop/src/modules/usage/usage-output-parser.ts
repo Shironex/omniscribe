@@ -1,7 +1,4 @@
-import type { ClaudeUsage } from '@omniscribe/shared';
-import { stripAnsiCodes } from '@omniscribe/shared';
-
-export { stripAnsiCodes };
+import { type ClaudeUsage, stripAnsiCodes } from '@omniscribe/shared';
 
 /** Valid usage section types */
 type UsageType = 'session' | 'weekly' | 'sonnet';
