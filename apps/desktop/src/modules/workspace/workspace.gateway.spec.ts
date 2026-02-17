@@ -90,6 +90,7 @@ describe('WorkspaceGateway', () => {
       updateTabTheme: jest.fn().mockReturnValue([]),
       removeTab: jest.fn().mockReturnValue({ tabs: [], activeTabId: null }),
       selectTab: jest.fn().mockReturnValue([]),
+      reorderTabs: jest.fn().mockReturnValue([]),
       setPreference: jest.fn().mockReturnValue({ theme: 'dark' }),
       getPreferences: jest.fn().mockReturnValue({ theme: 'dark' }),
     } as unknown as jest.Mocked<WorkspaceService>;
@@ -518,6 +519,38 @@ describe('WorkspaceGateway', () => {
       expect((client.broadcast as any).emit).toHaveBeenCalledWith('workspace:tabs-updated', {
         tabs,
         activeTabId: 'tab-2',
+      });
+    });
+  });
+
+  // =========================================================================
+  // handleReorderTabs
+  // =========================================================================
+
+  describe('handleReorderTabs', () => {
+    it('should reorder tabs via workspaceService', () => {
+      const client = createMockSocket();
+      const tabs = [makeTab({ id: 'tab-2' }), makeTab({ id: 'tab-1' })];
+      workspaceService.reorderTabs.mockReturnValue(tabs);
+      workspaceService.getActiveTabId.mockReturnValue('tab-1');
+
+      const result = gateway.handleReorderTabs({ tabIds: ['tab-2', 'tab-1'] }, client);
+
+      expect(workspaceService.reorderTabs).toHaveBeenCalledWith(['tab-2', 'tab-1']);
+      expect(result).toEqual({ success: true, tabs, activeTabId: 'tab-1' });
+    });
+
+    it('should broadcast to other clients', () => {
+      const client = createMockSocket();
+      const tabs = [makeTab({ id: 'tab-2' }), makeTab({ id: 'tab-1' })];
+      workspaceService.reorderTabs.mockReturnValue(tabs);
+      workspaceService.getActiveTabId.mockReturnValue('tab-1');
+
+      gateway.handleReorderTabs({ tabIds: ['tab-2', 'tab-1'] }, client);
+
+      expect((client.broadcast as any).emit).toHaveBeenCalledWith('workspace:tabs-updated', {
+        tabs,
+        activeTabId: 'tab-1',
       });
     });
   });

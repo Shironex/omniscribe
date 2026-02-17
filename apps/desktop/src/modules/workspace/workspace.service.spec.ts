@@ -162,6 +162,71 @@ describe('WorkspaceService', () => {
 
       expect(tabs[0].theme).toBe('monokai');
     });
+
+    it('should reorder tabs', () => {
+      service.addTab(mockTab);
+      service.addTab({
+        id: 'tab-2',
+        projectPath: '/project/two',
+        name: 'Project Two',
+        sessionIds: [],
+        isActive: false,
+        lastAccessedAt: new Date().toISOString(),
+      });
+      service.addTab({
+        id: 'tab-3',
+        projectPath: '/project/three',
+        name: 'Project Three',
+        sessionIds: [],
+        isActive: false,
+        lastAccessedAt: new Date().toISOString(),
+      });
+
+      const tabs = service.reorderTabs(['tab-3', 'tab-1', 'tab-2']);
+
+      expect(tabs.map(t => t.id)).toEqual(['tab-3', 'tab-1', 'tab-2']);
+    });
+
+    it('should append missing tabs when reordering with partial list', () => {
+      service.addTab(mockTab);
+      service.addTab({
+        id: 'tab-2',
+        projectPath: '/project/two',
+        name: 'Project Two',
+        sessionIds: [],
+        isActive: false,
+        lastAccessedAt: new Date().toISOString(),
+      });
+      service.addTab({
+        id: 'tab-3',
+        projectPath: '/project/three',
+        name: 'Project Three',
+        sessionIds: [],
+        isActive: false,
+        lastAccessedAt: new Date().toISOString(),
+      });
+
+      // Only include tab-3 and tab-1, tab-2 should be appended
+      const tabs = service.reorderTabs(['tab-3', 'tab-1']);
+
+      expect(tabs.map(t => t.id)).toEqual(['tab-3', 'tab-1', 'tab-2']);
+    });
+
+    it('should ignore unknown tab IDs when reordering', () => {
+      service.addTab(mockTab);
+      service.addTab({
+        id: 'tab-2',
+        projectPath: '/project/two',
+        name: 'Project Two',
+        sessionIds: [],
+        isActive: false,
+        lastAccessedAt: new Date().toISOString(),
+      });
+
+      const tabs = service.reorderTabs(['tab-2', 'nonexistent', 'tab-1']);
+
+      expect(tabs.map(t => t.id)).toEqual(['tab-2', 'tab-1']);
+    });
   });
 
   describe('quick actions', () => {

@@ -39,6 +39,7 @@ function App() {
     handleCloseTab,
     handleNewTab,
     handleSelectDirectory,
+    handleReorderTabs,
   } = useWorkspaceTabs();
 
   const { branches, currentBranch } = useProjectGit(activeProjectPath);
@@ -248,6 +249,7 @@ function App() {
         onSelectTab={handleSelectTab}
         onCloseTab={handleCloseTab}
         onNewTab={handleNewTab}
+        onReorderTabs={handleReorderTabs}
         currentBranch={currentBranch}
         statusCounts={statusCounts}
         onAddSlot={handleAddSession}

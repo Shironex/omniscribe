@@ -1,4 +1,5 @@
 import { useCallback, useMemo } from 'react';
+import { arrayMove } from '@dnd-kit/sortable';
 import { createLogger } from '@omniscribe/shared';
 import { useWorkspaceStore, type ProjectTab } from '@/stores/useWorkspaceStore';
 import { useSessionStore } from '@/stores/useSessionStore';
@@ -24,6 +25,8 @@ interface UseWorkspaceTabsReturn {
   handleNewTab: () => void;
   /** Handler to select a directory */
   handleSelectDirectory: () => Promise<void>;
+  /** Handler to reorder tabs via drag-and-drop */
+  handleReorderTabs: (activeId: string, overId: string) => void;
 }
 
 /**
@@ -37,6 +40,7 @@ export function useWorkspaceTabs(): UseWorkspaceTabsReturn {
   const openProject = useWorkspaceStore(state => state.openProject);
   const closeWorkspaceTab = useWorkspaceStore(state => state.closeTab);
   const selectWorkspaceTab = useWorkspaceStore(state => state.selectTab);
+  const reorderWorkspaceTabs = useWorkspaceStore(state => state.reorderTabs);
 
   // Session store for status
   const sessions = useSessionStore(state => state.sessions);
@@ -114,6 +118,19 @@ export function useWorkspaceTabs(): UseWorkspaceTabsReturn {
     handleSelectDirectory();
   }, [handleSelectDirectory]);
 
+  const handleReorderTabs = useCallback(
+    (activeId: string, overId: string) => {
+      const tabIds = workspaceTabs.map(t => t.id);
+      const oldIndex = tabIds.indexOf(activeId);
+      const newIndex = tabIds.indexOf(overId);
+      if (oldIndex === -1 || newIndex === -1) return;
+
+      const newOrder = arrayMove(tabIds, oldIndex, newIndex);
+      reorderWorkspaceTabs(newOrder);
+    },
+    [workspaceTabs, reorderWorkspaceTabs]
+  );
+
   return {
     tabs,
     activeTabId: activeWorkspaceTabId,
@@ -123,5 +140,6 @@ export function useWorkspaceTabs(): UseWorkspaceTabsReturn {
     handleCloseTab,
     handleNewTab,
     handleSelectDirectory,
+    handleReorderTabs,
   };
 }

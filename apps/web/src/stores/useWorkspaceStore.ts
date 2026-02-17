@@ -61,6 +61,8 @@ interface WorkspaceActions extends SocketStoreActions {
   selectTab: (tabId: string) => void;
   /** Update a tab's theme */
   updateTabTheme: (tabId: string, theme: Theme) => void;
+  /** Reorder tabs */
+  reorderTabs: (tabIds: string[]) => void;
   /** Add a session to a tab */
   addSessionToTab: (tabId: string, sessionId: string) => void;
   /** Remove a session from a tab */
@@ -264,6 +266,33 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
               // Rollback on failure - restore previous active tab
               logger.warn('selectTab rollback for', tabId);
               set({ activeTabId: previousTabId }, undefined, 'workspace/selectTabRollback');
+            }
+          });
+        },
+
+        reorderTabs: (tabIds: string[]) => {
+          logger.debug('reorderTabs', tabIds);
+          const previousTabs = get().tabs;
+
+          // Optimistic reorder
+          const tabMap = new Map(previousTabs.map(t => [t.id, t]));
+          const reordered = tabIds.map(id => tabMap.get(id)).filter(Boolean) as ProjectTab[];
+          set({ tabs: reordered }, undefined, 'workspace/reorderTabsOptimistic');
+
+          getSocket().emit(WorkspaceEvents.REORDER_TABS, { tabIds }, (response: TabsResponse) => {
+            if (response.success) {
+              set(
+                {
+                  tabs: response.tabs.map(convertBackendTab),
+                  activeTabId: response.activeTabId,
+                },
+                undefined,
+                'workspace/reorderTabs'
+              );
+            } else {
+              // Rollback on failure
+              logger.warn('reorderTabs rollback');
+              set({ tabs: previousTabs }, undefined, 'workspace/reorderTabsRollback');
             }
           });
         },
