@@ -19,6 +19,7 @@ import {
   UpdateTabThemePayload,
   RemoveTabPayload,
   SelectTabPayload,
+  ReorderTabsPayload,
   SaveStatePayload,
   UpdatePreferencePayload,
   ExecuteQuickActionPayload,
@@ -307,6 +308,29 @@ export class WorkspaceGateway implements OnGatewayInit {
     });
 
     return { success: true, tabs, activeTabId: payload.tabId };
+  }
+
+  /**
+   * Handle reorder tabs request
+   */
+  @SkipThrottle()
+  @SubscribeMessage(WorkspaceEvents.REORDER_TABS)
+  handleReorderTabs(
+    @MessageBody() payload: ReorderTabsPayload,
+    @ConnectedSocket() client: Socket
+  ): TabsResponse {
+    this.logger.debug(`[workspace:reorder-tabs] tabIds=${payload.tabIds.join(',')}`);
+
+    const tabs = this.workspaceService.reorderTabs(payload.tabIds);
+    const activeTabId = this.workspaceService.getActiveTabId();
+
+    // Broadcast tab update to all other clients
+    client.broadcast.emit(WorkspaceEvents.TABS_UPDATED, {
+      tabs,
+      activeTabId,
+    });
+
+    return { success: true, tabs, activeTabId };
   }
 
   /**

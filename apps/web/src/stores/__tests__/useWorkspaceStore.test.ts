@@ -330,6 +330,57 @@ describe('useWorkspaceStore', () => {
     });
   });
 
+  describe('reorderTabs', () => {
+    it('emits reorder-tabs event via socket', () => {
+      mockSocket.emit.mockImplementation(
+        (_event: string, _payload: unknown, callback?: (response: unknown) => void) => {
+          callback?.({ success: true, tabs: [], activeTabId: null });
+        }
+      );
+
+      useWorkspaceStore.getState().reorderTabs(['tab-2', 'tab-1']);
+
+      expect(mockSocket.emit).toHaveBeenCalledWith(
+        'workspace:reorder-tabs',
+        { tabIds: ['tab-2', 'tab-1'] },
+        expect.any(Function)
+      );
+    });
+
+    it('optimistically reorders tabs before socket response', () => {
+      const tab1 = createMockTab({ id: 'tab-1', name: 'First' });
+      const tab2 = createMockTab({ id: 'tab-2', name: 'Second' });
+      useWorkspaceStore.setState({ tabs: [tab1, tab2] });
+
+      // emit never calls callback
+      mockSocket.emit.mockImplementation(() => {});
+
+      useWorkspaceStore.getState().reorderTabs(['tab-2', 'tab-1']);
+
+      const tabs = useWorkspaceStore.getState().tabs;
+      expect(tabs[0].id).toBe('tab-2');
+      expect(tabs[1].id).toBe('tab-1');
+    });
+
+    it('rolls back on failure', () => {
+      const tab1 = createMockTab({ id: 'tab-1', name: 'First' });
+      const tab2 = createMockTab({ id: 'tab-2', name: 'Second' });
+      useWorkspaceStore.setState({ tabs: [tab1, tab2] });
+
+      mockSocket.emit.mockImplementation(
+        (_event: string, _payload: unknown, callback: (response: unknown) => void) => {
+          callback({ success: false });
+        }
+      );
+
+      useWorkspaceStore.getState().reorderTabs(['tab-2', 'tab-1']);
+
+      const tabs = useWorkspaceStore.getState().tabs;
+      expect(tabs[0].id).toBe('tab-1');
+      expect(tabs[1].id).toBe('tab-2');
+    });
+  });
+
   describe('restoreState', () => {
     it('restores tabs and preferences from server', async () => {
       const tabDTO = {

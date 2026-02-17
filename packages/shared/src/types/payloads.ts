@@ -480,6 +480,13 @@ export interface SelectTabPayload {
   tabId: string;
 }
 
+/**
+ * Payload for reordering tabs
+ */
+export interface ReorderTabsPayload {
+  tabIds: string[];
+}
+
 // ============================================
 // Tab Responses
 // ============================================

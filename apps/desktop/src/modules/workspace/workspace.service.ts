@@ -385,6 +385,32 @@ export class WorkspaceService implements OnModuleInit {
   }
 
   /**
+   * Reorder tabs to match the given ID order
+   */
+  reorderTabs(tabIds: string[]): ProjectTabDTO[] {
+    this.logger.debug(`[reorderTabs] newOrder=${tabIds.join(',')}`);
+    const tabs = this.getTabs();
+    const tabMap = new Map(tabs.map(t => [t.id, t]));
+    const reordered: ProjectTabDTO[] = [];
+
+    for (const id of tabIds) {
+      const tab = tabMap.get(id);
+      if (tab) {
+        reordered.push(tab);
+        tabMap.delete(id);
+      }
+    }
+
+    // Append any tabs not in the provided list (safety net)
+    for (const tab of tabMap.values()) {
+      reordered.push(tab);
+    }
+
+    this.setTabs(reordered);
+    return reordered;
+  }
+
+  /**
    * Update a tab's theme
    */
   updateTabTheme(tabId: string, theme: string): ProjectTabDTO[] {

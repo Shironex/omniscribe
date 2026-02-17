@@ -18,6 +18,7 @@ interface TopBarProps {
   onSelectTab: (tabId: string) => void;
   onCloseTab: (tabId: string) => void;
   onNewTab: () => void;
+  onReorderTabs?: (activeId: string, overId: string) => void;
   // Status props
   currentBranch: string;
   statusCounts?: Partial<StatusCounts>;
@@ -44,6 +45,7 @@ export function TopBar({
   onSelectTab,
   onCloseTab,
   onNewTab,
+  onReorderTabs,
   currentBranch,
   statusCounts,
   onAddSlot,
@@ -77,6 +79,7 @@ export function TopBar({
         onSelectTab={onSelectTab}
         onCloseTab={onCloseTab}
         onNewTab={onNewTab}
+        onReorderTabs={onReorderTabs}
         closeTabShortcut={CLOSE_TAB_SHORTCUT}
       />
 
