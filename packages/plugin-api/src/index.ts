@@ -60,6 +60,32 @@ export type {
 export type { AiProviderPlugin, ProviderPluginContext } from './types/provider';
 
 // ==========================================
+// Frontend Plugin Types
+// ==========================================
+export type {
+  PluginComponentType,
+  FrontendPlugin,
+  FrontendPluginContext,
+  SettingsSectionRegistration,
+  SettingsCategoryRegistration,
+  SessionStatusRendererRegistration,
+  SessionStatusProps,
+  UsagePanelRegistration,
+  UsagePanelProps,
+  TerminalHeaderActionRegistration,
+  ActionBarItemRegistration,
+  MoreMenuItemRegistration,
+  TerminalActionContext,
+} from './types/frontend';
+
+// ==========================================
+// Theme Types
+// ==========================================
+export type { ThemeRegistration } from './types/theme';
+
+// ==========================================
 // Base Classes
 // ==========================================
 export { BaseProviderPlugin } from './base/BaseProviderPlugin';
+export { BaseFrontendPlugin } from './base/BaseFrontendPlugin';
+export { BaseFullPlugin } from './base/BaseFullPlugin';
