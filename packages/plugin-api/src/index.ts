@@ -89,3 +89,10 @@ export type { ThemeRegistration } from './types/theme';
 export { BaseProviderPlugin } from './base/BaseProviderPlugin';
 export { BaseFrontendPlugin } from './base/BaseFrontendPlugin';
 export { BaseFullPlugin } from './base/BaseFullPlugin';
+
+// ==========================================
+// Utility Functions
+// ==========================================
+export { isProviderPlugin, isFrontendPlugin, isFullPlugin } from './utils/type-guards';
+export { hasCapability, supportsOperation, getCapabilities } from './utils/capability';
+export { validateManifest } from './utils/validation';
