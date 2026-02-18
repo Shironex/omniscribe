@@ -1,9 +1,10 @@
-import { Monitor, AlertTriangle, RotateCcw, FlaskConical } from 'lucide-react';
+import { type ComponentType } from 'react';
+import { Monitor, AlertTriangle, RotateCcw, FlaskConical, Bot } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useWorkspaceStore } from '@/stores';
+import { usePluginStore } from '@/stores/usePluginStore';
 import type { AiMode, SessionSettings } from '@omniscribe/shared';
 import { DEFAULT_SESSION_SETTINGS } from '@omniscribe/shared';
-import { ClaudeIcon } from '@/components/shared/ClaudeIcon';
 
 const AI_MODE_OPTIONS: {
   value: AiMode;
@@ -22,9 +23,31 @@ const AI_MODE_OPTIONS: {
   },
 ];
 
+/**
+ * Get the icon component for an AI mode from registered status renderers.
+ * Falls back to Bot icon for provider modes and Monitor for plain.
+ */
+function getModeIcon(
+  mode: string,
+  statusRenderers: Map<string, { aiMode: string; component: unknown; pluginId: string }>
+): ComponentType<{ className?: string; size?: string | number }> {
+  if (mode === 'plain') return Monitor;
+
+  // Check for a registered status renderer component (e.g., ClaudeStatusRenderer)
+  for (const [, reg] of statusRenderers) {
+    if (reg.aiMode === mode) {
+      return reg.component as ComponentType<{ className?: string; size?: string | number }>;
+    }
+  }
+
+  // Fallback: generic bot icon for unknown provider modes
+  return Bot;
+}
+
 export function SessionsSection() {
   const preferences = useWorkspaceStore(state => state.preferences);
   const updatePreference = useWorkspaceStore(state => state.updatePreference);
+  const statusRenderers = usePluginStore(s => s.statusRenderers);
 
   const sessionSettings: SessionSettings = preferences.session ?? DEFAULT_SESSION_SETTINGS;
   const skipPermissions = sessionSettings.skipPermissions ?? false;
@@ -100,11 +123,10 @@ export function SessionsSection() {
                 onChange={() => handleModeChange(option.value)}
                 className="mt-1 w-4 h-4 text-primary accent-primary"
               />
-              {option.value === 'claude' ? (
-                <ClaudeIcon className="w-4 h-4 mt-0.5 text-muted-foreground" />
-              ) : (
-                <Monitor className="w-4 h-4 mt-0.5 text-muted-foreground" />
-              )}
+              {(() => {
+                const ModeIcon = getModeIcon(option.value, statusRenderers);
+                return <ModeIcon className="w-4 h-4 mt-0.5 text-muted-foreground" size={16} />;
+              })()}
               <div className="flex-1">
                 <div className="text-sm font-medium text-foreground">{option.label}</div>
                 <div className="text-xs text-muted-foreground mt-0.5">{option.description}</div>

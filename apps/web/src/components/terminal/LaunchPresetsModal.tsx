@@ -1,16 +1,35 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, type ComponentType } from 'react';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
-import { Terminal, ChevronDown, X } from 'lucide-react';
+import { Terminal, ChevronDown, X, Bot } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogOverlay, DialogPortal, DialogTitle } from '@/components/ui/dialog';
 import { BranchAutocomplete } from '@/components/shared/BranchAutocomplete';
-import { ClaudeIcon } from '@/components/shared/ClaudeIcon';
 import { useClickOutside } from '@/hooks/useClickOutside';
+import { usePluginStore } from '@/stores/usePluginStore';
 import { GridPresetCard } from './GridPresetCard';
 import type { AiMode, WorktreeMode } from '@omniscribe/shared';
 import type { Branch } from '@/components/shared/BranchSelector';
+
+/**
+ * Get the icon component for an AI mode from registered status renderers.
+ * Falls back to Bot icon for provider modes and Terminal for plain.
+ */
+function getModeIcon(
+  mode: string,
+  statusRenderers: Map<string, { aiMode: string; component: unknown; pluginId: string }>
+): ComponentType<{ className?: string; size?: string | number }> {
+  if (mode === 'plain') return Terminal;
+
+  for (const [, reg] of statusRenderers) {
+    if (reg.aiMode === mode) {
+      return reg.component as ComponentType<{ className?: string; size?: string | number }>;
+    }
+  }
+
+  return Bot;
+}
 
 const GRID_PRESETS = [1, 2, 3, 4, 6, 8, 9, 12] as const;
 
@@ -38,6 +57,8 @@ export function LaunchPresetsModal({
   worktreeMode,
   onCreateSessions,
 }: LaunchPresetsModalProps) {
+  const statusRenderers = usePluginStore(s => s.statusRenderers);
+  const providers = usePluginStore(s => s.providers);
   const [selectedCount, setSelectedCount] = useState<number | null>(null);
   const [aiMode, setAiMode] = useState<AiMode>(defaultAiMode);
   const [branch, setBranch] = useState(currentBranch);
@@ -145,12 +166,19 @@ export function LaunchPresetsModal({
                     onClick={() => setIsAIModeOpen(!isAIModeOpen)}
                     className="min-w-[110px] text-xs"
                   >
-                    {aiMode === 'claude' ? (
-                      <ClaudeIcon size={14} className="text-orange-400" />
-                    ) : (
-                      <Terminal size={14} className="text-muted-foreground" />
-                    )}
-                    <span>{aiMode === 'claude' ? 'Claude' : 'Plain'}</span>
+                    {(() => {
+                      const ModeIcon = getModeIcon(aiMode, statusRenderers);
+                      return (
+                        <ModeIcon
+                          size={14}
+                          className={aiMode === 'plain' ? 'text-muted-foreground' : 'text-primary'}
+                        />
+                      );
+                    })()}
+                    <span>
+                      {providers.find(p => p.aiMode === aiMode)?.displayName ??
+                        (aiMode === 'plain' ? 'Plain' : aiMode)}
+                    </span>
                     <ChevronDown
                       size={12}
                       className={cn(
@@ -170,6 +198,10 @@ export function LaunchPresetsModal({
                     >
                       {(['claude', 'plain'] as const).map(mode => {
                         const isDisabled = mode === 'claude' && !claudeAvailable;
+                        const ModeIcon = getModeIcon(mode, statusRenderers);
+                        const providerInfo = providers.find(p => p.aiMode === mode);
+                        const modeLabel =
+                          providerInfo?.displayName ?? (mode === 'plain' ? 'Plain' : mode);
                         return (
                           <Button
                             key={mode}
@@ -181,18 +213,19 @@ export function LaunchPresetsModal({
                               setIsAIModeOpen(false);
                             }}
                             disabled={isDisabled}
-                            title={isDisabled ? 'Claude CLI is not installed' : undefined}
+                            title={isDisabled ? 'CLI is not installed' : undefined}
                             className={cn(
                               'w-full justify-start text-xs',
                               mode === aiMode && 'bg-primary/10 text-primary'
                             )}
                           >
-                            {mode === 'claude' ? (
-                              <ClaudeIcon size={14} className="text-orange-400" />
-                            ) : (
-                              <Terminal size={14} className="text-muted-foreground" />
-                            )}
-                            <span>{mode === 'claude' ? 'Claude' : 'Plain'}</span>
+                            <ModeIcon
+                              size={14}
+                              className={
+                                mode === 'plain' ? 'text-muted-foreground' : 'text-primary'
+                              }
+                            />
+                            <span>{modeLabel}</span>
                             {isDisabled && (
                               <span className="ml-auto text-[10px] text-muted-foreground">
                                 Not installed

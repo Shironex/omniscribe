@@ -126,7 +126,6 @@ vi.mock('@/stores/useWorkspaceStore', () => ({
 // ─── Settings section mocks (simplify SettingsModal) ───────────────────────────
 vi.mock('../settings/sections', () => ({
   AppearanceSection: () => <div data-testid="appearance-section" />,
-  IntegrationsSection: () => <div data-testid="integrations-section" />,
   GithubSection: () => <div data-testid="github-section" />,
   McpSection: () => <div data-testid="mcp-section" />,
   GeneralSection: () => <div data-testid="general-section" />,
@@ -380,42 +379,11 @@ describe('UsagePopover', () => {
     expect(screen.getByRole('button')).toBeTruthy();
   });
 
-  it('shows loading state when popover is opened with no usage data', () => {
+  it('shows no-usage fallback when no plugin panel is registered', () => {
     renderUsagePopover();
     // Open the popover
     fireEvent.click(screen.getByRole('button'));
-    expect(screen.getByText('Loading usage data...')).toBeTruthy();
-    expect(screen.getByText('Claude Usage')).toBeTruthy();
-  });
-
-  it('shows error state when there is an error', () => {
-    mockUsageState = {
-      ...mockUsageState,
-      error: 'cli_not_found' as const,
-      errorMessage: 'CLI missing',
-    };
-    renderUsagePopover();
-    fireEvent.click(screen.getByRole('button'));
-    expect(screen.getByText('Claude CLI not found')).toBeTruthy();
-  });
-
-  it('shows usage data when available', () => {
-    mockUsageState = {
-      ...mockUsageState,
-      claudeUsage: {
-        sessionPercentage: 45,
-        sessionResetText: 'Resets in 3h',
-        sonnetWeeklyPercentage: 30,
-        sonnetResetText: 'Resets Monday',
-        weeklyPercentage: 25,
-        weeklyResetText: 'Resets Monday',
-      },
-      status: 'success',
-      lastFetched: Date.now(),
-    };
-    renderUsagePopover();
-    fireEvent.click(screen.getByRole('button'));
-    expect(screen.getByText('Session Usage')).toBeTruthy();
-    expect(screen.getByText('Sonnet')).toBeTruthy();
+    expect(screen.getByText('Usage data not available for this provider')).toBeTruthy();
+    expect(screen.getByText('Usage')).toBeTruthy();
   });
 });

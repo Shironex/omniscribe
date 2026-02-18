@@ -207,6 +207,7 @@ const mockPluginState: Record<string, unknown> = {
   themes: new Map(),
   settingsSections: new Map(),
   settingsCategories: new Map(),
+  statusRenderers: new Map(),
   providers: [],
 };
 

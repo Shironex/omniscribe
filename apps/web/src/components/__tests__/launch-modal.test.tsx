@@ -11,6 +11,23 @@ vi.mock('@/hooks/useClickOutside', () => ({
   useClickOutside: vi.fn(),
 }));
 
+// ─── Mock usePluginStore ────────────────────────────────────────────────────
+vi.mock('@/stores/usePluginStore', () => ({
+  usePluginStore: (sel: (s: Record<string, unknown>) => unknown) =>
+    sel({
+      statusRenderers: new Map(),
+      providers: [
+        {
+          id: 'provider-claude',
+          aiMode: 'claude',
+          displayName: 'Claude',
+          enabled: true,
+          activated: true,
+        },
+      ],
+    }),
+}));
+
 // ─── Imports (after mocks) ───────────────────────────────────────────────────
 import { LaunchPresetsModal } from '../terminal/LaunchPresetsModal';
 import type { Branch } from '@/components/shared/BranchSelector';
