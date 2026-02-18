@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import { useConnectionStore } from '@/stores/useConnectionStore';
 import { useWorkspaceStore } from '@/stores/useWorkspaceStore';
-import { getPersistedTheme, isPersistedThemeDark } from '@/lib/theme-persistence';
 import { useAppVersion } from './useAppVersion';
 
 /** Minimum time the splash screen stays visible (ms) */
@@ -25,8 +24,6 @@ export interface SplashScreenState {
   statusText: string;
   /** App version string (empty in dev mode) */
   version: string;
-  /** Whether the current persisted theme is dark */
-  isDarkTheme: boolean;
 }
 
 /**
@@ -49,7 +46,6 @@ export function useSplashScreen(): SplashScreenState {
   const [isDismissing, setIsDismissing] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
   const version = useAppVersion();
-  const [isDarkTheme] = useState(() => isPersistedThemeDark(getPersistedTheme()));
 
   const hasDismissedRef = useRef(false);
 
@@ -98,7 +94,7 @@ export function useSplashScreen(): SplashScreenState {
   // Status text based on current readiness signals
   const statusText = deriveStatusText(connectionStatus, isWorkspaceRestored);
 
-  return { isVisible, isDismissing, showSpinner, statusText, version, isDarkTheme };
+  return { isVisible, isDismissing, showSpinner, statusText, version };
 }
 
 /**

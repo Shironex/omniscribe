@@ -716,11 +716,6 @@ describe('useSplashScreen', () => {
       useAppVersion: () => '1.0.0',
     }));
 
-    vi.doMock('@/lib/theme-persistence', () => ({
-      getPersistedTheme: () => 'dark',
-      isPersistedThemeDark: () => true,
-    }));
-
     const mod = await import('../useSplashScreen');
     return renderHook(() => mod.useSplashScreen());
   }
@@ -732,7 +727,6 @@ describe('useSplashScreen', () => {
     expect(result.current).toHaveProperty('showSpinner');
     expect(result.current).toHaveProperty('statusText');
     expect(result.current).toHaveProperty('version');
-    expect(result.current).toHaveProperty('isDarkTheme');
   });
 
   it('is initially visible and not dismissing', async () => {
