@@ -15,7 +15,25 @@ vi.mock('@/lib/socket', () => ({
 
 import { SessionStatusDisplay } from '../terminal/SessionStatusDisplay';
 import { useSessionStore } from '../../stores/useSessionStore';
+import { usePluginStore } from '../../stores/usePluginStore';
 import type { TerminalSession, GitBranchInfo } from '../terminal/TerminalHeader';
+
+/** Set up plugin store with a Claude provider for tests */
+function setupPluginStoreWithClaude() {
+  usePluginStore.setState({
+    providers: [
+      {
+        id: 'claude-provider',
+        displayName: 'Claude',
+        description: 'Claude AI assistant',
+        aiMode: 'claude',
+        enabled: true,
+        activated: true,
+        cliStatus: { installed: true, version: '1.0.0' },
+      },
+    ],
+  });
+}
 
 function makeSession(overrides: Partial<TerminalSession> = {}): TerminalSession {
   return {
@@ -28,6 +46,9 @@ function makeSession(overrides: Partial<TerminalSession> = {}): TerminalSession 
 }
 
 describe('SessionStatusDisplay', () => {
+  beforeEach(() => {
+    setupPluginStoreWithClaude();
+  });
   it('renders without crashing with minimal props', () => {
     const { container } = render(<SessionStatusDisplay session={makeSession()} />);
     expect(container).toBeTruthy();

@@ -70,12 +70,31 @@ vi.mock('@/stores/useSettingsStore', () => ({
   }),
 }));
 
-// Barrel re-export from @/stores also needs the settings store
+// Plugin store mock state
+const mockPluginState: Record<string, unknown> = {
+  settingsSections: new Map(),
+};
+
+vi.mock('@/stores/usePluginStore', () => ({
+  usePluginStore: vi.fn((sel?: unknown) => {
+    if (typeof sel === 'function')
+      return (sel as (s: typeof mockPluginState) => unknown)(mockPluginState);
+    return mockPluginState;
+  }),
+  getSettingsNavigation: vi.fn(() => []),
+}));
+
+// Barrel re-export from @/stores also needs the settings store and plugin store
 vi.mock('@/stores', () => ({
   useSettingsStore: vi.fn((sel?: unknown) => {
     if (typeof sel === 'function')
       return (sel as (s: typeof mockSettingsState) => unknown)(mockSettingsState);
     return mockSettingsState;
+  }),
+  usePluginStore: vi.fn((sel?: unknown) => {
+    if (typeof sel === 'function')
+      return (sel as (s: typeof mockPluginState) => unknown)(mockPluginState);
+    return mockPluginState;
   }),
 }));
 

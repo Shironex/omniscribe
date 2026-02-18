@@ -1,12 +1,13 @@
+import type { ComponentType } from 'react';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useSettingsStore } from '@/stores';
+import { useSettingsStore, usePluginStore } from '@/stores';
 import { Dialog, DialogOverlay, DialogPortal, DialogTitle } from '@/components/ui/dialog';
+import { PluginErrorBoundary } from '@/components/plugin/PluginErrorBoundary';
 import { SettingsNavigation } from './SettingsNavigation';
 import {
   AppearanceSection,
-  IntegrationsSection,
   GithubSection,
   McpSection,
   GeneralSection,
@@ -15,37 +16,54 @@ import {
   QuickActionsSection,
   TerminalSection,
 } from './sections';
+import { PluginMarketplace } from '@/components/plugin/PluginMarketplace';
+
+/**
+ * Core section map: maps built-in section IDs to their components.
+ * Replaces the previous switch statement for extensibility.
+ */
+const coreSections: Record<string, ComponentType> = {
+  appearance: AppearanceSection,
+  github: GithubSection,
+  mcp: McpSection,
+  general: GeneralSection,
+  worktrees: WorktreesSection,
+  sessions: SessionsSection,
+  quickActions: QuickActionsSection,
+  terminal: TerminalSection,
+  marketplace: PluginMarketplace,
+};
 
 export function SettingsModal() {
   const isOpen = useSettingsStore(state => state.isOpen);
   const activeSection = useSettingsStore(state => state.activeSection);
   const closeSettings = useSettingsStore(state => state.closeSettings);
   const navigateToSection = useSettingsStore(state => state.navigateToSection);
+  const settingsSections = usePluginStore(state => state.settingsSections);
 
   // Render the active section based on current view
   const renderActiveSection = () => {
-    switch (activeSection) {
-      case 'appearance':
-        return <AppearanceSection />;
-      case 'integrations':
-        return <IntegrationsSection />;
-      case 'github':
-        return <GithubSection />;
-      case 'mcp':
-        return <McpSection />;
-      case 'general':
-        return <GeneralSection />;
-      case 'worktrees':
-        return <WorktreesSection />;
-      case 'sessions':
-        return <SessionsSection />;
-      case 'quickActions':
-        return <QuickActionsSection />;
-      case 'terminal':
-        return <TerminalSection />;
-      default:
-        return <AppearanceSection />;
+    // 1. Check core sections map
+    const CoreComponent = coreSections[activeSection];
+    if (CoreComponent) {
+      return <CoreComponent />;
     }
+
+    // 2. Check plugin-registered sections (key is `${pluginId}:${sectionId}`)
+    // Find a section where sectionId matches the activeSection
+    for (const [, registration] of settingsSections) {
+      if (registration.sectionId === activeSection) {
+        const PluginComponent = registration.component as ComponentType;
+        return (
+          <PluginErrorBoundary pluginId={registration.pluginId}>
+            <PluginComponent />
+          </PluginErrorBoundary>
+        );
+      }
+    }
+
+    // 3. Fallback to appearance
+    return <AppearanceSection />;
   };
 
   return (

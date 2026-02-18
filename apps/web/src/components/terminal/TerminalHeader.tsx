@@ -6,6 +6,7 @@ import { SessionStatusDisplay } from './SessionStatusDisplay';
 import { QuickActionsDropdown } from './QuickActionsDropdown';
 import { MoreMenuDropdown } from './MoreMenuDropdown';
 import { TaskListPopover } from './TaskListPopover';
+import { ExtensionSlot } from '@/components/plugin/ExtensionSlot';
 import type { TerminalDragHandleProps } from './SortableTerminalWrapper';
 import type { QuickActionItem } from './TerminalCard';
 import type { SessionStatus } from '@/components/shared/StatusLegend';
@@ -128,6 +129,22 @@ export function TerminalHeader({
           </button>
         )}
 
+        {/* Plugin-contributed terminal header actions */}
+        <ExtensionSlot
+          name="terminal-header-actions"
+          aiMode={session.aiMode}
+          context={{ sessionId: session.id, status: session.status }}
+          className="flex items-center gap-0.5"
+        />
+
+        {/* Plugin-contributed action bar items (inline with core actions) */}
+        <ExtensionSlot
+          name="action-bar"
+          aiMode={session.aiMode}
+          context={{ sessionId: session.id, status: session.status }}
+          className="flex items-center gap-0.5"
+        />
+
         {quickActions.length > 0 && (
           <div className="relative" ref={quickActionsRef}>
             <QuickActionsDropdown
@@ -144,11 +161,13 @@ export function TerminalHeader({
           </div>
         )}
 
-        {session.aiMode === 'claude' && <TaskListPopover sessionId={session.id} />}
+        {session.aiMode !== 'plain' && <TaskListPopover sessionId={session.id} />}
 
         <div className="relative" ref={moreMenuRef}>
           <MoreMenuDropdown
             isOpen={moreMenuOpen}
+            aiMode={session.aiMode}
+            sessionId={session.id}
             onToggle={() => {
               setMoreMenuOpen(!moreMenuOpen);
               setQuickActionsOpen(false);
