@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## 1.0.0 (2026-02-18)
+
+### Features
+
+- **Terminal copy/paste improvements** — Improved copy/paste behavior and output handling in terminal sessions with proper clipboard permission support in Electron (#171)
+- **Drag-and-drop project tabs** — Reorder project tabs via drag-and-drop for custom workspace organization (#166)
+
+### Bug Fixes
+
+- **Splash screen theme colors** — Splash screen now uses theme system colors instead of hardcoded values, matching the active theme (#172)
+- **Granular tab status** — Project tabs now show granular session status instead of a generic indicator (#169)
+
+### Stats
+
+- 4 PRs merged
+- 30 files changed — +1,170 / −157 lines
+
 ## 0.10.0 (2026-02-17)
 
 ### Features
