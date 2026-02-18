@@ -152,3 +152,19 @@ export const ZombieEvents = {
 export const SystemEvents = {
   THROTTLED: 'ws:throttled',
 } as const;
+
+// ============================================
+// Plugin Events
+// ============================================
+export const PluginEvents = {
+  // Client -> Server (requests)
+  LIST_PROVIDERS: 'plugin:list-providers',
+  SET_ENABLED: 'plugin:set-enabled',
+  REFRESH_PROVIDERS: 'plugin:refresh-providers',
+  INVOKE: 'plugin:invoke',
+
+  // Server -> Client (broadcasts)
+  PROVIDER_STATUS: 'plugin:provider-status',
+  PROVIDER_ENABLED: 'plugin:provider-enabled',
+  PROVIDER_ERROR: 'plugin:provider-error',
+} as const;

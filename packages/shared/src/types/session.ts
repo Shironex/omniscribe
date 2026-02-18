@@ -1,9 +1,16 @@
+/** Built-in AI modes that are always available */
+export type BuiltinAiMode = 'claude' | 'plain';
+
 /**
- * AI mode for the session
- * - claude: Uses Claude Code CLI
- * - plain: Plain terminal without AI
+ * AI mode for the session.
+ * Built-in modes + any plugin-registered mode string.
+ * Runtime validation happens against the plugin registry.
+ *
+ * NOTE: 'claude' remains a BuiltinAiMode during Phase 12 because Claude-specific
+ * services still live in core. Phase 13 will extract Claude into a plugin, at which
+ * point 'claude' moves from BuiltinAiMode to a plugin-registered mode.
  */
-export type AiMode = 'claude' | 'plain';
+export type AiMode = BuiltinAiMode | (string & {});
 
 /**
  * Health level for session health monitoring.

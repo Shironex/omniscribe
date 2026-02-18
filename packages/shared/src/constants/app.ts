@@ -109,7 +109,14 @@ export const LOG_CLEANUP_INTERVAL_MS = 60 * 60 * 1000;
 // Validation
 // =============================================================================
 
-/** Valid AI modes for session creation */
+/**
+ * Built-in AI modes that are always available without plugins.
+ * For runtime validation of all modes (including plugin-registered),
+ * use PluginRegistryService.isValidMode() on the backend.
+ *
+ * @deprecated for validation - use PluginRegistryService.isValidMode() instead.
+ * Kept for reference to built-in modes only.
+ */
 export const VALID_AI_MODES = ['claude', 'plain'] as const;
 
 /** Maximum length for model identifier */
