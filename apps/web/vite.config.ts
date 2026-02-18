@@ -25,6 +25,10 @@ export default defineConfig({
       '@': resolve(__dirname, './src'),
       // Point to source for better dev experience and ESM compatibility
       '@omniscribe/shared': resolve(__dirname, '../../packages/shared/src/index.ts'),
+      // Plugin SDK: lets plugin frontend code import UI components and helpers
+      '@omniscribe/ui': resolve(__dirname, './src/lib/plugin-sdk.ts'),
+      // Plugin API types: lets plugin frontend code import type contracts
+      '@omniscribe/plugin-api': resolve(__dirname, '../../packages/plugin-api/src/index.ts'),
     },
   },
   server: {
