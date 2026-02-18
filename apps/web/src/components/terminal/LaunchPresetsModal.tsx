@@ -50,7 +50,7 @@ export function LaunchPresetsModal({
   open,
   onOpenChange,
   branches,
-  claudeAvailable,
+  claudeAvailable: _claudeAvailable,
   currentBranch,
   defaultAiMode,
   existingSessionCount,
@@ -196,12 +196,11 @@ export function LaunchPresetsModal({
                         'overflow-hidden animate-fade-in min-w-[120px]'
                       )}
                     >
-                      {(['claude', 'plain'] as const).map(mode => {
-                        const isDisabled = mode === 'claude' && !claudeAvailable;
+                      {/* Provider modes (dynamic from plugins) */}
+                      {providers.map(provider => {
+                        const mode = provider.aiMode as AiMode;
+                        const isDisabled = !provider.cliStatus?.installed;
                         const ModeIcon = getModeIcon(mode, statusRenderers);
-                        const providerInfo = providers.find(p => p.aiMode === mode);
-                        const modeLabel =
-                          providerInfo?.displayName ?? (mode === 'plain' ? 'Plain' : mode);
                         return (
                           <Button
                             key={mode}
@@ -219,13 +218,8 @@ export function LaunchPresetsModal({
                               mode === aiMode && 'bg-primary/10 text-primary'
                             )}
                           >
-                            <ModeIcon
-                              size={14}
-                              className={
-                                mode === 'plain' ? 'text-muted-foreground' : 'text-primary'
-                              }
-                            />
-                            <span>{modeLabel}</span>
+                            <ModeIcon size={14} className="text-primary" />
+                            <span>{provider.displayName}</span>
                             {isDisabled && (
                               <span className="ml-auto text-[10px] text-muted-foreground">
                                 Not installed
@@ -234,6 +228,22 @@ export function LaunchPresetsModal({
                           </Button>
                         );
                       })}
+                      {/* Plain mode (built-in, always available) */}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setAiMode('plain');
+                          setIsAIModeOpen(false);
+                        }}
+                        className={cn(
+                          'w-full justify-start text-xs',
+                          'plain' === aiMode && 'bg-primary/10 text-primary'
+                        )}
+                      >
+                        <Terminal size={14} className="text-muted-foreground" />
+                        <span>Plain</span>
+                      </Button>
                     </div>
                   )}
                 </div>

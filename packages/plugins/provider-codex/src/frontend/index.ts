@@ -65,6 +65,9 @@ export function frontendActivate(context: FrontendPluginContext): void {
   );
 
   // 4. Register Codex Dark theme (OpenAI green accents on dark background)
+  // Plugin themes cascade on top of the base 'dark' theme, so we only
+  // need to override brand-specific variables. Values use oklch to match
+  // the built-in theme convention.
   context.subscriptions.push(
     context.registerTheme({
       id: 'codex-dark',
@@ -72,25 +75,27 @@ export function frontendActivate(context: FrontendPluginContext): void {
       isDark: true,
       color: '#10A37F',
       cssProperties: {
-        '--background': '160 15% 5%',
-        '--foreground': '160 5% 95%',
-        '--primary': '160 56% 35%',
-        '--primary-foreground': '160 5% 98%',
-        '--accent': '160 20% 12%',
-        '--accent-foreground': '160 5% 90%',
-        '--muted': '160 10% 12%',
-        '--muted-foreground': '160 5% 55%',
-        '--card': '160 12% 7%',
-        '--card-foreground': '160 5% 95%',
-        '--border': '160 10% 15%',
-        '--ring': '160 56% 35%',
-        '--secondary': '160 10% 10%',
-        '--secondary-foreground': '160 5% 90%',
-        '--destructive': '0 72% 51%',
-        '--destructive-foreground': '0 0% 98%',
-        '--popover': '160 12% 7%',
-        '--popover-foreground': '160 5% 95%',
-        '--input': '160 10% 15%',
+        // Brand colors — OpenAI green (#10A37F ≈ oklch 0.63 0.15 165)
+        '--primary': 'oklch(0.63 0.15 165)',
+        '--primary-foreground': 'oklch(0.98 0 0)',
+        '--brand-400': 'oklch(0.68 0.13 165)',
+        '--brand-500': 'oklch(0.63 0.15 165)',
+        '--brand-600': 'oklch(0.58 0.17 165)',
+        '--ring': 'oklch(0.63 0.15 165)',
+        // Sidebar accent inherits primary
+        '--sidebar-primary': 'oklch(0.63 0.15 165)',
+        '--sidebar-primary-foreground': 'oklch(0.98 0 0)',
+        '--sidebar-ring': 'oklch(0.63 0.15 165)',
+        // Action buttons — green accent
+        '--action-view': 'oklch(0.63 0.15 165)',
+        '--action-view-hover': 'oklch(0.58 0.17 165)',
+        '--action-commit': 'oklch(0.63 0.15 165)',
+        '--action-commit-hover': 'oklch(0.58 0.17 165)',
+        '--action-verify': 'oklch(0.63 0.15 165)',
+        '--action-verify-hover': 'oklch(0.58 0.17 165)',
+        // Running indicator
+        '--running-indicator': 'oklch(0.63 0.15 165)',
+        '--running-indicator-text': 'oklch(0.68 0.13 165)',
       },
     })
   );

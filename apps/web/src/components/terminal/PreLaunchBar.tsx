@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils';
-import { Play, X, Terminal, ChevronDown } from 'lucide-react';
+import { Play, X, Terminal, Bot, ChevronDown } from 'lucide-react';
 import { useState, useRef, useEffect, useMemo, type ComponentType } from 'react';
 import type { Branch } from '@/components/shared/BranchSelector';
 import { BranchAutocomplete } from '@/components/shared/BranchAutocomplete';
@@ -54,17 +54,25 @@ export function PreLaunchBar({
   const [isAIModeOpen, setIsAIModeOpen] = useState(false);
   const aiModeRef = useRef<HTMLDivElement>(null);
   const providers = usePluginStore(s => s.providers);
+  const statusRenderers = usePluginStore(s => s.statusRenderers);
 
   // Build AI mode options dynamically from registered providers
   const aiModeOptions: AIModeOption[] = useMemo(() => {
     const options: AIModeOption[] = [];
 
-    // Add provider-contributed modes
+    // Add provider-contributed modes with icons from status renderers
     for (const provider of providers) {
+      let icon: ComponentType<{ size?: string | number; className?: string }> = Bot;
+      for (const [, reg] of statusRenderers) {
+        if (reg.aiMode === provider.aiMode) {
+          icon = reg.component as ComponentType<{ size?: string | number; className?: string }>;
+          break;
+        }
+      }
       options.push({
         value: provider.aiMode as AiMode,
         label: provider.displayName,
-        icon: Terminal, // Placeholder until Plan 05 provides actual icons via status renderer
+        icon,
         color: 'text-primary',
       });
     }
@@ -78,7 +86,7 @@ export function PreLaunchBar({
     });
 
     return options;
-  }, [providers]);
+  }, [providers, statusRenderers]);
 
   // Close AI mode dropdown when clicking outside
   useEffect(() => {

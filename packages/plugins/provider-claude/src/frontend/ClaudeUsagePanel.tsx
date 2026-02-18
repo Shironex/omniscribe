@@ -11,11 +11,12 @@ import {
   UsageCard,
   getStatusInfo,
 } from '@omniscribe/ui';
-import { RefreshCw, AlertTriangle, ExternalLink, Loader2, Activity } from 'lucide-react';
+import { RefreshCw, AlertTriangle, ExternalLink, Loader2 } from 'lucide-react';
 import { useUsageStore } from '@/stores/useUsageStore';
 import { useWorkspaceStore } from '@/stores/useWorkspaceStore';
 import type { UsageError } from '@omniscribe/shared';
 import type { UsagePanelProps } from '@omniscribe/plugin-api';
+import { ClaudeIcon } from './ClaudeIcon';
 
 // ---- Constants ----
 
@@ -120,7 +121,7 @@ export function ClaudeUsagePanel(_props: UsagePanelProps) {
 
   const trigger = (
     <Button variant="ghost" size="sm" className="h-8 gap-2 px-2 hover:bg-accent">
-      <Activity className={cn('w-4 h-4', claudeUsage && statusColor)} size={16} />
+      <ClaudeIcon className={cn('w-4 h-4', claudeUsage && statusColor)} size={16} />
       {claudeUsage && (
         <div
           className={cn(
@@ -153,7 +154,7 @@ export function ClaudeUsagePanel(_props: UsagePanelProps) {
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border/50 bg-secondary/10">
           <div className="flex items-center gap-2">
-            <Activity className="w-4 h-4" size={16} />
+            <ClaudeIcon size={16} />
             <span className="text-sm font-semibold">Claude Usage</span>
           </div>
           <Button
