@@ -430,4 +430,128 @@ describe('PluginLoaderService', () => {
       expect(providers[0].cliStatus.error).toBe('Detection failed');
     });
   });
+
+  // ================================================================
+  // autoEnable / autoActivate
+  // ================================================================
+  describe('autoEnable and autoActivate', () => {
+    it('should register plugin as enabled when autoEnable is true', async () => {
+      const def = createValidDefinition();
+      def.autoEnable = true;
+      const module = await buildModule([def]);
+      const loader = module.get<PluginLoaderService>(PluginLoaderService);
+      const reg = module.get<PluginRegistryService>(PluginRegistryService);
+
+      await loader.onModuleInit();
+
+      const providers = reg.listProviders();
+      expect(providers).toHaveLength(1);
+      expect(providers[0].enabled).toBe(true);
+      expect(providers[0].activated).toBe(false);
+    });
+
+    it('should register plugin as disabled when autoEnable is false (default)', async () => {
+      const def = createValidDefinition();
+      // autoEnable defaults to false (undefined)
+      const module = await buildModule([def]);
+      const loader = module.get<PluginLoaderService>(PluginLoaderService);
+      const reg = module.get<PluginRegistryService>(PluginRegistryService);
+
+      await loader.onModuleInit();
+
+      const providers = reg.listProviders();
+      expect(providers[0].enabled).toBe(false);
+      expect(providers[0].activated).toBe(false);
+    });
+
+    it('should auto-activate plugin when autoEnable and autoActivate are both true', async () => {
+      const plugin = createMockProviderPlugin();
+      const def = createValidDefinition({ plugin });
+      def.autoEnable = true;
+      def.autoActivate = true;
+      const module = await buildModule([def]);
+      const loader = module.get<PluginLoaderService>(PluginLoaderService);
+      const reg = module.get<PluginRegistryService>(PluginRegistryService);
+
+      await loader.onModuleInit();
+
+      const providers = reg.listProviders();
+      expect(providers[0].enabled).toBe(true);
+      expect(providers[0].activated).toBe(true);
+      expect(plugin.activate).toHaveBeenCalled();
+    });
+
+    it('should NOT auto-activate when autoEnable is true but autoActivate is false', async () => {
+      const plugin = createMockProviderPlugin();
+      const def = createValidDefinition({ plugin });
+      def.autoEnable = true;
+      def.autoActivate = false;
+      const module = await buildModule([def]);
+      const loader = module.get<PluginLoaderService>(PluginLoaderService);
+      const reg = module.get<PluginRegistryService>(PluginRegistryService);
+
+      await loader.onModuleInit();
+
+      const providers = reg.listProviders();
+      expect(providers[0].enabled).toBe(true);
+      expect(providers[0].activated).toBe(false);
+      // activate should not be called during loading
+      expect(plugin.activate).not.toHaveBeenCalled();
+    });
+
+    it('should NOT auto-activate when autoActivate is true but autoEnable is false', async () => {
+      const plugin = createMockProviderPlugin();
+      const def = createValidDefinition({ plugin });
+      def.autoEnable = false;
+      def.autoActivate = true;
+      const module = await buildModule([def]);
+      const loader = module.get<PluginLoaderService>(PluginLoaderService);
+      const reg = module.get<PluginRegistryService>(PluginRegistryService);
+
+      await loader.onModuleInit();
+
+      const providers = reg.listProviders();
+      expect(providers[0].enabled).toBe(false);
+      expect(providers[0].activated).toBe(false);
+      expect(plugin.activate).not.toHaveBeenCalled();
+    });
+
+    it('should log error but not crash when auto-activate fails', async () => {
+      const plugin = createMockProviderPlugin();
+      (plugin.activate as jest.Mock).mockRejectedValue(new Error('Activation failed'));
+      const def = createValidDefinition({ plugin });
+      def.autoEnable = true;
+      def.autoActivate = true;
+      const module = await buildModule([def]);
+      const loader = module.get<PluginLoaderService>(PluginLoaderService);
+      const reg = module.get<PluginRegistryService>(PluginRegistryService);
+
+      // Should not throw
+      await expect(loader.onModuleInit()).resolves.not.toThrow();
+
+      const providers = reg.listProviders();
+      // Plugin is registered and enabled, but activation failed so not activated
+      expect(providers).toHaveLength(1);
+      expect(providers[0].enabled).toBe(true);
+      expect(providers[0].activated).toBe(false);
+    });
+
+    it('should emit ACTIVATED event on successful auto-activate', async () => {
+      const plugin = createMockProviderPlugin();
+      const def = createValidDefinition({ plugin });
+      def.autoEnable = true;
+      def.autoActivate = true;
+      const module = await buildModule([def]);
+      const loader = module.get<PluginLoaderService>(PluginLoaderService);
+      const emitter = module.get<EventEmitter2>(EventEmitter2);
+
+      await loader.onModuleInit();
+
+      // Should have emitted both CLI_DETECTED and ACTIVATED events
+      expect(emitter.emit).toHaveBeenCalledWith(
+        'plugin.test-provider.activated',
+        expect.objectContaining({ pluginId: 'test-provider' })
+      );
+    });
+  });
 });

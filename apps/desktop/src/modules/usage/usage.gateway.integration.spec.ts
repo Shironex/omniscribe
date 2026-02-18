@@ -31,14 +31,20 @@ describe('UsageGateway (integration)', () => {
 
   beforeAll(async () => {
     mockUsageService = {
-      fetchUsageData: jest.fn().mockResolvedValue({
-        usage: {
+      fetchUsageForMode: jest.fn().mockResolvedValue({
+        providerUsage: {
+          percentageUsed: 25,
+          periodStart: '',
+          periodEnd: '',
+          resetText: '',
+        },
+        rawUsage: {
           sessionPercentage: 25,
           weeklyPercentage: 40,
           lastUpdated: '2024-01-01T00:00:00Z',
         },
       }),
-      getStatus: jest.fn().mockResolvedValue({
+      getStatusForMode: jest.fn().mockResolvedValue({
         installed: true,
         version: '1.0.27',
         platform: 'darwin',
@@ -71,7 +77,7 @@ describe('UsageGateway (integration)', () => {
     client?.disconnect();
   });
 
-  it('should handle usage:fetch and return usage data', async () => {
+  it('should handle usage:fetch and return usage data via rawUsage', async () => {
     const response = await emitWithAck<{ usage?: any; error?: string }>(client, 'usage:fetch', {
       workingDir: '/tmp/test-project',
     });
@@ -80,16 +86,11 @@ describe('UsageGateway (integration)', () => {
     expect(response.usage.sessionPercentage).toBe(25);
     expect(response.usage.weeklyPercentage).toBe(40);
     expect(response.error).toBeUndefined();
-    expect(mockUsageService.fetchUsageData).toHaveBeenCalledWith('/tmp/test-project');
+    expect(mockUsageService.fetchUsageForMode).toHaveBeenCalledWith('claude', '/tmp/test-project');
   });
 
-  it('should return error when CLI is not available', async () => {
-    mockUsageService.getStatus.mockResolvedValueOnce({
-      installed: false,
-      platform: 'darwin',
-      arch: 'arm64',
-      auth: { authenticated: false },
-    });
+  it('should return error when no usage provider available', async () => {
+    mockUsageService.fetchUsageForMode.mockResolvedValueOnce(null);
 
     const response = await emitWithAck<{ usage?: any; error?: string; message?: string }>(
       client,
@@ -98,7 +99,7 @@ describe('UsageGateway (integration)', () => {
     );
 
     expect(response.error).toBe('cli_not_found');
-    expect(response.message).toContain('Claude CLI not found');
+    expect(response.message).toContain('No usage provider available');
     expect(response.usage).toBeUndefined();
   });
 
@@ -122,7 +123,7 @@ describe('UsageGateway (integration)', () => {
     });
 
     expect(response.status.installed).toBe(true);
-    expect(mockUsageService.getStatus).toHaveBeenCalledWith(true);
+    expect(mockUsageService.getStatusForMode).toHaveBeenCalledWith('claude', true);
   });
 });
 

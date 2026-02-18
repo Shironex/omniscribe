@@ -19,7 +19,7 @@ function createMockExecutionContext(): ExecutionContext {
 describe('ClaudeCliGuard', () => {
   let guard: ClaudeCliGuard;
   let reflector: jest.Mocked<Reflector>;
-  let usageService: jest.Mocked<Pick<UsageService, 'getStatus'>>;
+  let usageService: jest.Mocked<Pick<UsageService, 'getStatusForMode'>>;
 
   beforeEach(() => {
     reflector = {
@@ -27,7 +27,7 @@ describe('ClaudeCliGuard', () => {
     } as unknown as jest.Mocked<Reflector>;
 
     usageService = {
-      getStatus: jest.fn(),
+      getStatusForMode: jest.fn(),
     };
 
     guard = new ClaudeCliGuard(reflector, usageService as unknown as UsageService);
@@ -43,7 +43,7 @@ describe('ClaudeCliGuard', () => {
     const result = await guard.canActivate(context);
 
     expect(result).toBe(true);
-    expect(usageService.getStatus).not.toHaveBeenCalled();
+    expect(usageService.getStatusForMode).not.toHaveBeenCalled();
   });
 
   it('should allow access when REQUIRES_CLAUDE_CLI metadata is absent', async () => {
@@ -53,7 +53,7 @@ describe('ClaudeCliGuard', () => {
     const result = await guard.canActivate(context);
 
     expect(result).toBe(true);
-    expect(usageService.getStatus).not.toHaveBeenCalled();
+    expect(usageService.getStatusForMode).not.toHaveBeenCalled();
   });
 
   it('should allow access when CLI is installed and authenticated', async () => {
@@ -63,7 +63,7 @@ describe('ClaudeCliGuard', () => {
       return false;
     });
 
-    usageService.getStatus.mockResolvedValue({
+    usageService.getStatusForMode.mockResolvedValue({
       installed: true,
       platform: 'win32',
       arch: 'x64',
@@ -74,7 +74,7 @@ describe('ClaudeCliGuard', () => {
     const result = await guard.canActivate(context);
 
     expect(result).toBe(true);
-    expect(usageService.getStatus).toHaveBeenCalledTimes(1);
+    expect(usageService.getStatusForMode).toHaveBeenCalledTimes(1);
   });
 
   it('should throw NotImplementedException with CLAUDE_CLI_NOT_INSTALLED when CLI is not installed', async () => {
@@ -84,7 +84,7 @@ describe('ClaudeCliGuard', () => {
       return false;
     });
 
-    usageService.getStatus.mockResolvedValue({
+    usageService.getStatusForMode.mockResolvedValue({
       installed: false,
       platform: 'win32',
       arch: 'x64',
@@ -116,7 +116,7 @@ describe('ClaudeCliGuard', () => {
       return false;
     });
 
-    usageService.getStatus.mockResolvedValue({
+    usageService.getStatusForMode.mockResolvedValue({
       installed: true,
       platform: 'win32',
       arch: 'x64',
