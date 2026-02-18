@@ -8,8 +8,12 @@
     "declaration": true,
     "declarationMap": true,
     "composite": true,
-    "types": ["node"]
+    "types": ["node"],
+    "paths": {
+      "@omniscribe/ui": ["../../apps/web/src/lib/plugin-sdk.ts"],
+      "@omniscribe/plugin-api": ["../plugin-api/src/index.ts"]
+    }
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "src/**/*.spec.ts", "test"]
+  "exclude": ["node_modules", "dist", "src/**/*.spec.ts", "test", "src/frontend/**/*"]
 }
