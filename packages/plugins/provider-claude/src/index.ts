@@ -10,4 +10,11 @@
 
 export * from './types';
 
-// Services and plugin class will be added as they are created
+// Services
+export { ClaudeCliDetectionService } from './services/cli-detection.service';
+export { ClaudeCliCommandService } from './services/cli-command.service';
+export { ClaudeUsageParserService } from './services/usage-parser.service';
+export { ClaudeStatusParserService } from './services/status-parser.service';
+export { OMNISCRIBE_SYSTEM_PROMPT, getSystemPromptAdditions } from './services/system-prompt';
+
+// Plugin class will be added in a subsequent plan
