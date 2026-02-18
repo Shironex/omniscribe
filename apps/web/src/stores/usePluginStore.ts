@@ -545,10 +545,14 @@ export const usePluginStore = create<PluginStore>()(
         const socket = getSocket();
 
         // Listen for provider status updates (full list broadcast)
-        socket.on(PluginEvents.PROVIDER_STATUS, (providers: ProviderInfo[]) => {
-          logger.debug('Received provider status', providers.length, 'providers');
-          get().setProviders(providers);
-        });
+        socket.on(
+          PluginEvents.PROVIDER_STATUS,
+          (data: { providers: ProviderInfo[] } | ProviderInfo[]) => {
+            const list = Array.isArray(data) ? data : data.providers;
+            logger.debug('Received provider status', list.length, 'providers');
+            get().setProviders(list);
+          }
+        );
 
         // Listen for individual provider enabled change
         socket.on(PluginEvents.PROVIDER_ENABLED, (data: { aiMode: string; enabled: boolean }) => {
@@ -572,9 +576,13 @@ export const usePluginStore = create<PluginStore>()(
         set({ listenersInitialized: true }, undefined, 'plugin/listenersInitialized');
 
         // Fetch initial provider list
-        emitAsync<Record<string, never>, ProviderInfo[]>(PluginEvents.LIST_PROVIDERS, {})
-          .then(providers => {
-            get().setProviders(providers);
+        emitAsync<Record<string, never>, { providers: ProviderInfo[] } | ProviderInfo[]>(
+          PluginEvents.LIST_PROVIDERS,
+          {}
+        )
+          .then(data => {
+            const list = Array.isArray(data) ? data : data.providers;
+            get().setProviders(list);
           })
           .catch(err => {
             logger.error('Failed to fetch initial providers', err);
