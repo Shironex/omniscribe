@@ -100,7 +100,8 @@ describe('UsageGateway', () => {
 
       const result = await gateway.handleFetch(mockSocket, payload);
 
-      expect(result).toEqual({ usage: usageData });
+      expect(result.usage).toEqual(usageData);
+      expect(result.providerUsage).toBeDefined();
       expect(usageService.fetchUsageForMode).toHaveBeenCalledWith('claude', '/my/project');
     });
 
@@ -183,18 +184,29 @@ describe('UsageGateway', () => {
       expect(usageService.fetchUsageForMode).toHaveBeenCalledWith('claude', '/different/path');
     });
 
-    it('should return parse_error when rawUsage is not available', async () => {
+    it('should return providerUsage when rawUsage is not available', async () => {
+      const providerUsageData = {
+        metrics: [{ name: 'Rate Limit', percentage: 25, percentageType: 'used' as const }],
+        lastUpdated: '2025-01-01T10:00:00.000Z',
+      };
       usageService.fetchUsageForMode.mockResolvedValue({
-        providerUsage: { percentageUsed: 25, periodStart: '', periodEnd: '', resetText: '' },
-        // No rawUsage
+        providerUsage: providerUsageData,
+        // No rawUsage — this is normal for non-Claude providers
       });
 
       const result = await gateway.handleFetch(mockSocket, payload);
 
-      expect(result).toEqual({
-        error: 'parse_error',
-        message: 'Usage data format mismatch',
-      });
+      expect(result.providerUsage).toEqual(providerUsageData);
+      expect(result.usage).toBeUndefined();
+      expect(result.error).toBeUndefined();
+    });
+
+    it('should use aiMode from payload when provided', async () => {
+      usageService.fetchUsageForMode.mockResolvedValue(null);
+
+      await gateway.handleFetch(mockSocket, { workingDir: '/my/project', aiMode: 'codex' });
+
+      expect(usageService.fetchUsageForMode).toHaveBeenCalledWith('codex', '/my/project');
     });
   });
 

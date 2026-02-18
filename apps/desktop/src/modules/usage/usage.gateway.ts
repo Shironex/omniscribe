@@ -42,10 +42,10 @@ export class UsageGateway implements OnGatewayInit {
     @ConnectedSocket() _client: Socket,
     @MessageBody() payload: UsageFetchPayload
   ): Promise<UsageFetchResponse> {
-    this.logger.debug(`Fetching usage for workingDir: ${payload.workingDir}`);
+    const aiMode = payload.aiMode ?? 'claude';
+    this.logger.debug(`Fetching usage for mode=${aiMode} workingDir=${payload.workingDir}`);
 
-    // Default to claude mode for backward compatibility
-    const result = await this.usageService.fetchUsageForMode('claude', payload.workingDir);
+    const result = await this.usageService.fetchUsageForMode(aiMode, payload.workingDir);
 
     if (!result) {
       return { error: 'cli_not_found', message: 'No usage provider available' };
@@ -56,16 +56,27 @@ export class UsageGateway implements OnGatewayInit {
       return { error: result.error, message: result.message };
     }
 
-    // Use rawUsage (ClaudeUsage) for frontend compatibility
-    // UsageFetchResponse.usage expects ClaudeUsage shape
+    // Build response: always include providerUsage when available
+    const response: UsageFetchResponse = {};
+
+    if (result.providerUsage) {
+      response.providerUsage = result.providerUsage;
+    }
+
+    // Include rawUsage (ClaudeUsage) for Claude frontend backward compatibility
     if (result.rawUsage) {
+      response.usage = result.rawUsage;
       this.logger.debug(
         `Usage fetched successfully: session=${result.rawUsage.sessionPercentage}%`
       );
-      return { usage: result.rawUsage };
     }
 
-    // Fallback: no raw usage available (shouldn't happen for Claude)
+    // If we have providerUsage or rawUsage, return them
+    if (response.providerUsage || response.usage) {
+      return response;
+    }
+
+    // Fallback: no usage data available
     return { error: 'parse_error', message: 'Usage data format mismatch' };
   }
 

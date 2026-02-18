@@ -54,16 +54,31 @@ export type UsageError =
  * Payload for requesting usage data
  */
 export interface UsageFetchPayload {
-  /** Working directory to run claude from */
+  /** Working directory to run the CLI from */
   workingDir: string;
+  /** AI mode to fetch usage for (defaults to 'claude' for backward compat) */
+  aiMode?: string;
 }
 
 /**
  * Response from usage fetch
  */
 export interface UsageFetchResponse {
-  /** Usage data if successful */
+  /** Claude-specific usage data (backward compat) */
   usage?: ClaudeUsage;
+  /** Provider-agnostic usage data with named metrics */
+  providerUsage?: {
+    metrics: Array<{
+      name: string;
+      percentage: number;
+      percentageType: 'used' | 'remaining';
+      resetTime?: string;
+      resetText?: string;
+      category?: string;
+    }>;
+    lastUpdated: string;
+    userTimezone?: string;
+  };
   /** Error type if failed */
   error?: UsageError;
   /** Error message with details */
