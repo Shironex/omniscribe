@@ -168,8 +168,8 @@ export class PluginLoaderService implements OnModuleInit {
       cliStatus = { installed: false, error: msg };
     }
 
-    // Register the provider (disabled and not activated by default)
-    const enabled = false;
+    // Register the provider (honor autoEnable flag, default disabled)
+    const enabled = definition.autoEnable ?? false;
     this.registry.registerProvider({
       manifest,
       plugin,
@@ -183,5 +183,25 @@ export class PluginLoaderService implements OnModuleInit {
       pluginId: manifest.id,
       cliStatus,
     });
+
+    // Auto-activate if requested (e.g., first-party Claude provider)
+    if (definition.autoActivate && enabled) {
+      try {
+        const context = createPluginContext(manifest.id, this.eventEmitter, this.storageService);
+        await plugin.activate(context);
+        // Get the entry we just registered and mark it activated
+        const entry = this.registry.getProviderEntry(plugin.aiMode);
+        if (entry) {
+          entry.activated = true;
+          this.eventEmitter.emit(InternalPluginEvents.ACTIVATED(manifest.id), {
+            pluginId: manifest.id,
+          });
+          this.logger.log(`Auto-activated provider '${plugin.aiMode}'`);
+        }
+      } catch (error) {
+        const msg = extractErrorMessage(error);
+        this.logger.error(`Failed to auto-activate provider '${plugin.aiMode}': ${msg}`);
+      }
+    }
   }
 }

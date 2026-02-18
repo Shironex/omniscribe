@@ -11,6 +11,10 @@ export interface PluginDefinition {
   manifest: PluginManifest;
   /** Factory function that creates the plugin instance */
   createPlugin: () => OmniscribePlugin;
+  /** If true, plugin is registered as enabled (default: false) */
+  autoEnable?: boolean;
+  /** If true, plugin is activated immediately after loading (default: false). Requires autoEnable. */
+  autoActivate?: boolean;
 }
 
 /** A registered provider in the registry with runtime metadata */

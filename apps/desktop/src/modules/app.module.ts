@@ -9,6 +9,7 @@ import { McpModule } from './mcp';
 import { UsageModule } from './usage';
 import { HealthModule } from './health';
 import { PluginModule } from './plugin';
+import { ClaudeProviderPlugin } from '@omniscribe/provider-claude';
 
 @Module({
   imports: [
@@ -32,8 +33,20 @@ import { PluginModule } from './plugin';
     ]),
     // PluginModule must be after ThrottlerModule but before domain modules
     // so PluginRegistryService is available for injection everywhere.
-    // Phase 12: empty plugin list. Phase 13 adds Claude plugin definition.
-    PluginModule.forRoot([]),
+    // Phase 13: Claude provider plugin registered with auto-enable and auto-activate.
+    PluginModule.forRoot([
+      {
+        manifest: {
+          id: 'provider-claude',
+          type: 'provider',
+          displayName: 'Claude Code',
+          description: "Anthropic's AI coding assistant via Claude Code CLI",
+        },
+        createPlugin: () => new ClaudeProviderPlugin(),
+        autoEnable: true,
+        autoActivate: true,
+      },
+    ]),
     TerminalModule,
     WorkspaceModule,
     SessionModule,

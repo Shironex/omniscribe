@@ -71,6 +71,9 @@ importers:
       '@omniscribe/plugin-api':
         specifier: workspace:*
         version: link:../../packages/plugin-api
+      '@omniscribe/provider-claude':
+        specifier: workspace:*
+        version: link:../../packages/plugins/provider-claude
       '@omniscribe/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -343,6 +346,10 @@ importers:
         version: 5.9.3
 
   packages/plugins/provider-claude:
+    dependencies:
+      node-pty:
+        specifier: '>=1.0.0'
+        version: 1.1.0
     devDependencies:
       '@omniscribe/plugin-api':
         specifier: workspace:*
