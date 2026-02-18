@@ -1,8 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import * as os from 'os';
-import * as path from 'path';
-import * as fs from 'fs';
-import { execFileSync } from 'child_process';
 import { AiMode, createLogger } from '@omniscribe/shared';
 import type { LaunchContext, CliCommandConfig } from '@omniscribe/plugin-api';
 import { PluginRegistryService } from '../plugin';
@@ -35,8 +32,8 @@ export interface CliSessionContext {
  * Handles finding AI CLI executables across different platforms and
  * building the appropriate command arguments.
  *
- * For built-in modes ('claude', 'plain'), uses hardcoded logic.
- * For plugin modes, delegates to the provider plugin via the registry.
+ * For 'plain' mode, uses shell config.
+ * For all other modes, delegates to the provider plugin via the registry.
  */
 @Injectable()
 export class CliCommandService {
@@ -53,13 +50,14 @@ export class CliCommandService {
   getCliConfig(aiMode: AiMode, session: CliSessionContext): AiCliConfig {
     if (aiMode === 'plain') return this.getShellConfig();
 
-    // Delegate to plugin provider for non-claude plugin modes
-    if (aiMode !== 'claude' && this.pluginRegistry.isPluginMode(aiMode)) {
+    // ALL non-plain modes go through the plugin registry (including Claude)
+    if (this.pluginRegistry.isPluginMode(aiMode)) {
       return this.getPluginCliConfig(aiMode, session);
     }
 
-    // Built-in Claude mode (remains until Phase 13 extracts it into a plugin)
-    return this.getClaudeCliConfig(session);
+    // Unknown mode -- should not happen if isValidMode() was checked
+    this.logger.warn(`No provider registered for mode: ${aiMode}, falling back to shell`);
+    return this.getShellConfig();
   }
 
   /**
@@ -76,77 +74,6 @@ export class CliCommandService {
     if (entry) return entry.manifest.displayName;
 
     return aiMode;
-  }
-
-  /**
-   * Get Claude CLI configuration
-   */
-  private getClaudeCliConfig(session: CliSessionContext): AiCliConfig {
-    const args: string[] = [];
-
-    // Add skip-permissions flag if enabled (must be before other flags)
-    if (session.skipPermissions) {
-      args.push('--dangerously-skip-permissions');
-    }
-
-    // Add continue flag for continuing the most recent session (mutually exclusive with --resume)
-    if (session.continueLastSession) {
-      args.push('--continue');
-    }
-    // Add resume flag if resuming a previous session (primary action flag, before --model)
-    else if (session.forkSessionId) {
-      args.push('--resume', session.forkSessionId, '--fork-session');
-    } else if (session.resumeSessionId) {
-      args.push('--resume', session.resumeSessionId);
-    }
-
-    // Add model flag if specified
-    if (session.model) {
-      args.push('--model', session.model);
-    }
-
-    // Skip system prompt flags when resuming/forking/continuing — the session already has its prompts
-    if (!session.resumeSessionId && !session.forkSessionId && !session.continueLastSession) {
-      // Add system prompt if specified (replaces default)
-      if (session.systemPrompt) {
-        args.push('--system-prompt', session.systemPrompt);
-      }
-
-      // Append Omniscribe status reporting instructions
-      // This adds to the default system prompt without replacing it
-      const omniscribePrompt = `
-## Omniscribe Integration
-
-You have access to the Omniscribe MCP server which keeps the Omniscribe UI in sync with your progress. Use these tools proactively:
-
-### Status Reporting (mcp__omniscribe__omniscribe_status)
-- **When starting work**: Call with state "working" and describe what you're doing
-- **When entering plan mode**: Call with state "planning" and describe what you're planning
-- **When waiting for user input**: Call with state "needs_input" and include the question in \`needsInputPrompt\`
-- **When task/plan is complete**: Call with state "finished" to indicate completion
-- **On errors**: Call with state "error" and describe what went wrong
-
-### Task List Reporting (mcp__omniscribe__omniscribe_tasks)
-- **When you plan multi-step work**: Report all tasks immediately so the user sees what's coming
-- **As you progress**: Update the task list whenever a task's status changes (pending → in_progress → completed)
-- **Always send the complete list**: Every call replaces the previous snapshot — include all tasks, not just changed ones
-- Each task needs: id (unique string), subject (brief title), status (pending/in_progress/completed)
-
-Call these tools at the start and end of every user request, and at each meaningful transition in between.
-`.trim();
-
-      args.push('--append-system-prompt', omniscribePrompt);
-    }
-
-    // Find the Claude CLI command with proper path resolution
-    // This is needed on all platforms because Electron doesn't inherit the user's shell PATH
-    const command = this.findCliCommand('claude', this.getClaudeCliPaths());
-    this.logger.debug(`Resolved Claude CLI command: ${command}`);
-
-    return {
-      command,
-      args,
-    };
   }
 
   /**
@@ -203,129 +130,5 @@ Call these tools at the start and end of every user request, and at each meaning
       command: cmdConfig.command,
       args: cmdConfig.args,
     };
-  }
-
-  /**
-   * Find a CLI command, checking PATH first, then known installation locations
-   * @param command The base command name (e.g., 'claude')
-   * @param knownPaths Platform-specific known installation paths
-   * @returns The resolved command path
-   */
-  private findCliCommand(command: string, knownPaths: string[]): string {
-    // First, try to find in PATH
-    const pathResult = this.findInPath(command);
-    if (pathResult) {
-      return pathResult;
-    }
-
-    // On Windows, also try with .cmd and .exe extensions
-    if (os.platform() === 'win32') {
-      const cmdResult = this.findInPath(`${command}.cmd`);
-      if (cmdResult) {
-        return cmdResult;
-      }
-      const exeResult = this.findInPath(`${command}.exe`);
-      if (exeResult) {
-        return exeResult;
-      }
-    }
-
-    // Check known installation paths
-    const knownPath = this.findFirstExistingPath(knownPaths);
-    if (knownPath) {
-      return knownPath;
-    }
-
-    // Fall back to the bare command (will likely fail, but provides clear error)
-    this.logger.info(
-      `CLI not found in PATH or known locations, falling back to bare command: ${command}`
-    );
-    return command;
-  }
-
-  /**
-   * Find an executable in the system PATH using 'where' (Windows) or 'which' (Unix)
-   * @param command The command name to find
-   * @returns The full path to the executable, or null if not found
-   */
-  private findInPath(command: string): string | null {
-    try {
-      const whichCmd = os.platform() === 'win32' ? 'where' : 'which';
-      const result = execFileSync(whichCmd, [command], {
-        encoding: 'utf-8',
-        stdio: ['pipe', 'pipe', 'pipe'],
-      });
-      // 'where' on Windows may return multiple lines, take the first
-      const firstLine = result.trim().split(/\r?\n/)[0];
-      return firstLine || null;
-    } catch (error) {
-      this.logger.debug(`CLI "${command}" not found in PATH`, error);
-      return null;
-    }
-  }
-
-  /**
-   * Get common paths where Claude CLI might be installed
-   */
-  private getClaudeCliPaths(): string[] {
-    const homeDir = os.homedir();
-
-    if (os.platform() === 'win32') {
-      const appData = process.env.APPDATA || path.join(homeDir, 'AppData', 'Roaming');
-      const localAppData = process.env.LOCALAPPDATA || path.join(homeDir, 'AppData', 'Local');
-
-      return [
-        // npm global installations
-        path.join(appData, 'npm', 'claude.cmd'),
-        path.join(appData, 'npm', 'claude'),
-        path.join(appData, '.npm-global', 'bin', 'claude.cmd'),
-        path.join(appData, '.npm-global', 'bin', 'claude'),
-        // Local bin
-        path.join(homeDir, '.local', 'bin', 'claude.exe'),
-        path.join(homeDir, '.local', 'bin', 'claude'),
-        // pnpm global
-        path.join(localAppData, 'pnpm', 'claude.cmd'),
-        path.join(localAppData, 'pnpm', 'claude'),
-        // Volta
-        path.join(homeDir, '.volta', 'bin', 'claude.exe'),
-      ];
-    }
-
-    // macOS and Linux paths
-    return [
-      // npm global installations
-      '/usr/local/bin/claude',
-      '/usr/bin/claude',
-      path.join(homeDir, '.npm-global', 'bin', 'claude'),
-      // Local bin
-      path.join(homeDir, '.local', 'bin', 'claude'),
-      // nvm installations
-      path.join(homeDir, '.nvm', 'versions', 'node', '*', 'bin', 'claude'),
-      // pnpm global
-      path.join(homeDir, 'Library', 'pnpm', 'claude'),
-      path.join(homeDir, '.local', 'share', 'pnpm', 'claude'),
-      // Homebrew
-      '/opt/homebrew/bin/claude',
-      // Volta
-      path.join(homeDir, '.volta', 'bin', 'claude'),
-      // Bun
-      path.join(homeDir, '.bun', 'bin', 'claude'),
-    ];
-  }
-
-  /**
-   * Find the first existing path from a list of paths
-   */
-  private findFirstExistingPath(paths: string[]): string | null {
-    for (const p of paths) {
-      try {
-        if (fs.existsSync(p)) {
-          return p;
-        }
-      } catch (error) {
-        this.logger.debug(`Error checking path ${p}`, error);
-      }
-    }
-    return null;
   }
 }
