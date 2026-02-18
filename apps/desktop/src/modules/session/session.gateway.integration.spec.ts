@@ -15,6 +15,12 @@ import {
   waitForEvent,
   emitWithAck,
 } from '../../../test/integration/helpers/socket-client';
+
+// Mock ../plugin barrel to avoid electron-store import in test environment
+jest.mock('../plugin', () => ({
+  PluginRegistryService: jest.fn(),
+}));
+
 import { SessionGateway } from './session.gateway';
 import { SessionService } from './session.service';
 import { SessionLauncherService } from './session-launcher.service';
@@ -23,6 +29,7 @@ import { WorktreeService } from '../git/worktree.service';
 import { GitService } from '../git/git.service';
 import { WorkspaceService } from '../workspace/workspace.service';
 import { ClaudeSessionReaderService } from './claude-session-reader.service';
+import { PluginRegistryService } from '../plugin';
 
 const mockSession = {
   id: 'session-1-123',
@@ -90,6 +97,18 @@ describe('SessionGateway (integration)', () => {
       watchSessionsIndex: jest.fn().mockReturnValue(() => {}),
     };
 
+    const mockPluginRegistry = {
+      isPluginMode: jest.fn().mockReturnValue(false),
+      isValidMode: jest
+        .fn()
+        .mockImplementation((mode: string) => mode === 'claude' || mode === 'plain'),
+      getProvider: jest.fn().mockImplementation(() => {
+        throw new Error('No provider registered');
+      }),
+      getProviderEntry: jest.fn().mockReturnValue(undefined),
+      listProviders: jest.fn().mockReturnValue([]),
+    };
+
     // Build a minimal module with just the SessionGateway and mocked providers
     @Module({
       providers: [
@@ -101,6 +120,7 @@ describe('SessionGateway (integration)', () => {
         { provide: GitService, useValue: mockGitService },
         { provide: WorkspaceService, useValue: mockWorkspaceService },
         { provide: ClaudeSessionReaderService, useValue: mockClaudeSessionReader },
+        { provide: PluginRegistryService, useValue: mockPluginRegistry },
       ],
     })
     class TestSessionModule {}

@@ -2,6 +2,13 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { UsageService } from './usage.service';
 import type { ClaudeCliStatus } from '@omniscribe/shared';
 
+// Mock ../plugin barrel to avoid electron-store import in test environment
+jest.mock('../plugin', () => ({
+  PluginRegistryService: jest.fn(),
+}));
+
+import { PluginRegistryService } from '../plugin';
+
 // ---- Mocks ----
 
 // Mock getClaudeCliStatus from claude-detection
@@ -9,6 +16,18 @@ const mockGetClaudeCliStatus = jest.fn<Promise<ClaudeCliStatus>, []>();
 jest.mock('../../main/utils/claude-detection', () => ({
   getClaudeCliStatus: () => mockGetClaudeCliStatus(),
 }));
+
+const mockPluginRegistry = {
+  isPluginMode: jest.fn().mockReturnValue(false),
+  isValidMode: jest
+    .fn()
+    .mockImplementation((mode: string) => mode === 'claude' || mode === 'plain'),
+  getProvider: jest.fn().mockImplementation(() => {
+    throw new Error('No provider registered');
+  }),
+  getProviderEntry: jest.fn().mockReturnValue(undefined),
+  listProviders: jest.fn().mockReturnValue([]),
+};
 
 // Mock os module for platform-specific testing
 const mockOsPlatform = jest.fn().mockReturnValue(process.platform);
@@ -61,8 +80,14 @@ describe('UsageService', () => {
     jest.clearAllMocks();
     jest.useFakeTimers({ advanceTimers: true });
 
+    // Restore mock defaults after clearAllMocks
+    mockPluginRegistry.isPluginMode.mockReturnValue(false);
+    mockPluginRegistry.getProvider.mockImplementation(() => {
+      throw new Error('No provider registered');
+    });
+
     const module: TestingModule = await Test.createTestingModule({
-      providers: [UsageService],
+      providers: [UsageService, { provide: PluginRegistryService, useValue: mockPluginRegistry }],
     }).compile();
 
     service = module.get<UsageService>(UsageService);
@@ -697,8 +722,14 @@ describe('UsageService', () => {
         jest.useFakeTimers({ advanceTimers: true });
         mockOsPlatform.mockReturnValue('win32');
 
+        // Restore mock defaults after clearAllMocks
+        mockPluginRegistry.isPluginMode.mockReturnValue(false);
+
         const module: TestingModule = await Test.createTestingModule({
-          providers: [UsageService],
+          providers: [
+            UsageService,
+            { provide: PluginRegistryService, useValue: mockPluginRegistry },
+          ],
         }).compile();
 
         winService = module.get<UsageService>(UsageService);
@@ -757,8 +788,14 @@ describe('UsageService', () => {
         jest.useFakeTimers({ advanceTimers: true });
         mockOsPlatform.mockReturnValue('linux');
 
+        // Restore mock defaults after clearAllMocks
+        mockPluginRegistry.isPluginMode.mockReturnValue(false);
+
         const module: TestingModule = await Test.createTestingModule({
-          providers: [UsageService],
+          providers: [
+            UsageService,
+            { provide: PluginRegistryService, useValue: mockPluginRegistry },
+          ],
         }).compile();
 
         linuxService = module.get<UsageService>(UsageService);

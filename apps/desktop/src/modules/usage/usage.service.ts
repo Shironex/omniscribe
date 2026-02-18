@@ -2,7 +2,9 @@ import { Injectable } from '@nestjs/common';
 import * as pty from 'node-pty';
 import * as os from 'os';
 import { createLogger, extractErrorMessage, stripAnsiCodes } from '@omniscribe/shared';
-import type { ClaudeUsage, UsageError, ClaudeCliStatus } from '@omniscribe/shared';
+import type { AiMode, ClaudeUsage, UsageError, ClaudeCliStatus } from '@omniscribe/shared';
+import type { CliDetectionResult, ProviderUsageData } from '@omniscribe/plugin-api';
+import { PluginRegistryService } from '../plugin';
 import { getClaudeCliStatus } from '../../main/utils/claude-detection';
 import { buildSafeEnv } from '../shared/env-utils';
 import { UsageOutputParser } from './usage-output-parser';
@@ -31,6 +33,8 @@ export class UsageService {
   /** Cached CLI status */
   private cachedStatus: ClaudeCliStatus | null = null;
   private statusCacheTimestamp = 0;
+
+  constructor(private readonly pluginRegistry: PluginRegistryService) {}
 
   /**
    * Get Claude CLI status (with caching)
@@ -86,6 +90,74 @@ export class UsageService {
 
       return { error: errorType, message };
     }
+  }
+
+  // ================================================================
+  // Mode-aware methods (plugin delegation)
+  // ================================================================
+
+  /**
+   * Fetch usage data for the given AI mode.
+   * Delegates to the provider plugin's parseUsage() for plugin modes,
+   * falls back to Claude CLI usage fetching for 'claude' mode.
+   * Returns null for modes that don't support usage.
+   */
+  async fetchUsageForMode(
+    aiMode: AiMode,
+    workingDir: string
+  ): Promise<{ usage?: ProviderUsageData; error?: UsageError; message?: string } | null> {
+    if (aiMode === 'plain') return null;
+
+    // Plugin provider usage
+    if (aiMode !== 'claude' && this.pluginRegistry.isPluginMode(aiMode)) {
+      try {
+        const provider = this.pluginRegistry.getProvider(aiMode);
+        if (!provider.capabilities.supportsUsage || !provider.parseUsage) {
+          return null;
+        }
+        const usage = await provider.parseUsage(workingDir);
+        if (usage) {
+          return { usage };
+        }
+        return null;
+      } catch (error) {
+        const message = extractErrorMessage(error);
+        this.logger.error(`Plugin usage fetch failed for '${aiMode}': ${message}`);
+        return { error: 'unknown', message };
+      }
+    }
+
+    // Default: Claude usage (existing behavior)
+    return null; // Caller should use existing fetchUsageData for Claude
+  }
+
+  /**
+   * Get CLI status for the given AI mode.
+   * Delegates to provider plugin's detectCli() for plugin modes,
+   * uses cached Claude CLI status for 'claude' mode.
+   */
+  async getStatusForMode(
+    aiMode: AiMode,
+    forceRefresh = false
+  ): Promise<CliDetectionResult | ClaudeCliStatus> {
+    if (aiMode === 'plain') {
+      return { installed: true }; // Plain terminals are always "installed"
+    }
+
+    // Plugin provider status
+    if (aiMode !== 'claude' && this.pluginRegistry.isPluginMode(aiMode)) {
+      try {
+        const provider = this.pluginRegistry.getProvider(aiMode);
+        return await provider.detectCli();
+      } catch (error) {
+        const message = extractErrorMessage(error);
+        this.logger.error(`Plugin CLI detection failed for '${aiMode}': ${message}`);
+        return { installed: false, error: message };
+      }
+    }
+
+    // Default: Claude status
+    return this.getStatus(forceRefresh);
   }
 
   /**

@@ -1,6 +1,12 @@
 import { ExecutionContext, NotImplementedException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ClaudeCliGuard, REQUIRES_CLAUDE_CLI, SKIP_CLAUDE_CLI_CHECK } from './claude-cli.guard';
+
+// Mock plugin barrel to avoid electron-store import in test environment
+jest.mock('../../modules/plugin', () => ({
+  PluginRegistryService: jest.fn(),
+}));
+
 import { UsageService } from '../../modules/usage/usage.service';
 
 function createMockExecutionContext(): ExecutionContext {

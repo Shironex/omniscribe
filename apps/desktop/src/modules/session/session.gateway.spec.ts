@@ -1,6 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { Server, Socket } from 'socket.io';
+
+// Mock ../plugin barrel to avoid electron-store import in test environment
+jest.mock('../plugin', () => ({
+  PluginRegistryService: jest.fn(),
+}));
+
 import { SessionGateway } from './session.gateway';
 import { SessionService } from './session.service';
 import { SessionLauncherService } from './session-launcher.service';
@@ -10,6 +16,7 @@ import { WorktreeService } from '../git/worktree.service';
 import { GitService } from '../git/git.service';
 import { WorkspaceService } from '../workspace/workspace.service';
 import { ClaudeSessionReaderService } from './claude-session-reader.service';
+import { PluginRegistryService } from '../plugin';
 import type { SessionStatus } from '@omniscribe/shared';
 import { MAX_CONCURRENT_SESSIONS } from '@omniscribe/shared';
 
@@ -108,6 +115,18 @@ const mockClaudeSessionReader = {
   watchSessionsIndex: jest.fn().mockReturnValue(() => {}),
 };
 
+const mockPluginRegistry = {
+  isPluginMode: jest.fn().mockReturnValue(false),
+  isValidMode: jest
+    .fn()
+    .mockImplementation((mode: string) => mode === 'claude' || mode === 'plain'),
+  getProvider: jest.fn().mockImplementation(() => {
+    throw new Error('No provider registered');
+  }),
+  getProviderEntry: jest.fn().mockReturnValue(undefined),
+  listProviders: jest.fn().mockReturnValue([]),
+};
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -129,6 +148,7 @@ describe('SessionGateway', () => {
         { provide: GitService, useValue: mockGitService },
         { provide: WorkspaceService, useValue: mockWorkspaceService },
         { provide: ClaudeSessionReaderService, useValue: mockClaudeSessionReader },
+        { provide: PluginRegistryService, useValue: mockPluginRegistry },
       ],
     }).compile();
 

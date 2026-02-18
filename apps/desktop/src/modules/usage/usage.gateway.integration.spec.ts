@@ -15,6 +15,12 @@ import {
   connectClient,
   emitWithAck,
 } from '../../../test/integration/helpers/socket-client';
+
+// Mock ../plugin barrel to avoid electron-store import in test environment
+jest.mock('../plugin', () => ({
+  PluginRegistryService: jest.fn(),
+}));
+
 import { UsageGateway } from './usage.gateway';
 import { UsageService } from './usage.service';
 
