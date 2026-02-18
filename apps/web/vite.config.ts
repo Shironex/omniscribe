@@ -29,6 +29,11 @@ export default defineConfig({
       '@omniscribe/ui': resolve(__dirname, './src/lib/plugin-sdk.ts'),
       // Plugin API types: lets plugin frontend code import type contracts
       '@omniscribe/plugin-api': resolve(__dirname, '../../packages/plugin-api/src/index.ts'),
+      // Claude plugin frontend: lets usePluginInitialization dynamically import Claude's UI
+      '@omniscribe/provider-claude/frontend': resolve(
+        __dirname,
+        '../../packages/plugins/provider-claude/src/frontend/index.ts'
+      ),
     },
   },
   server: {

@@ -10,6 +10,7 @@ import { useSettingsStore } from '@/stores/useSettingsStore';
 import { connectSocket, getSocket, initializeSocket } from '@/lib/socket';
 import { resumeSession } from '@/lib/session';
 import { useStoreListeners } from './useStoreListeners';
+import { usePluginInitialization } from './usePluginInitialization';
 
 const logger = createLogger('AppInit');
 
@@ -83,6 +84,9 @@ async function autoResumeOnRestart(): Promise<void> {
  */
 export function useAppInitialization(): void {
   const { initAllListeners, cleanupAllListeners, fetchInternalMcpStatus } = useStoreListeners();
+
+  // Initialize plugin system (socket listeners + frontend activation)
+  usePluginInitialization();
 
   // Update store (uses IPC, not socket — init separately)
   const initUpdateListeners = useUpdateStore(state => state.initListeners);
