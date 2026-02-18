@@ -32,6 +32,7 @@
 - [Architecture](#architecture)
 - [Tech Stack](#tech-stack)
 - [Beta Releases](#beta-releases)
+- [Roadmap](#roadmap)
 - [Contributing](#contributing)
 - [License](#license)
 
@@ -203,12 +204,32 @@ Omniscribe supports a beta update channel for testing new features before stable
 
 Beta releases are tagged with a `-beta` suffix (e.g. `v0.5.0-beta.1`) and marked as pre-release on the [Releases page](https://github.com/Shironex/omniscribe/releases).
 
+## Roadmap
+
+Track our progress on the [public project board](https://github.com/users/Shironex/projects/7).
+
+### v2.0 — Plugin System & Multi-Provider Support
+
+Transforming Omniscribe from a Claude Code-specific app into a **universal AI coding orchestrator**.
+
+| Phase                      | Description                                                   | Status  |
+| -------------------------- | ------------------------------------------------------------- | ------- |
+| Plugin API Contracts       | Typed interfaces and manifest format for provider plugins     | Planned |
+| Backend Infrastructure     | Plugin registry, dynamic module loading, service delegation   | Planned |
+| Claude Provider Extraction | Move Claude-specific logic into a plugin package              | Planned |
+| Frontend Extensions        | Slot-based UI injection, dynamic settings, in-app marketplace | Planned |
+| Codex Provider Validation  | Second provider (OpenAI Codex CLI) proving the architecture   | Planned |
+
+**Want to add a provider?** See the [Plugin System Spec (Issue #173)](https://github.com/Shironex/omniscribe/issues/173) for the full architecture.
+
 ## Contributing
 
 Contributions are welcome! Feel free to:
 
 - [Submit an issue](https://github.com/Shironex/omniscribe/issues) for bugs or feature requests
 - Open a pull request with improvements
+- Check the [v2.0 milestone](https://github.com/Shironex/omniscribe/milestone/9) for planned work
+- Read the [Plugin System Spec](https://github.com/Shironex/omniscribe/issues/173) if you want to contribute a provider plugin
 - Share feedback and suggestions
 
 ## License
