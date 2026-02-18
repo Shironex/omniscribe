@@ -1,8 +1,15 @@
 import { Test, TestingModule } from '@nestjs/testing';
+
+// Mock ../plugin barrel to avoid electron-store import in test environment
+jest.mock('../plugin', () => ({
+  PluginRegistryService: jest.fn(),
+}));
+
 import { SessionLauncherService } from './session-launcher.service';
 import { SessionService } from './session.service';
 import { TerminalService } from '../terminal/terminal.service';
 import { McpWriterService, McpDiscoveryService } from '../mcp';
+import { PluginRegistryService } from '../plugin';
 import { CliCommandService } from './cli-command.service';
 import { ClaudeSessionReaderService } from './claude-session-reader.service';
 import { HookManagerService } from './hook-manager.service';
@@ -22,6 +29,18 @@ function createMockSession(overrides?: Partial<BackendSessionConfig>): BackendSe
     ...overrides,
   } as BackendSessionConfig;
 }
+
+const mockPluginRegistry = {
+  isPluginMode: jest.fn().mockReturnValue(false),
+  isValidMode: jest
+    .fn()
+    .mockImplementation((mode: string) => mode === 'claude' || mode === 'plain'),
+  getProvider: jest.fn().mockImplementation(() => {
+    throw new Error('No provider registered');
+  }),
+  getProviderEntry: jest.fn().mockReturnValue(undefined),
+  listProviders: jest.fn().mockReturnValue([]),
+};
 
 describe('SessionLauncherService', () => {
   let service: SessionLauncherService;
@@ -78,6 +97,12 @@ describe('SessionLauncherService', () => {
       startTracking: jest.fn(),
     } as unknown as jest.Mocked<ClaudeSessionTrackerService>;
 
+    // Reset plugin registry mock
+    mockPluginRegistry.isPluginMode.mockReturnValue(false);
+    mockPluginRegistry.getProvider.mockImplementation(() => {
+      throw new Error('No provider registered');
+    });
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         SessionLauncherService,
@@ -89,6 +114,7 @@ describe('SessionLauncherService', () => {
         { provide: ClaudeSessionReaderService, useValue: claudeSessionReader },
         { provide: HookManagerService, useValue: hookManager },
         { provide: ClaudeSessionTrackerService, useValue: claudeSessionTracker },
+        { provide: PluginRegistryService, useValue: mockPluginRegistry },
       ],
     }).compile();
 

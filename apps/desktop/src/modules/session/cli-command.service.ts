@@ -4,6 +4,8 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { execFileSync } from 'child_process';
 import { AiMode, createLogger } from '@omniscribe/shared';
+import type { LaunchContext, CliCommandConfig } from '@omniscribe/plugin-api';
+import { PluginRegistryService } from '../plugin';
 import { AiCliConfig } from './types';
 
 /**
@@ -19,16 +21,28 @@ export interface CliSessionContext {
   forkSessionId?: string;
   /** Whether to continue the most recent session (passes --continue flag) */
   continueLastSession?: boolean;
+  // --- Added for plugin LaunchContext population ---
+  /** Omniscribe session identifier */
+  sessionId?: string;
+  /** Working directory for the session (may be a worktree path) */
+  workingDirectory?: string;
+  /** Original project path (before worktree resolution) */
+  projectPath?: string;
 }
 
 /**
  * Service responsible for CLI command resolution and configuration.
  * Handles finding AI CLI executables across different platforms and
  * building the appropriate command arguments.
+ *
+ * For built-in modes ('claude', 'plain'), uses hardcoded logic.
+ * For plugin modes, delegates to the provider plugin via the registry.
  */
 @Injectable()
 export class CliCommandService {
   private readonly logger = createLogger('CliCommandService');
+
+  constructor(private readonly pluginRegistry: PluginRegistryService) {}
 
   /**
    * Get the CLI configuration for a given AI mode
@@ -37,14 +51,15 @@ export class CliCommandService {
    * @returns CLI configuration with command and arguments
    */
   getCliConfig(aiMode: AiMode, session: CliSessionContext): AiCliConfig {
-    switch (aiMode) {
-      case 'claude':
-        return this.getClaudeCliConfig(session);
+    if (aiMode === 'plain') return this.getShellConfig();
 
-      case 'plain':
-      default:
-        return this.getShellConfig();
+    // Delegate to plugin provider for non-claude plugin modes
+    if (aiMode !== 'claude' && this.pluginRegistry.isPluginMode(aiMode)) {
+      return this.getPluginCliConfig(aiMode, session);
     }
+
+    // Built-in Claude mode (remains until Phase 13 extracts it into a plugin)
+    return this.getClaudeCliConfig(session);
   }
 
   /**
@@ -53,14 +68,14 @@ export class CliCommandService {
    * @returns Human-readable name
    */
   getAiModeName(aiMode: AiMode): string {
-    switch (aiMode) {
-      case 'claude':
-        return 'Claude';
-      case 'plain':
-        return 'Plain Terminal';
-      default:
-        return 'Unknown';
-    }
+    if (aiMode === 'plain') return 'Plain Terminal';
+    if (aiMode === 'claude') return 'Claude';
+
+    // Check plugin registry for display name
+    const entry = this.pluginRegistry.getProviderEntry(aiMode);
+    if (entry) return entry.manifest.displayName;
+
+    return aiMode;
   }
 
   /**
@@ -148,6 +163,45 @@ Call these tools at the start and end of every user request, and at each meaning
     return {
       command: process.env.SHELL || '/bin/bash',
       args: ['-l'], // Login shell
+    };
+  }
+
+  /**
+   * Get CLI configuration by delegating to a plugin provider.
+   * Builds a LaunchContext from the CliSessionContext and routes to the
+   * appropriate provider method (launch/resume/fork/continue).
+   */
+  private getPluginCliConfig(aiMode: string, session: CliSessionContext): AiCliConfig {
+    const provider = this.pluginRegistry.getProvider(aiMode);
+
+    const launchContext: LaunchContext = {
+      sessionId: session.sessionId ?? '',
+      workingDirectory: session.workingDirectory ?? '',
+      projectPath: session.projectPath ?? '',
+      model: session.model,
+      systemPrompt: session.systemPrompt,
+      skipPermissions: session.skipPermissions,
+    };
+
+    let cmdConfig: CliCommandConfig;
+
+    if (session.continueLastSession && provider.buildContinueCommand) {
+      cmdConfig = provider.buildContinueCommand(launchContext);
+    } else if (session.forkSessionId && provider.buildForkCommand) {
+      cmdConfig = provider.buildForkCommand(session.forkSessionId, launchContext);
+    } else if (session.resumeSessionId && provider.buildResumeCommand) {
+      cmdConfig = provider.buildResumeCommand(session.resumeSessionId, launchContext);
+    } else {
+      cmdConfig = provider.buildLaunchCommand(launchContext);
+    }
+
+    this.logger.debug(
+      `Plugin CLI config for '${aiMode}': ${cmdConfig.command} ${cmdConfig.args.join(' ')}`
+    );
+
+    return {
+      command: cmdConfig.command,
+      args: cmdConfig.args,
     };
   }
 

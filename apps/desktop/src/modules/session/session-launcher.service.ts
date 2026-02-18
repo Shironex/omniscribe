@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { AiMode, LaunchSessionResult, createLogger, extractErrorMessage } from '@omniscribe/shared';
 import { TerminalService } from '../terminal';
 import { McpWriterService, McpDiscoveryService } from '../mcp';
+import { PluginRegistryService } from '../plugin';
 import { CliCommandService } from './cli-command.service';
 import { ClaudeSessionReaderService } from './claude-session-reader.service';
 import { HookManagerService } from './hook-manager.service';
@@ -20,7 +21,8 @@ export class SessionLauncherService {
     private readonly cliCommandService: CliCommandService,
     private readonly claudeSessionReader: ClaudeSessionReaderService,
     private readonly hookManager: HookManagerService,
-    private readonly claudeSessionTracker: ClaudeSessionTrackerService
+    private readonly claudeSessionTracker: ClaudeSessionTrackerService,
+    private readonly pluginRegistry: PluginRegistryService
   ) {}
 
   /**
@@ -103,9 +105,34 @@ export class SessionLauncherService {
 
         this.logger.log(`MCP config written to ${worktreePath}/.mcp.json`);
       }
+      // Plugin providers that support MCP can contribute their own config.
+      // Delegated to the provider's getMcpConfig() method.
+      else if (aiMode !== 'plain' && this.pluginRegistry.isPluginMode(aiMode)) {
+        try {
+          const provider = this.pluginRegistry.getProvider(aiMode);
+          if (provider.capabilities.supportsMcp && provider.getMcpConfig) {
+            const mcpContribution = await provider.getMcpConfig(sessionId, projectPath);
+            if (mcpContribution) {
+              this.logger.log(
+                `Plugin '${aiMode}' contributed MCP config to ${mcpContribution.configPath}`
+              );
+            }
+          }
+        } catch (error) {
+          const msg = extractErrorMessage(error);
+          this.logger.warn(`Plugin MCP config failed for '${aiMode}': ${msg}`);
+        }
+      }
 
-      // Get CLI configuration for the AI mode
-      const cliConfig = this.cliCommandService.getCliConfig(aiMode, session);
+      // Get CLI configuration for the AI mode.
+      // Spread session fields and add launch context (sessionId, worktreePath, projectPath)
+      // so plugin providers receive a complete LaunchContext via CliSessionContext.
+      const cliConfig = this.cliCommandService.getCliConfig(aiMode, {
+        ...session,
+        sessionId: sessionId,
+        workingDirectory: worktreePath,
+        projectPath: projectPath,
+      });
 
       // Generate project hash for MCP status file identification
       const projectHash = this.mcpWriterService.generateProjectHash(projectPath);
