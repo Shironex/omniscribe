@@ -35,7 +35,6 @@ export class UsageGateway implements OnGatewayInit {
 
   /**
    * Handle usage:fetch request from client
-   * Fetches Claude CLI usage data and returns it
    */
   @SkipThrottle()
   @SubscribeMessage(UsageEvents.FETCH)
@@ -45,28 +44,29 @@ export class UsageGateway implements OnGatewayInit {
   ): Promise<UsageFetchResponse> {
     this.logger.debug(`Fetching usage for workingDir: ${payload.workingDir}`);
 
-    // Check if CLI is installed
-    const status = await this.usageService.getStatus();
-    if (!status.installed) {
-      return {
-        error: 'cli_not_found',
-        message: 'Claude CLI not found. Please install Claude Code CLI.',
-      };
-    }
+    // Default to claude mode for backward compatibility
+    const result = await this.usageService.fetchUsageForMode('claude', payload.workingDir);
 
-    // Fetch usage data
-    const result = await this.usageService.fetchUsageData(payload.workingDir);
+    if (!result) {
+      return { error: 'cli_not_found', message: 'No usage provider available' };
+    }
 
     if (result.error) {
       this.logger.warn(`Usage fetch failed: ${result.error} - ${result.message}`);
-      return {
-        error: result.error,
-        message: result.message,
-      };
+      return { error: result.error, message: result.message };
     }
 
-    this.logger.debug(`Usage fetched successfully: session=${result.usage?.sessionPercentage}%`);
-    return { usage: result.usage };
+    // Use rawUsage (ClaudeUsage) for frontend compatibility
+    // UsageFetchResponse.usage expects ClaudeUsage shape
+    if (result.rawUsage) {
+      this.logger.debug(
+        `Usage fetched successfully: session=${result.rawUsage.sessionPercentage}%`
+      );
+      return { usage: result.rawUsage };
+    }
+
+    // Fallback: no raw usage available (shouldn't happen for Claude)
+    return { error: 'parse_error', message: 'Usage data format mismatch' };
   }
 
   /**
@@ -80,8 +80,8 @@ export class UsageGateway implements OnGatewayInit {
   ): Promise<{ status: ClaudeCliStatus; error?: string }> {
     this.logger.debug(`[usage:claude-status] refresh=${payload?.refresh ?? false}`);
     try {
-      const status = await this.usageService.getStatus(payload?.refresh);
-      return { status };
+      const status = await this.usageService.getStatusForMode('claude', payload?.refresh);
+      return { status: status as ClaudeCliStatus };
     } catch (error) {
       const message = extractErrorMessage(error);
       const platform = process.platform;

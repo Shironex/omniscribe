@@ -49,7 +49,7 @@ export class ClaudeCliGuard implements CanActivate {
       return true;
     }
 
-    const status = await this.usageService.getStatus();
+    const status = await this.usageService.getStatusForMode('claude');
 
     if (!status.installed) {
       throw new NotImplementedException({
@@ -60,7 +60,7 @@ export class ClaudeCliGuard implements CanActivate {
       });
     }
 
-    if (!status.auth.authenticated) {
+    if ('auth' in status && !(status as any).auth.authenticated) {
       throw new NotImplementedException({
         statusCode: 501,
         message: 'Claude CLI not authenticated',

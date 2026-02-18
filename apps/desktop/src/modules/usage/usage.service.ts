@@ -1,82 +1,72 @@
 import { Injectable } from '@nestjs/common';
-import * as pty from 'node-pty';
-import * as os from 'os';
-import { createLogger, extractErrorMessage, stripAnsiCodes } from '@omniscribe/shared';
-import type { AiMode, ClaudeUsage, UsageError, ClaudeCliStatus } from '@omniscribe/shared';
-import type { CliDetectionResult, ProviderUsageData } from '@omniscribe/plugin-api';
 import { PluginRegistryService } from '../plugin';
-import { getClaudeCliStatus } from '../../main/utils/claude-detection';
-import { buildSafeEnv } from '../shared/env-utils';
-import { UsageOutputParser } from './usage-output-parser';
+import {
+  AiMode,
+  ClaudeCliStatus,
+  ClaudeUsage,
+  createLogger,
+  extractErrorMessage,
+} from '@omniscribe/shared';
+import type { CliDetectionResult, ProviderUsageData } from '@omniscribe/plugin-api';
+import type { UsageError } from '@omniscribe/shared';
 
-/** Cache TTL for status checks (5 minutes) */
-const STATUS_CACHE_TTL_MS = 5 * 60 * 1000;
+export interface UsageFetchResult {
+  /** Provider-agnostic usage data */
+  providerUsage?: ProviderUsageData;
+  /** Raw ClaudeUsage for backward compat with frontend (Phase 13 only) */
+  rawUsage?: ClaudeUsage;
+  /** Error if fetch failed */
+  error?: UsageError;
+  /** Error message */
+  message?: string;
+}
 
 /**
  * Usage Service
  *
- * Fetches usage data by executing the Claude CLI's /usage command.
- * This approach doesn't require any API keys - it relies on the user
- * having already authenticated via `claude login`.
- *
- * Platform-specific implementations:
- * - Windows: Uses node-pty with ConPTY disabled (winpty)
- * - macOS/Linux: Uses node-pty
+ * Delegates all usage fetching and CLI status detection to the provider plugin
+ * via the plugin registry. No longer directly spawns PTY processes or imports
+ * Claude-specific detection utilities.
  */
 @Injectable()
 export class UsageService {
   private readonly logger = createLogger('UsageService');
-  private readonly timeout = 45000; // 45 second timeout
-  private readonly isWindows = os.platform() === 'win32';
-  private readonly parser = new UsageOutputParser();
-
-  /** Cached CLI status */
-  private cachedStatus: ClaudeCliStatus | null = null;
-  private statusCacheTimestamp = 0;
 
   constructor(private readonly pluginRegistry: PluginRegistryService) {}
 
   /**
-   * Get Claude CLI status (with caching)
-   *
-   * Delegates to getClaudeCliStatus() which detects the CLI installation
-   * and checks authentication by reading ~/.claude/.credentials.json
-   * for OAuth tokens, rather than spawning a process.
+   * Fetch usage data for the given AI mode via the provider plugin.
+   * Returns null for modes that don't support usage (e.g., 'plain').
    */
-  async getStatus(forceRefresh = false): Promise<ClaudeCliStatus> {
-    const now = Date.now();
+  async fetchUsageForMode(aiMode: AiMode, workingDir: string): Promise<UsageFetchResult | null> {
+    if (aiMode === 'plain') return null;
+    if (!this.pluginRegistry.isPluginMode(aiMode)) return null;
 
-    // Return cached status if still valid
-    if (
-      !forceRefresh &&
-      this.cachedStatus &&
-      now - this.statusCacheTimestamp < STATUS_CACHE_TTL_MS
-    ) {
-      return this.cachedStatus;
-    }
-
-    this.cachedStatus = await getClaudeCliStatus();
-    this.statusCacheTimestamp = now;
-
-    return this.cachedStatus;
-  }
-
-  /**
-   * Fetch usage data by executing the Claude CLI
-   * @param workingDir - Working directory to run claude from (should be trusted)
-   */
-  async fetchUsageData(
-    workingDir: string
-  ): Promise<{ usage?: ClaudeUsage; error?: UsageError; message?: string }> {
     try {
-      const output = await this.executeClaudeUsageCommand(workingDir);
-      const usage = this.parser.parseUsageOutput(output);
-      return { usage };
+      const provider = this.pluginRegistry.getProvider(aiMode);
+      if (!provider.capabilities.supportsUsage || !provider.parseUsage) {
+        return null;
+      }
+
+      const providerUsage = await provider.parseUsage(workingDir);
+      if (!providerUsage) return null;
+
+      // For backward compat: access the provider's internal fetcher to get ClaudeUsage
+      // This avoids 'as any' by going through the typed accessor
+      let rawUsage: ClaudeUsage | undefined;
+      if ('getUsageFetcher' in provider) {
+        // The ClaudeProviderPlugin exposes getUsageFetcher() which has lastFetchedUsage
+        const fetcher = (provider as any).getUsageFetcher();
+        if (fetcher?.lastFetchedUsage) {
+          rawUsage = fetcher.lastFetchedUsage;
+        }
+      }
+
+      return { providerUsage, rawUsage };
     } catch (error) {
       const message = extractErrorMessage(error);
-      this.logger.error('Failed to fetch usage', error);
+      this.logger.error(`Usage fetch failed for '${aiMode}': ${message}`);
 
-      // Determine error type
       let errorType: UsageError = 'unknown';
       if (message.includes('authentication') || message.includes('login')) {
         errorType = 'auth_required';
@@ -87,279 +77,39 @@ export class UsageService {
       } else if (message.includes('not found') || message.includes('not available')) {
         errorType = 'cli_not_found';
       }
-
       return { error: errorType, message };
     }
   }
 
-  // ================================================================
-  // Mode-aware methods (plugin delegation)
-  // ================================================================
-
   /**
-   * Fetch usage data for the given AI mode.
-   * Delegates to the provider plugin's parseUsage() for plugin modes,
-   * falls back to Claude CLI usage fetching for 'claude' mode.
-   * Returns null for modes that don't support usage.
-   */
-  async fetchUsageForMode(
-    aiMode: AiMode,
-    workingDir: string
-  ): Promise<{ usage?: ProviderUsageData; error?: UsageError; message?: string } | null> {
-    if (aiMode === 'plain') return null;
-
-    // Plugin provider usage
-    if (aiMode !== 'claude' && this.pluginRegistry.isPluginMode(aiMode)) {
-      try {
-        const provider = this.pluginRegistry.getProvider(aiMode);
-        if (!provider.capabilities.supportsUsage || !provider.parseUsage) {
-          return null;
-        }
-        const usage = await provider.parseUsage(workingDir);
-        if (usage) {
-          return { usage };
-        }
-        return null;
-      } catch (error) {
-        const message = extractErrorMessage(error);
-        this.logger.error(`Plugin usage fetch failed for '${aiMode}': ${message}`);
-        return { error: 'unknown', message };
-      }
-    }
-
-    // Default: Claude usage (existing behavior)
-    return null; // Caller should use existing fetchUsageData for Claude
-  }
-
-  /**
-   * Get CLI status for the given AI mode.
-   * Delegates to provider plugin's detectCli() for plugin modes,
-   * uses cached Claude CLI status for 'claude' mode.
+   * Get CLI status for the given AI mode via the provider plugin.
    */
   async getStatusForMode(
     aiMode: AiMode,
-    forceRefresh = false
+    _forceRefresh = false
   ): Promise<CliDetectionResult | ClaudeCliStatus> {
     if (aiMode === 'plain') {
-      return { installed: true }; // Plain terminals are always "installed"
+      return { installed: true };
     }
 
-    // Plugin provider status
-    if (aiMode !== 'claude' && this.pluginRegistry.isPluginMode(aiMode)) {
-      try {
-        const provider = this.pluginRegistry.getProvider(aiMode);
-        return await provider.detectCli();
-      } catch (error) {
-        const message = extractErrorMessage(error);
-        this.logger.error(`Plugin CLI detection failed for '${aiMode}': ${message}`);
-        return { installed: false, error: message };
-      }
+    if (!this.pluginRegistry.isPluginMode(aiMode)) {
+      return { installed: false, error: `No provider for mode: ${aiMode}` };
     }
 
-    // Default: Claude status
-    return this.getStatus(forceRefresh);
-  }
-
-  /**
-   * Execute the claude /usage command and return the output
-   * Uses node-pty for PTY emulation
-   */
-  private executeClaudeUsageCommand(workingDir: string): Promise<string> {
-    return new Promise((resolve, reject) => {
-      let output = '';
-      let settled = false;
-      let hasSeenUsageData = false;
-      let hasSeenTrustPrompt = false;
-
-      // Use platform-appropriate shell and command
-      const shell = this.isWindows ? 'cmd.exe' : '/bin/sh';
-      // Use --add-dir to whitelist the current directory and bypass the trust prompt
-      const args = this.isWindows
-        ? ['/c', 'claude', '--add-dir', workingDir]
-        : ['-c', `claude --add-dir "${workingDir}"`];
-
-      // Build PTY spawn options
-      const ptyOptions: pty.IPtyForkOptions = {
-        name: 'xterm-256color',
-        cols: 120,
-        rows: 30,
-        cwd: workingDir,
-        env: {
-          ...buildSafeEnv(),
-          TERM: 'xterm-256color',
-        },
-      };
-
-      // On Windows, always use winpty instead of ConPTY
-      // ConPTY requires AttachConsole which fails in Electron
-      if (this.isWindows) {
-        (ptyOptions as pty.IWindowsPtyForkOptions).useConpty = false;
-        this.logger.debug('Using winpty on Windows (ConPTY disabled for compatibility)');
+    try {
+      const provider = this.pluginRegistry.getProvider(aiMode);
+      // For Claude, use the richer getFullStatus() for backward compat with frontend
+      if ('getCliDetectionService' in provider) {
+        const detectionService = (provider as any).getCliDetectionService();
+        if (detectionService?.getFullStatus) {
+          return await detectionService.getFullStatus();
+        }
       }
-
-      let ptyProcess: pty.IPty;
-      try {
-        ptyProcess = pty.spawn(shell, args, ptyOptions);
-      } catch (spawnError) {
-        const errorMessage = extractErrorMessage(spawnError);
-        this.logger.error('Failed to spawn PTY', spawnError);
-        reject(new Error(`Unable to access terminal: ${errorMessage}`));
-        return;
-      }
-
-      const timeoutId = setTimeout(() => {
-        if (!settled) {
-          settled = true;
-          this.killPtyProcess(ptyProcess);
-
-          // Don't fail if we have data
-          if (output.includes('Current session')) {
-            resolve(output);
-          } else if (hasSeenTrustPrompt) {
-            reject(
-              new Error(
-                'TRUST_PROMPT_PENDING: Claude CLI is waiting for folder permission. Please run "claude" in your terminal and approve access.'
-              )
-            );
-          } else {
-            reject(
-              new Error(
-                'The Claude CLI took too long to respond. This can happen if the CLI is waiting for a trust prompt.'
-              )
-            );
-          }
-        }
-      }, this.timeout);
-
-      let hasSentCommand = false;
-      let hasApprovedTrust = false;
-      let cleanOutput = '';
-
-      ptyProcess.onData((data: string) => {
-        output += data;
-
-        // Strip ANSI codes from the new chunk and append to clean buffer
-        cleanOutput += stripAnsiCodes(data);
-
-        // Check for authentication errors
-        const hasAuthError =
-          cleanOutput.includes('OAuth token does not meet scope requirement') ||
-          cleanOutput.includes('token_expired') ||
-          cleanOutput.includes('"type":"authentication_error"') ||
-          cleanOutput.includes('"type": "authentication_error"');
-
-        if (hasAuthError) {
-          if (!settled) {
-            settled = true;
-            this.killPtyProcess(ptyProcess);
-            reject(
-              new Error(
-                "Claude CLI authentication issue. Please run 'claude logout' and then 'claude login' in your terminal."
-              )
-            );
-          }
-          return;
-        }
-
-        // Check for usage data indicators
-        const hasUsageIndicators =
-          cleanOutput.includes('Current session') ||
-          (cleanOutput.includes('Usage') && cleanOutput.includes('% left')) ||
-          /\d+%\s*(left|used|remaining)/i.test(cleanOutput) ||
-          cleanOutput.includes('Resets in') ||
-          cleanOutput.includes('Current week');
-
-        if (!hasSeenUsageData && hasUsageIndicators) {
-          hasSeenUsageData = true;
-          // Wait for full output, then send escape to exit
-          setTimeout(() => {
-            if (!settled && ptyProcess) {
-              ptyProcess.write('\x1b'); // Send escape key
-
-              // Fallback: force kill after 2s if ESC doesn't work
-              setTimeout(() => {
-                if (!settled && ptyProcess) {
-                  this.killPtyProcess(ptyProcess);
-                }
-              }, 2000);
-            }
-          }, 3000);
-        }
-
-        // Handle Trust Dialog
-        if (
-          !hasApprovedTrust &&
-          (cleanOutput.includes('Do you want to work in this folder?') ||
-            cleanOutput.includes('Ready to code here') ||
-            cleanOutput.includes('permission to work with your files'))
-        ) {
-          hasApprovedTrust = true;
-          hasSeenTrustPrompt = true;
-          // Wait then send Enter to approve
-          setTimeout(() => {
-            if (!settled && ptyProcess) {
-              ptyProcess.write('\r');
-            }
-          }, 1000);
-        }
-
-        // Detect REPL prompt and send /usage command
-        const isReplReady =
-          cleanOutput.includes('❯') ||
-          cleanOutput.includes('? for shortcuts') ||
-          (cleanOutput.includes('Welcome back') && cleanOutput.includes('Claude')) ||
-          (cleanOutput.includes('Tips for getting started') && cleanOutput.includes('Claude')) ||
-          (cleanOutput.includes('Opus') && cleanOutput.includes('Claude API')) ||
-          (cleanOutput.includes('Sonnet') && cleanOutput.includes('Claude API'));
-
-        if (!hasSentCommand && isReplReady) {
-          hasSentCommand = true;
-          // Wait for REPL to fully settle
-          setTimeout(() => {
-            if (!settled && ptyProcess) {
-              ptyProcess.write('/usage\r');
-
-              // Send another enter after delay to confirm autocomplete if shown
-              setTimeout(() => {
-                if (!settled && ptyProcess) {
-                  ptyProcess.write('\r');
-                }
-              }, 1200);
-            }
-          }, 1500);
-        }
-      });
-
-      ptyProcess.onExit(({ exitCode }) => {
-        clearTimeout(timeoutId);
-        if (settled) return;
-        settled = true;
-
-        // Check for auth errors
-        if (output.includes('token_expired') || output.includes('"type":"authentication_error"')) {
-          reject(new Error("Authentication required - please run 'claude login'"));
-          return;
-        }
-
-        if (output.trim()) {
-          resolve(output);
-        } else if (exitCode !== 0) {
-          reject(new Error(`Command exited with code ${exitCode}`));
-        } else {
-          reject(new Error('No output from claude command'));
-        }
-      });
-    });
-  }
-
-  /**
-   * Kill a PTY process with platform-specific handling
-   */
-  private killPtyProcess(ptyProcess: pty.IPty, signal = 'SIGTERM'): void {
-    if (this.isWindows) {
-      ptyProcess.kill();
-    } else {
-      ptyProcess.kill(signal);
+      return await provider.detectCli();
+    } catch (error) {
+      const message = extractErrorMessage(error);
+      this.logger.error(`CLI detection failed for '${aiMode}': ${message}`);
+      return { installed: false, error: message };
     }
   }
 }
