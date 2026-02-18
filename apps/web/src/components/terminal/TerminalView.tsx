@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createLogger } from '@omniscribe/shared';
 import type { Terminal } from '@xterm/xterm';
 import type { FitAddon } from '@xterm/addon-fit';
@@ -6,6 +6,7 @@ import { resizeTerminal } from '@/lib/terminal';
 import { getTerminalTheme } from '@/lib/terminal-themes';
 import { cn } from '@/lib/utils';
 import { TerminalSearchBar } from './TerminalSearchBar';
+import { TerminalContextMenu } from './TerminalContextMenu';
 import { useTerminalSettings } from '@/hooks/useTerminalSettings';
 import { useTerminalSearch } from '@/hooks/useTerminalSearch';
 import { useTerminalResize, safeFit } from '@/hooks/useTerminalResize';
@@ -66,6 +67,25 @@ export const TerminalView: React.FC<TerminalViewProps> = React.memo(
     );
 
     const attachKeyboardHandler = useTerminalKeyboard(sessionIdRef, setShowSearch);
+
+    // Context menu state
+    const [contextMenuPos, setContextMenuPos] = useState<{ x: number; y: number } | null>(null);
+    const closeContextMenu = useCallback(() => setContextMenuPos(null), []);
+
+    // Attach native contextmenu listener to the terminal container
+    // (xterm.js canvas events may not bubble to React synthetic events)
+    useEffect(() => {
+      const el = terminalRef.current;
+      if (!el) return;
+
+      const handleContextMenu = (e: MouseEvent) => {
+        e.preventDefault();
+        setContextMenuPos({ x: e.clientX, y: e.clientY });
+      };
+
+      el.addEventListener('contextmenu', handleContextMenu);
+      return () => el.removeEventListener('contextmenu', handleContextMenu);
+    }, []);
 
     const { status, connectionRef, connectAndJoin, flushBuffer } = useTerminalConnection(
       xtermRef,
@@ -199,6 +219,12 @@ export const TerminalView: React.FC<TerminalViewProps> = React.memo(
             boxSizing: 'border-box',
             backgroundColor: theme.background ?? '#1a1b26',
           }}
+        />
+        <TerminalContextMenu
+          position={contextMenuPos}
+          onClose={closeContextMenu}
+          xtermRef={xtermRef}
+          sessionIdRef={sessionIdRef}
         />
       </div>
     );

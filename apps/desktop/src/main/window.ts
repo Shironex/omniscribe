@@ -66,13 +66,22 @@ export async function createMainWindow(): Promise<BrowserWindow> {
   // Set up Content Security Policy before creating the window
   setupContentSecurityPolicy(isDev, getBackendPort());
 
-  // Deny all permission requests (camera, mic, geolocation, etc.)
+  // Allow clipboard access, deny all other permission requests (camera, mic, geolocation, etc.)
+  const allowedPermissions = new Set(['clipboard-read', 'clipboard-sanitized-write']);
+
   session.defaultSession.setPermissionRequestHandler((_webContents, permission, callback) => {
+    if (allowedPermissions.has(permission)) {
+      callback(true);
+      return;
+    }
     logger.warn(`[security] Denied permission request: ${permission}`);
     callback(false);
   });
 
   session.defaultSession.setPermissionCheckHandler((_webContents, permission) => {
+    if (allowedPermissions.has(permission)) {
+      return true;
+    }
     logger.debug(`[security] Denied permission check: ${permission}`);
     return false;
   });

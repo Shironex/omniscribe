@@ -1,4 +1,5 @@
-import { UsageOutputParser, stripAnsiCodes } from './usage-output-parser';
+import { stripAnsiCodes } from '@omniscribe/shared';
+import { UsageOutputParser } from './usage-output-parser';
 
 describe('UsageOutputParser', () => {
   let parser: UsageOutputParser;

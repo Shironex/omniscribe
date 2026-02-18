@@ -6,6 +6,7 @@ import type {
   ClaudeVersionCheckResult,
   ClaudeInstallCommand,
 } from '@omniscribe/shared';
+import { writeClipboard } from '@/lib/clipboard';
 import { useSettingsStore } from '@/stores';
 
 const logger = createLogger('ClaudeCliStatus');
@@ -129,11 +130,7 @@ export function useClaudeCliStatus(): UseClaudeCliStatusReturn {
         clearTimeout(copiedTimeoutRef.current);
       }
       try {
-        if (window.electronAPI?.app?.clipboardWrite) {
-          await window.electronAPI.app.clipboardWrite(installCommand.command);
-        } else {
-          await navigator.clipboard.writeText(installCommand.command);
-        }
+        await writeClipboard(installCommand.command);
         setCopiedCommand(true);
         toast.success('Command copied to clipboard');
         copiedTimeoutRef.current = setTimeout(() => setCopiedCommand(false), 2000);

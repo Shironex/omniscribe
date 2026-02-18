@@ -1,7 +1,9 @@
 import { useCallback } from 'react';
 import { createLogger } from '@omniscribe/shared';
 import type { Terminal } from '@xterm/xterm';
+import { toast } from 'sonner';
 import { writeToTerminal, writeToTerminalChunked } from '@/lib/terminal';
+import { copyTerminalSelection } from '@/lib/terminal-clipboard';
 import { LARGE_PASTE_WARNING_THRESHOLD } from '@/lib/terminal-constants';
 import { IS_MAC } from '@/lib/platform';
 
@@ -12,6 +14,7 @@ function pasteFromClipboard(sessionIdRef: React.MutableRefObject<number>): void 
     .readText()
     .then(text => {
       if (text.length > LARGE_PASTE_WARNING_THRESHOLD) {
+        toast.warning('Large paste detected — sending in chunks');
         writeToTerminalChunked(sessionIdRef.current, text);
       } else {
         writeToTerminal(sessionIdRef.current, text);
@@ -24,7 +27,7 @@ function pasteFromClipboard(sessionIdRef: React.MutableRefObject<number>): void 
 
 /**
  * Hook that creates a keyboard event handler for the terminal.
- * Handles Cmd/Ctrl+C/V/F, paste chunking, and modifier passthrough.
+ * Handles Cmd/Ctrl+C/V/A/F/L, paste chunking, and modifier passthrough.
  */
 export function useTerminalKeyboard(
   sessionIdRef: React.MutableRefObject<number>,
@@ -46,10 +49,7 @@ export function useTerminalKeyboard(
         // Primary+C: copy if selected, otherwise use default handling
         if (isPrimaryModifier && !e.shiftKey && key === 'c' && e.type === 'keydown') {
           if (terminal.hasSelection()) {
-            navigator.clipboard.writeText(terminal.getSelection()).catch(() => {
-              logger.debug('Clipboard write failed');
-            });
-            terminal.clearSelection();
+            copyTerminalSelection(terminal);
             return false;
           }
           return true;
@@ -64,15 +64,18 @@ export function useTerminalKeyboard(
         // Ctrl+Shift+C/V: Linux-style copy/paste
         if (e.ctrlKey && e.shiftKey && key === 'c' && e.type === 'keydown') {
           if (terminal.hasSelection()) {
-            navigator.clipboard.writeText(terminal.getSelection()).catch(() => {
-              logger.debug('Clipboard write failed');
-            });
-            terminal.clearSelection();
+            copyTerminalSelection(terminal);
           }
           return false;
         }
         if (e.ctrlKey && e.shiftKey && key === 'v' && e.type === 'keydown') {
           pasteFromClipboard(sessionIdRef);
+          return false;
+        }
+
+        // Primary+A: select all terminal content
+        if (isPrimaryModifier && !e.shiftKey && key === 'a' && e.type === 'keydown') {
+          terminal.selectAll();
           return false;
         }
 

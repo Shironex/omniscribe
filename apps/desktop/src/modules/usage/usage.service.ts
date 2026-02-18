@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import * as pty from 'node-pty';
 import * as os from 'os';
-import { createLogger, extractErrorMessage } from '@omniscribe/shared';
+import { createLogger, extractErrorMessage, stripAnsiCodes } from '@omniscribe/shared';
 import type { ClaudeUsage, UsageError, ClaudeCliStatus } from '@omniscribe/shared';
 import { getClaudeCliStatus } from '../../main/utils/claude-detection';
 import { buildSafeEnv } from '../shared/env-utils';
-import { UsageOutputParser, stripAnsiCodes } from './usage-output-parser';
+import { UsageOutputParser } from './usage-output-parser';
 
 /** Cache TTL for status checks (5 minutes) */
 const STATUS_CACHE_TTL_MS = 5 * 60 * 1000;

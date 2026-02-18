@@ -3,3 +3,4 @@ export { encodeProjectPath, getClaudeSessionsDir, getSessionsIndexPath } from '.
 export { extractErrorMessage } from './error';
 export { formatFileSize } from './format';
 export { normalizePath } from './path';
+export { stripAnsiCodes } from './ansi';
