@@ -8,6 +8,7 @@ import { GitModule } from './git';
 import { McpModule } from './mcp';
 import { UsageModule } from './usage';
 import { HealthModule } from './health';
+import { PluginModule } from './plugin';
 
 @Module({
   imports: [
@@ -29,6 +30,10 @@ import { HealthModule } from './health';
         limit: 500, // max 500 requests per 10 seconds
       },
     ]),
+    // PluginModule must be after ThrottlerModule but before domain modules
+    // so PluginRegistryService is available for injection everywhere.
+    // Phase 12: empty plugin list. Phase 13 adds Claude plugin definition.
+    PluginModule.forRoot([]),
     TerminalModule,
     WorkspaceModule,
     SessionModule,

@@ -21,3 +21,6 @@ export { registerGithubCliHandlers, cleanupGithubCliHandlers } from './github-cl
 
 // Updater handlers
 export { registerUpdaterHandlers, cleanupUpdaterHandlers } from './updater';
+
+// Plugin handlers
+export { registerPluginIpc, cleanupPluginIpc } from './plugin';

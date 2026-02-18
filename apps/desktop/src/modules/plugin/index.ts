@@ -1,4 +1,8 @@
+export { PluginModule } from './plugin.module';
+export { PluginRegistryService } from './plugin-registry.service';
+export { PluginLoaderService } from './plugin-loader.service';
 export { PluginStorageService } from './plugin-storage.service';
+export { PluginGateway } from './plugin.gateway';
 export { createPluginContext, disposePluginContext } from './plugin-context.factory';
 export type { BackendPluginContext } from './plugin-context.factory';
 export { emitPluginEvent, createPluginEventInterface } from './plugin-events';

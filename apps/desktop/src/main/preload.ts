@@ -74,6 +74,13 @@ export interface ElectronAPI {
     onUpdateError: (callback: (message: string) => void) => () => void;
     onChannelChanged: (callback: (channel: UpdateChannel) => void) => () => void;
   };
+  plugin: {
+    invoke: (
+      pluginId: string,
+      method: string,
+      ...args: unknown[]
+    ) => Promise<{ result?: unknown; error?: string }>;
+  };
   platform: NodeJS.Platform;
 }
 
@@ -189,6 +196,13 @@ const electronAPI: ElectronAPI = {
         ipcRenderer.removeListener('updater:channel-changed', listener);
       };
     },
+  },
+  plugin: {
+    invoke: (pluginId: string, method: string, ...args: unknown[]) =>
+      ipcRenderer.invoke('plugin:invoke', pluginId, method, ...args) as Promise<{
+        result?: unknown;
+        error?: string;
+      }>,
   },
   platform: process.platform,
 };
