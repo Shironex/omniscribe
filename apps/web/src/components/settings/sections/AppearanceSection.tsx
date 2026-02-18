@@ -26,14 +26,14 @@ export function AppearanceSection() {
   const setPreviewTheme = useSettingsStore(state => state.setPreviewTheme);
 
   // Read plugin themes map (stable reference) and derive lists in useMemo
-  const pluginThemes = usePluginStore(s => s.themes);
+  const pluginThemesMap = usePluginStore(s => s.themes);
 
   // Split plugin themes into dark/light
   const { pluginDarkThemes, pluginLightThemes } = useMemo(() => {
     const dark: PluginThemeOption[] = [];
     const light: PluginThemeOption[] = [];
 
-    for (const pt of pluginThemes.values()) {
+    for (const pt of pluginThemesMap.values()) {
       const option: PluginThemeOption = {
         id: pt.id,
         label: pt.label,
@@ -50,7 +50,7 @@ export function AppearanceSection() {
     }
 
     return { pluginDarkThemes: dark, pluginLightThemes: light };
-  }, [pluginThemes]);
+  }, [pluginThemesMap]);
 
   const effectiveTheme = previewTheme ?? theme;
   const currentTheme = themeOptions.find(t => t.value === effectiveTheme);
