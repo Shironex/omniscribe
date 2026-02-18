@@ -89,18 +89,31 @@ interface SettingsActions {
 type SettingsStore = SettingsState & SettingsActions;
 
 /**
- * Apply theme class to document element
+ * Track the currently-applied theme class so we can always remove it,
+ * even for plugin themes not in the built-in themeOptions list.
+ */
+let currentThemeClass: string | null = null;
+
+/**
+ * Apply theme class to document element.
+ * Handles both built-in and plugin theme classes.
  */
 function applyThemeToDOM(theme: Theme) {
   logger.debug('applyThemeToDOM:', theme);
   const root = document.documentElement;
-  const allThemeClasses = themeOptions.map(t => t.value);
 
-  // Remove all theme classes
+  // Remove the previously tracked theme class (covers plugin themes)
+  if (currentThemeClass) {
+    root.classList.remove(currentThemeClass);
+  }
+
+  // Also remove all known built-in theme classes (safety net for initial load)
+  const allThemeClasses = themeOptions.map(t => t.value);
   root.classList.remove(...allThemeClasses);
 
-  // Add new theme class
+  // Add new theme class and track it
   root.classList.add(theme);
+  currentThemeClass = theme;
 }
 
 // Default theme
