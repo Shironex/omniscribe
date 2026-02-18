@@ -1,5 +1,4 @@
 import { Loader2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { useSplashScreen } from '@/hooks/useSplashScreen';
 
 /**
@@ -10,19 +9,13 @@ import { useSplashScreen } from '@/hooks/useSplashScreen';
  * once the app is ready (or after a 10s safety timeout).
  */
 export function SplashScreen() {
-  const { isVisible, isDismissing, showSpinner, statusText, version, isDarkTheme } =
-    useSplashScreen();
+  const { isVisible, isDismissing, showSpinner, statusText, version } = useSplashScreen();
 
   if (!isVisible) return null;
 
   return (
     <div
-      className={cn(
-        'fixed inset-0 z-9999 flex flex-col items-center justify-center',
-        isDarkTheme
-          ? 'bg-linear-to-br from-[#0a0a0f] via-[#0a0a0f] to-[#1a1a2e]'
-          : 'bg-linear-to-br from-[#fafafa] via-[#ffffff] to-[#f0f0ff]'
-      )}
+      className="fixed inset-0 z-9999 flex flex-col items-center justify-center bg-background"
       style={{
         opacity: isDismissing ? 0 : 1,
         transform: isDismissing ? 'scale(1.02)' : 'scale(1)',
@@ -39,14 +32,7 @@ export function SplashScreen() {
 
       {/* Version label */}
       {version && (
-        <span
-          className={cn(
-            'mt-3 rounded-full px-2.5 py-0.5 text-[10px] font-medium tracking-wide select-none',
-            isDarkTheme
-              ? 'bg-indigo-500/10 text-indigo-400 ring-1 ring-indigo-500/20'
-              : 'bg-indigo-500/10 text-indigo-600 ring-1 ring-indigo-500/20'
-          )}
-        >
+        <span className="mt-3 rounded-full px-2.5 py-0.5 text-[10px] font-medium tracking-wide select-none bg-brand-500/10 text-brand-400 ring-1 ring-brand-500/20">
           v{version}
         </span>
       )}
@@ -61,13 +47,8 @@ export function SplashScreen() {
         role="status"
         aria-live="polite"
       >
-        <Loader2
-          className={cn(
-            'h-5 w-5 animate-spin',
-            isDarkTheme ? 'text-indigo-400' : 'text-indigo-500'
-          )}
-        />
-        <p className="text-sm select-none text-zinc-500">{statusText}</p>
+        <Loader2 className="h-5 w-5 animate-spin text-brand-400" />
+        <p className="text-sm select-none text-foreground-muted">{statusText}</p>
       </div>
     </div>
   );
