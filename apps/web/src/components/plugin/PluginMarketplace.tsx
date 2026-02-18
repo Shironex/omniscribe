@@ -1,11 +1,34 @@
+import { useState, useCallback } from 'react';
 import { Puzzle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { usePluginStore } from '@/stores';
+import { PluginCard } from './PluginCard';
 
 /**
- * Marketplace section for browsing and toggling plugins.
- * Placeholder -- will be fully implemented in Task 2.
+ * Marketplace section for browsing and toggling AI provider plugins.
+ * Renders in the settings modal as a card grid (VS Code extensions style).
  */
 export function PluginMarketplace() {
+  const providers = usePluginStore(s => s.providers);
+  const setProviderEnabled = usePluginStore(s => s.setProviderEnabled);
+
+  // Track which provider is currently being toggled (prevents double-click)
+  const [togglingAiMode, setTogglingAiMode] = useState<string | null>(null);
+
+  const handleToggle = useCallback(
+    (aiMode: string, enabled: boolean) => {
+      setTogglingAiMode(aiMode);
+      setProviderEnabled(aiMode, enabled);
+
+      // Clear toggling state after a short delay
+      // The optimistic update in usePluginStore handles the immediate UI change
+      setTimeout(() => {
+        setTogglingAiMode(null);
+      }, 500);
+    },
+    [setProviderEnabled]
+  );
+
   return (
     <div className="space-y-6">
       {/* Section Header */}
@@ -30,7 +53,27 @@ export function PluginMarketplace() {
         </div>
       </div>
 
-      <p className="text-sm text-muted-foreground">No plugins available</p>
+      {/* Plugin Cards */}
+      {providers.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <Puzzle className="w-10 h-10 text-muted-foreground/30 mb-3" />
+          <p className="text-sm text-muted-foreground">No plugins available</p>
+          <p className="text-xs text-muted-foreground/70 mt-1">
+            Plugins will appear here when registered
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-3">
+          {providers.map(provider => (
+            <PluginCard
+              key={provider.aiMode}
+              provider={provider}
+              onToggle={handleToggle}
+              isToggling={togglingAiMode === provider.aiMode}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

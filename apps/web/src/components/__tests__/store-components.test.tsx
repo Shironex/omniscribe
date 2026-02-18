@@ -27,7 +27,7 @@ vi.mock('@/stores/useConnectionStore', () => ({
 }));
 
 // ─── Session store mock ────────────────────────────────────────────────────────
-const mockSessionState: Record<string, unknown> = {};
+const mockSessionState: Record<string, unknown> = { sessions: [] };
 
 vi.mock('@/stores/useSessionStore', () => ({
   useSessionStore: vi.fn((sel?: unknown) => {
@@ -73,6 +73,9 @@ vi.mock('@/stores/useSettingsStore', () => ({
 // Plugin store mock state
 const mockPluginState: Record<string, unknown> = {
   settingsSections: new Map(),
+  settingsCategories: new Map(),
+  usagePanels: new Map(),
+  providers: [],
 };
 
 vi.mock('@/stores/usePluginStore', () => ({
@@ -365,6 +368,10 @@ describe('UsagePopover', () => {
       activeTabId: 'tab-1',
       tabs: [{ id: 'tab-1', projectPath: '/projects/test', name: 'Test' }],
     };
+    // UsagePopover now reads sessions to determine aiMode
+    Object.assign(mockSessionState, { sessions: [] });
+    // UsagePopover checks for plugin-registered usage panels
+    Object.assign(mockPluginState, { usagePanels: new Map() });
   });
 
   it('renders without crashing', () => {

@@ -130,6 +130,11 @@ vi.mock('@/stores', () => ({
       setGithubCliLoading: vi.fn(),
     })
   ),
+  usePluginStore: vi.fn((sel?: unknown) => {
+    if (typeof sel === 'function')
+      return (sel as (s: typeof mockPluginState) => unknown)(mockPluginState);
+    return mockPluginState;
+  }),
   useWorkspaceStore: vi.fn((sel: (s: Record<string, unknown>) => unknown) =>
     sel({
       preferences: {
@@ -195,6 +200,24 @@ vi.mock('@/lib/socket', () => ({
 
 vi.mock('@/lib/socketHelpers', () => ({
   emitAsync: vi.fn(),
+}));
+
+// Plugin store mock
+const mockPluginState: Record<string, unknown> = {
+  themes: new Map(),
+  settingsSections: new Map(),
+  settingsCategories: new Map(),
+  providers: [],
+};
+
+vi.mock('@/stores/usePluginStore', () => ({
+  usePluginStore: vi.fn((sel?: unknown) => {
+    if (typeof sel === 'function')
+      return (sel as (s: typeof mockPluginState) => unknown)(mockPluginState);
+    return mockPluginState;
+  }),
+  getSettingsNavigation: vi.fn(() => []),
+  getAllThemes: vi.fn(() => []),
 }));
 
 // ---------------------------------------------------------------------------

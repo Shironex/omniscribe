@@ -14,6 +14,7 @@ import type {
 } from '@omniscribe/plugin-api';
 import { ALL_THEMES, PluginEvents, createLogger } from '@omniscribe/shared';
 import { getSocket, emitAsync } from '@/lib/socket';
+import { injectThemeStyles, removeThemeStyles } from '@/lib/plugin-theme-injector';
 import type { NavigationGroup, NavigationItem } from '@/components/settings/navigation-config';
 
 const logger = createLogger('PluginStore');
@@ -219,6 +220,15 @@ export const usePluginStore = create<PluginStore>()(
 
       deactivateFrontendPlugin: (pluginId: string) => {
         logger.info('deactivateFrontendPlugin', pluginId);
+
+        // Remove theme CSS from DOM before removing from store
+        const currentThemes = get().themes;
+        for (const [, theme] of currentThemes) {
+          if (theme.pluginId === pluginId) {
+            removeThemeStyles(theme.id);
+          }
+        }
+
         set(
           state => {
             // Remove from activated set
@@ -504,8 +514,13 @@ export const usePluginStore = create<PluginStore>()(
           'plugin/registerTheme'
         );
 
+        // Inject CSS custom properties into the DOM
+        injectThemeStyles(reg.id, reg.cssProperties);
+
         return {
           dispose: () => {
+            // Remove CSS from DOM before removing from store
+            removeThemeStyles(reg.id);
             set(
               state => {
                 const next = new Map(state.themes);

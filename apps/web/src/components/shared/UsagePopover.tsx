@@ -1,18 +1,22 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, type ComponentType } from 'react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, AlertTriangle, ExternalLink, Loader2 } from 'lucide-react';
+import { RefreshCw, AlertTriangle, ExternalLink, Loader2, Activity } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { ClaudeIcon } from '@/components/shared/ClaudeIcon';
 import { UsageCard, getStatusInfo } from '@/components/shared/UsageCard';
 import { useUsageStore } from '@/stores/useUsageStore';
 import { useWorkspaceStore } from '@/stores/useWorkspaceStore';
+import { useSessionStore } from '@/stores/useSessionStore';
+import { usePluginStore } from '@/stores/usePluginStore';
+import { PluginErrorBoundary } from '@/components/plugin/PluginErrorBoundary';
 import type { UsageError } from '@omniscribe/shared';
+
+// ─── Claude fallback constants ──────────────────────────────────────────────
 
 const CLAUDE_SESSION_WINDOW_HOURS = 5;
 
-/** Map error codes to user-friendly messages */
+/** Map error codes to user-friendly messages (Claude-specific, temporary until Plan 05) */
 const ERROR_MESSAGES: Record<UsageError, { title: string; description: string }> = {
   auth_required: {
     title: 'Authentication required',
@@ -40,7 +44,44 @@ const ERROR_MESSAGES: Record<UsageError, { title: string; description: string }>
   },
 };
 
-export function UsagePopover() {
+// ─── No usage fallback ─────────────────────────────────────────────────────
+
+function NoUsageFallback() {
+  return (
+    <Popover>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <PopoverTrigger asChild>
+            <Button variant="ghost" size="sm" className="h-8 gap-2 px-2 hover:bg-accent">
+              <Activity className="w-4 h-4 text-muted-foreground" size={16} />
+            </Button>
+          </PopoverTrigger>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">Usage</TooltipContent>
+      </Tooltip>
+      <PopoverContent
+        className="w-[280px] p-0 overflow-hidden bg-background/95 backdrop-blur-xl border-border shadow-2xl"
+        align="end"
+        sideOffset={8}
+      >
+        <div className="flex items-center gap-2 px-4 py-3 border-b border-border/50 bg-secondary/10">
+          <Activity className="w-4 h-4 text-muted-foreground" size={16} />
+          <span className="text-sm font-semibold">Usage</span>
+        </div>
+        <div className="flex flex-col items-center justify-center py-8 px-4 text-center space-y-2">
+          <Activity className="w-8 h-8 text-muted-foreground/50" />
+          <p className="text-sm text-muted-foreground">
+            Usage data not available for this provider
+          </p>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+// ─── Claude usage content (temporary fallback until Plan 05 extracts it) ────
+
+function ClaudeUsagePopoverContent() {
   const [open, setOpen] = useState(false);
 
   // Usage store
@@ -100,7 +141,7 @@ export function UsagePopover() {
 
   const trigger = (
     <Button variant="ghost" size="sm" className="h-8 gap-2 px-2 hover:bg-accent">
-      <ClaudeIcon className={cn('w-4 h-4', claudeUsage && statusColor)} size={16} />
+      <Activity className={cn('w-4 h-4', claudeUsage && statusColor)} size={16} />
       {claudeUsage && (
         <div
           className={cn(
@@ -133,7 +174,7 @@ export function UsagePopover() {
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border/50 bg-secondary/10">
           <div className="flex items-center gap-2">
-            <ClaudeIcon className="w-4 h-4" size={16} />
+            <Activity className="w-4 h-4" size={16} />
             <span className="text-sm font-semibold">Claude Usage</span>
           </div>
           <Button
@@ -214,4 +255,46 @@ export function UsagePopover() {
       </PopoverContent>
     </Popover>
   );
+}
+
+// ─── Main UsagePopover (delegator shell) ────────────────────────────────────
+
+export function UsagePopover() {
+  // Get active session's aiMode
+  const activeTabId = useWorkspaceStore(s => s.activeTabId);
+  const tabs = useWorkspaceStore(s => s.tabs);
+  const sessions = useSessionStore(s => s.sessions);
+  const activeTab = tabs.find(t => t.id === activeTabId);
+  const activeSession = activeTab
+    ? sessions.find(s => s.projectPath === activeTab.projectPath)
+    : undefined;
+  const aiMode = activeSession?.aiMode ?? 'claude'; // default to claude for backward compat
+
+  // Check for plugin-registered usage panel
+  const usagePanelReg = usePluginStore(s => {
+    for (const [, reg] of s.usagePanels) {
+      if (reg.aiMode === aiMode) return reg;
+    }
+    return undefined;
+  });
+
+  const projectPath = activeTab?.projectPath;
+
+  // If plugin panel registered, delegate to it
+  if (usagePanelReg) {
+    const PanelComponent = usagePanelReg.component as ComponentType<{ workingDir: string }>;
+    return (
+      <PluginErrorBoundary pluginId={usagePanelReg.pluginId}>
+        <PanelComponent workingDir={projectPath ?? ''} />
+      </PluginErrorBoundary>
+    );
+  }
+
+  // Fallback: existing Claude usage popover content (temporary until Plan 05)
+  if (aiMode === 'claude') {
+    return <ClaudeUsagePopoverContent />;
+  }
+
+  // No usage panel for this provider
+  return <NoUsageFallback />;
 }
