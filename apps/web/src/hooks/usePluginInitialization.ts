@@ -19,6 +19,7 @@ const BUNDLED_FRONTEND_ACTIVATORS: Record<
   () => Promise<{ frontendActivate: (ctx: any) => void }>
 > = {
   'provider-claude': () => import('@omniscribe/provider-claude/frontend'),
+  'provider-codex': () => import('@omniscribe/provider-codex/frontend'),
 };
 
 /**

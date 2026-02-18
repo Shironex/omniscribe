@@ -10,6 +10,7 @@ import { UsageModule } from './usage';
 import { HealthModule } from './health';
 import { PluginModule } from './plugin';
 import { ClaudeProviderPlugin } from '@omniscribe/provider-claude';
+import { CodexProviderPlugin } from '@omniscribe/provider-codex';
 
 @Module({
   imports: [
@@ -43,6 +44,17 @@ import { ClaudeProviderPlugin } from '@omniscribe/provider-claude';
           description: "Anthropic's AI coding assistant via Claude Code CLI",
         },
         createPlugin: () => new ClaudeProviderPlugin(),
+        autoEnable: true,
+        autoActivate: true,
+      },
+      {
+        manifest: {
+          id: 'provider-codex',
+          type: 'provider',
+          displayName: 'Codex',
+          description: "OpenAI's Codex CLI for AI-assisted coding",
+        },
+        createPlugin: () => new CodexProviderPlugin(),
         autoEnable: true,
         autoActivate: true,
       },

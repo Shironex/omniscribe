@@ -9,3 +9,8 @@ declare module '@omniscribe/provider-claude/frontend' {
   import type { FrontendPluginContext } from '@omniscribe/plugin-api';
   export function frontendActivate(context: FrontendPluginContext): void;
 }
+
+declare module '@omniscribe/provider-codex/frontend' {
+  import type { FrontendPluginContext } from '@omniscribe/plugin-api';
+  export function frontendActivate(context: FrontendPluginContext): void;
+}

@@ -34,6 +34,11 @@ export default defineConfig({
         __dirname,
         '../../packages/plugins/provider-claude/src/frontend/index.ts'
       ),
+      // Codex plugin frontend: lets usePluginInitialization dynamically import Codex's UI
+      '@omniscribe/provider-codex/frontend': resolve(
+        __dirname,
+        '../../packages/plugins/provider-codex/src/frontend/index.ts'
+      ),
     },
   },
   server: {
