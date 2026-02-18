@@ -196,38 +196,40 @@ export function LaunchPresetsModal({
                         'overflow-hidden animate-fade-in min-w-[120px]'
                       )}
                     >
-                      {/* Provider modes (dynamic from plugins) */}
-                      {providers.map(provider => {
-                        const mode = provider.aiMode as AiMode;
-                        const isDisabled = !provider.cliStatus?.installed;
-                        const ModeIcon = getModeIcon(mode, statusRenderers);
-                        return (
-                          <Button
-                            key={mode}
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              if (isDisabled) return;
-                              setAiMode(mode);
-                              setIsAIModeOpen(false);
-                            }}
-                            disabled={isDisabled}
-                            title={isDisabled ? 'CLI is not installed' : undefined}
-                            className={cn(
-                              'w-full justify-start text-xs',
-                              mode === aiMode && 'bg-primary/10 text-primary'
-                            )}
-                          >
-                            <ModeIcon size={14} className="text-primary" />
-                            <span>{provider.displayName}</span>
-                            {isDisabled && (
-                              <span className="ml-auto text-[10px] text-muted-foreground">
-                                Not installed
-                              </span>
-                            )}
-                          </Button>
-                        );
-                      })}
+                      {/* Provider modes (only enabled plugins) */}
+                      {providers
+                        .filter(p => p.enabled)
+                        .map(provider => {
+                          const mode = provider.aiMode as AiMode;
+                          const isDisabled = !provider.cliStatus?.installed;
+                          const ModeIcon = getModeIcon(mode, statusRenderers);
+                          return (
+                            <Button
+                              key={mode}
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                if (isDisabled) return;
+                                setAiMode(mode);
+                                setIsAIModeOpen(false);
+                              }}
+                              disabled={isDisabled}
+                              title={isDisabled ? 'CLI is not installed' : undefined}
+                              className={cn(
+                                'w-full justify-start text-xs',
+                                mode === aiMode && 'bg-primary/10 text-primary'
+                              )}
+                            >
+                              <ModeIcon size={14} className="text-primary" />
+                              <span>{provider.displayName}</span>
+                              {isDisabled && (
+                                <span className="ml-auto text-[10px] text-muted-foreground">
+                                  Not installed
+                                </span>
+                              )}
+                            </Button>
+                          );
+                        })}
                       {/* Plain mode (built-in, always available) */}
                       <Button
                         variant="ghost"

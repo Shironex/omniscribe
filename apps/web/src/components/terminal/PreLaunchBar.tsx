@@ -60,8 +60,8 @@ export function PreLaunchBar({
   const aiModeOptions: AIModeOption[] = useMemo(() => {
     const options: AIModeOption[] = [];
 
-    // Add provider-contributed modes with icons from status renderers
-    for (const provider of providers) {
+    // Add enabled provider modes with icons from status renderers
+    for (const provider of providers.filter(p => p.enabled)) {
       let icon: ComponentType<{ size?: string | number; className?: string }> = Bot;
       for (const [, reg] of statusRenderers) {
         if (reg.aiMode === provider.aiMode) {
