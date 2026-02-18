@@ -13,7 +13,9 @@
     "baseUrl": ".",
     "paths": {
       "@omniscribe/shared": ["../../packages/shared/dist"],
-      "@omniscribe/shared/*": ["../../packages/shared/dist/*"]
+      "@omniscribe/shared/*": ["../../packages/shared/dist/*"],
+      "@omniscribe/plugin-api": ["../../packages/plugin-api/dist"],
+      "@omniscribe/plugin-api/*": ["../../packages/plugin-api/dist/*"]
     }
   },
   "include": ["src/**/*", "test/**/*"],
