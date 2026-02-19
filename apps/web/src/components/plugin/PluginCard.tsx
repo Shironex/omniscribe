@@ -36,7 +36,7 @@ export function PluginCard({ provider, onToggle, isToggling }: PluginCardProps) 
           <span className="text-sm font-medium text-foreground truncate">
             {provider.displayName}
           </span>
-          {provider.activated && (
+          {provider.enabled && provider.activated && (
             <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
               Active
             </span>
@@ -44,6 +44,11 @@ export function PluginCard({ provider, onToggle, isToggling }: PluginCardProps) 
           {provider.enabled && !provider.activated && (
             <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-blue-500/10 text-blue-500 border border-blue-500/20">
               Enabled
+            </span>
+          )}
+          {!provider.enabled && (
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-muted text-muted-foreground border border-border/50">
+              Disabled
             </span>
           )}
         </div>

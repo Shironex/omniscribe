@@ -102,6 +102,10 @@ export class PluginRegistryService {
     const entry = this.providers.get(aiMode);
     if (!entry) return false;
     entry.enabled = enabled;
+    // Deactivate when disabling so the provider is fully stopped
+    if (!enabled) {
+      entry.activated = false;
+    }
     this.logger.log(`Provider '${aiMode}' ${enabled ? 'enabled' : 'disabled'}`);
     return true;
   }

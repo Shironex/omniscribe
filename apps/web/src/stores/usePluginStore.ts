@@ -173,10 +173,12 @@ export const usePluginStore = create<PluginStore>()(
       setProviderEnabled: (aiMode: string, enabled: boolean) => {
         logger.info('setProviderEnabled', aiMode, enabled);
 
-        // Optimistic UI update
+        // Optimistic UI update (also clear activated when disabling)
         set(
           state => ({
-            providers: state.providers.map(p => (p.aiMode === aiMode ? { ...p, enabled } : p)),
+            providers: state.providers.map(p =>
+              p.aiMode === aiMode ? { ...p, enabled, ...(enabled ? {} : { activated: false }) } : p
+            ),
           }),
           undefined,
           'plugin/setProviderEnabled'
@@ -560,7 +562,13 @@ export const usePluginStore = create<PluginStore>()(
           set(
             state => ({
               providers: state.providers.map(p =>
-                p.aiMode === data.aiMode ? { ...p, enabled: data.enabled } : p
+                p.aiMode === data.aiMode
+                  ? {
+                      ...p,
+                      enabled: data.enabled,
+                      ...(data.enabled ? {} : { activated: false }),
+                    }
+                  : p
               ),
             }),
             undefined,
