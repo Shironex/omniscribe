@@ -94,4 +94,4 @@ Two complete reference plugins ship with Omniscribe:
 
 - [Plugin Anatomy](/sdk/plugin-anatomy) — Every file in a plugin, explained
 - [Creating a Provider Plugin](/sdk/creating-a-provider) — Step-by-step guide
-- [API Reference](/api) — Full TypeScript API documentation
+- [API Reference](/docs/api) — Full TypeScript API documentation

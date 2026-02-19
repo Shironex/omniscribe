@@ -281,6 +281,6 @@ describe('MyToolProviderPlugin', () => {
 
 ## Next Steps
 
-- Browse the [API Reference](/api) for the full `AiProviderPlugin` interface
+- Browse the [API Reference](/docs/api) for the full `AiProviderPlugin` interface
 - Study the [Claude provider](https://github.com/Shironex/omniscribe/tree/master/packages/plugins/provider-claude) for a full-featured reference implementation
 - Add optional capabilities like usage tracking and session history

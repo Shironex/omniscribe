@@ -1,8 +1,0 @@
-{
-  "extends": "./tsconfig.base.json",
-  "compilerOptions": {
-    "noEmit": true
-  },
-  "references": [{ "path": "packages/shared" }, { "path": "packages/plugin-api" }],
-  "files": []
-}

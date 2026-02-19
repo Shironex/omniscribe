@@ -28,4 +28,4 @@ Omniscribe is built as an Electron desktop application with:
 
 - [Getting Started](/docs/getting-started/overview) — Architecture overview and setup
 - [Plugin SDK](/sdk/overview) — Build your own provider plugin
-- [API Reference](/api) — Auto-generated TypeScript API docs
+- [API Reference](/docs/api) — Auto-generated TypeScript API docs

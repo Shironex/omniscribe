@@ -1,22 +1,239 @@
+/* Brand palette — based on Omniscribe's purple identity */
 :root {
-  --ifm-color-primary: #6366f1;
-  --ifm-color-primary-dark: #4f46e5;
-  --ifm-color-primary-darker: #4338ca;
-  --ifm-color-primary-darkest: #3730a3;
-  --ifm-color-primary-light: #818cf8;
-  --ifm-color-primary-lighter: #a5b4fc;
-  --ifm-color-primary-lightest: #c7d2fe;
+  --ifm-color-primary: #6d28d9;
+  --ifm-color-primary-dark: #5b21b6;
+  --ifm-color-primary-darker: #4c1d95;
+  --ifm-color-primary-darkest: #3b0764;
+  --ifm-color-primary-light: #7c3aed;
+  --ifm-color-primary-lighter: #8b5cf6;
+  --ifm-color-primary-lightest: #a78bfa;
   --ifm-code-font-size: 95%;
-  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
+  --ifm-font-family-base: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --ifm-heading-font-weight: 700;
+  --docusaurus-highlighted-code-line-bg: rgba(109, 40, 217, 0.1);
 }
 
 [data-theme='dark'] {
-  --ifm-color-primary: #818cf8;
-  --ifm-color-primary-dark: #6366f1;
-  --ifm-color-primary-darker: #4f46e5;
-  --ifm-color-primary-darkest: #4338ca;
-  --ifm-color-primary-light: #a5b4fc;
-  --ifm-color-primary-lighter: #c7d2fe;
-  --ifm-color-primary-lightest: #e0e7ff;
-  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+  --ifm-color-primary: #a78bfa;
+  --ifm-color-primary-dark: #8b5cf6;
+  --ifm-color-primary-darker: #7c3aed;
+  --ifm-color-primary-darkest: #6d28d9;
+  --ifm-color-primary-light: #c4b5fd;
+  --ifm-color-primary-lighter: #ddd6fe;
+  --ifm-color-primary-lightest: #ede9fe;
+  --ifm-background-color: #0f0a1a;
+  --ifm-background-surface-color: #160f2a;
+  --ifm-navbar-background-color: #0d0816;
+  --ifm-footer-background-color: #080510;
+  --docusaurus-highlighted-code-line-bg: rgba(167, 139, 250, 0.15);
+}
+
+/* ---- Navbar ---- */
+.navbar {
+  box-shadow: 0 1px 0 0 rgba(167, 139, 250, 0.08);
+}
+
+[data-theme='dark'] .navbar {
+  background: rgba(13, 8, 22, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.navbar__logo img {
+  height: 28px;
+}
+
+.navbar__title {
+  font-weight: 700;
+}
+
+/* ---- Hero section ---- */
+.hero-gradient {
+  background: linear-gradient(135deg, #1e0a3c 0%, #0f0a1a 40%, #0a1628 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-gradient::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background:
+    radial-gradient(ellipse at 30% 20%, rgba(109, 40, 217, 0.12) 0%, transparent 60%),
+    radial-gradient(ellipse at 70% 80%, rgba(59, 130, 246, 0.08) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+/* Light mode hero */
+[data-theme='light'] .hero-gradient {
+  background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 40%, #e0e7ff 100%);
+}
+
+[data-theme='light'] .hero-gradient::before {
+  background:
+    radial-gradient(ellipse at 30% 20%, rgba(109, 40, 217, 0.06) 0%, transparent 60%),
+    radial-gradient(ellipse at 70% 80%, rgba(59, 130, 246, 0.04) 0%, transparent 50%);
+}
+
+[data-theme='light'] .hero-gradient .hero__title {
+  color: #1e0a3c;
+}
+
+[data-theme='light'] .hero-gradient .hero__subtitle {
+  color: #4c1d95;
+}
+
+/* ---- Feature cards ---- */
+.feature-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(167, 139, 250, 0.1);
+  border-radius: 12px;
+  padding: 2rem;
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.feature-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(167, 139, 250, 0.25);
+  box-shadow: 0 8px 30px rgba(109, 40, 217, 0.1);
+}
+
+[data-theme='light'] .feature-card {
+  background: white;
+  border: 1px solid rgba(109, 40, 217, 0.08);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+[data-theme='light'] .feature-card:hover {
+  border-color: rgba(109, 40, 217, 0.2);
+  box-shadow: 0 8px 30px rgba(109, 40, 217, 0.08);
+}
+
+.feature-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+  font-size: 24px;
+}
+
+.feature-icon--purple {
+  background: rgba(139, 92, 246, 0.15);
+  color: #a78bfa;
+}
+
+.feature-icon--blue {
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+}
+
+.feature-icon--emerald {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+}
+
+.feature-icon--amber {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+}
+
+[data-theme='light'] .feature-icon--purple {
+  background: rgba(109, 40, 217, 0.1);
+  color: #7c3aed;
+}
+
+[data-theme='light'] .feature-icon--blue {
+  background: rgba(37, 99, 235, 0.1);
+  color: #2563eb;
+}
+
+[data-theme='light'] .feature-icon--emerald {
+  background: rgba(5, 150, 105, 0.1);
+  color: #059669;
+}
+
+[data-theme='light'] .feature-icon--amber {
+  background: rgba(217, 119, 6, 0.1);
+  color: #d97706;
+}
+
+/* ---- Buttons ---- */
+.button--primary {
+  background: linear-gradient(135deg, #7c3aed, #6d28d9);
+  border: none;
+  box-shadow: 0 2px 8px rgba(109, 40, 217, 0.3);
+  transition:
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+.button--primary:hover {
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+  box-shadow: 0 4px 16px rgba(109, 40, 217, 0.4);
+  transform: translateY(-1px);
+}
+
+.button--secondary {
+  border-color: rgba(167, 139, 250, 0.3);
+  color: #a78bfa;
+}
+
+.button--secondary:hover {
+  background: rgba(167, 139, 250, 0.1);
+  border-color: rgba(167, 139, 250, 0.5);
+  color: #c4b5fd;
+}
+
+[data-theme='light'] .button--secondary {
+  border-color: rgba(109, 40, 217, 0.2);
+  color: #6d28d9;
+}
+
+[data-theme='light'] .button--secondary:hover {
+  background: rgba(109, 40, 217, 0.05);
+  border-color: rgba(109, 40, 217, 0.4);
+  color: #5b21b6;
+}
+
+/* ---- Footer ---- */
+[data-theme='dark'] .footer--dark {
+  background: #080510;
+  border-top: 1px solid rgba(167, 139, 250, 0.06);
+}
+
+/* ---- Sidebar ---- */
+[data-theme='dark'] .menu__link:hover {
+  background: rgba(167, 139, 250, 0.08);
+}
+
+[data-theme='dark'] .menu__link--active {
+  color: #a78bfa;
+}
+
+/* ---- Code blocks ---- */
+[data-theme='dark'] .prism-code {
+  background: #110c20 !important;
+  border: 1px solid rgba(167, 139, 250, 0.08);
+}
+
+/* ---- Tables ---- */
+[data-theme='dark'] table {
+  border-color: rgba(167, 139, 250, 0.1);
+}
+
+[data-theme='dark'] table thead tr {
+  background: rgba(167, 139, 250, 0.05);
+}
+
+[data-theme='dark'] table tbody tr:nth-child(2n) {
+  background: rgba(167, 139, 250, 0.02);
 }

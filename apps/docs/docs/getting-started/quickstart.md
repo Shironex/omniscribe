@@ -68,4 +68,4 @@ pnpm package:linux    # Package for Linux
 
 - [Plugin SDK Overview](/sdk/overview) — Learn how the plugin system works
 - [Creating a Provider Plugin](/sdk/creating-a-provider) — Build your own AI provider
-- [API Reference](/api) — Browse the full TypeScript API
+- [API Reference](/docs/api) — Browse the full TypeScript API

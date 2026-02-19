@@ -4,6 +4,7 @@
 # Docusaurus
 apps/docs/.docusaurus/
 apps/docs/build/
+apps/docs/docs/api/
 
 # Dependencies
 node_modules/

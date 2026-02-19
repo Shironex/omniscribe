@@ -1,7 +1,6 @@
 import { themes as prismThemes } from 'prism-react-renderer';
 import type { Config } from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
-import path from 'path';
 
 const config: Config = {
   title: 'Omniscribe',
@@ -49,22 +48,20 @@ const config: Config = {
         editUrl: 'https://github.com/Shironex/omniscribe/tree/master/apps/docs/',
       },
     ],
-    // Auto-generated API reference from TypeDoc
+    // Auto-generated API reference from TypeDoc (generates Markdown into docs/api/)
     [
-      'docusaurus-plugin-typedoc-api',
+      'docusaurus-plugin-typedoc',
       {
-        projectRoot: path.join(__dirname, '../..'),
-        packages: [
-          {
-            path: 'packages/plugin-api',
-            entry: 'src/index.ts',
-          },
-        ],
-        removeScopes: ['omniscribe'],
-        gitRefName: 'master',
-        tsconfigName: 'tsconfig.json',
-        readmes: true,
-        minimal: false,
+        entryPoints: ['../../packages/plugin-api/src/index.ts'],
+        tsconfig: '../../packages/plugin-api/tsconfig.json',
+        outputFileStrategy: 'members',
+        indexFormat: 'table',
+        parametersFormat: 'table',
+        enumMembersFormat: 'table',
+        expandObjects: true,
+        sidebar: {
+          autoConfiguration: false,
+        },
       },
     ],
     // Generate llms.txt and llms-full.txt for AI consumption
@@ -92,8 +89,13 @@ const config: Config = {
   ],
 
   themeConfig: {
+    image: 'img/logo.png',
     navbar: {
       title: 'Omniscribe',
+      logo: {
+        alt: 'Omniscribe Logo',
+        src: 'img/logo.png',
+      },
       items: [
         {
           type: 'docSidebar',
@@ -108,7 +110,7 @@ const config: Config = {
           activeBaseRegex: '/sdk/',
         },
         {
-          to: '/api',
+          to: '/docs/api',
           label: 'API Reference',
           position: 'left',
         },
@@ -127,7 +129,7 @@ const config: Config = {
           items: [
             { label: 'Getting Started', to: '/docs/intro' },
             { label: 'Plugin SDK', to: '/sdk/overview' },
-            { label: 'API Reference', to: '/api' },
+            { label: 'API Reference', to: '/docs/api' },
           ],
         },
         {
@@ -144,7 +146,7 @@ const config: Config = {
           ],
         },
       ],
-      copyright: `Copyright ${new Date().getFullYear()} Omniscribe. Built with Docusaurus.`,
+      copyright: `Copyright ${new Date().getFullYear()} Omniscribe.`,
     },
     prism: {
       theme: prismThemes.github,
