@@ -1,0 +1,58 @@
+---
+sidebar_position: 2
+---
+
+# Provider Settings
+
+Omniscribe supports multiple AI providers through its plugin system. Each provider has its own detection logic, authentication flow, and settings UI. Currently available providers are **Claude Code** and **OpenAI Codex**.
+
+## Claude Code
+
+Claude Code is the primary AI provider in Omniscribe, powered by Anthropic's Claude CLI.
+
+### Requirements
+
+- The Claude CLI must be installed on your system
+- The `claude` command must be accessible from your terminal PATH
+
+### Detection
+
+Omniscribe auto-detects the `claude` command at startup. The status is displayed in Settings under Integrations when the Claude provider is active. If the CLI is not found, Omniscribe defaults new sessions to Plain terminal mode and disables the Claude option with a tooltip explaining why.
+
+### Authentication
+
+Omniscribe checks authentication by reading `~/.claude/.credentials.json`. If credentials are missing or invalid, the settings panel displays instructions to authenticate by running `claude` in your terminal and completing the login flow.
+
+### Usage Tracking
+
+When Claude Code is active, a usage indicator appears in the top bar showing your current API usage percentage and the rolling time window. Click it to expand a detailed usage popover. Hover over the icon to see a quick tooltip summary (e.g., "Claude usage: 45% (5h window)").
+
+### CLI Updates
+
+The settings panel includes an option to update the Claude CLI. A warning is displayed before proceeding because updating the CLI will terminate all running Claude Code sessions.
+
+## OpenAI Codex
+
+OpenAI Codex is an alternative AI provider available through the plugin system.
+
+### Requirements
+
+- The Codex CLI must be installed on your system
+
+### Detection
+
+Omniscribe auto-detects the Codex CLI at startup, similar to Claude Code. The detection status and authentication state are displayed in Settings under Integrations when the Codex provider is active.
+
+## Skip Permissions
+
+The skip-permissions toggle is available in **Settings > Sessions** and applies globally to all AI sessions.
+
+When enabled:
+
+- Claude sessions launch with the `--dangerously-skip-permissions` flag
+- A badge is displayed on the terminal header of each session to indicate the flag is active
+- The AI assistant can execute commands without confirmation prompts
+
+:::warning
+Use skip-permissions with caution. This gives the AI assistant full access to your system without confirmation prompts. It will be able to read, write, and execute files without asking for your approval. Only enable this if you trust the AI's actions and understand the risks.
+:::

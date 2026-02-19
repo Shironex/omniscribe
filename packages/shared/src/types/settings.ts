@@ -108,9 +108,9 @@ export interface ClaudeInstallCommand {
 }
 
 /**
- * Settings section IDs for navigation
+ * Core settings section IDs (built-in sections)
  */
-export type SettingsSectionId =
+export type CoreSettingsSectionId =
   | 'appearance'
   | 'integrations'
   | 'github'
@@ -119,7 +119,14 @@ export type SettingsSectionId =
   | 'worktrees'
   | 'sessions'
   | 'terminal'
-  | 'quickActions';
+  | 'quickActions'
+  | 'marketplace';
+
+/**
+ * Settings section IDs for navigation.
+ * Accepts core IDs and dynamic plugin-registered section IDs.
+ */
+export type SettingsSectionId = CoreSettingsSectionId | (string & {});
 
 /**
  * Worktree creation mode

@@ -10,6 +10,7 @@ import type {
 import { createLogger } from '@omniscribe/shared';
 import { themeOptions } from '@/lib/theme';
 import { persistTheme, getPersistedTheme } from '@/lib/theme-persistence';
+import { usePluginStore } from '@/stores/usePluginStore';
 
 const logger = createLogger('Settings');
 
@@ -89,18 +90,48 @@ interface SettingsActions {
 type SettingsStore = SettingsState & SettingsActions;
 
 /**
- * Apply theme class to document element
+ * Track the currently-applied theme class and base class so we can
+ * always remove them, even for plugin themes not in themeOptions.
+ */
+let currentThemeClass: string | null = null;
+let currentBaseClass: string | null = null;
+
+/**
+ * Apply theme class to document element.
+ * For plugin themes, also adds a base 'dark' or 'light' class so the
+ * plugin only needs to override brand-specific CSS variables while
+ * inheriting the full set from the base theme.
  */
 function applyThemeToDOM(theme: Theme) {
   logger.debug('applyThemeToDOM:', theme);
   const root = document.documentElement;
-  const allThemeClasses = themeOptions.map(t => t.value);
 
-  // Remove all theme classes
+  // Remove the previously tracked theme + base classes
+  if (currentThemeClass) {
+    root.classList.remove(currentThemeClass);
+  }
+  if (currentBaseClass) {
+    root.classList.remove(currentBaseClass);
+  }
+
+  // Also remove all known built-in theme classes (safety net for initial load)
+  const allThemeClasses = themeOptions.map(t => t.value);
   root.classList.remove(...allThemeClasses);
 
-  // Add new theme class
+  // Check if this is a plugin theme that needs a base class
+  const pluginTheme = usePluginStore.getState().themes.get(theme);
+  if (pluginTheme) {
+    // Plugin themes cascade on top of the base dark/light theme
+    const baseClass = pluginTheme.isDark ? 'dark' : 'light';
+    root.classList.add(baseClass);
+    currentBaseClass = baseClass;
+  } else {
+    currentBaseClass = null;
+  }
+
+  // Add the theme class
   root.classList.add(theme);
+  currentThemeClass = theme;
 }
 
 // Default theme

@@ -27,7 +27,7 @@ vi.mock('@/stores/useConnectionStore', () => ({
 }));
 
 // ─── Session store mock ────────────────────────────────────────────────────────
-const mockSessionState: Record<string, unknown> = {};
+const mockSessionState: Record<string, unknown> = { sessions: [] };
 
 vi.mock('@/stores/useSessionStore', () => ({
   useSessionStore: vi.fn((sel?: unknown) => {
@@ -70,12 +70,34 @@ vi.mock('@/stores/useSettingsStore', () => ({
   }),
 }));
 
-// Barrel re-export from @/stores also needs the settings store
+// Plugin store mock state
+const mockPluginState: Record<string, unknown> = {
+  settingsSections: new Map(),
+  settingsCategories: new Map(),
+  usagePanels: new Map(),
+  providers: [],
+};
+
+vi.mock('@/stores/usePluginStore', () => ({
+  usePluginStore: vi.fn((sel?: unknown) => {
+    if (typeof sel === 'function')
+      return (sel as (s: typeof mockPluginState) => unknown)(mockPluginState);
+    return mockPluginState;
+  }),
+  getSettingsNavigation: vi.fn(() => []),
+}));
+
+// Barrel re-export from @/stores also needs the settings store and plugin store
 vi.mock('@/stores', () => ({
   useSettingsStore: vi.fn((sel?: unknown) => {
     if (typeof sel === 'function')
       return (sel as (s: typeof mockSettingsState) => unknown)(mockSettingsState);
     return mockSettingsState;
+  }),
+  usePluginStore: vi.fn((sel?: unknown) => {
+    if (typeof sel === 'function')
+      return (sel as (s: typeof mockPluginState) => unknown)(mockPluginState);
+    return mockPluginState;
   }),
 }));
 
@@ -104,7 +126,6 @@ vi.mock('@/stores/useWorkspaceStore', () => ({
 // ─── Settings section mocks (simplify SettingsModal) ───────────────────────────
 vi.mock('../settings/sections', () => ({
   AppearanceSection: () => <div data-testid="appearance-section" />,
-  IntegrationsSection: () => <div data-testid="integrations-section" />,
   GithubSection: () => <div data-testid="github-section" />,
   McpSection: () => <div data-testid="mcp-section" />,
   GeneralSection: () => <div data-testid="general-section" />,
@@ -346,6 +367,10 @@ describe('UsagePopover', () => {
       activeTabId: 'tab-1',
       tabs: [{ id: 'tab-1', projectPath: '/projects/test', name: 'Test' }],
     };
+    // UsagePopover now reads sessions to determine aiMode
+    Object.assign(mockSessionState, { sessions: [] });
+    // UsagePopover checks for plugin-registered usage panels
+    Object.assign(mockPluginState, { usagePanels: new Map() });
   });
 
   it('renders without crashing', () => {
@@ -354,42 +379,11 @@ describe('UsagePopover', () => {
     expect(screen.getByRole('button')).toBeTruthy();
   });
 
-  it('shows loading state when popover is opened with no usage data', () => {
+  it('shows no-usage fallback when no plugin panel is registered', () => {
     renderUsagePopover();
     // Open the popover
     fireEvent.click(screen.getByRole('button'));
-    expect(screen.getByText('Loading usage data...')).toBeTruthy();
-    expect(screen.getByText('Claude Usage')).toBeTruthy();
-  });
-
-  it('shows error state when there is an error', () => {
-    mockUsageState = {
-      ...mockUsageState,
-      error: 'cli_not_found' as const,
-      errorMessage: 'CLI missing',
-    };
-    renderUsagePopover();
-    fireEvent.click(screen.getByRole('button'));
-    expect(screen.getByText('Claude CLI not found')).toBeTruthy();
-  });
-
-  it('shows usage data when available', () => {
-    mockUsageState = {
-      ...mockUsageState,
-      claudeUsage: {
-        sessionPercentage: 45,
-        sessionResetText: 'Resets in 3h',
-        sonnetWeeklyPercentage: 30,
-        sonnetResetText: 'Resets Monday',
-        weeklyPercentage: 25,
-        weeklyResetText: 'Resets Monday',
-      },
-      status: 'success',
-      lastFetched: Date.now(),
-    };
-    renderUsagePopover();
-    fireEvent.click(screen.getByRole('button'));
-    expect(screen.getByText('Session Usage')).toBeTruthy();
-    expect(screen.getByText('Sonnet')).toBeTruthy();
+    expect(screen.getByText('Usage data not available for this provider')).toBeTruthy();
+    expect(screen.getByText('Usage')).toBeTruthy();
   });
 });

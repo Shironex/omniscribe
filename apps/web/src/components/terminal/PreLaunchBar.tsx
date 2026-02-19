@@ -1,9 +1,9 @@
 import { cn } from '@/lib/utils';
-import { Play, X, Terminal, ChevronDown } from 'lucide-react';
-import { useState, useRef, useEffect, type ComponentType } from 'react';
+import { Play, X, Terminal, Bot, ChevronDown } from 'lucide-react';
+import { useState, useRef, useEffect, useMemo, type ComponentType } from 'react';
 import type { Branch } from '@/components/shared/BranchSelector';
 import { BranchAutocomplete } from '@/components/shared/BranchAutocomplete';
-import { ClaudeIcon } from '@/components/shared/ClaudeIcon';
+import { usePluginStore } from '@/stores/usePluginStore';
 import { getPrelaunchShortcutForIndex } from '@/lib/prelaunch-shortcuts';
 import { Button } from '@/components/ui/button';
 import type { AiMode, WorktreeMode } from '@omniscribe/shared';
@@ -20,9 +20,9 @@ interface PreLaunchBarProps {
   slotIndex?: number;
   branches: Branch[];
   isLaunching?: boolean;
-  /** Whether Claude CLI is available (controls Claude mode option) */
+  /** Whether Claude CLI is available (kept for backward compat, overridden by provider cliStatus) */
   claudeAvailable?: boolean;
-  /** Worktree mode — hides branch selector when 'never' */
+  /** Worktree mode -- hides branch selector when 'never' */
   worktreeMode?: WorktreeMode;
   onUpdate: (slotId: string, updates: Partial<Pick<PreLaunchSlot, 'aiMode' | 'branch'>>) => void;
   onLaunch: (slotId: string) => void;
@@ -38,17 +38,12 @@ interface AIModeOption {
   color: string;
 }
 
-const aiModeOptions: AIModeOption[] = [
-  { value: 'claude', label: 'Claude', icon: ClaudeIcon, color: 'text-orange-400' },
-  { value: 'plain', label: 'Plain', icon: Terminal, color: 'text-muted-foreground' },
-];
-
 export function PreLaunchBar({
   slot,
   slotIndex,
   branches,
   isLaunching = false,
-  claudeAvailable = true,
+  claudeAvailable: _claudeAvailable = true,
   worktreeMode,
   onUpdate,
   onLaunch,
@@ -58,6 +53,40 @@ export function PreLaunchBar({
 }: PreLaunchBarProps) {
   const [isAIModeOpen, setIsAIModeOpen] = useState(false);
   const aiModeRef = useRef<HTMLDivElement>(null);
+  const providers = usePluginStore(s => s.providers);
+  const statusRenderers = usePluginStore(s => s.statusRenderers);
+
+  // Build AI mode options dynamically from registered providers
+  const aiModeOptions: AIModeOption[] = useMemo(() => {
+    const options: AIModeOption[] = [];
+
+    // Add enabled provider modes with icons from status renderers
+    for (const provider of providers.filter(p => p.enabled)) {
+      let icon: ComponentType<{ size?: string | number; className?: string }> = Bot;
+      for (const [, reg] of statusRenderers) {
+        if (reg.aiMode === provider.aiMode) {
+          icon = reg.component as ComponentType<{ size?: string | number; className?: string }>;
+          break;
+        }
+      }
+      options.push({
+        value: provider.aiMode as AiMode,
+        label: provider.displayName,
+        icon,
+        color: 'text-primary',
+      });
+    }
+
+    // Always add plain mode (built-in, not a plugin)
+    options.push({
+      value: 'plain',
+      label: 'Plain',
+      icon: Terminal,
+      color: 'text-muted-foreground',
+    });
+
+    return options;
+  }, [providers, statusRenderers]);
 
   // Close AI mode dropdown when clicking outside
   useEffect(() => {
@@ -114,7 +143,10 @@ export function PreLaunchBar({
           >
             {aiModeOptions.map(option => {
               const Icon = option.icon;
-              const isDisabled = option.value === 'claude' && !claudeAvailable;
+              // Disable non-plain modes whose provider CLI is not installed
+              const isDisabled =
+                option.value !== 'plain' &&
+                !providers.find(p => p.aiMode === option.value)?.cliStatus?.installed;
               return (
                 <Button
                   key={option.value}
@@ -126,7 +158,7 @@ export function PreLaunchBar({
                     setIsAIModeOpen(false);
                   }}
                   disabled={isDisabled}
-                  title={isDisabled ? 'Claude CLI is not installed' : undefined}
+                  title={isDisabled ? 'CLI is not installed' : undefined}
                   className={cn(
                     'w-full justify-start text-xs',
                     option.value === slot.aiMode && 'bg-primary/10 text-primary'
@@ -144,7 +176,7 @@ export function PreLaunchBar({
         )}
       </div>
 
-      {/* Branch selector — hidden when worktrees are disabled */}
+      {/* Branch selector -- hidden when worktrees are disabled */}
       {worktreeMode !== 'never' && (
         <BranchAutocomplete
           branches={branches}

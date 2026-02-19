@@ -76,8 +76,24 @@ jobs:
       - name: Setup project
         uses: ./.github/actions/setup-project
 
+      - name: Build packages
+        run: pnpm build:packages
+
       - name: Run integration tests
         run: pnpm --filter @omniscribe/desktop test:integration
+
+  docs:
+    name: Docs Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup project
+        uses: ./.github/actions/setup-project
+
+      - name: Build docs
+        run: pnpm docs:build
 
   build:
     name: Build

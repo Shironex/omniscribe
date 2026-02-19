@@ -1,25 +1,18 @@
-import { useEffect } from 'react';
 import { Toaster as Sonner } from 'sonner';
 
-import { createLogger } from '@omniscribe/shared';
 import { getThemeOption } from '@/lib/theme';
 import { useSettingsStore, selectEffectiveTheme } from '@/stores/useSettingsStore';
-
-const logger = createLogger('Toaster');
+import { usePluginStore } from '@/stores';
 
 type ToasterProps = React.ComponentProps<typeof Sonner>;
 
 const Toaster = ({ ...props }: ToasterProps) => {
   const effectiveTheme = useSettingsStore(selectEffectiveTheme);
   const themeOption = getThemeOption(effectiveTheme);
+  const pluginThemes = usePluginStore(s => s.themes);
 
-  useEffect(() => {
-    if (!themeOption && import.meta.env.DEV) {
-      logger.warn(`Theme "${effectiveTheme}" not found in themeOptions, defaulting to dark`);
-    }
-  }, [effectiveTheme, themeOption]);
-
-  const isDark = themeOption?.isDark ?? true;
+  // Check built-in themes first, then plugin themes, default to dark
+  const isDark = themeOption?.isDark ?? pluginThemes.get(effectiveTheme)?.isDark ?? true;
 
   return (
     <Sonner

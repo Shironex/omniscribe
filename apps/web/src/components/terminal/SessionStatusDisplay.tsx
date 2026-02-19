@@ -10,22 +10,43 @@ import {
 } from 'lucide-react';
 import { useState, useRef, useEffect, useCallback, type ComponentType } from 'react';
 import { StatusDot } from '@/components/shared/StatusLegend';
-import { ClaudeIcon } from '@/components/shared/ClaudeIcon';
 import { Input } from '@/components/ui/input';
 import { useSessionStore } from '@/stores/useSessionStore';
-import { MAX_SESSION_NAME_LENGTH, type AiMode } from '@omniscribe/shared';
+import { usePluginStore, type ProviderInfo } from '@/stores/usePluginStore';
+import { MAX_SESSION_NAME_LENGTH } from '@omniscribe/shared';
 import type { TerminalSession, GitBranchInfo } from './TerminalHeader';
+import type { SessionStatusRendererRegistration } from '@omniscribe/plugin-api';
 
-interface AIModeConfigItem {
-  icon: ComponentType<{ size?: string | number; className?: string }>;
-  label: string;
-  color: string;
+type WithPluginId<T> = T & { pluginId: string };
+
+/**
+ * Resolve mode config dynamically from plugin store providers and status renderers.
+ * Returns icon, label, color, and optional renderer component.
+ */
+function getModeConfig(
+  aiMode: string,
+  providers: ProviderInfo[],
+  statusRenderers: Map<string, WithPluginId<SessionStatusRendererRegistration>>
+) {
+  const renderer = [...statusRenderers.values()].find(r => r.aiMode === aiMode);
+  const provider = providers.find(p => p.aiMode === aiMode);
+
+  if (aiMode === 'plain') {
+    return {
+      icon: Terminal,
+      label: 'Plain',
+      color: 'text-muted-foreground',
+      rendererComponent: null,
+    };
+  }
+
+  return {
+    icon: Terminal,
+    label: provider?.displayName ?? aiMode,
+    color: 'text-primary',
+    rendererComponent: renderer?.component ?? null,
+  };
 }
-
-export const aiModeConfig: Record<AiMode, AIModeConfigItem> = {
-  claude: { icon: ClaudeIcon, label: 'Claude', color: 'text-orange-400' },
-  plain: { icon: Terminal, label: 'Plain', color: 'text-muted-foreground' },
-};
 
 interface SessionStatusDisplayProps {
   session: TerminalSession;
@@ -33,8 +54,12 @@ interface SessionStatusDisplayProps {
 }
 
 export function SessionStatusDisplay({ session, gitBranch }: SessionStatusDisplayProps) {
-  const modeConfig = aiModeConfig[session.aiMode];
+  const providers = usePluginStore(s => s.providers);
+  const statusRenderers = usePluginStore(s => s.statusRenderers);
+  const modeConfig = getModeConfig(session.aiMode, providers, statusRenderers);
   const ModeIcon = modeConfig.icon;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const RendererComponent = modeConfig.rendererComponent as ComponentType<any> | null;
   const setCustomTitle = useSessionStore(state => state.setCustomTitle);
   const clearCustomTitle = useSessionStore(state => state.clearCustomTitle);
 
@@ -104,7 +129,15 @@ export function SessionStatusDisplay({ session, gitBranch }: SessionStatusDispla
 
       {/* AI Mode icon + Session label */}
       <div className="flex items-center gap-1 shrink-0">
-        <ModeIcon size={14} className={cn('shrink-0', modeConfig.color)} />
+        {RendererComponent ? (
+          <RendererComponent
+            sessionId={session.id}
+            status={session.status}
+            statusMessage={session.statusMessage}
+          />
+        ) : (
+          <ModeIcon size={14} className={cn('shrink-0', modeConfig.color)} />
+        )}
         {isEditing ? (
           <Input
             ref={inputRef}

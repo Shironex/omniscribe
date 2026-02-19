@@ -1,13 +1,20 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+
+// Mock ../plugin barrel to avoid electron-store import in test environment
+jest.mock('../plugin', () => ({
+  PluginRegistryService: jest.fn(),
+}));
+
 import { SessionLauncherService } from './session-launcher.service';
 import { SessionService } from './session.service';
 import { TerminalService } from '../terminal/terminal.service';
 import { McpWriterService, McpDiscoveryService } from '../mcp';
+import { PluginRegistryService } from '../plugin';
 import { CliCommandService } from './cli-command.service';
-import { ClaudeSessionReaderService } from './claude-session-reader.service';
-import { HookManagerService } from './hook-manager.service';
 import { ClaudeSessionTrackerService } from './claude-session-tracker.service';
 import type { BackendSessionConfig } from './types';
+import { InternalSessionEvents } from '../shared/events';
 
 function createMockSession(overrides?: Partial<BackendSessionConfig>): BackendSessionConfig {
   return {
@@ -23,6 +30,33 @@ function createMockSession(overrides?: Partial<BackendSessionConfig>): BackendSe
   } as BackendSessionConfig;
 }
 
+const mockProvider = {
+  capabilities: {
+    supportsMcp: true,
+    supportsUsage: true,
+    supportsSessionHistory: true,
+    supportedOperations: new Set(['resume', 'fork', 'continue']),
+  },
+  readSessionHistory: jest.fn().mockResolvedValue([]),
+  getHookManager: jest.fn().mockReturnValue({
+    registerHooks: jest.fn().mockResolvedValue(undefined),
+    startWatching: jest.fn(),
+  }),
+  getSessionTracker: jest.fn().mockReturnValue({
+    pollForNewSession: jest.fn().mockResolvedValue(null),
+  }),
+};
+
+const mockPluginRegistry = {
+  isPluginMode: jest.fn().mockReturnValue(true),
+  isValidMode: jest
+    .fn()
+    .mockImplementation((mode: string) => mode === 'claude' || mode === 'plain'),
+  getProvider: jest.fn().mockReturnValue(mockProvider),
+  getProviderEntry: jest.fn().mockReturnValue(undefined),
+  listProviders: jest.fn().mockReturnValue([]),
+};
+
 describe('SessionLauncherService', () => {
   let service: SessionLauncherService;
   let sessionService: jest.Mocked<SessionService>;
@@ -30,9 +64,8 @@ describe('SessionLauncherService', () => {
   let mcpWriterService: jest.Mocked<McpWriterService>;
   let mcpDiscoveryService: jest.Mocked<McpDiscoveryService>;
   let cliCommandService: jest.Mocked<CliCommandService>;
-  let claudeSessionReader: jest.Mocked<ClaudeSessionReaderService>;
-  let hookManager: jest.Mocked<HookManagerService>;
   let claudeSessionTracker: jest.Mocked<ClaudeSessionTrackerService>;
+  let eventEmitter: jest.Mocked<EventEmitter2>;
 
   beforeEach(async () => {
     sessionService = {
@@ -40,6 +73,7 @@ describe('SessionLauncherService', () => {
       updateStatus: jest.fn(),
       registerTerminal: jest.fn(),
       clearTerminalRef: jest.fn(),
+      setClaudeSessionId: jest.fn(),
     } as unknown as jest.Mocked<SessionService>;
 
     terminalService = {
@@ -64,19 +98,27 @@ describe('SessionLauncherService', () => {
       getAiModeName: jest.fn().mockReturnValue('Claude'),
     } as unknown as jest.Mocked<CliCommandService>;
 
-    claudeSessionReader = {
-      readSessionsIndex: jest.fn().mockResolvedValue([]),
-      findNewSession: jest.fn().mockResolvedValue(null),
-    } as unknown as jest.Mocked<ClaudeSessionReaderService>;
+    claudeSessionTracker = {
+      refreshActiveSessionsSnapshot: jest.fn(),
+    } as unknown as jest.Mocked<ClaudeSessionTrackerService>;
 
-    hookManager = {
+    eventEmitter = {
+      emit: jest.fn(),
+    } as unknown as jest.Mocked<EventEmitter2>;
+
+    // Reset plugin registry mock
+    mockPluginRegistry.isPluginMode.mockReturnValue(true);
+    mockPluginRegistry.getProvider.mockReturnValue(mockProvider);
+
+    // Reset provider mocks
+    mockProvider.readSessionHistory.mockResolvedValue([]);
+    mockProvider.getHookManager.mockReturnValue({
       registerHooks: jest.fn().mockResolvedValue(undefined),
       startWatching: jest.fn(),
-    } as unknown as jest.Mocked<HookManagerService>;
-
-    claudeSessionTracker = {
-      startTracking: jest.fn(),
-    } as unknown as jest.Mocked<ClaudeSessionTrackerService>;
+    });
+    mockProvider.getSessionTracker.mockReturnValue({
+      pollForNewSession: jest.fn().mockResolvedValue(null),
+    });
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -86,9 +128,9 @@ describe('SessionLauncherService', () => {
         { provide: McpWriterService, useValue: mcpWriterService },
         { provide: McpDiscoveryService, useValue: mcpDiscoveryService },
         { provide: CliCommandService, useValue: cliCommandService },
-        { provide: ClaudeSessionReaderService, useValue: claudeSessionReader },
-        { provide: HookManagerService, useValue: hookManager },
         { provide: ClaudeSessionTrackerService, useValue: claudeSessionTracker },
+        { provide: PluginRegistryService, useValue: mockPluginRegistry },
+        { provide: EventEmitter2, useValue: eventEmitter },
       ],
     }).compile();
 
@@ -162,15 +204,21 @@ describe('SessionLauncherService', () => {
     });
   });
 
-  describe('launchSession with hooks', () => {
-    it('should register hooks and start watching for claude sessions', async () => {
+  describe('launchSession with plugin delegation', () => {
+    it('should register hooks through provider via hasHookManager type guard', async () => {
       const session = createMockSession();
       sessionService.get.mockReturnValue(session);
+      const hookMgr = {
+        registerHooks: jest.fn().mockResolvedValue(undefined),
+        startWatching: jest.fn(),
+      };
+      mockProvider.getHookManager.mockReturnValue(hookMgr);
 
       await service.launchSession(session.id, '/project', '/worktree', 'claude');
 
-      expect(hookManager.registerHooks).toHaveBeenCalledWith('/project');
-      expect(hookManager.startWatching).toHaveBeenCalled();
+      expect(mockPluginRegistry.getProvider).toHaveBeenCalledWith('claude');
+      expect(hookMgr.registerHooks).toHaveBeenCalledWith('/project');
+      expect(hookMgr.startWatching).toHaveBeenCalled();
     });
 
     it('should not register hooks for plain mode sessions', async () => {
@@ -184,35 +232,50 @@ describe('SessionLauncherService', () => {
 
       await service.launchSession(session.id, '/project', '/worktree', 'plain');
 
-      expect(hookManager.registerHooks).not.toHaveBeenCalled();
-      expect(hookManager.startWatching).not.toHaveBeenCalled();
+      // Should not call getProvider for 'plain' mode (plain is filtered out)
+      expect(mockProvider.getHookManager).not.toHaveBeenCalled();
     });
 
-    it('should snapshot Claude sessions for non-resumed sessions', async () => {
+    it('should write MCP config when provider supports MCP', async () => {
       const session = createMockSession();
       sessionService.get.mockReturnValue(session);
 
       await service.launchSession(session.id, '/project', '/worktree', 'claude');
 
-      expect(claudeSessionReader.readSessionsIndex).toHaveBeenCalledWith('/project');
+      expect(mcpDiscoveryService.discoverServers).toHaveBeenCalledWith('/project');
+      expect(mcpWriterService.writeConfig).toHaveBeenCalledWith(
+        '/worktree',
+        session.id,
+        '/project',
+        []
+      );
     });
 
-    it('should snapshot Claude sessions for fork sessions', async () => {
+    it('should snapshot sessions via provider for non-resumed sessions', async () => {
+      const session = createMockSession();
+      sessionService.get.mockReturnValue(session);
+
+      await service.launchSession(session.id, '/project', '/worktree', 'claude');
+
+      expect(mockProvider.readSessionHistory).toHaveBeenCalledWith('/project');
+    });
+
+    it('should snapshot sessions for fork sessions', async () => {
       const session = createMockSession({ forkSessionId: 'fork-id' });
       sessionService.get.mockReturnValue(session);
 
       await service.launchSession(session.id, '/project', '/worktree', 'claude');
 
-      expect(claudeSessionReader.readSessionsIndex).toHaveBeenCalledWith('/project');
+      expect(mockProvider.readSessionHistory).toHaveBeenCalledWith('/project');
     });
 
-    it('should snapshot Claude sessions for continue-last sessions', async () => {
+    it('should snapshot sessions for continue-last sessions', async () => {
       const session = createMockSession({ continueLastSession: true });
       sessionService.get.mockReturnValue(session);
 
       await service.launchSession(session.id, '/project', '/worktree', 'claude');
 
-      expect(claudeSessionReader.readSessionsIndex).toHaveBeenCalledWith('/project');
+      expect(mockProvider.readSessionHistory).toHaveBeenCalledWith('/project');
     });
 
     it('should skip snapshot for resumed sessions without fork or continue', async () => {
@@ -221,8 +284,60 @@ describe('SessionLauncherService', () => {
 
       await service.launchSession(session.id, '/project', '/worktree', 'claude');
 
-      expect(claudeSessionReader.readSessionsIndex).not.toHaveBeenCalled();
-      expect(claudeSessionTracker.startTracking).not.toHaveBeenCalled();
+      expect(mockProvider.readSessionHistory).not.toHaveBeenCalled();
+    });
+
+    it('should delegate to plugin provider for Claude session launch', async () => {
+      const session = createMockSession();
+      sessionService.get.mockReturnValue(session);
+
+      const result = await service.launchSession(session.id, '/project', '/worktree', 'claude');
+
+      expect(result.success).toBe(true);
+      // Verify the plugin registry was consulted
+      expect(mockPluginRegistry.isPluginMode).toHaveBeenCalledWith('claude');
+      expect(mockPluginRegistry.getProvider).toHaveBeenCalledWith('claude');
+    });
+
+    it('should emit CLAUDE_ID_CAPTURED and refresh snapshot when tracker finds new session', async () => {
+      const session = createMockSession();
+      sessionService.get.mockReturnValue(session);
+      mockProvider.readSessionHistory.mockResolvedValue([
+        { sessionId: 'old-1' },
+        { sessionId: 'old-2' },
+      ]);
+      mockProvider.getSessionTracker.mockReturnValue({
+        pollForNewSession: jest.fn().mockResolvedValue('new-session-id'),
+      });
+
+      await service.launchSession(session.id, '/project', '/worktree', 'claude');
+
+      // Wait for the fire-and-forget promise to resolve
+      await new Promise(resolve => process.nextTick(resolve));
+      await new Promise(resolve => process.nextTick(resolve));
+
+      expect(sessionService.setClaudeSessionId).toHaveBeenCalledWith(session.id, 'new-session-id');
+      expect(eventEmitter.emit).toHaveBeenCalledWith(
+        InternalSessionEvents.CLAUDE_ID_CAPTURED,
+        expect.objectContaining({
+          sessionId: session.id,
+          claudeSessionId: 'new-session-id',
+        })
+      );
+      expect(claudeSessionTracker.refreshActiveSessionsSnapshot).toHaveBeenCalledWith(
+        'claude-id-captured'
+      );
+    });
+
+    it('should handle snapshot failure gracefully', async () => {
+      const session = createMockSession();
+      sessionService.get.mockReturnValue(session);
+      mockProvider.readSessionHistory.mockRejectedValue(new Error('Snapshot failed'));
+
+      const result = await service.launchSession(session.id, '/project', '/worktree', 'claude');
+
+      // Should still succeed -- snapshot failure is non-fatal
+      expect(result.success).toBe(true);
     });
   });
 });

@@ -8,6 +8,9 @@ import { GitModule } from './git';
 import { McpModule } from './mcp';
 import { UsageModule } from './usage';
 import { HealthModule } from './health';
+import { PluginModule } from './plugin';
+import { ClaudeProviderPlugin } from '@omniscribe/provider-claude';
+import { CodexProviderPlugin } from '@omniscribe/provider-codex';
 
 @Module({
   imports: [
@@ -27,6 +30,33 @@ import { HealthModule } from './health';
         name: 'medium',
         ttl: 10000, // 10 second window
         limit: 500, // max 500 requests per 10 seconds
+      },
+    ]),
+    // PluginModule must be after ThrottlerModule but before domain modules
+    // so PluginRegistryService is available for injection everywhere.
+    // Phase 13: Claude provider plugin registered with auto-enable and auto-activate.
+    PluginModule.forRoot([
+      {
+        manifest: {
+          id: 'provider-claude',
+          type: 'provider',
+          displayName: 'Claude Code',
+          description: "Anthropic's AI coding assistant via Claude Code CLI",
+        },
+        createPlugin: () => new ClaudeProviderPlugin(),
+        autoEnable: true,
+        autoActivate: true,
+      },
+      {
+        manifest: {
+          id: 'provider-codex',
+          type: 'provider',
+          displayName: 'Codex',
+          description: "OpenAI's Codex CLI for AI-assisted coding",
+        },
+        createPlugin: () => new CodexProviderPlugin(),
+        autoEnable: true,
+        autoActivate: true,
       },
     ]),
     TerminalModule,

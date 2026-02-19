@@ -5,5 +5,4 @@ export { SessionGateway } from './session.gateway';
 export { CliCommandService } from './cli-command.service';
 export type { CliSessionContext } from './cli-command.service';
 export type { AiCliConfig } from './types';
-export { ClaudeSessionReaderService } from './claude-session-reader.service';
-export { HookManagerService } from './hook-manager.service';
+export { ClaudeSessionTrackerService } from './claude-session-tracker.service';

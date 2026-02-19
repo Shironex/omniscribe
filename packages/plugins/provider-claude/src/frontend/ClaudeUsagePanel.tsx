@@ -1,0 +1,251 @@
+import { useState, useEffect, useMemo } from 'react';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+  Button,
+  cn,
+  UsageCard,
+  getStatusInfo,
+} from '@omniscribe/ui';
+import { RefreshCw, AlertTriangle, ExternalLink, Loader2 } from 'lucide-react';
+import { useUsageStore } from '@/stores/useUsageStore';
+import { useWorkspaceStore } from '@/stores/useWorkspaceStore';
+import type { UsageError } from '@omniscribe/shared';
+import type { UsagePanelProps } from '@omniscribe/plugin-api';
+import { ClaudeIcon } from './ClaudeIcon';
+
+// ---- Constants ----
+
+const CLAUDE_SESSION_WINDOW_HOURS = 5;
+
+/** Map error codes to user-friendly messages */
+const ERROR_MESSAGES: Record<UsageError, { title: string; description: string }> = {
+  auth_required: {
+    title: 'Authentication required',
+    description: "Please run 'claude login' in your terminal to authenticate.",
+  },
+  cli_not_found: {
+    title: 'Claude CLI not found',
+    description: 'Please install Claude Code CLI to view usage.',
+  },
+  timeout: {
+    title: 'Request timed out',
+    description: 'The Claude CLI took too long to respond. Try again.',
+  },
+  parse_error: {
+    title: 'Failed to parse usage',
+    description: 'Unable to read usage data from Claude CLI output.',
+  },
+  trust_prompt: {
+    title: 'Folder permission needed',
+    description: 'Run "claude" in your terminal and approve folder access to continue.',
+  },
+  unknown: {
+    title: 'Failed to fetch usage',
+    description: 'An unexpected error occurred. Try again.',
+  },
+};
+
+/**
+ * Claude Usage Panel
+ *
+ * Provides the full Claude usage experience as a Popover:
+ * - Trigger: Activity icon with progress bar showing session usage
+ * - Content: Session usage (5h window), Sonnet weekly, overall weekly
+ * - Error states, loading states, staleness indicators
+ * - Polling for live updates when open
+ *
+ * Registered as a usage panel via frontendActivate.
+ */
+export function ClaudeUsagePanel({ embedded = false }: UsagePanelProps) {
+  const [open, setOpen] = useState(false);
+
+  // Usage store
+  const claudeUsage = useUsageStore(s => s.claudeUsage);
+  const status = useUsageStore(s => s.status);
+  const error = useUsageStore(s => s.error);
+  const errorMessage = useUsageStore(s => s.errorMessage);
+  const fetchUsage = useUsageStore(s => s.fetchUsage);
+  const setWorkingDir = useUsageStore(s => s.setWorkingDir);
+  const startPolling = useUsageStore(s => s.startPolling);
+  const stopPolling = useUsageStore(s => s.stopPolling);
+  const lastFetched = useUsageStore(s => s.lastFetched);
+
+  // Get active project path from workspace store
+  const activeTabId = useWorkspaceStore(s => s.activeTabId);
+  const tabs = useWorkspaceStore(s => s.tabs);
+  const activeTab = tabs.find(t => t.id === activeTabId);
+  const projectPath = activeTab?.projectPath;
+
+  // Update working directory when project changes
+  useEffect(() => {
+    if (projectPath) {
+      setWorkingDir(projectPath);
+    }
+  }, [projectPath, setWorkingDir]);
+
+  // Start/stop polling based on popover state (or mount/unmount in embedded mode)
+  const isActive = embedded || open;
+  useEffect(() => {
+    if (isActive && projectPath) {
+      startPolling();
+    } else {
+      stopPolling();
+    }
+
+    return () => {
+      stopPolling();
+    };
+  }, [isActive, projectPath, startPolling, stopPolling]);
+
+  // Check if data is stale (older than 2 minutes)
+  const isStale = useMemo(() => {
+    return !lastFetched || Date.now() - lastFetched > 2 * 60 * 1000;
+  }, [lastFetched]);
+
+  const isLoading = status === 'fetching';
+
+  const sessionPercentage = claudeUsage?.sessionPercentage ?? 0;
+  const sessionStatus = getStatusInfo(sessionPercentage);
+  const statusColor = sessionStatus.color;
+
+  // Error info
+  const errorInfo = error ? ERROR_MESSAGES[error] : null;
+
+  const tooltipLabel = claudeUsage
+    ? `Claude usage: ${Math.round(sessionPercentage)}% (${CLAUDE_SESSION_WINDOW_HOURS}h window)`
+    : 'Claude usage';
+
+  const trigger = (
+    <Button variant="ghost" size="sm" className="h-8 gap-2 px-2 hover:bg-accent">
+      <ClaudeIcon className={cn('w-4 h-4', claudeUsage && statusColor)} size={16} />
+      {claudeUsage && (
+        <div
+          className={cn(
+            'h-1.5 w-12 bg-muted rounded-full overflow-hidden border border-border/50 transition-opacity',
+            isStale && 'opacity-60'
+          )}
+        >
+          <div
+            className={cn('h-full transition-all duration-500 rounded-full', sessionStatus.bg)}
+            style={{ width: `${Math.min(sessionPercentage, 100)}%` }}
+          />
+        </div>
+      )}
+    </Button>
+  );
+
+  const content = (
+    <>
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border/50 bg-secondary/10">
+        <div className="flex items-center gap-2">
+          <ClaudeIcon size={16} />
+          <span className="text-sm font-semibold">Claude Usage</span>
+        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-6 w-6"
+          onClick={() => fetchUsage()}
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />
+          ) : (
+            <RefreshCw className="w-3.5 h-3.5" />
+          )}
+        </Button>
+      </div>
+
+      {/* Content */}
+      <div className="p-4 space-y-4">
+        {error ? (
+          <div className="flex flex-col items-center justify-center py-6 text-center space-y-3">
+            <AlertTriangle className="w-8 h-8 text-yellow-500/80" />
+            <div className="space-y-1 flex flex-col items-center">
+              <p className="text-sm font-medium">{errorInfo?.title ?? 'Error'}</p>
+              <p className="text-xs text-muted-foreground">
+                {errorInfo?.description ?? errorMessage}
+              </p>
+            </div>
+          </div>
+        ) : !claudeUsage ? (
+          <div className="flex flex-col items-center justify-center py-8 space-y-2">
+            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+            <p className="text-xs text-muted-foreground">Loading usage data...</p>
+          </div>
+        ) : (
+          <>
+            <UsageCard
+              title="Session Usage"
+              subtitle={`${CLAUDE_SESSION_WINDOW_HOURS}-hour rolling window`}
+              percentage={claudeUsage.sessionPercentage}
+              resetText={claudeUsage.sessionResetText}
+              isPrimary={true}
+              stale={isStale}
+            />
+
+            <div className="grid grid-cols-2 gap-3">
+              <UsageCard
+                title="Sonnet"
+                subtitle="Weekly"
+                percentage={claudeUsage.sonnetWeeklyPercentage}
+                resetText={claudeUsage.sonnetResetText}
+                stale={isStale}
+              />
+              <UsageCard
+                title="Weekly"
+                subtitle="All models"
+                percentage={claudeUsage.weeklyPercentage}
+                resetText={claudeUsage.weeklyResetText}
+                stale={isStale}
+              />
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Footer */}
+      <div className="flex items-center justify-between px-4 py-2 bg-secondary/10 border-t border-border/50">
+        <a
+          href="https://status.claude.com"
+          target="_blank"
+          rel="noreferrer"
+          className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
+        >
+          Claude Status <ExternalLink className="w-2.5 h-2.5" />
+        </a>
+        <span className="text-[10px] text-muted-foreground">Updates every 15 min</span>
+      </div>
+    </>
+  );
+
+  // Embedded mode: content only (used inside multi-provider tabbed popover)
+  if (embedded) {
+    return content;
+  }
+
+  // Standalone mode: full Popover with trigger
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <PopoverTrigger asChild>{trigger}</PopoverTrigger>
+        </TooltipTrigger>
+        {!open && <TooltipContent side="bottom">{tooltipLabel}</TooltipContent>}
+      </Tooltip>
+      <PopoverContent
+        className="w-[340px] p-0 overflow-hidden bg-background/95 backdrop-blur-xl border-border shadow-2xl"
+        align="end"
+        sideOffset={8}
+      >
+        {content}
+      </PopoverContent>
+    </Popover>
+  );
+}

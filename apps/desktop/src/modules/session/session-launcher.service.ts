@@ -1,12 +1,40 @@
 import { Injectable } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { AiMode, LaunchSessionResult, createLogger, extractErrorMessage } from '@omniscribe/shared';
+import type { AiProviderPlugin } from '@omniscribe/plugin-api';
 import { TerminalService } from '../terminal';
 import { McpWriterService, McpDiscoveryService } from '../mcp';
+import { PluginRegistryService } from '../plugin';
 import { CliCommandService } from './cli-command.service';
-import { ClaudeSessionReaderService } from './claude-session-reader.service';
-import { HookManagerService } from './hook-manager.service';
 import { ClaudeSessionTrackerService } from './claude-session-tracker.service';
 import { SessionService } from './session.service';
+import { InternalSessionEvents } from '../shared/events';
+
+// Type guard for providers that support session tracking
+function hasSessionTracker(provider: AiProviderPlugin): provider is AiProviderPlugin & {
+  getSessionTracker(): {
+    pollForNewSession(
+      projectPath: string,
+      previousSessionIds: Set<string>,
+      maxPolls?: number,
+      intervalMs?: number
+    ): Promise<string | null>;
+  };
+} {
+  return (
+    'getSessionTracker' in provider && typeof (provider as any).getSessionTracker === 'function'
+  );
+}
+
+// Type guard for providers that expose hook management
+function hasHookManager(provider: AiProviderPlugin): provider is AiProviderPlugin & {
+  getHookManager(): {
+    registerHooks(projectPath: string): Promise<void>;
+    startWatching(): void;
+  };
+} {
+  return 'getHookManager' in provider && typeof (provider as any).getHookManager === 'function';
+}
 
 @Injectable()
 export class SessionLauncherService {
@@ -18,9 +46,9 @@ export class SessionLauncherService {
     private readonly mcpWriterService: McpWriterService,
     private readonly mcpDiscoveryService: McpDiscoveryService,
     private readonly cliCommandService: CliCommandService,
-    private readonly claudeSessionReader: ClaudeSessionReaderService,
-    private readonly hookManager: HookManagerService,
-    private readonly claudeSessionTracker: ClaudeSessionTrackerService
+    private readonly claudeSessionTracker: ClaudeSessionTrackerService,
+    private readonly pluginRegistry: PluginRegistryService,
+    private readonly eventEmitter: EventEmitter2
   ) {}
 
   /**
@@ -61,51 +89,79 @@ export class SessionLauncherService {
     // Update status to connecting
     this.sessionService.updateStatus(sessionId, 'connecting', 'Starting AI session...');
 
-    // Snapshot current Claude session IDs before spawning (for non-resumed sessions, forks, and continue)
-    // so we can detect which new Claude session was created by this launch.
-    // Fork creates a new session (sidechain), so we poll for it. Continue also creates/resumes.
-    const shouldPollForNewSession =
-      aiMode === 'claude' &&
-      (!session.isResumed || session.forkSessionId || session.continueLastSession);
+    // Snapshot current sessions for tracking (if provider supports it)
     let previousSessionIds: Set<string> | null = null;
-    if (shouldPollForNewSession) {
+    const shouldTrackSession = aiMode !== 'plain' && this.pluginRegistry.isPluginMode(aiMode);
+    if (shouldTrackSession) {
       try {
-        const currentEntries = await this.claudeSessionReader.readSessionsIndex(projectPath);
-        previousSessionIds = new Set(currentEntries.map(e => e.sessionId));
-        this.logger.debug(
-          `Snapshotted ${previousSessionIds.size} existing Claude sessions for ${sessionId}`
-        );
+        const provider = this.pluginRegistry.getProvider(aiMode);
+        if (provider.capabilities.supportsSessionHistory && provider.readSessionHistory) {
+          const shouldPoll =
+            !session.isResumed || session.forkSessionId || session.continueLastSession;
+          if (shouldPoll) {
+            const currentEntries = await provider.readSessionHistory(projectPath);
+            previousSessionIds = new Set(currentEntries.map(e => e.sessionId));
+            this.logger.debug(
+              `Snapshotted ${previousSessionIds.size} existing sessions for ${sessionId}`
+            );
+          }
+        }
       } catch (error) {
         const msg = extractErrorMessage(error);
-        this.logger.warn(`Failed to snapshot Claude sessions for ${sessionId}: ${msg}`);
+        this.logger.warn(`Failed to snapshot sessions for ${sessionId}: ${msg}`);
       }
     }
 
     try {
-      // Register hooks for instant session ID capture (fire-and-forget)
-      if (aiMode === 'claude') {
-        this.hookManager.registerHooks(projectPath).catch(err => {
-          const msg = extractErrorMessage(err);
-          this.logger.warn(`Failed to register hooks for ${sessionId}: ${msg}`);
-        });
-        this.hookManager.startWatching();
+      // Register provider-specific hooks (fire-and-forget)
+      if (aiMode !== 'plain' && this.pluginRegistry.isPluginMode(aiMode)) {
+        try {
+          const provider = this.pluginRegistry.getProvider(aiMode);
+          if (hasHookManager(provider)) {
+            const hookMgr = provider.getHookManager();
+            hookMgr.registerHooks(projectPath).catch((err: Error) => {
+              this.logger.warn(`Failed to register hooks for ${sessionId}: ${err.message}`);
+            });
+            hookMgr.startWatching();
+          }
+        } catch (error) {
+          const msg = extractErrorMessage(error);
+          this.logger.warn(`Hook registration failed for ${sessionId}: ${msg}`);
+        }
       }
 
-      // Only discover and write MCP config for Claude sessions.
-      // Plain terminals don't use Claude Code and don't read .mcp.json.
-      // Writing for all modes causes a race condition where the plain session
-      // overwrites the Claude session's ID in .mcp.json.
-      if (aiMode === 'claude') {
-        const allServers = await this.mcpDiscoveryService.discoverServers(projectPath);
-        this.logger.log(`Discovered ${allServers.length} MCP servers for session ${sessionId}`);
-
-        await this.mcpWriterService.writeConfig(worktreePath, sessionId, projectPath, allServers);
-
-        this.logger.log(`MCP config written to ${worktreePath}/.mcp.json`);
+      // MCP config for all provider modes
+      if (aiMode !== 'plain' && this.pluginRegistry.isPluginMode(aiMode)) {
+        try {
+          const provider = this.pluginRegistry.getProvider(aiMode);
+          if (provider.capabilities.supportsMcp) {
+            // Core handles MCP discovery and writing -- provider specifies via getMcpConfig()
+            // For Claude, we use the existing core MCP infrastructure
+            const allServers = await this.mcpDiscoveryService.discoverServers(projectPath);
+            this.logger.log(`Discovered ${allServers.length} MCP servers for session ${sessionId}`);
+            await this.mcpWriterService.writeConfig(
+              worktreePath,
+              sessionId,
+              projectPath,
+              allServers
+            );
+            this.logger.log(`MCP config written to ${worktreePath}/.mcp.json`);
+          }
+        } catch (error) {
+          const msg = extractErrorMessage(error);
+          this.logger.warn(`MCP config failed for '${aiMode}': ${msg}`);
+        }
       }
 
-      // Get CLI configuration for the AI mode
-      const cliConfig = this.cliCommandService.getCliConfig(aiMode, session);
+      // Get CLI configuration for the AI mode.
+      // Spread session fields and add launch context (sessionId, worktreePath, projectPath)
+      // so plugin providers receive a complete LaunchContext via CliSessionContext.
+      const cliConfig = this.cliCommandService.getCliConfig(aiMode, {
+        ...session,
+        sessionId: sessionId,
+        workingDirectory: worktreePath,
+        projectPath: projectPath,
+      });
 
       // Generate project hash for MCP status file identification
       const projectHash = this.mcpWriterService.generateProjectHash(projectPath);
@@ -152,9 +208,33 @@ export class SessionLauncherService {
 
       this.logger.log(`Session ${sessionId} launched with terminal ${terminalSessionId}`);
 
-      // Poll for new Claude session ID (fire-and-forget, does not block launch)
-      if (shouldPollForNewSession && previousSessionIds) {
-        this.claudeSessionTracker.startTracking(sessionId, projectPath, previousSessionIds);
+      // Post-launch session tracking (fire-and-forget)
+      if (shouldTrackSession && previousSessionIds) {
+        const provider = this.pluginRegistry.getProvider(aiMode);
+        if (hasSessionTracker(provider)) {
+          const tracker = provider.getSessionTracker();
+          // Fire-and-forget: polls for new session, emits event when found
+          tracker.pollForNewSession(projectPath, previousSessionIds).then(
+            (newSessionId: string | null) => {
+              if (newSessionId) {
+                this.sessionService.setClaudeSessionId(sessionId, newSessionId);
+                this.logger.info(`Captured provider session ID for ${sessionId}: ${newSessionId}`);
+
+                // Emit event so gateway broadcasts to frontend AND tracker persists snapshot
+                this.eventEmitter.emit(InternalSessionEvents.CLAUDE_ID_CAPTURED, {
+                  sessionId,
+                  claudeSessionId: newSessionId,
+                });
+
+                // Eagerly update the active sessions snapshot
+                this.claudeSessionTracker.refreshActiveSessionsSnapshot('claude-id-captured');
+              }
+            },
+            (error: Error) => {
+              this.logger.warn(`Session tracking failed for ${sessionId}: ${error.message}`);
+            }
+          );
+        }
       }
 
       return {

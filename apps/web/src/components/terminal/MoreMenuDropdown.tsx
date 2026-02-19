@@ -1,8 +1,11 @@
 import { cn } from '@/lib/utils';
 import { MoreVertical, Settings, X, SquareArrowOutUpRight } from 'lucide-react';
+import { ExtensionSlot } from '@/components/plugin/ExtensionSlot';
 
 interface MoreMenuDropdownProps {
   isOpen: boolean;
+  aiMode?: string;
+  sessionId?: string;
   onToggle: () => void;
   onSettingsClick?: () => void;
   onOpenInEditor?: () => void;
@@ -11,6 +14,8 @@ interface MoreMenuDropdownProps {
 
 export function MoreMenuDropdown({
   isOpen,
+  aiMode,
+  sessionId,
   onToggle,
   onSettingsClick,
   onOpenInEditor,
@@ -57,6 +62,10 @@ export function MoreMenuDropdown({
               Open in Editor
             </button>
           )}
+
+          {/* Plugin-contributed more menu items */}
+          <ExtensionSlot name="more-menu" aiMode={aiMode} context={{ sessionId }} />
+
           <button
             type="button"
             onClick={onClose}

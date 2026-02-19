@@ -19,6 +19,7 @@ import { BackendSessionConfig } from './types';
 import { TerminalGateway } from '../terminal';
 import { WorktreeService, GitService } from '../git';
 import { WorkspaceService } from '../workspace';
+import { PluginRegistryService } from '../plugin';
 import {
   AiMode,
   CreateSessionPayload,
@@ -40,7 +41,6 @@ import {
   SessionSettings,
   DEFAULT_SESSION_SETTINGS,
   MAX_CONCURRENT_SESSIONS,
-  VALID_AI_MODES,
   MAX_MODEL_LENGTH,
   MAX_SYSTEM_PROMPT_LENGTH,
   MAX_SESSION_NAME_LENGTH,
@@ -50,7 +50,6 @@ import {
   extractErrorMessage,
 } from '@omniscribe/shared';
 import { InternalSessionEvents, InternalZombieEvents } from '../shared/events';
-import { ClaudeSessionReaderService } from './claude-session-reader.service';
 import { CORS_CONFIG } from '../shared/cors.config';
 
 /**
@@ -91,7 +90,7 @@ export class SessionGateway implements OnGatewayInit {
     private readonly gitService: GitService,
     @Inject(forwardRef(() => WorkspaceService))
     private readonly workspaceService: WorkspaceService,
-    private readonly claudeSessionReader: ClaudeSessionReaderService
+    private readonly pluginRegistry: PluginRegistryService
   ) {}
 
   afterInit(): void {
@@ -265,7 +264,7 @@ export class SessionGateway implements OnGatewayInit {
 
   /**
    * Handle request for Claude Code session history for a project.
-   * Reads the sessions-index.json from Claude Code's data directory.
+   * Delegates to the provider plugin's session reader via the plugin registry.
    */
   @SkipThrottle()
   @SubscribeMessage(SessionEvents.HISTORY)
@@ -275,8 +274,16 @@ export class SessionGateway implements OnGatewayInit {
   ): Promise<ClaudeSessionHistoryResponse> {
     this.logger.debug(`[session:history] projectPath=${payload.projectPath}`);
     try {
-      const sessions = await this.claudeSessionReader.readSessionsIndex(payload.projectPath);
-      return { sessions };
+      // Delegate to provider plugin for session history
+      if (this.pluginRegistry.isPluginMode('claude')) {
+        const provider = this.pluginRegistry.getProvider('claude');
+        if ('getSessionReader' in provider) {
+          const reader = (provider as any).getSessionReader();
+          const sessions = await reader.readSessionsIndex(payload.projectPath);
+          return { sessions };
+        }
+      }
+      return { sessions: [], error: 'No session history provider available' };
     } catch (error) {
       const errorMessage = extractErrorMessage(error);
       this.logger.error('Failed to fetch session history', error);
@@ -374,10 +381,10 @@ export class SessionGateway implements OnGatewayInit {
       return { error: `name exceeds maximum length of ${MAX_SESSION_NAME_LENGTH} characters` };
     }
 
-    // Validate mode
-    if (!VALID_AI_MODES.includes(mode as (typeof VALID_AI_MODES)[number])) {
+    // Validate mode via plugin registry (supports built-in and plugin-registered modes)
+    if (!this.pluginRegistry.isValidMode(mode)) {
       return {
-        error: `Invalid AI mode: ${String(mode)}. Must be one of: ${VALID_AI_MODES.join(', ')}`,
+        error: `Invalid AI mode: ${String(mode)}. No built-in or plugin provider registered for this mode.`,
       };
     }
 

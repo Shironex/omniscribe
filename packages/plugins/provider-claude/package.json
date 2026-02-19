@@ -1,0 +1,49 @@
+{
+  "name": "@omniscribe/provider-claude",
+  "version": "1.0.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
+    }
+  },
+  "omniscribe": {
+    "id": "provider-claude",
+    "type": "provider",
+    "displayName": "Claude Code",
+    "description": "Anthropic's AI coding assistant via Claude Code CLI"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "jest",
+    "test:cov": "jest --coverage",
+    "test:watch": "jest --watch"
+  },
+  "peerDependencies": {
+    "node-pty": ">=1.0.0"
+  },
+  "peerDependenciesMeta": {
+    "node-pty": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@omniscribe/plugin-api": "workspace:*",
+    "@omniscribe/shared": "workspace:*",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^25.2.1",
+    "@types/react": "^18.3.0",
+    "jest": "^30.0.0",
+    "lucide-react": "^0.564.0",
+    "react": "^18.3.1",
+    "sonner": "^2.0.7",
+    "ts-jest": "^29.4.0",
+    "typescript": "^5.5.0"
+  }
+}

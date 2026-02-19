@@ -49,3 +49,21 @@ export const InternalQuickActionEvents = {
 export const InternalZombieEvents = {
   CLEANUP: 'zombie.cleanup',
 } as const;
+
+// ============================================
+// Plugin Internal Events
+// ============================================
+export const InternalPluginEvents = {
+  /** plugin.<id>.activated */
+  ACTIVATED: (id: string) => `plugin.${id}.activated` as const,
+  /** plugin.<id>.deactivated */
+  DEACTIVATED: (id: string) => `plugin.${id}.deactivated` as const,
+  /** plugin.<id>.cli-detected */
+  CLI_DETECTED: (id: string) => `plugin.${id}.cli-detected` as const,
+  /** plugin.<id>.error */
+  ERROR: (id: string) => `plugin.${id}.error` as const,
+  /** Wildcard for all events from a specific plugin */
+  ALL_FOR_PLUGIN: (id: string) => `plugin.${id}.**` as const,
+  /** Wildcard for all plugin events */
+  ALL: 'plugin.**' as const,
+} as const;

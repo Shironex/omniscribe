@@ -13,6 +13,7 @@ vi.mock('@/hooks/useClickOutside', () => ({
 
 // ─── Imports (after mocks) ───────────────────────────────────────────────────
 import { TerminalHeader } from '../terminal/TerminalHeader';
+import { usePluginStore } from '../../stores/usePluginStore';
 import type { TerminalSession } from '../terminal/TerminalHeader';
 import type { QuickActionItem } from '../terminal/TerminalCard';
 
@@ -39,6 +40,20 @@ describe('TerminalHeader', () => {
 
   beforeEach(() => {
     onCloseMock.mockClear();
+    // Set up plugin store with a Claude provider for SessionStatusDisplay
+    usePluginStore.setState({
+      providers: [
+        {
+          id: 'claude-provider',
+          displayName: 'Claude',
+          description: 'Claude AI assistant',
+          aiMode: 'claude',
+          enabled: true,
+          activated: true,
+          cliStatus: { installed: true, version: '1.0.0' },
+        },
+      ],
+    });
   });
 
   it('renders without crashing with minimal props', () => {

@@ -12,9 +12,24 @@
     "paths": {
       "@/*": ["./src/*"],
       "@omniscribe/shared": ["../../packages/shared/src"],
-      "@omniscribe/shared/*": ["../../packages/shared/src/*"]
+      "@omniscribe/shared/*": ["../../packages/shared/src/*"],
+      "@omniscribe/ui": ["./src/lib/plugin-sdk.ts"],
+      "@omniscribe/plugin-api": ["../../packages/plugin-api/src"],
+      "@omniscribe/plugin-api/*": ["../../packages/plugin-api/src/*"]
     }
   },
-  "include": ["src/**/*", "../../packages/shared/src/**/*"],
-  "exclude": ["node_modules", "dist", "../../packages/shared/src/**/*.spec.ts"]
+  "include": [
+    "src/**/*",
+    "../../packages/shared/src/**/*",
+    "../../packages/plugin-api/src/**/*",
+    "../../packages/plugins/provider-claude/src/frontend/**/*",
+    "../../packages/plugins/provider-codex/src/frontend/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "../../packages/shared/src/**/*.spec.ts",
+    "../../packages/plugin-api/src/**/*.spec.ts",
+    "../../packages/plugin-api/src/__tests__/**/*"
+  ]
 }

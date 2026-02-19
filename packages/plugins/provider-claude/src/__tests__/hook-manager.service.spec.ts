@@ -1,7 +1,4 @@
 import * as path from 'path';
-import { Test, TestingModule } from '@nestjs/testing';
-import { EventEmitter2 } from '@nestjs/event-emitter';
-import { InternalSessionEvents } from '../shared/events';
 
 // ---- Module-level mocks ----
 
@@ -32,26 +29,27 @@ jest.mock('os', () => ({
   tmpdir: jest.fn().mockReturnValue('/tmp'),
 }));
 
-// Ensure the module is imported AFTER the mocks
-import { HookManagerService } from './hook-manager.service';
+jest.mock('@omniscribe/shared', () => ({
+  createLogger: () => ({
+    debug: jest.fn(),
+    info: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+  }),
+  extractErrorMessage: (err: unknown) => (err instanceof Error ? err.message : String(err)),
+  normalizePath: (p: string) => p.replace(/\\/g, '/'),
+}));
 
-describe('HookManagerService', () => {
-  let service: HookManagerService;
-  let eventEmitter: jest.Mocked<EventEmitter2>;
+// Import AFTER mocks are set up
+import { ClaudeHookManagerService, type HookEventData } from '../services/hook-manager.service';
 
-  beforeEach(async () => {
+describe('ClaudeHookManagerService', () => {
+  let service: ClaudeHookManagerService;
+
+  beforeEach(() => {
     jest.clearAllMocks();
     watchCallback = null;
-
-    eventEmitter = {
-      emit: jest.fn(),
-    } as unknown as jest.Mocked<EventEmitter2>;
-
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [HookManagerService, { provide: EventEmitter2, useValue: eventEmitter }],
-    }).compile();
-
-    service = module.get<HookManagerService>(HookManagerService);
+    service = new ClaudeHookManagerService();
   });
 
   // ==================================================================
@@ -63,13 +61,11 @@ describe('HookManagerService', () => {
 
       await service.registerHooks('/my/project');
 
-      // Should create the hooks directory
       expect(mockFsPromises.mkdir).toHaveBeenCalledWith(
         expect.stringContaining(path.join('.claude', 'hooks')),
         { recursive: true }
       );
 
-      // Should write the hook script file
       expect(mockFsPromises.writeFile).toHaveBeenCalledWith(
         expect.stringContaining('omniscribe-notify.js'),
         expect.stringContaining('process.stdin.on'),
@@ -78,12 +74,10 @@ describe('HookManagerService', () => {
     });
 
     it('should create settings.local.json when it does not exist', async () => {
-      // readFile for settings throws (file missing)
       mockFsPromises.readFile.mockRejectedValueOnce(new Error('ENOENT'));
 
       await service.registerHooks('/my/project');
 
-      // Should write settings.local.json with hooks
       const writeCall = mockFsPromises.writeFile.mock.calls.find((call: unknown[]) =>
         (call[0] as string).includes('settings.local.json')
       );
@@ -97,7 +91,7 @@ describe('HookManagerService', () => {
       expect(written.hooks.SessionStart[0].hooks[0].async).toBe(true);
     });
 
-    it('should merge into existing settings.local.json preserving other keys', async () => {
+    it('should merge into existing settings preserving other keys', async () => {
       const existingSettings = {
         customSetting: true,
         hooks: {
@@ -115,9 +109,7 @@ describe('HookManagerService', () => {
       );
       const written = JSON.parse(writeCall![1] as string);
 
-      // Preserve existing settings
       expect(written.customSetting).toBe(true);
-      // Preserve existing hooks + add ours
       expect(written.hooks.SessionStart).toHaveLength(2);
       expect(written.hooks.SessionStart[0].hooks[0].command).toBe('other-tool');
       expect(written.hooks.SessionEnd).toHaveLength(1);
@@ -143,7 +135,6 @@ describe('HookManagerService', () => {
       );
       const secondSettings = JSON.parse(secondWriteCall![1] as string);
 
-      // Should still have exactly 1 hook per event, not 2
       expect(secondSettings.hooks.SessionStart).toHaveLength(1);
       expect(secondSettings.hooks.SessionEnd).toHaveLength(1);
     });
@@ -151,7 +142,6 @@ describe('HookManagerService', () => {
     it('should handle errors gracefully without throwing', async () => {
       mockFsPromises.mkdir.mockRejectedValueOnce(new Error('Permission denied'));
 
-      // Should not throw
       await expect(service.registerHooks('/my/project')).resolves.toBeUndefined();
     });
   });
@@ -196,7 +186,6 @@ describe('HookManagerService', () => {
       const writeCall = mockFsPromises.writeFile.mock.calls[0];
       expect(writeCall).toBeDefined();
       const written = JSON.parse(writeCall[1] as string);
-      // Hooks should be removed (set to undefined for empty arrays)
       expect(written.hooks.SessionStart).toBeUndefined();
       expect(written.hooks.SessionEnd).toBeUndefined();
     });
@@ -257,14 +246,12 @@ describe('HookManagerService', () => {
 
       await service.unregisterHooks('/my/project');
 
-      // No omniscribe hooks to remove, so should not write
       expect(mockFsPromises.writeFile).not.toHaveBeenCalled();
     });
 
     it('should handle errors gracefully without throwing', async () => {
       mockFsPromises.readFile.mockResolvedValueOnce('invalid json{{{');
 
-      // readFile returns invalid JSON -> JSON.parse fails -> caught, returns early
       await expect(service.unregisterHooks('/my/project')).resolves.toBeUndefined();
     });
   });
@@ -302,7 +289,6 @@ describe('HookManagerService', () => {
         throw new Error('Permission denied');
       });
 
-      // Should not throw
       expect(() => service.startWatching()).not.toThrow();
     });
   });
@@ -316,25 +302,24 @@ describe('HookManagerService', () => {
     });
 
     it('should be a no-op when not watching', () => {
-      // Should not throw
       expect(() => service.stopWatching()).not.toThrow();
       expect(mockWatcherClose).not.toHaveBeenCalled();
     });
   });
 
-  describe('onModuleDestroy', () => {
-    it('should stop watching on module destroy', () => {
+  describe('destroy', () => {
+    it('should stop watching on destroy', () => {
       service.startWatching();
-      service.onModuleDestroy();
+      service.destroy();
 
       expect(mockWatcherClose).toHaveBeenCalled();
     });
   });
 
   // ==================================================================
-  // File watcher callback (processHookFile)
+  // setHookCallback and file watcher callback
   // ==================================================================
-  describe('file watcher callback', () => {
+  describe('hook callback pattern', () => {
     beforeEach(() => {
       jest.useFakeTimers();
     });
@@ -343,13 +328,79 @@ describe('HookManagerService', () => {
       jest.useRealTimers();
     });
 
+    it('should invoke hookCallback when SessionStart event is detected', async () => {
+      const callback = jest.fn();
+      service.setHookCallback(callback);
+      service.startWatching();
+
+      const hookData = { hook_event_name: 'SessionStart', session_id: 'abc-123' };
+      mockFsPromises.readFile.mockResolvedValueOnce(JSON.stringify(hookData));
+
+      watchCallback!('rename', '12345-999.json');
+
+      await jest.advanceTimersByTimeAsync(150);
+
+      expect(callback).toHaveBeenCalledWith(
+        expect.objectContaining({ hook_event_name: 'SessionStart', session_id: 'abc-123' })
+      );
+      expect(mockFsPromises.unlink).toHaveBeenCalled();
+    });
+
+    it('should invoke hookCallback when SessionEnd event is detected', async () => {
+      const callback = jest.fn();
+      service.setHookCallback(callback);
+      service.startWatching();
+
+      const hookData = { hook_event_name: 'SessionEnd', session_id: 'abc-123' };
+      mockFsPromises.readFile.mockResolvedValueOnce(JSON.stringify(hookData));
+
+      watchCallback!('rename', '12345-888.json');
+
+      await jest.advanceTimersByTimeAsync(150);
+
+      expect(callback).toHaveBeenCalledWith(
+        expect.objectContaining({ hook_event_name: 'SessionEnd', session_id: 'abc-123' })
+      );
+    });
+
+    it('should invoke hookCallback for unknown event types too', async () => {
+      const callback = jest.fn();
+      service.setHookCallback(callback);
+      service.startWatching();
+
+      const hookData: HookEventData = {
+        hook_event_name: 'UnknownEvent',
+        session_id: 'abc-123',
+      };
+      mockFsPromises.readFile.mockResolvedValueOnce(JSON.stringify(hookData));
+
+      watchCallback!('rename', '12345-555.json');
+
+      await jest.advanceTimersByTimeAsync(150);
+
+      // Plugin version calls hookCallback for ALL event types (unlike NestJS version)
+      expect(callback).toHaveBeenCalledWith(expect.objectContaining(hookData));
+    });
+
+    it('should not crash when no hookCallback is set', async () => {
+      // Do NOT set hookCallback
+      service.startWatching();
+
+      const hookData = { hook_event_name: 'SessionStart', session_id: 'abc-123' };
+      mockFsPromises.readFile.mockResolvedValueOnce(JSON.stringify(hookData));
+
+      watchCallback!('rename', '12345-999.json');
+
+      // Should not throw
+      await jest.advanceTimersByTimeAsync(150);
+    });
+
     it('should ignore non-rename events', () => {
       service.startWatching();
       expect(watchCallback).not.toBeNull();
 
       watchCallback!('change', 'test.json');
 
-      // No readFile call means no processHookFile
       expect(mockFsPromises.readFile).not.toHaveBeenCalled();
     });
 
@@ -369,55 +420,9 @@ describe('HookManagerService', () => {
       expect(mockFsPromises.readFile).not.toHaveBeenCalled();
     });
 
-    it('should process a SessionStart hook file', async () => {
-      service.startWatching();
-
-      const hookData = { hook_event_name: 'SessionStart', session_id: 'abc-123' };
-      mockFsPromises.readFile.mockResolvedValueOnce(JSON.stringify(hookData));
-
-      watchCallback!('rename', '12345-999.json');
-
-      // processHookFile has a 100ms delay
-      await jest.advanceTimersByTimeAsync(150);
-
-      expect(eventEmitter.emit).toHaveBeenCalledWith(
-        InternalSessionEvents.HOOK_START,
-        expect.objectContaining({ hook_event_name: 'SessionStart', session_id: 'abc-123' })
-      );
-      // File should be cleaned up
-      expect(mockFsPromises.unlink).toHaveBeenCalled();
-    });
-
-    it('should process a SessionEnd hook file', async () => {
-      service.startWatching();
-
-      const hookData = { hook_event_name: 'SessionEnd', session_id: 'abc-123' };
-      mockFsPromises.readFile.mockResolvedValueOnce(JSON.stringify(hookData));
-
-      watchCallback!('rename', '12345-888.json');
-
-      await jest.advanceTimersByTimeAsync(150);
-
-      expect(eventEmitter.emit).toHaveBeenCalledWith(
-        InternalSessionEvents.HOOK_END,
-        expect.objectContaining({ hook_event_name: 'SessionEnd', session_id: 'abc-123' })
-      );
-    });
-
-    it('should not emit for unknown event types', async () => {
-      service.startWatching();
-
-      const hookData = { hook_event_name: 'UnknownEvent', session_id: 'abc-123' };
-      mockFsPromises.readFile.mockResolvedValueOnce(JSON.stringify(hookData));
-
-      watchCallback!('rename', '12345-555.json');
-
-      await jest.advanceTimersByTimeAsync(150);
-
-      expect(eventEmitter.emit).not.toHaveBeenCalled();
-    });
-
     it('should not process the same file twice', async () => {
+      const callback = jest.fn();
+      service.setHookCallback(callback);
       service.startWatching();
 
       const hookData = { hook_event_name: 'SessionStart', session_id: 'abc-123' };
@@ -426,15 +431,14 @@ describe('HookManagerService', () => {
       watchCallback!('rename', 'same-file.json');
       await jest.advanceTimersByTimeAsync(150);
 
-      eventEmitter.emit.mockClear();
+      callback.mockClear();
       mockFsPromises.readFile.mockClear();
 
       watchCallback!('rename', 'same-file.json');
       await jest.advanceTimersByTimeAsync(150);
 
-      // Should not process again
       expect(mockFsPromises.readFile).not.toHaveBeenCalled();
-      expect(eventEmitter.emit).not.toHaveBeenCalled();
+      expect(callback).not.toHaveBeenCalled();
     });
 
     it('should handle errors in processHookFile gracefully', async () => {
@@ -444,13 +448,14 @@ describe('HookManagerService', () => {
 
       watchCallback!('rename', 'bad-file.json');
 
-      // Should not throw
       await jest.advanceTimersByTimeAsync(150);
 
-      expect(eventEmitter.emit).not.toHaveBeenCalled();
+      // Should not throw
     });
 
     it('should handle invalid JSON in hook file gracefully', async () => {
+      const callback = jest.fn();
+      service.setHookCallback(callback);
       service.startWatching();
 
       mockFsPromises.readFile.mockResolvedValueOnce('not valid json{{{');
@@ -459,7 +464,7 @@ describe('HookManagerService', () => {
 
       await jest.advanceTimersByTimeAsync(150);
 
-      expect(eventEmitter.emit).not.toHaveBeenCalled();
+      expect(callback).not.toHaveBeenCalled();
     });
   });
 });

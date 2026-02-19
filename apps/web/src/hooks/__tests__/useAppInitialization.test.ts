@@ -91,6 +91,10 @@ vi.mock('@/lib/session', () => ({
   resumeSession: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock('../usePluginInitialization', () => ({
+  usePluginInitialization: vi.fn(),
+}));
+
 // ---- Import under test (after mocks) ----
 
 import { useAppInitialization } from '../useAppInitialization';

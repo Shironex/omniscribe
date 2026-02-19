@@ -3,7 +3,6 @@ import { render, screen } from '@testing-library/react';
 
 import { StatusLegend, StatusDot } from '../shared/StatusLegend';
 import { ProgressBar } from '../shared/ProgressBar';
-import { ClaudeIcon } from '../shared/ClaudeIcon';
 import { UsageCard } from '../shared/UsageCard';
 import { TaskBadge } from '../terminal/TaskBadge';
 import { ErrorBoundary } from '../shared/ErrorBoundary';
@@ -87,36 +86,6 @@ describe('ProgressBar', () => {
     const inner2 = c2.querySelector('[style]') as HTMLElement;
     expect(inner2).toBeTruthy();
     expect(inner2.style.width).toBe('100%');
-  });
-});
-
-// ─── ClaudeIcon ──────────────────────────────────────────────────────────────
-
-describe('ClaudeIcon', () => {
-  it('renders without crashing with no props', () => {
-    const { container } = render(<ClaudeIcon />);
-    const svg = container.querySelector('svg');
-    expect(svg).toBeTruthy();
-  });
-
-  it('uses default size of 24', () => {
-    const { container } = render(<ClaudeIcon />);
-    const svg = container.querySelector('svg') as SVGSVGElement;
-    expect(svg.getAttribute('width')).toBe('24');
-    expect(svg.getAttribute('height')).toBe('24');
-  });
-
-  it('accepts a custom size', () => {
-    const { container } = render(<ClaudeIcon size={48} />);
-    const svg = container.querySelector('svg') as SVGSVGElement;
-    expect(svg.getAttribute('width')).toBe('48');
-    expect(svg.getAttribute('height')).toBe('48');
-  });
-
-  it('has aria-hidden attribute for accessibility', () => {
-    const { container } = render(<ClaudeIcon />);
-    const svg = container.querySelector('svg') as SVGSVGElement;
-    expect(svg.getAttribute('aria-hidden')).toBe('true');
   });
 });
 

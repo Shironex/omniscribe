@@ -1,6 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { Server, Socket } from 'socket.io';
+
+// Mock ../plugin barrel to avoid electron-store import in test environment
+jest.mock('../plugin', () => ({
+  PluginRegistryService: jest.fn(),
+}));
+
 import { SessionGateway } from './session.gateway';
 import { SessionService } from './session.service';
 import { SessionLauncherService } from './session-launcher.service';
@@ -9,7 +15,7 @@ import { TerminalGateway } from '../terminal/terminal.gateway';
 import { WorktreeService } from '../git/worktree.service';
 import { GitService } from '../git/git.service';
 import { WorkspaceService } from '../workspace/workspace.service';
-import { ClaudeSessionReaderService } from './claude-session-reader.service';
+import { PluginRegistryService } from '../plugin';
 import type { SessionStatus } from '@omniscribe/shared';
 import { MAX_CONCURRENT_SESSIONS } from '@omniscribe/shared';
 
@@ -102,10 +108,19 @@ const mockWorkspaceService = {
   clearActiveSessionsSnapshot: jest.fn(),
 };
 
-const mockClaudeSessionReader = {
-  readSessionsIndex: jest.fn().mockResolvedValue([]),
-  findNewSession: jest.fn().mockResolvedValue(null),
-  watchSessionsIndex: jest.fn().mockReturnValue(() => {}),
+const mockPluginRegistry = {
+  isPluginMode: jest.fn().mockReturnValue(true),
+  isValidMode: jest
+    .fn()
+    .mockImplementation((mode: string) => mode === 'claude' || mode === 'plain'),
+  getProvider: jest.fn().mockReturnValue({
+    capabilities: { supportsSessionHistory: true },
+    getSessionReader: jest.fn().mockReturnValue({
+      readSessionsIndex: jest.fn().mockResolvedValue([]),
+    }),
+  }),
+  getProviderEntry: jest.fn().mockReturnValue(undefined),
+  listProviders: jest.fn().mockReturnValue([]),
 };
 
 // ---------------------------------------------------------------------------
@@ -128,7 +143,7 @@ describe('SessionGateway', () => {
         { provide: WorktreeService, useValue: mockWorktreeService },
         { provide: GitService, useValue: mockGitService },
         { provide: WorkspaceService, useValue: mockWorkspaceService },
-        { provide: ClaudeSessionReaderService, useValue: mockClaudeSessionReader },
+        { provide: PluginRegistryService, useValue: mockPluginRegistry },
       ],
     }).compile();
 
@@ -674,6 +689,76 @@ describe('SessionGateway', () => {
     });
   });
 
+  describe('onClaudeSessionIdCaptured', () => {
+    it('should broadcast claude session ID captured event', () => {
+      const payload = { sessionId: 'session-1', claudeSessionId: 'claude-abc-123' };
+
+      gateway.onClaudeSessionIdCaptured(payload);
+
+      expect(server.emit).toHaveBeenCalledWith('session:claude-id-captured', payload);
+    });
+  });
+
+  // ========================================================================
+  // handleGetHistory (via plugin registry)
+  // ========================================================================
+
+  describe('handleGetHistory', () => {
+    it('should return session history via plugin provider', async () => {
+      const mockReader = {
+        readSessionsIndex: jest.fn().mockResolvedValue([
+          {
+            sessionId: 'abc-123',
+            fullPath: '/path/to/abc-123.jsonl',
+            fileMtime: Date.now(),
+            firstPrompt: 'Help with tests',
+            summary: '',
+            messageCount: 0,
+            created: '2024-01-01T00:00:00Z',
+            modified: '2024-01-01T00:00:00Z',
+            gitBranch: 'main',
+            projectPath: '/project',
+            isSidechain: false,
+          },
+        ]),
+      };
+      mockPluginRegistry.isPluginMode.mockReturnValue(true);
+      mockPluginRegistry.getProvider.mockReturnValue({
+        getSessionReader: jest.fn().mockReturnValue(mockReader),
+      });
+
+      const result = await gateway.handleGetHistory({ projectPath: '/project' }, client);
+
+      expect(result.sessions).toHaveLength(1);
+      expect(result.sessions[0].sessionId).toBe('abc-123');
+      expect(result.error).toBeUndefined();
+      expect(mockPluginRegistry.isPluginMode).toHaveBeenCalledWith('claude');
+    });
+
+    it('should return error when no provider available', async () => {
+      mockPluginRegistry.isPluginMode.mockReturnValue(false);
+
+      const result = await gateway.handleGetHistory({ projectPath: '/project' }, client);
+
+      expect(result.sessions).toEqual([]);
+      expect(result.error).toBe('No session history provider available');
+    });
+
+    it('should return error when read fails', async () => {
+      mockPluginRegistry.isPluginMode.mockReturnValue(true);
+      mockPluginRegistry.getProvider.mockReturnValue({
+        getSessionReader: jest.fn().mockReturnValue({
+          readSessionsIndex: jest.fn().mockRejectedValue(new Error('File not found')),
+        }),
+      });
+
+      const result = await gateway.handleGetHistory({ projectPath: '/project' }, client);
+
+      expect(result.sessions).toEqual([]);
+      expect(result.error).toBe('File not found');
+    });
+  });
+
   // ========================================================================
   // handleFork
   // ========================================================================
@@ -863,45 +948,6 @@ describe('SessionGateway', () => {
       gateway.handleGetRestoreSnapshot();
 
       expect(mockWorkspaceService.clearActiveSessionsSnapshot).not.toHaveBeenCalled();
-    });
-  });
-
-  // ========================================================================
-  // handleGetHistory
-  // ========================================================================
-
-  describe('handleGetHistory', () => {
-    it('should return session history for a project', async () => {
-      mockClaudeSessionReader.readSessionsIndex.mockResolvedValue([
-        {
-          sessionId: 'abc-123',
-          fullPath: '/path/to/abc-123.jsonl',
-          fileMtime: Date.now(),
-          firstPrompt: 'Help with tests',
-          summary: '',
-          messageCount: 0,
-          created: '2024-01-01T00:00:00Z',
-          modified: '2024-01-01T00:00:00Z',
-          gitBranch: 'main',
-          projectPath: '/project',
-          isSidechain: false,
-        },
-      ]);
-
-      const result = await gateway.handleGetHistory({ projectPath: '/project' }, client);
-
-      expect(result.sessions).toHaveLength(1);
-      expect(result.sessions[0].sessionId).toBe('abc-123');
-      expect(result.error).toBeUndefined();
-    });
-
-    it('should return error when read fails', async () => {
-      mockClaudeSessionReader.readSessionsIndex.mockRejectedValue(new Error('File not found'));
-
-      const result = await gateway.handleGetHistory({ projectPath: '/project' }, client);
-
-      expect(result.sessions).toEqual([]);
-      expect(result.error).toBe('File not found');
     });
   });
 

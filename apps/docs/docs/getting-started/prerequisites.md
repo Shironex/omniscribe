@@ -1,0 +1,37 @@
+---
+sidebar_position: 2
+---
+
+# Prerequisites
+
+Before using Omniscribe, you need at least one supported AI coding CLI installed on your system.
+
+## Claude Code CLI (recommended)
+
+[Claude Code](https://docs.anthropic.com/en/docs/claude-code/overview) is Anthropic's terminal-based AI coding assistant.
+
+1. Install Claude Code following the [official instructions](https://docs.anthropic.com/en/docs/claude-code/overview)
+2. Authenticate by running `claude` in your terminal and completing the login flow
+3. Verify it works: `claude --version` should print a version number
+
+## OpenAI Codex CLI (optional)
+
+[Codex CLI](https://github.com/openai/codex) is OpenAI's terminal-based coding agent.
+
+1. Install Codex following the [official instructions](https://github.com/openai/codex)
+2. Authenticate with your OpenAI API key
+3. Verify it works: `codex --version` should print a version number
+
+## Git
+
+Git is required for branch management and worktree features. Most systems have it pre-installed.
+
+```bash
+git --version
+```
+
+If not installed, get it from [git-scm.com](https://git-scm.com/).
+
+:::info Auto-detection
+Omniscribe automatically detects which CLIs are installed and adjusts the available AI modes accordingly. You only see modes for tools that are present on your system.
+:::

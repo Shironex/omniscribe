@@ -1,6 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { Socket } from 'socket.io';
+
+// Mock ../plugin barrel to avoid electron-store import in test environment
+jest.mock('../plugin', () => ({
+  PluginRegistryService: jest.fn(),
+}));
+
 import { UsageGateway } from './usage.gateway';
 import { UsageService } from './usage.service';
 
@@ -42,8 +48,8 @@ describe('UsageGateway', () => {
 
   beforeEach(async () => {
     usageService = {
-      fetchUsageData: jest.fn(),
-      getStatus: jest.fn(),
+      fetchUsageForMode: jest.fn(),
+      getStatusForMode: jest.fn(),
     } as unknown as jest.Mocked<UsageService>;
 
     const module: TestingModule = await Test.createTestingModule({
@@ -56,25 +62,24 @@ describe('UsageGateway', () => {
   });
 
   // ================================================================
-  // handleFetch
+  // handleFetch (uses fetchUsageForMode)
   // ================================================================
   describe('handleFetch', () => {
     const payload = { workingDir: '/my/project' };
 
-    it('should return cli_not_found error when CLI is not installed', async () => {
-      usageService.getStatus.mockResolvedValue(notInstalledStatus);
+    it('should return cli_not_found error when no usage provider available', async () => {
+      usageService.fetchUsageForMode.mockResolvedValue(null);
 
       const result = await gateway.handleFetch(mockSocket, payload);
 
       expect(result).toEqual({
         error: 'cli_not_found',
-        message: 'Claude CLI not found. Please install Claude Code CLI.',
+        message: 'No usage provider available',
       });
-      expect(usageService.getStatus).toHaveBeenCalled();
-      expect(usageService.fetchUsageData).not.toHaveBeenCalled();
+      expect(usageService.fetchUsageForMode).toHaveBeenCalledWith('claude', '/my/project');
     });
 
-    it('should return usage data on successful fetch', async () => {
+    it('should return usage data on successful fetch (rawUsage for frontend compat)', async () => {
       const usageData = {
         sessionPercentage: 25,
         sessionResetTime: '2025-01-01T12:00:00.000Z',
@@ -88,19 +93,20 @@ describe('UsageGateway', () => {
         userTimezone: 'America/New_York',
       };
 
-      usageService.getStatus.mockResolvedValue(installedStatus);
-      usageService.fetchUsageData.mockResolvedValue({ usage: usageData });
+      usageService.fetchUsageForMode.mockResolvedValue({
+        providerUsage: { percentageUsed: 25, periodStart: '', periodEnd: '', resetText: '' },
+        rawUsage: usageData,
+      });
 
       const result = await gateway.handleFetch(mockSocket, payload);
 
-      expect(result).toEqual({ usage: usageData });
-      expect(usageService.getStatus).toHaveBeenCalled();
-      expect(usageService.fetchUsageData).toHaveBeenCalledWith('/my/project');
+      expect(result.usage).toEqual(usageData);
+      expect(result.providerUsage).toBeDefined();
+      expect(usageService.fetchUsageForMode).toHaveBeenCalledWith('claude', '/my/project');
     });
 
-    it('should return error when fetchUsageData returns an error', async () => {
-      usageService.getStatus.mockResolvedValue(installedStatus);
-      usageService.fetchUsageData.mockResolvedValue({
+    it('should return error when fetchUsageForMode returns an error', async () => {
+      usageService.fetchUsageForMode.mockResolvedValue({
         error: 'auth_required',
         message: 'Authentication required',
       });
@@ -114,9 +120,8 @@ describe('UsageGateway', () => {
       expect(result.usage).toBeUndefined();
     });
 
-    it('should return timeout error from fetchUsageData', async () => {
-      usageService.getStatus.mockResolvedValue(installedStatus);
-      usageService.fetchUsageData.mockResolvedValue({
+    it('should return timeout error from fetchUsageForMode', async () => {
+      usageService.fetchUsageForMode.mockResolvedValue({
         error: 'timeout',
         message: 'The Claude CLI took too long to respond.',
       });
@@ -129,9 +134,8 @@ describe('UsageGateway', () => {
       });
     });
 
-    it('should return trust_prompt error from fetchUsageData', async () => {
-      usageService.getStatus.mockResolvedValue(installedStatus);
-      usageService.fetchUsageData.mockResolvedValue({
+    it('should return trust_prompt error from fetchUsageForMode', async () => {
+      usageService.fetchUsageForMode.mockResolvedValue({
         error: 'trust_prompt',
         message: 'TRUST_PROMPT_PENDING: Please approve folder access.',
       });
@@ -144,9 +148,8 @@ describe('UsageGateway', () => {
       });
     });
 
-    it('should return unknown error from fetchUsageData', async () => {
-      usageService.getStatus.mockResolvedValue(installedStatus);
-      usageService.fetchUsageData.mockResolvedValue({
+    it('should return unknown error from fetchUsageForMode', async () => {
+      usageService.fetchUsageForMode.mockResolvedValue({
         error: 'unknown',
         message: 'Something went wrong',
       });
@@ -159,10 +162,10 @@ describe('UsageGateway', () => {
       });
     });
 
-    it('should pass the correct workingDir to fetchUsageData', async () => {
-      usageService.getStatus.mockResolvedValue(installedStatus);
-      usageService.fetchUsageData.mockResolvedValue({
-        usage: {
+    it('should pass the correct workingDir to fetchUsageForMode', async () => {
+      usageService.fetchUsageForMode.mockResolvedValue({
+        providerUsage: { percentageUsed: 0, periodStart: '', periodEnd: '', resetText: '' },
+        rawUsage: {
           sessionPercentage: 0,
           sessionResetTime: '',
           sessionResetText: '',
@@ -178,34 +181,51 @@ describe('UsageGateway', () => {
 
       await gateway.handleFetch(mockSocket, { workingDir: '/different/path' });
 
-      expect(usageService.fetchUsageData).toHaveBeenCalledWith('/different/path');
+      expect(usageService.fetchUsageForMode).toHaveBeenCalledWith('claude', '/different/path');
     });
 
-    it('should not call fetchUsageData when CLI is not installed', async () => {
-      usageService.getStatus.mockResolvedValue(notInstalledStatus);
+    it('should return providerUsage when rawUsage is not available', async () => {
+      const providerUsageData = {
+        metrics: [{ name: 'Rate Limit', percentage: 25, percentageType: 'used' as const }],
+        lastUpdated: '2025-01-01T10:00:00.000Z',
+      };
+      usageService.fetchUsageForMode.mockResolvedValue({
+        providerUsage: providerUsageData,
+        // No rawUsage — this is normal for non-Claude providers
+      });
 
-      await gateway.handleFetch(mockSocket, payload);
+      const result = await gateway.handleFetch(mockSocket, payload);
 
-      expect(usageService.fetchUsageData).not.toHaveBeenCalled();
+      expect(result.providerUsage).toEqual(providerUsageData);
+      expect(result.usage).toBeUndefined();
+      expect(result.error).toBeUndefined();
+    });
+
+    it('should use aiMode from payload when provided', async () => {
+      usageService.fetchUsageForMode.mockResolvedValue(null);
+
+      await gateway.handleFetch(mockSocket, { workingDir: '/my/project', aiMode: 'codex' });
+
+      expect(usageService.fetchUsageForMode).toHaveBeenCalledWith('codex', '/my/project');
     });
   });
 
   // ================================================================
-  // handleStatus
+  // handleStatus (uses getStatusForMode)
   // ================================================================
   describe('handleStatus', () => {
     it('should return CLI status on success', async () => {
-      usageService.getStatus.mockResolvedValue(installedStatus);
+      usageService.getStatusForMode.mockResolvedValue(installedStatus);
 
       const result = await gateway.handleStatus(mockSocket, undefined);
 
       expect(result).toEqual({ status: installedStatus });
       expect(result.error).toBeUndefined();
-      expect(usageService.getStatus).toHaveBeenCalledWith(undefined);
+      expect(usageService.getStatusForMode).toHaveBeenCalledWith('claude', undefined);
     });
 
     it('should return not-installed status', async () => {
-      usageService.getStatus.mockResolvedValue(notInstalledStatus);
+      usageService.getStatusForMode.mockResolvedValue(notInstalledStatus);
 
       const result = await gateway.handleStatus(mockSocket, undefined);
 
@@ -214,48 +234,48 @@ describe('UsageGateway', () => {
     });
 
     it('should pass refresh flag to service when true', async () => {
-      usageService.getStatus.mockResolvedValue(installedStatus);
+      usageService.getStatusForMode.mockResolvedValue(installedStatus);
 
       await gateway.handleStatus(mockSocket, { refresh: true });
 
-      expect(usageService.getStatus).toHaveBeenCalledWith(true);
+      expect(usageService.getStatusForMode).toHaveBeenCalledWith('claude', true);
     });
 
     it('should pass refresh flag to service when false', async () => {
-      usageService.getStatus.mockResolvedValue(installedStatus);
+      usageService.getStatusForMode.mockResolvedValue(installedStatus);
 
       await gateway.handleStatus(mockSocket, { refresh: false });
 
-      expect(usageService.getStatus).toHaveBeenCalledWith(false);
+      expect(usageService.getStatusForMode).toHaveBeenCalledWith('claude', false);
     });
 
     it('should handle undefined payload', async () => {
-      usageService.getStatus.mockResolvedValue(installedStatus);
+      usageService.getStatusForMode.mockResolvedValue(installedStatus);
 
       await gateway.handleStatus(mockSocket, undefined);
 
-      expect(usageService.getStatus).toHaveBeenCalledWith(undefined);
+      expect(usageService.getStatusForMode).toHaveBeenCalledWith('claude', undefined);
     });
 
     it('should handle null payload', async () => {
-      usageService.getStatus.mockResolvedValue(installedStatus);
+      usageService.getStatusForMode.mockResolvedValue(installedStatus);
 
       await gateway.handleStatus(mockSocket, null as any);
 
       // payload?.refresh will be undefined for null
-      expect(usageService.getStatus).toHaveBeenCalledWith(undefined);
+      expect(usageService.getStatusForMode).toHaveBeenCalledWith('claude', undefined);
     });
 
     it('should handle payload without refresh field', async () => {
-      usageService.getStatus.mockResolvedValue(installedStatus);
+      usageService.getStatusForMode.mockResolvedValue(installedStatus);
 
       await gateway.handleStatus(mockSocket, {} as any);
 
-      expect(usageService.getStatus).toHaveBeenCalledWith(undefined);
+      expect(usageService.getStatusForMode).toHaveBeenCalledWith('claude', undefined);
     });
 
     it('should return fallback status with platform/arch on Error', async () => {
-      usageService.getStatus.mockRejectedValue(new Error('Service crashed'));
+      usageService.getStatusForMode.mockRejectedValue(new Error('Service crashed'));
 
       const result = await gateway.handleStatus(mockSocket, undefined);
 
@@ -269,7 +289,7 @@ describe('UsageGateway', () => {
     });
 
     it('should return fallback status on non-Error thrown value', async () => {
-      usageService.getStatus.mockRejectedValue('string error');
+      usageService.getStatusForMode.mockRejectedValue('string error');
 
       const result = await gateway.handleStatus(mockSocket, undefined);
 
@@ -283,7 +303,7 @@ describe('UsageGateway', () => {
     });
 
     it('should return fallback status on numeric thrown value', async () => {
-      usageService.getStatus.mockRejectedValue(42);
+      usageService.getStatusForMode.mockRejectedValue(42);
 
       const result = await gateway.handleStatus(mockSocket, undefined);
 
@@ -294,7 +314,7 @@ describe('UsageGateway', () => {
     });
 
     it('should include platform and arch from process in fallback', async () => {
-      usageService.getStatus.mockRejectedValue(new Error('fail'));
+      usageService.getStatusForMode.mockRejectedValue(new Error('fail'));
 
       const result = await gateway.handleStatus(mockSocket, undefined);
 
@@ -306,7 +326,7 @@ describe('UsageGateway', () => {
     });
 
     it('should set authenticated to false in fallback status', async () => {
-      usageService.getStatus.mockRejectedValue(new Error('fail'));
+      usageService.getStatusForMode.mockRejectedValue(new Error('fail'));
 
       const result = await gateway.handleStatus(mockSocket, undefined);
 

@@ -1,217 +1,190 @@
-import { useState, useEffect, useMemo } from 'react';
+import { type ComponentType, useMemo, useState } from 'react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, AlertTriangle, ExternalLink, Loader2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { ClaudeIcon } from '@/components/shared/ClaudeIcon';
-import { UsageCard, getStatusInfo } from '@/components/shared/UsageCard';
-import { useUsageStore } from '@/stores/useUsageStore';
+import { Activity } from 'lucide-react';
 import { useWorkspaceStore } from '@/stores/useWorkspaceStore';
-import type { UsageError } from '@omniscribe/shared';
+import { useSessionStore } from '@/stores/useSessionStore';
+import { usePluginStore, type ProviderInfo } from '@/stores/usePluginStore';
+import { PluginErrorBoundary } from '@/components/plugin/PluginErrorBoundary';
+import type { UsagePanelProps, UsagePanelRegistration } from '@omniscribe/plugin-api';
 
-const CLAUDE_SESSION_WINDOW_HOURS = 5;
+type WithPluginId<T> = T & { pluginId: string };
 
-/** Map error codes to user-friendly messages */
-const ERROR_MESSAGES: Record<UsageError, { title: string; description: string }> = {
-  auth_required: {
-    title: 'Authentication required',
-    description: "Please run 'claude login' in your terminal to authenticate.",
-  },
-  cli_not_found: {
-    title: 'Claude CLI not found',
-    description: 'Please install Claude Code CLI to view usage.',
-  },
-  timeout: {
-    title: 'Request timed out',
-    description: 'The Claude CLI took too long to respond. Try again.',
-  },
-  parse_error: {
-    title: 'Failed to parse usage',
-    description: 'Unable to read usage data from Claude CLI output.',
-  },
-  trust_prompt: {
-    title: 'Folder permission needed',
-    description: 'Run "claude" in your terminal and approve folder access to continue.',
-  },
-  unknown: {
-    title: 'Failed to fetch usage',
-    description: 'An unexpected error occurred. Try again.',
-  },
-};
+interface ResolvedPanel {
+  aiMode: string;
+  registration: WithPluginId<UsagePanelRegistration>;
+  provider: ProviderInfo | undefined;
+}
 
-export function UsagePopover() {
-  const [open, setOpen] = useState(false);
+// ─── No usage fallback ─────────────────────────────────────────────────────
 
-  // Usage store
-  const claudeUsage = useUsageStore(s => s.claudeUsage);
-  const status = useUsageStore(s => s.status);
-  const error = useUsageStore(s => s.error);
-  const errorMessage = useUsageStore(s => s.errorMessage);
-  const fetchUsage = useUsageStore(s => s.fetchUsage);
-  const setWorkingDir = useUsageStore(s => s.setWorkingDir);
-  const startPolling = useUsageStore(s => s.startPolling);
-  const stopPolling = useUsageStore(s => s.stopPolling);
-  const lastFetched = useUsageStore(s => s.lastFetched);
-
-  // Get active project path from workspace store
-  const activeTabId = useWorkspaceStore(s => s.activeTabId);
-  const tabs = useWorkspaceStore(s => s.tabs);
-  const activeTab = tabs.find(t => t.id === activeTabId);
-  const projectPath = activeTab?.projectPath;
-
-  // Update working directory when project changes
-  useEffect(() => {
-    if (projectPath) {
-      setWorkingDir(projectPath);
-    }
-  }, [projectPath, setWorkingDir]);
-
-  // Start/stop polling based on popover state
-  useEffect(() => {
-    if (open && projectPath) {
-      startPolling();
-    } else {
-      stopPolling();
-    }
-
-    return () => {
-      stopPolling();
-    };
-  }, [open, projectPath, startPolling, stopPolling]);
-
-  // Check if data is stale (older than 2 minutes)
-  const isStale = useMemo(() => {
-    return !lastFetched || Date.now() - lastFetched > 2 * 60 * 1000;
-  }, [lastFetched]);
-
-  const isLoading = status === 'fetching';
-
-  const sessionPercentage = claudeUsage?.sessionPercentage ?? 0;
-  const sessionStatus = getStatusInfo(sessionPercentage);
-  const statusColor = sessionStatus.color;
-
-  // Error info
-  const errorInfo = error ? ERROR_MESSAGES[error] : null;
-
-  const tooltipLabel = claudeUsage
-    ? `Claude usage: ${Math.round(sessionPercentage)}% (${CLAUDE_SESSION_WINDOW_HOURS}h window)`
-    : 'Claude usage';
-
-  const trigger = (
-    <Button variant="ghost" size="sm" className="h-8 gap-2 px-2 hover:bg-accent">
-      <ClaudeIcon className={cn('w-4 h-4', claudeUsage && statusColor)} size={16} />
-      {claudeUsage && (
-        <div
-          className={cn(
-            'h-1.5 w-12 bg-muted rounded-full overflow-hidden border border-border/50 transition-opacity',
-            isStale && 'opacity-60'
-          )}
-        >
-          <div
-            className={cn('h-full transition-all duration-500 rounded-full', sessionStatus.bg)}
-            style={{ width: `${Math.min(sessionPercentage, 100)}%` }}
-          />
+function NoUsageFallback() {
+  return (
+    <Popover>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <PopoverTrigger asChild>
+            <Button variant="ghost" size="sm" className="h-8 gap-2 px-2 hover:bg-accent">
+              <Activity className="w-4 h-4 text-muted-foreground" size={16} />
+            </Button>
+          </PopoverTrigger>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">Usage</TooltipContent>
+      </Tooltip>
+      <PopoverContent
+        className="w-[280px] p-0 overflow-hidden bg-background/95 backdrop-blur-xl border-border shadow-2xl"
+        align="end"
+        sideOffset={8}
+      >
+        <div className="flex items-center gap-2 px-4 py-3 border-b border-border/50 bg-secondary/10">
+          <Activity className="w-4 h-4 text-muted-foreground" size={16} />
+          <span className="text-sm font-semibold">Usage</span>
         </div>
-      )}
-    </Button>
+        <div className="flex flex-col items-center justify-center py-8 px-4 text-center space-y-2">
+          <Activity className="w-8 h-8 text-muted-foreground/50" />
+          <p className="text-sm text-muted-foreground">
+            Usage data not available for this provider
+          </p>
+        </div>
+      </PopoverContent>
+    </Popover>
   );
+}
+
+// ─── Multi-provider tabbed popover ─────────────────────────────────────────
+
+function MultiProviderPopover({
+  panels,
+  projectPath,
+}: {
+  panels: ResolvedPanel[];
+  projectPath: string;
+}) {
+  const [open, setOpen] = useState(false);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <Tooltip>
         <TooltipTrigger asChild>
-          <PopoverTrigger asChild>{trigger}</PopoverTrigger>
+          <PopoverTrigger asChild>
+            <Button variant="ghost" size="sm" className="h-8 gap-2 px-2 hover:bg-accent">
+              <Activity className="w-4 h-4 text-muted-foreground" size={16} />
+            </Button>
+          </PopoverTrigger>
         </TooltipTrigger>
-        {!open && <TooltipContent side="bottom">{tooltipLabel}</TooltipContent>}
+        {!open && <TooltipContent side="bottom">Usage</TooltipContent>}
       </Tooltip>
       <PopoverContent
         className="w-[340px] p-0 overflow-hidden bg-background/95 backdrop-blur-xl border-border shadow-2xl"
         align="end"
         sideOffset={8}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border/50 bg-secondary/10">
-          <div className="flex items-center gap-2">
-            <ClaudeIcon className="w-4 h-4" size={16} />
-            <span className="text-sm font-semibold">Claude Usage</span>
+        <Tabs defaultValue={panels[0].aiMode}>
+          <div className="px-3 pt-3 pb-0">
+            <TabsList className="w-full">
+              {panels.map(({ aiMode, registration }) => {
+                const Icon = registration.icon as
+                  | ComponentType<{ size?: number; className?: string }>
+                  | undefined;
+                const label =
+                  registration.label ?? aiMode.charAt(0).toUpperCase() + aiMode.slice(1);
+                return (
+                  <TabsTrigger key={aiMode} value={aiMode} className="flex-1 gap-1.5 text-xs">
+                    {Icon && <Icon size={14} />}
+                    {label}
+                  </TabsTrigger>
+                );
+              })}
+            </TabsList>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6"
-            onClick={() => fetchUsage()}
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />
-            ) : (
-              <RefreshCw className="w-3.5 h-3.5" />
-            )}
-          </Button>
-        </div>
-
-        {/* Content */}
-        <div className="p-4 space-y-4">
-          {error ? (
-            <div className="flex flex-col items-center justify-center py-6 text-center space-y-3">
-              <AlertTriangle className="w-8 h-8 text-yellow-500/80" />
-              <div className="space-y-1 flex flex-col items-center">
-                <p className="text-sm font-medium">{errorInfo?.title ?? 'Error'}</p>
-                <p className="text-xs text-muted-foreground">
-                  {errorInfo?.description ?? errorMessage}
-                </p>
-              </div>
-            </div>
-          ) : !claudeUsage ? (
-            <div className="flex flex-col items-center justify-center py-8 space-y-2">
-              <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-              <p className="text-xs text-muted-foreground">Loading usage data...</p>
-            </div>
-          ) : (
-            <>
-              <UsageCard
-                title="Session Usage"
-                subtitle={`${CLAUDE_SESSION_WINDOW_HOURS}-hour rolling window`}
-                percentage={claudeUsage.sessionPercentage}
-                resetText={claudeUsage.sessionResetText}
-                isPrimary={true}
-                stale={isStale}
-              />
-
-              <div className="grid grid-cols-2 gap-3">
-                <UsageCard
-                  title="Sonnet"
-                  subtitle="Weekly"
-                  percentage={claudeUsage.sonnetWeeklyPercentage}
-                  resetText={claudeUsage.sonnetResetText}
-                  stale={isStale}
-                />
-                <UsageCard
-                  title="Weekly"
-                  subtitle="All models"
-                  percentage={claudeUsage.weeklyPercentage}
-                  resetText={claudeUsage.weeklyResetText}
-                  stale={isStale}
-                />
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="flex items-center justify-between px-4 py-2 bg-secondary/10 border-t border-border/50">
-          <a
-            href="https://status.claude.com"
-            target="_blank"
-            rel="noreferrer"
-            className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
-          >
-            Claude Status <ExternalLink className="w-2.5 h-2.5" />
-          </a>
-          <span className="text-[10px] text-muted-foreground">Updates every 15 min</span>
-        </div>
+          {panels.map(({ aiMode, registration }) => {
+            const PanelComponent = registration.component as ComponentType<UsagePanelProps>;
+            return (
+              <TabsContent key={aiMode} value={aiMode} className="mt-0">
+                <PluginErrorBoundary pluginId={registration.pluginId}>
+                  <PanelComponent workingDir={projectPath} embedded />
+                </PluginErrorBoundary>
+              </TabsContent>
+            );
+          })}
+        </Tabs>
       </PopoverContent>
     </Popover>
   );
+}
+
+// ─── Main UsagePopover ─────────────────────────────────────────────────────
+
+/**
+ * Provider-agnostic usage popover.
+ *
+ * Resolves all active providers for the current tab:
+ * - 0 providers: "not available" fallback
+ * - 1 provider: renders the panel standalone (own Popover, same UX as before)
+ * - 2+ providers: renders a single Popover with tabbed content per provider
+ */
+export function UsagePopover() {
+  const activeTabId = useWorkspaceStore(s => s.activeTabId);
+  const tabs = useWorkspaceStore(s => s.tabs);
+  const sessions = useSessionStore(s => s.sessions);
+  const usagePanels = usePluginStore(s => s.usagePanels);
+  const providers = usePluginStore(s => s.providers);
+
+  const activeTab = tabs.find(t => t.id === activeTabId);
+  const projectPath = activeTab?.projectPath ?? '';
+
+  // Resolve all distinct aiModes from the active tab's sessions
+  const resolvedPanels = useMemo((): ResolvedPanel[] => {
+    if (!activeTab) return [];
+
+    // Get all sessions belonging to this tab
+    const tabSessions = sessions.filter(s => activeTab.sessionIds.includes(s.id));
+
+    // Backward compat: if no sessionIds match, fall back to projectPath lookup
+    const relevantSessions =
+      tabSessions.length > 0
+        ? tabSessions
+        : sessions.filter(s => s.projectPath === activeTab.projectPath);
+
+    // Deduplicate by aiMode
+    const modes = [...new Set(relevantSessions.map(s => s.aiMode))];
+
+    // Look up registered usage panels for each mode
+    const panels: ResolvedPanel[] = [];
+    for (const mode of modes) {
+      for (const [, reg] of usagePanels) {
+        if (reg.aiMode === mode) {
+          panels.push({
+            aiMode: mode,
+            registration: reg,
+            provider: providers.find(p => p.aiMode === mode),
+          });
+          break;
+        }
+      }
+    }
+
+    return panels.sort((a, b) => (a.registration.order ?? 100) - (b.registration.order ?? 100));
+  }, [activeTab, sessions, usagePanels, providers]);
+
+  // No panels registered for any active provider
+  if (resolvedPanels.length === 0) {
+    return <NoUsageFallback />;
+  }
+
+  // Single provider: render standalone (panel manages its own Popover)
+  if (resolvedPanels.length === 1) {
+    const { registration } = resolvedPanels[0];
+    const PanelComponent = registration.component as ComponentType<UsagePanelProps>;
+    return (
+      <PluginErrorBoundary pluginId={registration.pluginId}>
+        <PanelComponent workingDir={projectPath} />
+      </PluginErrorBoundary>
+    );
+  }
+
+  // Multiple providers: tabbed popover
+  return <MultiProviderPopover panels={resolvedPanels} projectPath={projectPath} />;
 }

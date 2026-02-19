@@ -1,8 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { EventEmitter2 } from '@nestjs/event-emitter';
 import { ClaudeSessionTrackerService } from './claude-session-tracker.service';
 import { SessionService } from './session.service';
-import { ClaudeSessionReaderService } from './claude-session-reader.service';
 import { WorkspaceService } from '../workspace/workspace.service';
 import type { BackendSessionConfig } from './types';
 
@@ -24,14 +22,11 @@ describe('ClaudeSessionTrackerService', () => {
   let service: ClaudeSessionTrackerService;
   let sessionService: jest.Mocked<SessionService>;
   let workspaceService: jest.Mocked<WorkspaceService>;
-  let eventEmitter: jest.Mocked<EventEmitter2>;
-  let claudeSessionReader: jest.Mocked<ClaudeSessionReaderService>;
 
   beforeEach(async () => {
     sessionService = {
       get: jest.fn(),
       getRunningSessions: jest.fn().mockReturnValue([]),
-      setClaudeSessionId: jest.fn(),
     } as unknown as jest.Mocked<SessionService>;
 
     workspaceService = {
@@ -39,22 +34,10 @@ describe('ClaudeSessionTrackerService', () => {
       addSessionHistory: jest.fn(),
     } as unknown as jest.Mocked<WorkspaceService>;
 
-    eventEmitter = {
-      emit: jest.fn(),
-      on: jest.fn(),
-    } as unknown as jest.Mocked<EventEmitter2>;
-
-    claudeSessionReader = {
-      readSessionsIndex: jest.fn().mockResolvedValue([]),
-      findNewSession: jest.fn().mockResolvedValue(null),
-    } as unknown as jest.Mocked<ClaudeSessionReaderService>;
-
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ClaudeSessionTrackerService,
-        { provide: EventEmitter2, useValue: eventEmitter },
         { provide: SessionService, useValue: sessionService },
-        { provide: ClaudeSessionReaderService, useValue: claudeSessionReader },
         { provide: WorkspaceService, useValue: workspaceService },
       ],
     }).compile();
@@ -136,6 +119,17 @@ describe('ClaudeSessionTrackerService', () => {
 
       expect(workspaceService.saveActiveSessionsSnapshot).toHaveBeenCalled();
     });
+
+    it('should not crash when session is not found', () => {
+      sessionService.get.mockReturnValue(undefined);
+
+      expect(() =>
+        service.onTerminalClosedWithSession({
+          sessionId: 'nonexistent',
+          exitCode: 0,
+        })
+      ).not.toThrow();
+    });
   });
 
   describe('onSessionRemoved', () => {
@@ -146,103 +140,57 @@ describe('ClaudeSessionTrackerService', () => {
     });
   });
 
-  describe('startTracking', () => {
-    beforeEach(() => {
-      jest.useFakeTimers();
+  describe('refreshActiveSessionsSnapshot', () => {
+    it('should build snapshot from running sessions with claudeSessionId', () => {
+      const sessions = [
+        createMockSession({
+          id: 'sess-1',
+          claudeSessionId: 'claude-1',
+          projectPath: '/project-a',
+          branch: 'main',
+          name: 'Session A',
+        }),
+        createMockSession({
+          id: 'sess-2',
+          // No claudeSessionId -- should be filtered out
+          projectPath: '/project-b',
+          name: 'Session B',
+        }),
+        createMockSession({
+          id: 'sess-3',
+          claudeSessionId: 'claude-3',
+          projectPath: '/project-c',
+          branch: 'feature',
+          name: 'Session C',
+        }),
+      ];
+      sessionService.getRunningSessions.mockReturnValue(sessions);
+
+      service.refreshActiveSessionsSnapshot('test-reason');
+
+      expect(workspaceService.saveActiveSessionsSnapshot).toHaveBeenCalledWith([
+        expect.objectContaining({
+          claudeSessionId: 'claude-1',
+          projectPath: '/project-a',
+          branch: 'main',
+          name: 'Session A',
+        }),
+        expect.objectContaining({
+          claudeSessionId: 'claude-3',
+          projectPath: '/project-c',
+          branch: 'feature',
+          name: 'Session C',
+        }),
+      ]);
     });
 
-    afterEach(() => {
-      jest.useRealTimers();
-    });
-
-    it('should set Claude session ID when a new session is found', async () => {
-      const session = createMockSession();
-      sessionService.get.mockReturnValue(session);
-      claudeSessionReader.findNewSession.mockResolvedValue({
-        sessionId: 'new-claude-id',
-        name: 'New Session',
-        model: 'opus',
-        createdAt: Date.now(),
+    it('should handle errors gracefully', () => {
+      sessionService.getRunningSessions.mockImplementation(() => {
+        throw new Error('Service error');
       });
 
-      const trackingPromise = service.startTracking(session.id, '/project', new Set(['old-id']));
-
-      // Advance past first poll interval
-      await jest.advanceTimersByTimeAsync(2000);
-      await trackingPromise;
-
-      expect(sessionService.setClaudeSessionId).toHaveBeenCalledWith(session.id, 'new-claude-id');
-      expect(eventEmitter.emit).toHaveBeenCalledWith(
-        'session.claude-id-captured',
-        expect.objectContaining({
-          sessionId: session.id,
-          claudeSessionId: 'new-claude-id',
-        })
-      );
-    });
-
-    it('should stop polling when session is removed during tracking', async () => {
-      sessionService.get.mockReturnValue(undefined);
-
-      const trackingPromise = service.startTracking(
-        'session-1-1700000000000',
-        '/project',
-        new Set()
-      );
-
-      await jest.advanceTimersByTimeAsync(2000);
-      await trackingPromise;
-
-      expect(claudeSessionReader.findNewSession).not.toHaveBeenCalled();
-    });
-
-    it('should stop polling when session already has Claude session ID', async () => {
-      const session = createMockSession({ claudeSessionId: 'existing-id' });
-      sessionService.get.mockReturnValue(session);
-
-      const trackingPromise = service.startTracking(session.id, '/project', new Set());
-
-      await jest.advanceTimersByTimeAsync(2000);
-      await trackingPromise;
-
-      expect(claudeSessionReader.findNewSession).not.toHaveBeenCalled();
-    });
-
-    it('should stop polling when module is destroyed', async () => {
-      const session = createMockSession();
-      sessionService.get.mockReturnValue(session);
-
-      const trackingPromise = service.startTracking(session.id, '/project', new Set());
-
-      // Destroy the module before the first poll completes
-      service.onModuleDestroy();
-      await jest.advanceTimersByTimeAsync(2000);
-      await trackingPromise;
-
-      expect(claudeSessionReader.findNewSession).not.toHaveBeenCalled();
-    });
-
-    it('should continue polling on reader errors', async () => {
-      const session = createMockSession();
-      sessionService.get.mockReturnValue(session);
-      claudeSessionReader.findNewSession
-        .mockRejectedValueOnce(new Error('Read error'))
-        .mockResolvedValueOnce({
-          sessionId: 'found-id',
-          name: 'Found',
-          model: 'opus',
-          createdAt: Date.now(),
-        });
-
-      const trackingPromise = service.startTracking(session.id, '/project', new Set());
-
-      // First poll: error
-      await jest.advanceTimersByTimeAsync(2000);
-      // Second poll: found
-      await jest.advanceTimersByTimeAsync(2000);
-      await trackingPromise;
-
-      expect(sessionService.setClaudeSessionId).toHaveBeenCalledWith(session.id, 'found-id');
+      // Should not throw
+      expect(() => service.refreshActiveSessionsSnapshot('error-test')).not.toThrow();
     });
   });
 });

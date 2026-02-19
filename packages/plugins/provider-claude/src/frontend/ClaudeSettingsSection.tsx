@@ -1,12 +1,19 @@
 import { Loader2, RefreshCw } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { ClaudeIcon } from '@/components/shared/ClaudeIcon';
-import { useClaudeCliStatus } from '@/hooks/useClaudeCliStatus';
+import { cn } from '@omniscribe/ui';
+import { ClaudeIcon } from './ClaudeIcon';
+import { useClaudeCliStatus } from './hooks/useClaudeCliStatus';
 import { ClaudeCliStatusCard } from './ClaudeCliStatusCard';
 import { ClaudeAuthCard } from './ClaudeAuthCard';
 import { InstallCommandDisplay } from './InstallCommandDisplay';
 
-export function IntegrationsSection() {
+/**
+ * Claude Code settings section.
+ *
+ * Wraps CLI status card, install command display, and auth card into
+ * a single settings section that the plugin registers via frontendActivate.
+ * This replaces the core IntegrationsSection with a plugin-provided version.
+ */
+export function ClaudeSettingsSection() {
   const {
     claudeCliStatus,
     isLoading,

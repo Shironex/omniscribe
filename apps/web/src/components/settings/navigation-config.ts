@@ -8,9 +8,9 @@ import {
   Monitor,
   TerminalSquare,
   Zap,
+  Puzzle,
 } from 'lucide-react';
 import type { SettingsSectionId } from '@omniscribe/shared';
-import { ClaudeIcon } from '@/components/shared/ClaudeIcon';
 
 export interface NavigationItem {
   id: SettingsSectionId;
@@ -24,15 +24,16 @@ export interface NavigationGroup {
 }
 
 /**
- * Navigation groups for the settings sidebar
+ * Core navigation groups for the settings sidebar.
+ * Plugin-registered categories are merged dynamically in SettingsNavigation.
  */
-export const NAV_GROUPS: NavigationGroup[] = [
+export const CORE_NAV_GROUPS: NavigationGroup[] = [
   {
     label: 'Integrations',
     items: [
-      { id: 'integrations', label: 'Claude CLI', icon: ClaudeIcon },
       { id: 'github', label: 'GitHub CLI', icon: Github },
       { id: 'mcp', label: 'MCP Servers', icon: Server },
+      { id: 'marketplace', label: 'Extensions', icon: Puzzle },
     ],
   },
   {
@@ -53,7 +54,10 @@ export const NAV_GROUPS: NavigationGroup[] = [
   },
 ];
 
+/** @deprecated Use CORE_NAV_GROUPS instead */
+export const NAV_GROUPS = CORE_NAV_GROUPS;
+
 /**
- * Flat list of all nav items
+ * Flat list of all core nav items
  */
-export const NAV_ITEMS: NavigationItem[] = NAV_GROUPS.flatMap(group => group.items);
+export const NAV_ITEMS: NavigationItem[] = CORE_NAV_GROUPS.flatMap(group => group.items);

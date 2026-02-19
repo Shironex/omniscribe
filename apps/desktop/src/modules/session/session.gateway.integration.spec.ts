@@ -15,6 +15,12 @@ import {
   waitForEvent,
   emitWithAck,
 } from '../../../test/integration/helpers/socket-client';
+
+// Mock ../plugin barrel to avoid electron-store import in test environment
+jest.mock('../plugin', () => ({
+  PluginRegistryService: jest.fn(),
+}));
+
 import { SessionGateway } from './session.gateway';
 import { SessionService } from './session.service';
 import { SessionLauncherService } from './session-launcher.service';
@@ -22,7 +28,7 @@ import { TerminalGateway } from '../terminal/terminal.gateway';
 import { WorktreeService } from '../git/worktree.service';
 import { GitService } from '../git/git.service';
 import { WorkspaceService } from '../workspace/workspace.service';
-import { ClaudeSessionReaderService } from './claude-session-reader.service';
+import { PluginRegistryService } from '../plugin';
 
 const mockSession = {
   id: 'session-1-123',
@@ -84,10 +90,19 @@ describe('SessionGateway (integration)', () => {
       getActiveSessionsSnapshot: jest.fn().mockReturnValue([]),
     };
 
-    const mockClaudeSessionReader = {
-      readSessionsIndex: jest.fn().mockResolvedValue([]),
-      findNewSession: jest.fn().mockResolvedValue(null),
-      watchSessionsIndex: jest.fn().mockReturnValue(() => {}),
+    const mockPluginRegistry = {
+      isPluginMode: jest.fn().mockReturnValue(true),
+      isValidMode: jest
+        .fn()
+        .mockImplementation((mode: string) => mode === 'claude' || mode === 'plain'),
+      getProvider: jest.fn().mockReturnValue({
+        capabilities: { supportsSessionHistory: true },
+        getSessionReader: jest.fn().mockReturnValue({
+          readSessionsIndex: jest.fn().mockResolvedValue([]),
+        }),
+      }),
+      getProviderEntry: jest.fn().mockReturnValue(undefined),
+      listProviders: jest.fn().mockReturnValue([]),
     };
 
     // Build a minimal module with just the SessionGateway and mocked providers
@@ -100,7 +115,7 @@ describe('SessionGateway (integration)', () => {
         { provide: WorktreeService, useValue: mockWorktreeService },
         { provide: GitService, useValue: mockGitService },
         { provide: WorkspaceService, useValue: mockWorkspaceService },
-        { provide: ClaudeSessionReaderService, useValue: mockClaudeSessionReader },
+        { provide: PluginRegistryService, useValue: mockPluginRegistry },
       ],
     })
     class TestSessionModule {}

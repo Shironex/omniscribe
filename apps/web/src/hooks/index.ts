@@ -20,7 +20,7 @@ export { useClickOutside } from './useClickOutside';
 export { useAppKeyboardShortcuts } from './useAppKeyboardShortcuts';
 export { useQuickActionExecution } from './useQuickActionExecution';
 
-export { useClaudeCliStatus } from './useClaudeCliStatus';
+export { usePluginInitialization } from './usePluginInitialization';
 export { useDefaultAiMode } from './useDefaultAiMode';
 export { useAppVersion } from './useAppVersion';
 export { useSplashScreen } from './useSplashScreen';

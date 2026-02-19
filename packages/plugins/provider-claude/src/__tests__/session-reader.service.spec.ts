@@ -1,5 +1,3 @@
-import { Test, TestingModule } from '@nestjs/testing';
-
 // ---- Module-level mocks ----
 
 const mockFsPromises = {
@@ -28,14 +26,12 @@ jest.mock('fs', () => ({
   }),
 }));
 
-// Mock readline for async iteration.
-// Each test should set mockLines before calling code that triggers extractEntryFromJsonl.
+// Mock readline for async iteration
 const mockLines: string[] = [];
 const mockRlClose = jest.fn();
 
 jest.mock('readline', () => ({
   createInterface: jest.fn(() => {
-    // Capture current snapshot of mockLines at creation time
     const lines = [...mockLines];
     let index = 0;
     return {
@@ -70,14 +66,12 @@ jest.mock('@omniscribe/shared', () => ({
 }));
 
 // Import AFTER mocks are set up
-import { ClaudeSessionReaderService } from './claude-session-reader.service';
+import { ClaudeSessionReaderService } from '../services/session-reader.service';
 
 // ---- Helpers ----
 
-/** Standard empty index for tests that don't need index data */
 const EMPTY_INDEX = JSON.stringify({ version: 1, entries: [] });
 
-/** Helper to create a valid ClaudeSessionEntry for the index mock */
 function makeIndexEntry(overrides: Record<string, unknown> = {}) {
   return {
     sessionId: 'session-default',
@@ -100,16 +94,11 @@ function makeIndexEntry(overrides: Record<string, unknown> = {}) {
 describe('ClaudeSessionReaderService', () => {
   let service: ClaudeSessionReaderService;
 
-  beforeEach(async () => {
+  beforeEach(() => {
     jest.clearAllMocks();
     mockLines.length = 0;
     watchCallbacks.clear();
-
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [ClaudeSessionReaderService],
-    }).compile();
-
-    service = module.get<ClaudeSessionReaderService>(ClaudeSessionReaderService);
+    service = new ClaudeSessionReaderService();
   });
 
   // ==================================================================
@@ -204,16 +193,13 @@ describe('ClaudeSessionReaderService', () => {
         JSON.stringify({ version: 1, entries: [indexedEntry] })
       );
 
-      // readdir returns a file not in the index
       mockFsPromises.readdir.mockResolvedValueOnce([
         { name: 'indexed-session.jsonl', isFile: () => true },
         { name: 'new-session.jsonl', isFile: () => true },
       ]);
 
-      // stat for the new file only (indexed one is skipped)
       mockFsPromises.stat.mockResolvedValueOnce({ mtimeMs: 3000 });
 
-      // readline lines for extractEntryFromJsonl
       mockLines.push(
         JSON.stringify({
           sessionId: 'new-session',
@@ -243,7 +229,7 @@ describe('ClaudeSessionReaderService', () => {
   });
 
   // ==================================================================
-  // readFileWithRetry (tested indirectly through readSessionsIndex)
+  // readFileWithRetry (tested indirectly)
   // ==================================================================
   describe('readFileWithRetry (via readSessionsIndex)', () => {
     beforeEach(() => {
@@ -274,7 +260,6 @@ describe('ClaudeSessionReaderService', () => {
 
       const promise = service.readSessionsIndex('/project');
 
-      // Flush the 500ms retry delay
       await jest.advanceTimersByTimeAsync(600);
 
       const entries = await promise;
@@ -317,18 +302,6 @@ describe('ClaudeSessionReaderService', () => {
 
       expect(entries).toEqual([]);
     });
-
-    it('should handle non-retryable errors gracefully', async () => {
-      const eacces = new Error('EACCES') as NodeJS.ErrnoException;
-      eacces.code = 'EACCES';
-
-      mockFsPromises.readFile.mockRejectedValueOnce(eacces);
-      mockFsPromises.readdir.mockResolvedValueOnce([]);
-
-      const entries = await service.readSessionsIndex('/project');
-
-      expect(entries).toEqual([]);
-    });
   });
 
   // ==================================================================
@@ -346,7 +319,6 @@ describe('ClaudeSessionReaderService', () => {
 
       const entries = await service.readSessionsIndex('/project');
 
-      // stat should not be called because the only .jsonl is already indexed
       expect(mockFsPromises.stat).not.toHaveBeenCalled();
       expect(entries).toHaveLength(1);
     });
@@ -388,14 +360,9 @@ describe('ClaudeSessionReaderService', () => {
   });
 
   // ==================================================================
-  // extractEntryFromJsonl (tested indirectly via readSessionsIndex)
+  // extractEntryFromJsonl (tested indirectly)
   // ==================================================================
   describe('extractEntryFromJsonl (via readSessionsIndex)', () => {
-    /**
-     * Helper: set up mocks so readSessionsIndex will scan a single
-     * .jsonl file named "test-session.jsonl" with the given lines.
-     * Must be called AFTER setting mockLines.
-     */
     function setupSingleJsonlScan() {
       mockFsPromises.readFile.mockResolvedValueOnce(EMPTY_INDEX);
       mockFsPromises.readdir.mockResolvedValueOnce([
@@ -469,7 +436,6 @@ describe('ClaudeSessionReaderService', () => {
 
       const entries = await service.readSessionsIndex('/project');
 
-      // Sidechains are filtered out by filterAndSort
       expect(entries).toHaveLength(0);
     });
 
@@ -517,7 +483,6 @@ describe('ClaudeSessionReaderService', () => {
     });
 
     it('should only read first 20 lines', async () => {
-      // Push 25 lines with no sessionId
       for (let i = 0; i < 25; i++) {
         mockLines.push(JSON.stringify({ line: i }));
       }
@@ -526,7 +491,6 @@ describe('ClaudeSessionReaderService', () => {
       const entries = await service.readSessionsIndex('/project');
 
       expect(entries).toHaveLength(1);
-      // No sessionId in first 20 lines, so fallback to filename
       expect(entries[0].sessionId).toBe('test-session');
     });
 
@@ -602,7 +566,6 @@ describe('ClaudeSessionReaderService', () => {
       const previousIds = new Set<string>();
       const result = await service.findNewSession('/project', previousIds);
 
-      // Entries are sorted newest first, so new-b should be first
       expect(result).not.toBeNull();
       expect(result!.sessionId).toBe('new-b');
     });
@@ -614,6 +577,65 @@ describe('ClaudeSessionReaderService', () => {
       const result = await service.findNewSession('/project', new Set());
 
       expect(result).toBeNull();
+    });
+  });
+
+  // ==================================================================
+  // readSessionHistory
+  // ==================================================================
+  describe('readSessionHistory', () => {
+    it('should map ClaudeSessionEntry to ProviderSessionEntry', async () => {
+      const entry = makeIndexEntry({
+        sessionId: 'session-hist',
+        firstPrompt: 'Write unit tests',
+        messageCount: 5,
+        created: '2025-01-01T00:00:00Z',
+        modified: '2025-01-02T00:00:00Z',
+        gitBranch: 'feature/tests',
+        projectPath: '/my/project',
+        fullPath: '/path/to/session.jsonl',
+        isSidechain: false,
+      });
+      mockFsPromises.readFile.mockResolvedValueOnce(
+        JSON.stringify({ version: 1, entries: [entry] })
+      );
+      mockFsPromises.readdir.mockResolvedValueOnce([]);
+
+      const providerEntries = await service.readSessionHistory('/my/project');
+
+      expect(providerEntries).toHaveLength(1);
+      expect(providerEntries[0].sessionId).toBe('session-hist');
+      expect(providerEntries[0].summary).toBe('Write unit tests');
+      expect(providerEntries[0].messageCount).toBe(5);
+      expect(providerEntries[0].created).toBe('2025-01-01T00:00:00Z');
+      expect(providerEntries[0].modified).toBe('2025-01-02T00:00:00Z');
+      expect(providerEntries[0].metadata?.gitBranch).toBe('feature/tests');
+      expect(providerEntries[0].metadata?.fullPath).toBe('/path/to/session.jsonl');
+    });
+
+    it('should use summary if firstPrompt is empty', async () => {
+      const entry = makeIndexEntry({
+        sessionId: 'sum-session',
+        firstPrompt: '',
+        summary: 'Refactoring auth module',
+      });
+      mockFsPromises.readFile.mockResolvedValueOnce(
+        JSON.stringify({ version: 1, entries: [entry] })
+      );
+      mockFsPromises.readdir.mockResolvedValueOnce([]);
+
+      const providerEntries = await service.readSessionHistory('/project');
+
+      expect(providerEntries[0].summary).toBe('Refactoring auth module');
+    });
+
+    it('should return empty array when no sessions exist', async () => {
+      mockFsPromises.readFile.mockResolvedValueOnce(EMPTY_INDEX);
+      mockFsPromises.readdir.mockResolvedValueOnce([]);
+
+      const providerEntries = await service.readSessionHistory('/project');
+
+      expect(providerEntries).toEqual([]);
     });
   });
 
@@ -643,7 +665,6 @@ describe('ClaudeSessionReaderService', () => {
       service.watchSessionsIndex('/project', jest.fn());
       service.watchSessionsIndex('/project', jest.fn());
 
-      // The first watcher should have been closed
       expect(mockWatcherClose).toHaveBeenCalledTimes(1);
     });
 
@@ -656,15 +677,12 @@ describe('ClaudeSessionReaderService', () => {
 
       service.watchSessionsIndex('/project', callback);
 
-      // Find the watch callback
       const dirPath = Array.from(watchCallbacks.keys())[0];
       const watchCb = watchCallbacks.get(dirPath);
       expect(watchCb).toBeDefined();
 
-      // Trigger a change event for sessions-index.json
       watchCb!('change', 'sessions-index.json');
 
-      // Debounce 300ms + allow async resolution
       await jest.advanceTimersByTimeAsync(500);
 
       expect(callback).toHaveBeenCalled();
@@ -692,20 +710,20 @@ describe('ClaudeSessionReaderService', () => {
   });
 
   // ==================================================================
-  // onModuleDestroy
+  // destroy
   // ==================================================================
-  describe('onModuleDestroy', () => {
+  describe('destroy', () => {
     it('should close all active watchers', () => {
       service.watchSessionsIndex('/project1', jest.fn());
       service.watchSessionsIndex('/project2', jest.fn());
 
-      service.onModuleDestroy();
+      service.destroy();
 
       expect(mockWatcherClose).toHaveBeenCalledTimes(2);
     });
 
     it('should be safe to call when no watchers exist', () => {
-      expect(() => service.onModuleDestroy()).not.toThrow();
+      expect(() => service.destroy()).not.toThrow();
     });
   });
 });

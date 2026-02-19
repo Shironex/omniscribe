@@ -8,6 +8,16 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './src'),
       '@omniscribe/shared': path.resolve(__dirname, '../../packages/shared/src/index.ts'),
+      '@omniscribe/plugin-api': path.resolve(__dirname, '../../packages/plugin-api/src/index.ts'),
+      '@omniscribe/provider-claude/frontend': path.resolve(
+        __dirname,
+        '../../packages/plugins/provider-claude/src/frontend/index.ts'
+      ),
+      '@omniscribe/provider-codex/frontend': path.resolve(
+        __dirname,
+        '../../packages/plugins/provider-codex/src/frontend/index.ts'
+      ),
+      '@omniscribe/ui': path.resolve(__dirname, './src/lib/plugin-sdk.ts'),
     },
   },
   test: {
