@@ -44,17 +44,11 @@ interface ProviderUsageResponse {
 const POLLING_INTERVAL = 15 * 60 * 1000; // 15 minutes
 const STALE_THRESHOLD = 2 * 60 * 1000; // 2 minutes
 
-/** Color for progress based on percentage used */
-function getUsedColor(pct: number): string {
-  if (pct >= 90) return 'text-red-500';
-  if (pct >= 70) return 'text-yellow-500';
-  return 'text-[#10A37F]';
-}
-
-function getUsedBg(pct: number): string {
-  if (pct >= 90) return 'bg-red-500';
-  if (pct >= 70) return 'bg-yellow-500';
-  return 'bg-[#10A37F]';
+/** Raw hex color for progress based on percentage used */
+function getUsedHex(pct: number): string {
+  if (pct >= 90) return '#ef4444'; // red-500
+  if (pct >= 70) return '#eab308'; // yellow-500
+  return '#10A37F'; // OpenAI green
 }
 
 // ---- Metric Card ----
@@ -69,8 +63,7 @@ function MetricCard({
   stale?: boolean;
 }) {
   const usedPct = metric.percentageType === 'used' ? metric.percentage : 100 - metric.percentage;
-  const color = getUsedColor(usedPct);
-  const bg = getUsedBg(usedPct);
+  const hex = getUsedHex(usedPct);
 
   return (
     <div
@@ -89,12 +82,14 @@ function MetricCard({
         >
           {metric.name}
         </span>
-        <span className={cn('text-xs font-mono tabular-nums', color)}>{Math.round(usedPct)}%</span>
+        <span className="text-xs font-mono tabular-nums" style={{ color: hex }}>
+          {Math.round(usedPct)}%
+        </span>
       </div>
       <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
         <div
-          className={cn('h-full transition-all duration-500 rounded-full', bg)}
-          style={{ width: `${Math.min(usedPct, 100)}%` }}
+          className="h-full transition-all duration-500 rounded-full"
+          style={{ width: `${Math.min(usedPct, 100)}%`, backgroundColor: hex }}
         />
       </div>
       {metric.resetText && <p className="text-[10px] text-muted-foreground">{metric.resetText}</p>}
@@ -125,7 +120,7 @@ function PlanBadge({ planLabel }: { planLabel: string }) {
  *
  * Registered as a usage panel via frontendActivate.
  */
-export function CodexUsagePanel(_props: UsagePanelProps) {
+export function CodexUsagePanel({ embedded = false }: UsagePanelProps) {
   const [open, setOpen] = useState(false);
   const [metrics, setMetrics] = useState<UsageMetric[] | null>(null);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
@@ -175,9 +170,10 @@ export function CodexUsagePanel(_props: UsagePanelProps) {
     }
   }, [projectPath, status]);
 
-  // Start/stop polling based on popover state
+  // Start/stop polling based on popover state (or mount/unmount in embedded mode)
+  const isActive = embedded || open;
   useEffect(() => {
-    if (open && projectPath) {
+    if (isActive && projectPath) {
       // Fetch immediately
       fetchUsage();
 
@@ -202,7 +198,7 @@ export function CodexUsagePanel(_props: UsagePanelProps) {
         pollingRef.current = null;
       }
     };
-  }, [open, projectPath]);
+  }, [isActive, projectPath]);
 
   // Check if data is stale
   const isStale = useMemo(() => {
@@ -218,8 +214,7 @@ export function CodexUsagePanel(_props: UsagePanelProps) {
       ? primaryMetric.percentage
       : 100 - primaryMetric.percentage
     : 0;
-  const primaryColor = getUsedColor(primaryPct);
-  const primaryBg = getUsedBg(primaryPct);
+  const primaryHex = getUsedHex(primaryPct);
 
   // Extract plan label from primary metric name if present (e.g., "Rate Limit (Plus)")
   const planMatch = primaryMetric?.name.match(/\((\w+)\)$/);
@@ -240,7 +235,9 @@ export function CodexUsagePanel(_props: UsagePanelProps) {
 
   const trigger = (
     <Button variant="ghost" size="sm" className="h-8 gap-2 px-2 hover:bg-accent">
-      <Activity className={cn('w-4 h-4', metrics && primaryColor)} size={16} />
+      <span style={metrics ? { color: primaryHex } : undefined}>
+        <CodexIcon className="w-4 h-4" size={16} />
+      </span>
       {metrics && (
         <div
           className={cn(
@@ -249,14 +246,103 @@ export function CodexUsagePanel(_props: UsagePanelProps) {
           )}
         >
           <div
-            className={cn('h-full transition-all duration-500 rounded-full', primaryBg)}
-            style={{ width: `${Math.min(primaryPct, 100)}%` }}
+            className="h-full transition-all duration-500 rounded-full"
+            style={{ width: `${Math.min(primaryPct, 100)}%`, backgroundColor: primaryHex }}
           />
         </div>
       )}
     </Button>
   );
 
+  const content = (
+    <>
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border/50 bg-secondary/10">
+        <div className="flex items-center gap-2">
+          <CodexIcon size={16} className="text-[#10A37F]" />
+          <span className="text-sm font-semibold">Codex Usage</span>
+          {planLabel && <PlanBadge planLabel={planLabel} />}
+        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-6 w-6"
+          onClick={() => fetchUsage()}
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />
+          ) : (
+            <RefreshCw className="w-3.5 h-3.5" />
+          )}
+        </Button>
+      </div>
+
+      {/* Content */}
+      <div className="p-4 space-y-3">
+        {error ? (
+          <div className="flex flex-col items-center justify-center py-6 text-center space-y-3">
+            <AlertTriangle className="w-8 h-8 text-yellow-500/80" />
+            <div className="space-y-1 flex flex-col items-center">
+              <p className="text-sm font-medium">Failed to fetch usage</p>
+              <p className="text-xs text-muted-foreground">{error}</p>
+            </div>
+          </div>
+        ) : !metrics ? (
+          <div className="flex flex-col items-center justify-center py-8 space-y-2">
+            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+            <p className="text-xs text-muted-foreground">Loading usage data...</p>
+          </div>
+        ) : metrics.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-6 text-center space-y-2">
+            <Activity className="w-8 h-8 text-muted-foreground/50" />
+            <p className="text-sm text-muted-foreground">Usage data not available</p>
+          </div>
+        ) : (
+          <>
+            {/* Primary metric (first) */}
+            {metrics[0] && <MetricCard metric={metrics[0]} isPrimary stale={isStale} />}
+
+            {/* Secondary metrics (remaining) in a grid */}
+            {metrics.length > 1 && (
+              <div
+                className={cn('grid gap-3', metrics.length === 2 ? 'grid-cols-1' : 'grid-cols-2')}
+              >
+                {metrics.slice(1).map((m, i) => (
+                  <MetricCard key={i} metric={m} stale={isStale} />
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* Footer */}
+      <div className="flex items-center justify-between px-4 py-2 bg-secondary/10 border-t border-border/50">
+        <a
+          href="https://status.openai.com"
+          target="_blank"
+          rel="noreferrer"
+          className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
+        >
+          OpenAI Status <ExternalLink className="w-2.5 h-2.5" />
+        </a>
+        {lastUpdatedText && (
+          <span className="text-[10px] text-muted-foreground">Updated {lastUpdatedText}</span>
+        )}
+        {!lastUpdatedText && (
+          <span className="text-[10px] text-muted-foreground">Updates every 15 min</span>
+        )}
+      </div>
+    </>
+  );
+
+  // Embedded mode: content only (used inside multi-provider tabbed popover)
+  if (embedded) {
+    return content;
+  }
+
+  // Standalone mode: full Popover with trigger
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <Tooltip>
@@ -270,84 +356,7 @@ export function CodexUsagePanel(_props: UsagePanelProps) {
         align="end"
         sideOffset={8}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border/50 bg-secondary/10">
-          <div className="flex items-center gap-2">
-            <CodexIcon size={16} className="text-[#10A37F]" />
-            <span className="text-sm font-semibold">Codex Usage</span>
-            {planLabel && <PlanBadge planLabel={planLabel} />}
-          </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6"
-            onClick={() => fetchUsage()}
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />
-            ) : (
-              <RefreshCw className="w-3.5 h-3.5" />
-            )}
-          </Button>
-        </div>
-
-        {/* Content */}
-        <div className="p-4 space-y-3">
-          {error ? (
-            <div className="flex flex-col items-center justify-center py-6 text-center space-y-3">
-              <AlertTriangle className="w-8 h-8 text-yellow-500/80" />
-              <div className="space-y-1 flex flex-col items-center">
-                <p className="text-sm font-medium">Failed to fetch usage</p>
-                <p className="text-xs text-muted-foreground">{error}</p>
-              </div>
-            </div>
-          ) : !metrics ? (
-            <div className="flex flex-col items-center justify-center py-8 space-y-2">
-              <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-              <p className="text-xs text-muted-foreground">Loading usage data...</p>
-            </div>
-          ) : metrics.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-6 text-center space-y-2">
-              <Activity className="w-8 h-8 text-muted-foreground/50" />
-              <p className="text-sm text-muted-foreground">Usage data not available</p>
-            </div>
-          ) : (
-            <>
-              {/* Primary metric (first) */}
-              {metrics[0] && <MetricCard metric={metrics[0]} isPrimary stale={isStale} />}
-
-              {/* Secondary metrics (remaining) in a grid */}
-              {metrics.length > 1 && (
-                <div
-                  className={cn('grid gap-3', metrics.length === 2 ? 'grid-cols-1' : 'grid-cols-2')}
-                >
-                  {metrics.slice(1).map((m, i) => (
-                    <MetricCard key={i} metric={m} stale={isStale} />
-                  ))}
-                </div>
-              )}
-            </>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="flex items-center justify-between px-4 py-2 bg-secondary/10 border-t border-border/50">
-          <a
-            href="https://status.openai.com"
-            target="_blank"
-            rel="noreferrer"
-            className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
-          >
-            OpenAI Status <ExternalLink className="w-2.5 h-2.5" />
-          </a>
-          {lastUpdatedText && (
-            <span className="text-[10px] text-muted-foreground">Updated {lastUpdatedText}</span>
-          )}
-          {!lastUpdatedText && (
-            <span className="text-[10px] text-muted-foreground">Updates every 15 min</span>
-          )}
-        </div>
+        {content}
       </PopoverContent>
     </Popover>
   );

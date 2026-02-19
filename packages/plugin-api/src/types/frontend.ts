@@ -272,6 +272,12 @@ export interface UsagePanelRegistration {
   /** Component that renders the usage information */
   component: PluginComponentType<UsagePanelProps>;
 
+  /** Display label for tab headers in multi-provider mode (defaults to aiMode capitalized) */
+  label?: string;
+
+  /** Icon component for tab headers in multi-provider mode */
+  icon?: PluginComponentType<{ size?: number; className?: string }>;
+
   /** Sort order when multiple panels match (lower = higher priority) */
   order?: number;
 }
@@ -282,6 +288,13 @@ export interface UsagePanelRegistration {
 export interface UsagePanelProps {
   /** Working directory for the project */
   workingDir: string;
+
+  /**
+   * When true, render content only (no Popover wrapper).
+   * Used by the multi-provider usage host to embed panels inside a shared popover.
+   * Defaults to false (standalone mode with own Popover).
+   */
+  embedded?: boolean;
 }
 
 /**

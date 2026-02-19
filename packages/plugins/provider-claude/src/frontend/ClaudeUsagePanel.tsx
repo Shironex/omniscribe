@@ -61,7 +61,7 @@ const ERROR_MESSAGES: Record<UsageError, { title: string; description: string }>
  *
  * Registered as a usage panel via frontendActivate.
  */
-export function ClaudeUsagePanel(_props: UsagePanelProps) {
+export function ClaudeUsagePanel({ embedded = false }: UsagePanelProps) {
   const [open, setOpen] = useState(false);
 
   // Usage store
@@ -88,9 +88,10 @@ export function ClaudeUsagePanel(_props: UsagePanelProps) {
     }
   }, [projectPath, setWorkingDir]);
 
-  // Start/stop polling based on popover state
+  // Start/stop polling based on popover state (or mount/unmount in embedded mode)
+  const isActive = embedded || open;
   useEffect(() => {
-    if (open && projectPath) {
+    if (isActive && projectPath) {
       startPolling();
     } else {
       stopPolling();
@@ -99,7 +100,7 @@ export function ClaudeUsagePanel(_props: UsagePanelProps) {
     return () => {
       stopPolling();
     };
-  }, [open, projectPath, startPolling, stopPolling]);
+  }, [isActive, projectPath, startPolling, stopPolling]);
 
   // Check if data is stale (older than 2 minutes)
   const isStale = useMemo(() => {
@@ -138,6 +139,98 @@ export function ClaudeUsagePanel(_props: UsagePanelProps) {
     </Button>
   );
 
+  const content = (
+    <>
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border/50 bg-secondary/10">
+        <div className="flex items-center gap-2">
+          <ClaudeIcon size={16} />
+          <span className="text-sm font-semibold">Claude Usage</span>
+        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-6 w-6"
+          onClick={() => fetchUsage()}
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />
+          ) : (
+            <RefreshCw className="w-3.5 h-3.5" />
+          )}
+        </Button>
+      </div>
+
+      {/* Content */}
+      <div className="p-4 space-y-4">
+        {error ? (
+          <div className="flex flex-col items-center justify-center py-6 text-center space-y-3">
+            <AlertTriangle className="w-8 h-8 text-yellow-500/80" />
+            <div className="space-y-1 flex flex-col items-center">
+              <p className="text-sm font-medium">{errorInfo?.title ?? 'Error'}</p>
+              <p className="text-xs text-muted-foreground">
+                {errorInfo?.description ?? errorMessage}
+              </p>
+            </div>
+          </div>
+        ) : !claudeUsage ? (
+          <div className="flex flex-col items-center justify-center py-8 space-y-2">
+            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+            <p className="text-xs text-muted-foreground">Loading usage data...</p>
+          </div>
+        ) : (
+          <>
+            <UsageCard
+              title="Session Usage"
+              subtitle={`${CLAUDE_SESSION_WINDOW_HOURS}-hour rolling window`}
+              percentage={claudeUsage.sessionPercentage}
+              resetText={claudeUsage.sessionResetText}
+              isPrimary={true}
+              stale={isStale}
+            />
+
+            <div className="grid grid-cols-2 gap-3">
+              <UsageCard
+                title="Sonnet"
+                subtitle="Weekly"
+                percentage={claudeUsage.sonnetWeeklyPercentage}
+                resetText={claudeUsage.sonnetResetText}
+                stale={isStale}
+              />
+              <UsageCard
+                title="Weekly"
+                subtitle="All models"
+                percentage={claudeUsage.weeklyPercentage}
+                resetText={claudeUsage.weeklyResetText}
+                stale={isStale}
+              />
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Footer */}
+      <div className="flex items-center justify-between px-4 py-2 bg-secondary/10 border-t border-border/50">
+        <a
+          href="https://status.claude.com"
+          target="_blank"
+          rel="noreferrer"
+          className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
+        >
+          Claude Status <ExternalLink className="w-2.5 h-2.5" />
+        </a>
+        <span className="text-[10px] text-muted-foreground">Updates every 15 min</span>
+      </div>
+    </>
+  );
+
+  // Embedded mode: content only (used inside multi-provider tabbed popover)
+  if (embedded) {
+    return content;
+  }
+
+  // Standalone mode: full Popover with trigger
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <Tooltip>
@@ -151,87 +244,7 @@ export function ClaudeUsagePanel(_props: UsagePanelProps) {
         align="end"
         sideOffset={8}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border/50 bg-secondary/10">
-          <div className="flex items-center gap-2">
-            <ClaudeIcon size={16} />
-            <span className="text-sm font-semibold">Claude Usage</span>
-          </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6"
-            onClick={() => fetchUsage()}
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />
-            ) : (
-              <RefreshCw className="w-3.5 h-3.5" />
-            )}
-          </Button>
-        </div>
-
-        {/* Content */}
-        <div className="p-4 space-y-4">
-          {error ? (
-            <div className="flex flex-col items-center justify-center py-6 text-center space-y-3">
-              <AlertTriangle className="w-8 h-8 text-yellow-500/80" />
-              <div className="space-y-1 flex flex-col items-center">
-                <p className="text-sm font-medium">{errorInfo?.title ?? 'Error'}</p>
-                <p className="text-xs text-muted-foreground">
-                  {errorInfo?.description ?? errorMessage}
-                </p>
-              </div>
-            </div>
-          ) : !claudeUsage ? (
-            <div className="flex flex-col items-center justify-center py-8 space-y-2">
-              <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-              <p className="text-xs text-muted-foreground">Loading usage data...</p>
-            </div>
-          ) : (
-            <>
-              <UsageCard
-                title="Session Usage"
-                subtitle={`${CLAUDE_SESSION_WINDOW_HOURS}-hour rolling window`}
-                percentage={claudeUsage.sessionPercentage}
-                resetText={claudeUsage.sessionResetText}
-                isPrimary={true}
-                stale={isStale}
-              />
-
-              <div className="grid grid-cols-2 gap-3">
-                <UsageCard
-                  title="Sonnet"
-                  subtitle="Weekly"
-                  percentage={claudeUsage.sonnetWeeklyPercentage}
-                  resetText={claudeUsage.sonnetResetText}
-                  stale={isStale}
-                />
-                <UsageCard
-                  title="Weekly"
-                  subtitle="All models"
-                  percentage={claudeUsage.weeklyPercentage}
-                  resetText={claudeUsage.weeklyResetText}
-                  stale={isStale}
-                />
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="flex items-center justify-between px-4 py-2 bg-secondary/10 border-t border-border/50">
-          <a
-            href="https://status.claude.com"
-            target="_blank"
-            rel="noreferrer"
-            className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
-          >
-            Claude Status <ExternalLink className="w-2.5 h-2.5" />
-          </a>
-          <span className="text-[10px] text-muted-foreground">Updates every 15 min</span>
-        </div>
+        {content}
       </PopoverContent>
     </Popover>
   );

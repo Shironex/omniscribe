@@ -51,6 +51,8 @@ export function frontendActivate(context: FrontendPluginContext): void {
       id: 'claude-usage',
       aiMode: 'claude',
       component: ClaudeUsagePanel as any,
+      label: 'Claude',
+      icon: ClaudeIcon as any,
     })
   );
 

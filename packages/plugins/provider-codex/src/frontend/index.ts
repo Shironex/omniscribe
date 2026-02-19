@@ -52,6 +52,8 @@ export function frontendActivate(context: FrontendPluginContext): void {
       id: 'codex-usage',
       aiMode: 'codex',
       component: CodexUsagePanel as any,
+      label: 'Codex',
+      icon: CodexIcon as any,
     })
   );
 
