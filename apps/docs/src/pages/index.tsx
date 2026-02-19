@@ -17,14 +17,14 @@ function HomepageHeader() {
         <div
           style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}
         >
-          <Link className="button button--primary button--lg" to="/docs/intro">
-            Get Started
+          <Link className="button button--primary button--lg" to="/download">
+            Download
+          </Link>
+          <Link className="button button--secondary button--lg" to="/docs/intro">
+            Documentation
           </Link>
           <Link className="button button--secondary button--lg" to="/sdk/overview">
             Plugin SDK
-          </Link>
-          <Link className="button button--secondary button--lg" to="/docs/api">
-            API Reference
           </Link>
         </div>
       </div>
@@ -34,32 +34,32 @@ function HomepageHeader() {
 
 const features = [
   {
-    title: 'Multi-Provider Sessions',
+    title: '12 Parallel Sessions',
     icon: '\u2726',
     iconClass: 'feature-icon--purple',
     description:
-      'Run Claude Code, OpenAI Codex, and other AI assistants side by side. Switch between providers per session or run them in parallel across projects.',
+      'Run up to 12 AI coding sessions simultaneously in a resizable grid. Launch presets let you set up 2x2, 3x2, or custom layouts in one click.',
   },
   {
-    title: 'Plugin System',
+    title: 'Session History & Resume',
     icon: '\u29C9',
     iconClass: 'feature-icon--blue',
     description:
-      'Build provider plugins with a clean TypeScript API. Implement a backend service and frontend UI, then register your plugin to extend Omniscribe.',
+      'Browse, search, and resume past sessions. Fork conversations into new branches or continue your last session with a single click.',
   },
   {
-    title: 'Real-Time Streaming',
+    title: 'Git Worktree Isolation',
     icon: '\u25B6',
     iconClass: 'feature-icon--emerald',
     description:
-      'Live terminal output with automatic status detection, usage tracking, and task monitoring. Full PTY support with resize and input handling.',
+      'Each session can work on its own branch without conflicts. Omniscribe manages git worktrees automatically so parallel development just works.',
   },
   {
-    title: 'AI-Friendly Docs',
+    title: '41 Themes & Customization',
     icon: '\u2728',
     iconClass: 'feature-icon--amber',
     description:
-      'Documentation ships as llms.txt for AI coding assistants. Point your AI tool at our docs and it can help you build and debug plugins.',
+      'Choose from 41 UI themes and 12 terminal themes. Per-project theme persistence, configurable shortcuts, and a full settings system.',
   },
 ];
 
@@ -91,25 +91,83 @@ function Features() {
   );
 }
 
-function QuickStart() {
+const highlights = [
+  {
+    label: 'MCP Integration',
+    description: 'Real-time status and task reporting from AI assistants',
+    link: '/docs/features/mcp-integration',
+  },
+  {
+    label: 'Quick Actions',
+    description: 'Git commit, push, and more from the terminal header',
+    link: '/docs/features/quick-actions',
+  },
+  {
+    label: 'Terminal Search',
+    description: 'Regex-powered search across terminal output',
+    link: '/docs/features/terminal',
+  },
+  {
+    label: 'Keyboard Shortcuts',
+    description: 'Launch, navigate, and control sessions from the keyboard',
+    link: '/docs/features/keyboard-shortcuts',
+  },
+  {
+    label: 'Auto Updates',
+    description: 'Stable and beta channels with automatic update detection',
+    link: '/docs/features/auto-update',
+  },
+  {
+    label: 'Plugin System',
+    description: 'Add new AI providers with a TypeScript plugin API',
+    link: '/sdk/overview',
+  },
+];
+
+function Highlights() {
+  return (
+    <section style={{ padding: '2rem 0 3rem' }}>
+      <div className="container">
+        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+          <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>And much more</h2>
+        </div>
+        <div className="row">
+          {highlights.map((item, idx) => (
+            <div key={idx} className="col col--4" style={{ marginBottom: '1rem' }}>
+              <Link to={item.link} className="highlight-card">
+                <strong>{item.label}</strong>
+                <span>{item.description}</span>
+              </Link>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function GetStarted() {
   return (
     <section style={{ padding: '2rem 0 5rem' }}>
       <div className="container" style={{ textAlign: 'center' }}>
-        <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>
-          Get up and running in minutes
-        </h2>
-        <p className="hero__subtitle--styled" style={{ fontSize: '1rem', marginBottom: '1.5rem' }}>
-          Clone, install, and start building with AI assistants.
+        <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>Ready to get started?</h2>
+        <p className="hero__subtitle--styled" style={{ fontSize: '1rem', marginBottom: '2rem' }}>
+          Download Omniscribe and start running AI sessions in parallel.
         </p>
-        <div className="terminal-block">
-          <div>
-            <span className="prompt">$</span> git clone https://github.com/Shironex/omniscribe
+        <div style={{ display: 'flex', gap: '2rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+          <div className="cta-card">
+            <h3>For Users</h3>
+            <p>Download the app and start using AI assistants right away.</p>
+            <Link className="button button--primary" to="/download">
+              Download Omniscribe
+            </Link>
           </div>
-          <div>
-            <span className="prompt">$</span> pnpm install
-          </div>
-          <div>
-            <span className="prompt">$</span> pnpm dev
+          <div className="cta-card">
+            <h3>For Developers</h3>
+            <p>Build plugins or contribute to the open-source project.</p>
+            <Link className="button button--secondary" to="/docs/contributing/quickstart">
+              Development Setup
+            </Link>
           </div>
         </div>
       </div>
@@ -125,7 +183,10 @@ export default function Home(): JSX.Element {
       <hr className="section-divider" />
       <main>
         <Features />
-        <QuickStart />
+        <hr className="section-divider" />
+        <Highlights />
+        <hr className="section-divider" />
+        <GetStarted />
       </main>
     </Layout>
   );

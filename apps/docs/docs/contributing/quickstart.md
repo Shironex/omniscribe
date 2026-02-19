@@ -1,10 +1,11 @@
 ---
-sidebar_position: 2
+sidebar_position: 1
+sidebar_label: Development Setup
 ---
 
-# Quick Start
+# Development Setup
 
-Get Omniscribe running locally for development.
+Get Omniscribe running locally for development and contributing.
 
 ## Prerequisites
 

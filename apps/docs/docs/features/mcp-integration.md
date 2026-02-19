@@ -1,0 +1,52 @@
+---
+sidebar_position: 6
+---
+
+# MCP Integration
+
+The [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) is an open standard that allows AI assistants to communicate with external tools. Omniscribe uses MCP to receive real-time status updates from your AI coding sessions, so you always know what each session is doing without reading the terminal output.
+
+## How It Works
+
+Omniscribe bundles its own MCP server -- no separate installation or configuration is needed. When you launch a session, Omniscribe generates a `.mcp.json` configuration file in the project directory so the AI assistant (such as Claude Code) discovers and connects to the MCP server automatically.
+
+Once connected, the AI assistant can call two MCP tools to report its progress back to Omniscribe.
+
+## MCP Tools
+
+### omniscribe_status
+
+Reports the current state of the session along with a human-readable message describing what the agent is doing.
+
+**Available states:**
+
+| State         | Meaning                                     |
+| ------------- | ------------------------------------------- |
+| `idle`        | Waiting for input, not actively working     |
+| `working`     | Executing a task                            |
+| `planning`    | Analyzing or planning before implementation |
+| `needs_input` | Waiting for clarification from the user     |
+| `finished`    | Task completed successfully                 |
+| `error`       | Something went wrong                        |
+
+Status updates appear as colored indicators in the terminal header, giving you an at-a-glance view of every session's state.
+
+### omniscribe_tasks
+
+Reports a structured task list with individual progress tracking. Each task includes an ID, a subject line, and a status (`pending`, `in_progress`, or `completed`).
+
+When an AI assistant reports tasks, a badge appears on the terminal header showing overall progress. Click the badge to expand the full task list and see exactly what the assistant is working on.
+
+:::tip
+Not all AI assistants support MCP tools. Currently, Claude Code has built-in MCP support and will use these tools automatically when connected to Omniscribe.
+:::
+
+## Configuration
+
+Omniscribe handles MCP configuration automatically per session. You can review discovered MCP server configurations in **Settings > MCP Servers**.
+
+The generated `.mcp.json` file is placed in your project root when a session starts. If your project already has an `.mcp.json` with other MCP servers configured, Omniscribe merges its configuration alongside them.
+
+:::info
+The MCP server runs locally on your machine. No data is sent to external services -- all communication happens between the AI assistant's terminal process and the Omniscribe app.
+:::

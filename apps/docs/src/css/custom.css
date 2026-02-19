@@ -353,3 +353,192 @@
 [data-theme='light'] .section-divider {
   background: #eee;
 }
+
+/* ---- Highlight cards (homepage) ---- */
+.highlight-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  border-radius: 10px;
+  padding: 1.25rem;
+  height: 100%;
+  text-decoration: none !important;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+[data-theme='dark'] .highlight-card {
+  background: #1a1a1a;
+  border: 1px solid #222;
+  color: #ccc;
+}
+
+[data-theme='dark'] .highlight-card:hover {
+  border-color: #333;
+  color: #fff;
+}
+
+[data-theme='dark'] .highlight-card strong {
+  color: #e5e5e5;
+}
+
+[data-theme='dark'] .highlight-card span {
+  color: #888;
+  font-size: 0.875rem;
+}
+
+[data-theme='light'] .highlight-card {
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  color: #333;
+}
+
+[data-theme='light'] .highlight-card:hover {
+  border-color: #ccc;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+  color: #111;
+}
+
+[data-theme='light'] .highlight-card strong {
+  color: #111;
+}
+
+[data-theme='light'] .highlight-card span {
+  color: #555;
+  font-size: 0.875rem;
+}
+
+/* ---- CTA cards (homepage) ---- */
+.cta-card {
+  border-radius: 12px;
+  padding: 2rem;
+  max-width: 320px;
+  flex: 1;
+  text-align: center;
+}
+
+[data-theme='dark'] .cta-card {
+  background: #1a1a1a;
+  border: 1px solid #222;
+}
+
+[data-theme='dark'] .cta-card p {
+  color: #888;
+}
+
+[data-theme='light'] .cta-card {
+  background: #fff;
+  border: 1px solid #e5e5e5;
+}
+
+[data-theme='light'] .cta-card p {
+  color: #555;
+}
+
+.cta-card h3 {
+  margin-bottom: 0.5rem;
+}
+
+.cta-card p {
+  margin-bottom: 1.25rem;
+  line-height: 1.5;
+}
+
+/* ---- Download page ---- */
+.download-card {
+  border-radius: 12px;
+  padding: 1.75rem;
+  height: 100%;
+}
+
+[data-theme='dark'] .download-card {
+  background: #1a1a1a;
+  border: 1px solid #222;
+}
+
+[data-theme='dark'] .download-card--detected {
+  border-color: rgba(139, 92, 246, 0.4);
+}
+
+[data-theme='light'] .download-card {
+  background: #fff;
+  border: 1px solid #e5e5e5;
+}
+
+[data-theme='light'] .download-card--detected {
+  border-color: rgba(109, 40, 217, 0.4);
+}
+
+.download-card__header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.download-card__header h3 {
+  margin: 0;
+  flex: 1;
+}
+
+.download-card__icon {
+  font-size: 1.5rem;
+}
+
+.download-card__badge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(139, 92, 246, 0.15);
+  color: #a78bfa;
+}
+
+[data-theme='light'] .download-card__badge {
+  background: rgba(109, 40, 217, 0.1);
+  color: #7c3aed;
+}
+
+.download-card__assets {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.download-card__asset {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.download-card__na {
+  font-size: 0.8rem;
+  opacity: 0.5;
+}
+
+.download-card__note {
+  margin-top: 1rem;
+  margin-bottom: 0;
+  font-size: 0.8rem;
+  opacity: 0.6;
+  line-height: 1.4;
+}
+
+.download-requirements {
+  margin: 0 auto;
+  max-width: 600px;
+}
+
+/* ---- Announcement bar ---- */
+div[class*='announcementBar'] {
+  font-size: 0.875rem;
+}
+
+div[class*='announcementBar'] a {
+  text-decoration: underline;
+  font-weight: 600;
+}

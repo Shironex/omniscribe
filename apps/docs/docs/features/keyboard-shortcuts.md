@@ -1,0 +1,50 @@
+---
+sidebar_position: 8
+---
+
+# Keyboard Shortcuts
+
+A complete reference of keyboard shortcuts available in Omniscribe. macOS uses `Cmd`, while Windows and Linux use `Ctrl`.
+
+## Global Shortcuts
+
+These work from anywhere in the app.
+
+| macOS                       | Windows / Linux               | Action                          |
+| --------------------------- | ----------------------------- | ------------------------------- |
+| `Cmd + K`                   | `Ctrl + K`                    | Stop all running sessions       |
+| `Cmd + ,`                   | `Ctrl + ,`                    | Toggle settings                 |
+| `Cmd + Shift + H`           | `Ctrl + Shift + H`            | Toggle session history          |
+| `Cmd + W`                   | `Ctrl + W`                    | Close current project tab       |
+| `Cmd + 1` through `Cmd + 9` | `Ctrl + 1` through `Ctrl + 9` | Switch to project tab by number |
+
+## Session Shortcuts
+
+These shortcuts work when focus is **not** inside a text input or terminal.
+
+| Shortcut                       | Action                             |
+| ------------------------------ | ---------------------------------- |
+| `N`                            | Add a new pre-launch slot          |
+| `Shift + N`                    | Open launch presets modal          |
+| `L`                            | Launch all pre-launch slots        |
+| `1` through `9`, `0`, `-`, `=` | Launch individual slot by position |
+
+:::info
+The slot position keys map left-to-right, top-to-bottom across the grid: `1` launches the first slot, `2` the second, and so on. `0`, `-`, and `=` cover positions 10, 11, and 12.
+:::
+
+## Terminal Shortcuts
+
+These work when a terminal pane is focused.
+
+| macOS                | Windows / Linux      | Action                                                    |
+| -------------------- | -------------------- | --------------------------------------------------------- |
+| `Cmd + F`            | `Ctrl + F`           | Toggle terminal search                                    |
+| `Cmd + L`            | `Ctrl + L`           | Clear focused terminal                                    |
+| `Cmd + C`            | `Ctrl + C`           | Copy selection (or send interrupt if nothing is selected) |
+| `Cmd + V`            | `Ctrl + V`           | Paste from clipboard                                      |
+| `Ctrl + Alt + Arrow` | `Ctrl + Alt + Arrow` | Navigate between terminal panes                           |
+
+:::tip
+`Ctrl + Alt + Arrow` uses the same modifier on all platforms. Arrow direction moves focus to the adjacent terminal in that direction.
+:::

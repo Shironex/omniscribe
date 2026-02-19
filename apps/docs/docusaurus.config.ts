@@ -90,6 +90,22 @@ const config: Config = {
 
   themeConfig: {
     image: 'img/logo.png',
+    metadata: [
+      {
+        name: 'keywords',
+        content:
+          'AI coding assistant, Claude Code, Codex, Electron, desktop app, multi-session, plugin system',
+      },
+      { name: 'twitter:card', content: 'summary_large_image' },
+    ],
+    announcementBar: {
+      id: 'v1_release',
+      content:
+        'Omniscribe v1.0.0 is here! <a target="_blank" rel="noopener noreferrer" href="https://github.com/Shironex/omniscribe/releases/tag/v1.0.0">See what\'s new</a>',
+      backgroundColor: '#7c3aed',
+      textColor: '#fff',
+      isCloseable: true,
+    },
     navbar: {
       title: 'Omniscribe',
       logo: {
@@ -115,6 +131,11 @@ const config: Config = {
           position: 'left',
         },
         {
+          to: '/download',
+          label: 'Download',
+          position: 'left',
+        },
+        {
           href: 'https://github.com/Shironex/omniscribe',
           label: 'GitHub',
           position: 'right',
@@ -127,9 +148,21 @@ const config: Config = {
         {
           title: 'Documentation',
           items: [
-            { label: 'Getting Started', to: '/docs/intro' },
+            { label: 'Getting Started', to: '/docs/getting-started/installation' },
+            { label: 'Features', to: '/docs/features/multi-session-grid' },
             { label: 'Plugin SDK', to: '/sdk/overview' },
             { label: 'API Reference', to: '/docs/api' },
+          ],
+        },
+        {
+          title: 'Download',
+          items: [
+            { label: 'Download Omniscribe', to: '/download' },
+            {
+              label: 'Releases',
+              href: 'https://github.com/Shironex/omniscribe/releases',
+            },
+            { label: 'Changelog', to: '/docs/changelog' },
           ],
         },
         {

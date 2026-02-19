@@ -8,7 +8,7 @@ This guide walks through creating a minimal provider plugin from scratch. By the
 
 ## Prerequisites
 
-- Omniscribe development environment set up ([Quick Start](/docs/getting-started/quickstart))
+- Omniscribe development environment set up ([Development Setup](/docs/contributing/quickstart))
 - Familiarity with TypeScript and the plugin system ([Overview](/sdk/overview))
 
 ## Step 1: Create the Package
