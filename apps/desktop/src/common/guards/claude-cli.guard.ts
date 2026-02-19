@@ -60,7 +60,7 @@ export class ClaudeCliGuard implements CanActivate {
       });
     }
 
-    if ('auth' in status && !(status as any).auth.authenticated) {
+    if (status.auth && !status.auth.authenticated) {
       throw new NotImplementedException({
         statusCode: 501,
         message: 'Claude CLI not authenticated',
