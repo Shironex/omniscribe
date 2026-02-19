@@ -2,7 +2,7 @@ import { Loader2, RefreshCw, Terminal, CheckCircle2, XCircle } from 'lucide-reac
 import { cn } from '@omniscribe/ui';
 import { PluginEvents } from '@omniscribe/shared';
 import { usePluginStore } from '@/stores/usePluginStore';
-import { emitAsync } from '@/lib/socket';
+import { emitAsync } from '@omniscribe/ui';
 import { CodexIcon } from './CodexIcon';
 import { CodexAuthCard } from './CodexAuthCard';
 

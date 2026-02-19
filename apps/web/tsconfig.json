@@ -18,7 +18,13 @@
       "@omniscribe/plugin-api/*": ["../../packages/plugin-api/src/*"]
     }
   },
-  "include": ["src/**/*", "../../packages/shared/src/**/*", "../../packages/plugin-api/src/**/*"],
+  "include": [
+    "src/**/*",
+    "../../packages/shared/src/**/*",
+    "../../packages/plugin-api/src/**/*",
+    "../../packages/plugins/provider-claude/src/frontend/**/*",
+    "../../packages/plugins/provider-codex/src/frontend/**/*"
+  ],
   "exclude": [
     "node_modules",
     "dist",
