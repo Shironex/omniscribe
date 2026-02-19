@@ -247,14 +247,14 @@
 }
 
 [data-theme='dark'] .button--secondary {
-  border-color: #333;
-  color: #999;
+  border-color: rgba(139, 92, 246, 0.3);
+  color: #a78bfa;
 }
 
 [data-theme='dark'] .button--secondary:hover {
-  background: #1a1a1a;
-  border-color: #444;
-  color: #ccc;
+  background: rgba(139, 92, 246, 0.1);
+  border-color: rgba(139, 92, 246, 0.5);
+  color: #c4b5fd;
 }
 
 [data-theme='light'] .button--secondary {
