@@ -13,11 +13,11 @@
     ]
   },
   "scripts": {
-    "dev": "pnpm --filter @omniscribe/shared build && concurrently -k -n web,desktop -c cyan,yellow \"pnpm dev:web\" \"wait-on http://localhost:15174 && pnpm --filter @omniscribe/mcp-server build:dev && pnpm --filter @omniscribe/desktop dev\"",
+    "dev": "pnpm build:packages && concurrently -k -n web,desktop -c cyan,yellow \"pnpm dev:web\" \"wait-on http://localhost:15174 && pnpm --filter @omniscribe/mcp-server build:dev && pnpm --filter @omniscribe/desktop dev\"",
     "dev:debug": "LOG_LEVEL=debug pnpm dev",
     "dev:web": "pnpm --filter @omniscribe/web dev",
-    "build": "pnpm --filter @omniscribe/shared build && pnpm --filter @omniscribe/web build && pnpm --filter @omniscribe/mcp-server build && pnpm --filter @omniscribe/desktop build",
-    "build:packages": "pnpm --filter @omniscribe/shared build",
+    "build": "pnpm build:packages && pnpm --filter @omniscribe/web build && pnpm --filter @omniscribe/mcp-server build && pnpm --filter @omniscribe/desktop build",
+    "build:packages": "pnpm --filter @omniscribe/shared build && pnpm --filter @omniscribe/plugin-api build && pnpm --filter @omniscribe/provider-claude build && pnpm --filter @omniscribe/provider-codex build",
     "package": "pnpm build && pnpm --filter @omniscribe/desktop package",
     "package:win": "pnpm build && pnpm --filter @omniscribe/desktop package:win",
     "package:mac": "pnpm build && pnpm --filter @omniscribe/desktop package:mac",
@@ -25,8 +25,8 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "pnpm build:packages && pnpm --filter @omniscribe/shared test && pnpm --filter @omniscribe/desktop test && pnpm --filter @omniscribe/mcp-server test && pnpm --filter @omniscribe/web test",
-    "test:cov": "pnpm build:packages && pnpm --filter @omniscribe/shared test:cov && pnpm --filter @omniscribe/desktop test:cov && pnpm --filter @omniscribe/mcp-server test:cov && pnpm --filter @omniscribe/web test:cov",
+    "test": "pnpm build:packages && pnpm --filter @omniscribe/shared test && pnpm --filter @omniscribe/plugin-api test && pnpm --filter @omniscribe/provider-claude test && pnpm --filter @omniscribe/provider-codex test && pnpm --filter @omniscribe/desktop test && pnpm --filter @omniscribe/mcp-server test && pnpm --filter @omniscribe/web test",
+    "test:cov": "pnpm build:packages && pnpm --filter @omniscribe/shared test:cov && pnpm --filter @omniscribe/plugin-api test:cov && pnpm --filter @omniscribe/provider-claude test:cov && pnpm --filter @omniscribe/provider-codex test:cov && pnpm --filter @omniscribe/desktop test:cov && pnpm --filter @omniscribe/mcp-server test:cov && pnpm --filter @omniscribe/web test:cov",
     "typecheck": "pnpm build:packages && pnpm --filter @omniscribe/web typecheck && pnpm --filter @omniscribe/mcp-server typecheck && pnpm --filter @omniscribe/desktop typecheck",
     "prepare": "husky"
   },

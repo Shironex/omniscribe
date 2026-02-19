@@ -76,6 +76,9 @@ jobs:
       - name: Setup project
         uses: ./.github/actions/setup-project
 
+      - name: Build packages
+        run: pnpm build:packages
+
       - name: Run integration tests
         run: pnpm --filter @omniscribe/desktop test:integration
 
