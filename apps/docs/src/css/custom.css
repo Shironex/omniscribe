@@ -247,6 +247,7 @@
 }
 
 [data-theme='dark'] .button--secondary {
+  background: transparent;
   border-color: rgba(139, 92, 246, 0.3);
   color: #a78bfa;
 }
