@@ -52,6 +52,7 @@ const mockRegistryService = {
   listProviders: jest.fn().mockReturnValue([]),
   setEnabled: jest.fn().mockReturnValue(true),
   getProviderEntry: jest.fn(),
+  getProviderEntryByPluginId: jest.fn(),
   getProvider: jest.fn(),
 };
 
@@ -206,19 +207,16 @@ describe('PluginGateway', () => {
   // handleInvoke
   // ================================================================
   describe('handleInvoke', () => {
-    it('should invoke a valid method on the plugin and return result', async () => {
+    it('should invoke an allowed method on the plugin and return result', async () => {
       const payload: PluginInvokePayload = {
         pluginId: 'test-provider',
-        method: 'customMethod',
+        method: 'detectCli',
         args: ['arg1', 'arg2'],
       };
       const mockPlugin = {
-        customMethod: jest.fn().mockResolvedValue('result-value'),
+        detectCli: jest.fn().mockResolvedValue('result-value'),
       };
-      mockRegistryService.listProviders.mockReturnValue([
-        createMockProviderInfo('test-mode', { id: 'test-provider' }),
-      ]);
-      mockRegistryService.getProviderEntry.mockReturnValue({
+      mockRegistryService.getProviderEntryByPluginId.mockReturnValue({
         activated: true,
         plugin: mockPlugin,
         manifest: { id: 'test-provider' },
@@ -227,15 +225,15 @@ describe('PluginGateway', () => {
       const result = await gateway.handleInvoke(mockSocket, payload);
 
       expect(result).toEqual({ result: 'result-value' });
-      expect(mockPlugin.customMethod).toHaveBeenCalledWith('arg1', 'arg2');
+      expect(mockPlugin.detectCli).toHaveBeenCalledWith('arg1', 'arg2');
     });
 
     it('should return error when plugin is not found', async () => {
       const payload: PluginInvokePayload = {
         pluginId: 'nonexistent',
-        method: 'foo',
+        method: 'detectCli',
       };
-      mockRegistryService.listProviders.mockReturnValue([]);
+      mockRegistryService.getProviderEntryByPluginId.mockReturnValue(undefined);
 
       const result = await gateway.handleInvoke(mockSocket, payload);
 
@@ -245,12 +243,9 @@ describe('PluginGateway', () => {
     it('should return error when provider is not activated', async () => {
       const payload: PluginInvokePayload = {
         pluginId: 'test-provider',
-        method: 'foo',
+        method: 'detectCli',
       };
-      mockRegistryService.listProviders.mockReturnValue([
-        createMockProviderInfo('test-mode', { id: 'test-provider' }),
-      ]);
-      mockRegistryService.getProviderEntry.mockReturnValue({
+      mockRegistryService.getProviderEntryByPluginId.mockReturnValue({
         activated: false,
         plugin: {},
         manifest: { id: 'test-provider' },
@@ -261,15 +256,12 @@ describe('PluginGateway', () => {
       expect(result.error).toContain('not activated');
     });
 
-    it('should return error when method does not exist on plugin', async () => {
+    it('should return error when allowed method does not exist on plugin', async () => {
       const payload: PluginInvokePayload = {
         pluginId: 'test-provider',
-        method: 'nonExistentMethod',
+        method: 'parseUsage',
       };
-      mockRegistryService.listProviders.mockReturnValue([
-        createMockProviderInfo('test-mode', { id: 'test-provider' }),
-      ]);
-      mockRegistryService.getProviderEntry.mockReturnValue({
+      mockRegistryService.getProviderEntryByPluginId.mockReturnValue({
         activated: true,
         plugin: {},
         manifest: { id: 'test-provider' },
@@ -277,21 +269,18 @@ describe('PluginGateway', () => {
 
       const result = await gateway.handleInvoke(mockSocket, payload);
 
-      expect(result.error).toContain("Method 'nonExistentMethod' not found");
+      expect(result.error).toContain("Method 'parseUsage' not found");
     });
 
     it('should catch and return error when invoked method throws', async () => {
       const payload: PluginInvokePayload = {
         pluginId: 'test-provider',
-        method: 'failingMethod',
+        method: 'detectCli',
       };
       const mockPlugin = {
-        failingMethod: jest.fn().mockRejectedValue(new Error('Method crashed')),
+        detectCli: jest.fn().mockRejectedValue(new Error('Method crashed')),
       };
-      mockRegistryService.listProviders.mockReturnValue([
-        createMockProviderInfo('test-mode', { id: 'test-provider' }),
-      ]);
-      mockRegistryService.getProviderEntry.mockReturnValue({
+      mockRegistryService.getProviderEntryByPluginId.mockReturnValue({
         activated: true,
         plugin: mockPlugin,
         manifest: { id: 'test-provider' },
@@ -305,15 +294,12 @@ describe('PluginGateway', () => {
     it('should default args to empty array when not provided', async () => {
       const payload: PluginInvokePayload = {
         pluginId: 'test-provider',
-        method: 'noArgs',
+        method: 'detectCli',
       };
       const mockPlugin = {
-        noArgs: jest.fn().mockResolvedValue('ok'),
+        detectCli: jest.fn().mockResolvedValue('ok'),
       };
-      mockRegistryService.listProviders.mockReturnValue([
-        createMockProviderInfo('test-mode', { id: 'test-provider' }),
-      ]);
-      mockRegistryService.getProviderEntry.mockReturnValue({
+      mockRegistryService.getProviderEntryByPluginId.mockReturnValue({
         activated: true,
         plugin: mockPlugin,
         manifest: { id: 'test-provider' },
@@ -322,7 +308,130 @@ describe('PluginGateway', () => {
       const result = await gateway.handleInvoke(mockSocket, payload);
 
       expect(result).toEqual({ result: 'ok' });
-      expect(mockPlugin.noArgs).toHaveBeenCalledWith();
+      expect(mockPlugin.detectCli).toHaveBeenCalledWith();
+    });
+
+    // ================================================================
+    // Security: method allowlist enforcement
+    // ================================================================
+    describe('method allowlist', () => {
+      it('should reject prototype method: constructor', async () => {
+        const payload: PluginInvokePayload = {
+          pluginId: 'test-provider',
+          method: 'constructor',
+        };
+
+        const result = await gateway.handleInvoke(mockSocket, payload);
+
+        expect(result.error).toContain('not allowed for remote invocation');
+        expect(mockRegistryService.getProviderEntryByPluginId).not.toHaveBeenCalled();
+      });
+
+      it('should reject prototype method: __proto__', async () => {
+        const payload: PluginInvokePayload = {
+          pluginId: 'test-provider',
+          method: '__proto__',
+        };
+
+        const result = await gateway.handleInvoke(mockSocket, payload);
+
+        expect(result.error).toContain('not allowed for remote invocation');
+      });
+
+      it('should reject prototype method: toString', async () => {
+        const payload: PluginInvokePayload = {
+          pluginId: 'test-provider',
+          method: 'toString',
+        };
+
+        const result = await gateway.handleInvoke(mockSocket, payload);
+
+        expect(result.error).toContain('not allowed for remote invocation');
+      });
+
+      it('should reject prototype method: hasOwnProperty', async () => {
+        const payload: PluginInvokePayload = {
+          pluginId: 'test-provider',
+          method: 'hasOwnProperty',
+        };
+
+        const result = await gateway.handleInvoke(mockSocket, payload);
+
+        expect(result.error).toContain('not allowed for remote invocation');
+      });
+
+      it('should reject lifecycle method: activate', async () => {
+        const payload: PluginInvokePayload = {
+          pluginId: 'test-provider',
+          method: 'activate',
+        };
+
+        const result = await gateway.handleInvoke(mockSocket, payload);
+
+        expect(result.error).toContain('not allowed for remote invocation');
+      });
+
+      it('should reject lifecycle method: deactivate', async () => {
+        const payload: PluginInvokePayload = {
+          pluginId: 'test-provider',
+          method: 'deactivate',
+        };
+
+        const result = await gateway.handleInvoke(mockSocket, payload);
+
+        expect(result.error).toContain('not allowed for remote invocation');
+      });
+
+      it('should reject internal accessor: getSessionReader', async () => {
+        const payload: PluginInvokePayload = {
+          pluginId: 'test-provider',
+          method: 'getSessionReader',
+        };
+
+        const result = await gateway.handleInvoke(mockSocket, payload);
+
+        expect(result.error).toContain('not allowed for remote invocation');
+      });
+
+      it('should reject arbitrary method names', async () => {
+        const payload: PluginInvokePayload = {
+          pluginId: 'test-provider',
+          method: 'arbitraryDangerousMethod',
+        };
+
+        const result = await gateway.handleInvoke(mockSocket, payload);
+
+        expect(result.error).toContain('not allowed for remote invocation');
+      });
+
+      it.each([
+        'detectCli',
+        'buildLaunchCommand',
+        'parseTerminalStatus',
+        'parseUsage',
+        'readSessionHistory',
+        'buildResumeCommand',
+        'buildForkCommand',
+        'buildContinueCommand',
+        'getMcpConfig',
+        'getSystemPromptAdditions',
+      ])('should allow AiProviderPlugin method: %s', async method => {
+        const mockPlugin = {
+          [method]: jest.fn().mockResolvedValue('ok'),
+        };
+        mockRegistryService.getProviderEntryByPluginId.mockReturnValue({
+          activated: true,
+          plugin: mockPlugin,
+          manifest: { id: 'test-provider' },
+        });
+
+        const result = await gateway.handleInvoke(mockSocket, {
+          pluginId: 'test-provider',
+          method,
+        });
+
+        expect(result).toEqual({ result: 'ok' });
+      });
     });
   });
 

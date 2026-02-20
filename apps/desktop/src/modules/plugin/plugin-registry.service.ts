@@ -59,6 +59,17 @@ export class PluginRegistryService {
   }
 
   /**
+   * Look up a provider entry by its manifest plugin ID (e.g. 'provider-claude').
+   * Returns undefined if no match is found.
+   */
+  getProviderEntryByPluginId(pluginId: string): RegisteredProvider | undefined {
+    for (const entry of this.providers.values()) {
+      if (entry.manifest.id === pluginId) return entry;
+    }
+    return undefined;
+  }
+
+  /**
    * Check if the given aiMode is backed by a registered plugin.
    */
   isPluginMode(aiMode: string): boolean {

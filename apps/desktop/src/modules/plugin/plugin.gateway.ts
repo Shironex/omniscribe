@@ -15,6 +15,7 @@ import { CORS_CONFIG } from '../shared/cors.config';
 import { InternalPluginEvents } from '../shared/events';
 import { PluginRegistryService } from './plugin-registry.service';
 import { PluginLoaderService } from './plugin-loader.service';
+import { ALLOWED_PROVIDER_INVOKE_METHODS } from '@omniscribe/plugin-api';
 import { PluginEvents, createLogger, extractErrorMessage } from '@omniscribe/shared';
 import type { PluginSetEnabledPayload, PluginInvokePayload, ProviderInfo } from './types';
 
@@ -127,22 +128,21 @@ export class PluginGateway implements OnGatewayInit {
     try {
       const { pluginId, method, args = [] } = payload;
 
-      // Find the provider entry by plugin ID
-      const providers = this.registryService.listProviders();
-      const providerInfo = providers.find(p => p.id === pluginId);
-      if (!providerInfo) {
-        return { error: `No provider found with pluginId: ${pluginId}` };
+      // Security: only allow methods defined on the AiProviderPlugin interface
+      if (!ALLOWED_PROVIDER_INVOKE_METHODS.has(method)) {
+        return { error: `Method '${method}' is not allowed for remote invocation` };
       }
 
-      const entry = this.registryService.getProviderEntry(providerInfo.aiMode);
+      // Find the provider entry by plugin ID (O(n) scan, but small N)
+      const entry = this.registryService.getProviderEntryByPluginId(pluginId);
       if (!entry) {
-        return { error: `Provider entry not found for aiMode: ${providerInfo.aiMode}` };
+        return { error: `No provider found with pluginId: ${pluginId}` };
       }
       if (!entry.activated) {
         return { error: `Provider '${pluginId}' is not activated` };
       }
 
-      // Invoke the method on the plugin (type-safe access via dynamic lookup)
+      // Invoke the allowed method on the plugin
       const plugin = entry.plugin as unknown as Record<string, unknown>;
       const fn = plugin[method];
       if (typeof fn !== 'function') {

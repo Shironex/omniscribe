@@ -215,3 +215,26 @@ export interface AiProviderPlugin extends OmniscribePlugin {
  * for future provider-specific context extensions.
  */
 export type ProviderPluginContext = PluginContext;
+
+/**
+ * Methods on `AiProviderPlugin` that may be invoked remotely via the
+ * `plugin:invoke` WebSocket event.  Any method NOT in this set will be
+ * rejected at runtime to prevent prototype-chain traversal and
+ * invocation of internal/lifecycle methods.
+ *
+ * Keep in sync with the `AiProviderPlugin` interface above.
+ */
+export const ALLOWED_PROVIDER_INVOKE_METHODS: ReadonlySet<string> = new Set([
+  // Required
+  'detectCli',
+  'buildLaunchCommand',
+  'parseTerminalStatus',
+  // Optional
+  'parseUsage',
+  'readSessionHistory',
+  'buildResumeCommand',
+  'buildForkCommand',
+  'buildContinueCommand',
+  'getMcpConfig',
+  'getSystemPromptAdditions',
+]);
