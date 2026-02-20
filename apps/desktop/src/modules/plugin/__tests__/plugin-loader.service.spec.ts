@@ -474,19 +474,35 @@ describe('PluginLoaderService', () => {
     });
 
     it('should continue deactivating other providers if one fails', async () => {
-      // Build with a single plugin that fails deactivation
-      const plugin = createMockProviderPlugin();
-      (plugin.deactivate as jest.Mock).mockRejectedValue(new Error('Shutdown error'));
-      const def = createValidDefinition({ plugin });
-      def.autoEnable = true;
-      def.autoActivate = true;
-      const module = await buildModule([def]);
+      // First plugin: fails deactivation
+      const failingPlugin = createMockProviderPlugin('fail-mode');
+      (failingPlugin.deactivate as jest.Mock).mockRejectedValue(new Error('Shutdown error'));
+      const failDef = createValidDefinition({
+        manifest: { id: 'fail-provider' },
+        plugin: failingPlugin,
+      });
+      failDef.autoEnable = true;
+      failDef.autoActivate = true;
+
+      // Second plugin: succeeds deactivation
+      const successPlugin = createMockProviderPlugin('ok-mode');
+      const okDef = createValidDefinition({
+        manifest: { id: 'ok-provider' },
+        plugin: successPlugin,
+      });
+      okDef.autoEnable = true;
+      okDef.autoActivate = true;
+
+      const module = await buildModule([failDef, okDef]);
       const loader = module.get<PluginLoaderService>(PluginLoaderService);
 
       await loader.onModuleInit();
 
-      // Should not throw even when deactivation fails
+      // Should not throw even when first provider's deactivation fails
       await expect(loader.onModuleDestroy()).resolves.not.toThrow();
+      // Both providers should have had deactivate() called
+      expect(failingPlugin.deactivate).toHaveBeenCalled();
+      expect(successPlugin.deactivate).toHaveBeenCalled();
     });
   });
 

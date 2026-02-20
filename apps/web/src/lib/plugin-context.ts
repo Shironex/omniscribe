@@ -26,17 +26,6 @@ import { createLogger } from '@omniscribe/shared';
 import type { usePluginStore as UsePluginStoreType } from '@/stores/usePluginStore';
 
 /**
- * Create a FrontendPluginContext for a plugin.
- *
- * The returned context object implements the FrontendPluginContext interface
- * from @omniscribe/plugin-api. Each registerXxx method delegates to the
- * corresponding method on the plugin store, binding the pluginId automatically.
- *
- * @param pluginId - The unique ID of the plugin being activated
- * @param store - The usePluginStore Zustand store
- * @returns A fully-typed FrontendPluginContext
- */
-/**
  * Dispose all subscriptions in a plugin context.
  * Called during frontend plugin deactivation to clean up resources.
  */
@@ -51,6 +40,17 @@ export function disposeFrontendPluginContext(context: PluginContext): void {
   context.subscriptions.length = 0;
 }
 
+/**
+ * Create a FrontendPluginContext for a plugin.
+ *
+ * The returned context object implements the FrontendPluginContext interface
+ * from @omniscribe/plugin-api. Each registerXxx method delegates to the
+ * corresponding method on the plugin store, binding the pluginId automatically.
+ *
+ * @param pluginId - The unique ID of the plugin being activated
+ * @param store - The usePluginStore Zustand store
+ * @returns A fully-typed FrontendPluginContext
+ */
 export function createFrontendPluginContext(
   pluginId: string,
   store: typeof UsePluginStoreType
