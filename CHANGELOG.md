@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## 1.1.0-beta.2 (2026-02-20)
+
+### Bug Fixes
+
+- **Codex usage panel theme colors** — Codex usage popover now uses theme-aware colors (`text-primary`, `bg-primary`, `text-status-warning`, `text-status-error`) via the shared `getStatusInfo`/`UsageCard` utilities instead of hardcoded hex values (`#10A37F`, `#eab308`, `#ef4444`), matching Claude usage panel behavior across all themes
+
 ## 1.1.0-beta.1 (2026-02-20)
 
 ### Features
