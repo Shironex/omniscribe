@@ -2,6 +2,38 @@
 
 All notable changes to this project will be documented in this file.
 
+## 1.1.0-beta.1 (2026-02-20)
+
+### Features
+
+- **Plugin system architecture** — Extensible provider plugin framework with `@omniscribe/plugin-api` package defining backend/frontend interfaces, base classes, and extension points (#179)
+- **Plugin runtime infrastructure** — PluginModule with registry, loader, storage services, gateway, and IPC bridge for managing plugin lifecycle (#179)
+- **Claude provider plugin** — Extracted all Claude-specific services (CLI detection, command builder, session launcher, usage fetcher, status parser) into `@omniscribe/provider-claude` plugin package (#179)
+- **Codex provider plugin** — New `@omniscribe/provider-codex` plugin with CLI detection, command builder, usage fetcher/parser, settings UI, and custom themes (#179)
+- **Frontend plugin framework** — ExtensionSlot components, FrontendPluginContext factory, plugin UI SDK, runtime theme injection, and plugin initialization hook (#179)
+- **Dynamic settings & marketplace** — Registry-driven settings navigation with per-plugin sections and a marketplace UI for managing providers (#179)
+- **Multi-provider usage popover** — Tabbed usage popover showing per-provider usage data with provider-specific panels (#179)
+- **Documentation site** — Docusaurus-powered docs at with architecture guides, feature docs, SDK reference, and download page (#179)
+
+### Bug Fixes
+
+- **Plugin theme cascade** — Handle plugin theme classes in `applyThemeToDOM` and Sonner toast provider (#179)
+- **Mode picker cleanup** — Hide disabled providers from mode picker dropdowns (#179)
+- **Extension UI refresh** — Update extension UI when toggling providers on/off (#179)
+- **CI plugin builds** — Build plugin packages before typecheck and tests, add missing frontend dependencies (#179)
+
+### Testing
+
+- **Plugin infrastructure tests** — Unit tests for PluginRegistryService, PluginStorageService, PluginLoaderService, and PluginGateway (#179)
+- **Claude provider tests** — Leaf service and plugin class unit tests for Claude provider (#179)
+- **Codex provider tests** — Comprehensive backend service tests for Codex provider (#179)
+- **Updated delegation tests** — Updated session module, usage, and guard tests for plugin delegation (#179)
+
+### Stats
+
+- 1 PR merged (68 commits)
+- 208 files changed — +37,822 / −10,424 lines
+
 ## 1.0.0 (2026-02-18)
 
 ### Features
