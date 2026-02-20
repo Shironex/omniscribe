@@ -126,14 +126,15 @@ export class PluginGateway implements OnGatewayInit {
     @MessageBody() payload: PluginInvokePayload
   ): Promise<{ result?: unknown; error?: string }> {
     try {
-      const { pluginId, method, args = [] } = payload;
+      const { pluginId, method } = payload;
+      const args = Array.isArray(payload.args) ? payload.args : [];
 
       // Security: only allow methods defined on the AiProviderPlugin interface
       if (!ALLOWED_PROVIDER_INVOKE_METHODS.has(method)) {
-        return { error: `Method '${method}' is not allowed for remote invocation` };
+        return { error: 'Method is not allowed for remote invocation' };
       }
 
-      // Find the provider entry by plugin ID (O(n) scan, but small N)
+      // Find the provider entry by plugin ID
       const entry = this.registryService.getProviderEntryByPluginId(pluginId);
       if (!entry) {
         return { error: `No provider found with pluginId: ${pluginId}` };

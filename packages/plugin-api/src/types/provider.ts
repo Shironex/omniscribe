@@ -217,19 +217,26 @@ export interface AiProviderPlugin extends OmniscribePlugin {
 export type ProviderPluginContext = PluginContext;
 
 /**
+ * Provider-specific method names from `AiProviderPlugin`, excluding
+ * properties inherited from `OmniscribePlugin` and readonly fields.
+ * Used as a compile-time guard so the allowlist below stays in sync
+ * with the interface — renaming or removing a method surfaces a type error.
+ */
+type AiProviderPluginMethods = Exclude<
+  keyof AiProviderPlugin,
+  keyof OmniscribePlugin | 'type' | 'capabilities' | 'aiMode' | 'activationEvents'
+>;
+
+/**
  * Methods on `AiProviderPlugin` that may be invoked remotely via the
  * `plugin:invoke` WebSocket event.  Any method NOT in this set will be
  * rejected at runtime to prevent prototype-chain traversal and
  * invocation of internal/lifecycle methods.
- *
- * Keep in sync with the `AiProviderPlugin` interface above.
  */
-export const ALLOWED_PROVIDER_INVOKE_METHODS: ReadonlySet<string> = new Set([
-  // Required
+const methods: readonly AiProviderPluginMethods[] = [
   'detectCli',
   'buildLaunchCommand',
   'parseTerminalStatus',
-  // Optional
   'parseUsage',
   'readSessionHistory',
   'buildResumeCommand',
@@ -237,4 +244,6 @@ export const ALLOWED_PROVIDER_INVOKE_METHODS: ReadonlySet<string> = new Set([
   'buildContinueCommand',
   'getMcpConfig',
   'getSystemPromptAdditions',
-]);
+] as const;
+
+export const ALLOWED_PROVIDER_INVOKE_METHODS: ReadonlySet<string> = new Set(methods);

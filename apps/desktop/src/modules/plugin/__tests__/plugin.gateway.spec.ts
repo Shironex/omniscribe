@@ -336,6 +336,7 @@ describe('PluginGateway', () => {
         const result = await gateway.handleInvoke(mockSocket, payload);
 
         expect(result.error).toContain('not allowed for remote invocation');
+        expect(mockRegistryService.getProviderEntryByPluginId).not.toHaveBeenCalled();
       });
 
       it('should reject prototype method: toString', async () => {
@@ -347,6 +348,7 @@ describe('PluginGateway', () => {
         const result = await gateway.handleInvoke(mockSocket, payload);
 
         expect(result.error).toContain('not allowed for remote invocation');
+        expect(mockRegistryService.getProviderEntryByPluginId).not.toHaveBeenCalled();
       });
 
       it('should reject prototype method: hasOwnProperty', async () => {
@@ -358,6 +360,7 @@ describe('PluginGateway', () => {
         const result = await gateway.handleInvoke(mockSocket, payload);
 
         expect(result.error).toContain('not allowed for remote invocation');
+        expect(mockRegistryService.getProviderEntryByPluginId).not.toHaveBeenCalled();
       });
 
       it('should reject lifecycle method: activate', async () => {
@@ -369,6 +372,7 @@ describe('PluginGateway', () => {
         const result = await gateway.handleInvoke(mockSocket, payload);
 
         expect(result.error).toContain('not allowed for remote invocation');
+        expect(mockRegistryService.getProviderEntryByPluginId).not.toHaveBeenCalled();
       });
 
       it('should reject lifecycle method: deactivate', async () => {
@@ -380,6 +384,7 @@ describe('PluginGateway', () => {
         const result = await gateway.handleInvoke(mockSocket, payload);
 
         expect(result.error).toContain('not allowed for remote invocation');
+        expect(mockRegistryService.getProviderEntryByPluginId).not.toHaveBeenCalled();
       });
 
       it('should reject internal accessor: getSessionReader', async () => {
@@ -391,6 +396,7 @@ describe('PluginGateway', () => {
         const result = await gateway.handleInvoke(mockSocket, payload);
 
         expect(result.error).toContain('not allowed for remote invocation');
+        expect(mockRegistryService.getProviderEntryByPluginId).not.toHaveBeenCalled();
       });
 
       it('should reject arbitrary method names', async () => {
@@ -402,6 +408,7 @@ describe('PluginGateway', () => {
         const result = await gateway.handleInvoke(mockSocket, payload);
 
         expect(result.error).toContain('not allowed for remote invocation');
+        expect(mockRegistryService.getProviderEntryByPluginId).not.toHaveBeenCalled();
       });
 
       it.each([
