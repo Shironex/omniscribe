@@ -138,7 +138,7 @@ describe('PluginGateway', () => {
       });
     });
 
-    it('should disable a provider without deactivation call', async () => {
+    it('should disable a provider and call deactivateProvider', async () => {
       const payload: PluginSetEnabledPayload = { aiMode: 'test-mode', enabled: false };
       mockRegistryService.setEnabled.mockReturnValue(true);
 
@@ -146,6 +146,7 @@ describe('PluginGateway', () => {
 
       expect(result).toEqual({ success: true });
       expect(mockRegistryService.setEnabled).toHaveBeenCalledWith('test-mode', false);
+      expect(mockLoaderService.deactivateProvider).toHaveBeenCalledWith('test-mode');
       expect(mockLoaderService.activateProvider).not.toHaveBeenCalled();
       expect(mockServer.emit).toHaveBeenCalledWith('plugin:provider-enabled', {
         aiMode: 'test-mode',

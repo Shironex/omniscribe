@@ -12,6 +12,7 @@ import type {
   FrontendPluginContext,
   Disposable,
   PluginLogger,
+  PluginContext,
   SettingsCategoryRegistration,
   SettingsSectionRegistration,
   SessionStatusRendererRegistration,
@@ -23,6 +24,21 @@ import type {
 } from '@omniscribe/plugin-api';
 import { createLogger } from '@omniscribe/shared';
 import type { usePluginStore as UsePluginStoreType } from '@/stores/usePluginStore';
+
+/**
+ * Dispose all subscriptions in a plugin context.
+ * Called during frontend plugin deactivation to clean up resources.
+ */
+export function disposeFrontendPluginContext(context: PluginContext): void {
+  for (const disposable of context.subscriptions) {
+    try {
+      disposable.dispose();
+    } catch {
+      // Swallow disposal errors
+    }
+  }
+  context.subscriptions.length = 0;
+}
 
 /**
  * Create a FrontendPluginContext for a plugin.

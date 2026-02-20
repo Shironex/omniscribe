@@ -1,4 +1,4 @@
-import { Injectable, Inject, OnModuleInit } from '@nestjs/common';
+import { Injectable, Inject, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { isProviderPlugin, validateManifest } from '@omniscribe/plugin-api';
 import type { OmniscribePlugin, CliDetectionResult } from '@omniscribe/plugin-api';
@@ -6,7 +6,7 @@ import { createLogger, extractErrorMessage } from '@omniscribe/shared';
 import type { PluginDefinition } from './types';
 import { PluginRegistryService } from './plugin-registry.service';
 import { PluginStorageService } from './plugin-storage.service';
-import { createPluginContext } from './plugin-context.factory';
+import { createPluginContext, disposePluginContext } from './plugin-context.factory';
 import { InternalPluginEvents } from '../shared/events';
 
 /**
@@ -20,7 +20,7 @@ import { InternalPluginEvents } from '../shared/events';
  * wrapped in try/catch to ensure plugin errors never crash the app.
  */
 @Injectable()
-export class PluginLoaderService implements OnModuleInit {
+export class PluginLoaderService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = createLogger('PluginLoader');
 
   constructor(
@@ -85,6 +85,7 @@ export class PluginLoaderService implements OnModuleInit {
       );
       await entry.plugin.activate(context);
       entry.activated = true;
+      entry.context = context;
       this.eventEmitter.emit(InternalPluginEvents.ACTIVATED(entry.manifest.id), {
         pluginId: entry.manifest.id,
       });
@@ -116,14 +117,19 @@ export class PluginLoaderService implements OnModuleInit {
         pluginId: entry.manifest.id,
       });
       this.logger.log(`Deactivated provider '${entry.plugin.aiMode}'`);
-      return true;
     } catch (error) {
       const msg = extractErrorMessage(error);
       this.logger.warn(`Error deactivating provider '${aiMode}': ${msg}`);
       // Mark as deactivated regardless -- best-effort cleanup
       entry.activated = false;
-      return true;
+    } finally {
+      // Dispose context subscriptions regardless of deactivation success/failure
+      if (entry.context) {
+        disposePluginContext(entry.context);
+        entry.context = undefined;
+      }
     }
+    return true;
   }
 
   /**
@@ -186,21 +192,29 @@ export class PluginLoaderService implements OnModuleInit {
 
     // Auto-activate if requested (e.g., first-party Claude provider)
     if (definition.autoActivate && enabled) {
+      const activated = await this.activateProvider(plugin.aiMode);
+      if (activated) {
+        this.logger.log(`Auto-activated provider '${plugin.aiMode}'`);
+      }
+    }
+  }
+
+  /**
+   * Called by NestJS during application shutdown.
+   * Deactivates all active providers for graceful cleanup.
+   */
+  async onModuleDestroy(): Promise<void> {
+    const providers = this.registry.listProviders();
+    const activeProviders = providers.filter(p => p.activated);
+    if (activeProviders.length === 0) return;
+
+    this.logger.log(`Shutting down ${activeProviders.length} active provider(s)`);
+    for (const provider of activeProviders) {
       try {
-        const context = createPluginContext(manifest.id, this.eventEmitter, this.storageService);
-        await plugin.activate(context);
-        // Get the entry we just registered and mark it activated
-        const entry = this.registry.getProviderEntry(plugin.aiMode);
-        if (entry) {
-          entry.activated = true;
-          this.eventEmitter.emit(InternalPluginEvents.ACTIVATED(manifest.id), {
-            pluginId: manifest.id,
-          });
-          this.logger.log(`Auto-activated provider '${plugin.aiMode}'`);
-        }
+        await this.deactivateProvider(provider.aiMode);
       } catch (error) {
         const msg = extractErrorMessage(error);
-        this.logger.error(`Failed to auto-activate provider '${plugin.aiMode}': ${msg}`);
+        this.logger.warn(`Error during shutdown deactivation of '${provider.aiMode}': ${msg}`);
       }
     }
   }

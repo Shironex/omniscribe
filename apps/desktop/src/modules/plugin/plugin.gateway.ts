@@ -86,6 +86,9 @@ export class PluginGateway implements OnGatewayInit {
         if (entry && !entry.activated) {
           await this.loaderService.activateProvider(aiMode);
         }
+      } else {
+        // Deactivate the provider when disabling (calls plugin.deactivate() + disposes context)
+        await this.loaderService.deactivateProvider(aiMode);
       }
 
       // Broadcast the enabled state change to all clients
