@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## 1.1.0-beta.3 (2026-02-20)
+
+### Bug Fixes
+
+- **Weekly usage parsing broken** — Claude Code v2.1.49 TUI renders word separators as `ESC[nC` (Cursor Forward) instead of literal spaces; `stripAnsiCodes` now replaces these with spaces, fixing "Current week (all models)" label matching that was showing 0% instead of the actual percentage
+
 ## 1.1.0-beta.2 (2026-02-20)
 
 ### Bug Fixes
