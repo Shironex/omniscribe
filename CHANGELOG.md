@@ -13,7 +13,7 @@ All notable changes to this project will be documented in this file.
 - **Frontend plugin framework** — ExtensionSlot components, FrontendPluginContext factory, plugin UI SDK, runtime theme injection, and plugin initialization hook (#179)
 - **Dynamic settings & marketplace** — Registry-driven settings navigation with per-plugin sections and a marketplace UI for managing providers (#179)
 - **Multi-provider usage popover** — Tabbed usage popover showing per-provider usage data with provider-specific panels (#179)
-- **Documentation site** — Docusaurus-powered docs at with architecture guides, feature docs, SDK reference, and download page (#179)
+- **Documentation site** — Docusaurus-powered docs with architecture guides, feature docs, SDK reference, and download page (#179)
 
 ### Bug Fixes
 
