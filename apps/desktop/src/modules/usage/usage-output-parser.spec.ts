@@ -43,6 +43,23 @@ describe('UsageOutputParser', () => {
       const input = 'hello\x00\x01\x02world';
       expect(stripAnsiCodes(input)).toBe('helloworld');
     });
+
+    it('should replace cursor forward (CUF) sequences with spaces', () => {
+      // ESC[1C = cursor forward 1 = 1 space
+      const input = 'Current\x1B[1Cweek\x1B[1C(all\x1B[1Cmodels)';
+      expect(stripAnsiCodes(input)).toBe('Current week (all models)');
+    });
+
+    it('should handle cursor forward with explicit count', () => {
+      // ESC[3C = cursor forward 3 = 3 spaces
+      const input = 'hello\x1B[3Cworld';
+      expect(stripAnsiCodes(input)).toBe('hello   world');
+    });
+
+    it('should handle cursor forward with no count (defaults to 1)', () => {
+      const input = 'a\x1B[Cb';
+      expect(stripAnsiCodes(input)).toBe('a b');
+    });
   });
 
   // ================================================================
@@ -338,6 +355,34 @@ describe('UsageOutputParser', () => {
       const usage = parser.parseUsageOutput('Current session\n  10% used\n');
       expect(typeof usage.userTimezone).toBe('string');
       expect(usage.userTimezone.length).toBeGreaterThan(0);
+    });
+  });
+
+  // ================================================================
+  // parseUsageOutput() — TUI output with cursor forward sequences
+  // ================================================================
+  describe('TUI output with cursor forward (CUF) sequences', () => {
+    it('should parse weekly usage when words are separated by ESC[1C', () => {
+      // Real CC v2.1.49 TUI output uses ESC[1C (cursor forward 1) instead of spaces
+      const tuiOutput = [
+        '\x1B[1mCurrent session\x1B[22m',
+        '\x1B[47m\x1B[33m█████████████████                                 \x1B[1C\x1B[39m\x1B[49m34%\x1B[1Cused',
+        '\x1B[37mResets\x1B[1Cin\x1B[1C3h\x1B[1C15m\x1B[39m',
+        '',
+        '\x1B[1mCurrent\x1B[1Cweek\x1B[1C(all\x1B[1Cmodels)\x1B[22m',
+        '\x1B[47m\x1B[33m████████████████▌                                 \x1B[1C\x1B[39m\x1B[49m33%\x1B[1Cused',
+        '\x1B[37mResets\x1B[1CFeb\x1B[1C24\x1B[1Cat\x1B[1C6:59pm\x1B[1C(Europe/Warsaw)\x1B[39m',
+        '',
+        '\x1B[1mCurrent\x1B[1Cweek\x1B[1C(Sonnet\x1B[1Conly)\x1B[22m',
+        '\x1B[47m\x1B[33m                                                  \x1B[1C\x1B[39m\x1B[49m0%\x1B[1Cused',
+        '\x1B[37mResets\x1B[1CFeb\x1B[1C25\x1B[1Cat\x1B[1C10pm\x1B[1C(Europe/Warsaw)\x1B[39m',
+      ].join('\r\n');
+
+      const usage = parser.parseUsageOutput(tuiOutput);
+
+      expect(usage.sessionPercentage).toBe(34);
+      expect(usage.weeklyPercentage).toBe(33);
+      expect(usage.sonnetWeeklyPercentage).toBe(0);
     });
   });
 

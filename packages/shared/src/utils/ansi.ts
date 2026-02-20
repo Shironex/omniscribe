@@ -3,11 +3,16 @@
  *
  * Handles CSI sequences, OSC sequences, other ESC sequences,
  * carriage returns, backspaces, and remaining control characters.
+ *
+ * Cursor Forward (CUF) sequences are replaced with spaces to preserve
+ * horizontal spacing that TUI frameworks (like Ink) use between words.
  */
 export function stripAnsiCodes(text: string): string {
   /* eslint-disable no-control-regex */
   let clean = text
-    // CSI sequences
+    // Cursor Forward (CUF): ESC[nC → n spaces (preserves word spacing from TUI output)
+    .replace(/\x1B\[(\d*)C/g, (_, n) => ' '.repeat(parseInt(n || '1', 10)))
+    // Remaining CSI sequences (colors, formatting, other cursor movements)
     .replace(/\x1B\[[0-9;?]*[A-Za-z@]/g, '')
     // OSC sequences
     .replace(/\x1B\][^\x07\x1B]*(?:\x07|\x1B\\)?/g, '')
