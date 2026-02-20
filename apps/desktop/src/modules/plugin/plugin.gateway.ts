@@ -16,8 +16,14 @@ import { InternalPluginEvents } from '../shared/events';
 import { PluginRegistryService } from './plugin-registry.service';
 import { PluginLoaderService } from './plugin-loader.service';
 import { ALLOWED_PROVIDER_INVOKE_METHODS } from '@omniscribe/plugin-api';
-import { PluginEvents, createLogger, extractErrorMessage } from '@omniscribe/shared';
-import type { PluginSetEnabledPayload, PluginInvokePayload, ProviderInfo } from './types';
+import {
+  PluginEvents,
+  createLogger,
+  extractErrorMessage,
+  type PluginSetEnabledPayload,
+  type PluginInvokePayload,
+  type ProviderInfo,
+} from '@omniscribe/shared';
 
 @UseGuards(WsThrottlerGuard)
 @WebSocketGateway({
@@ -137,10 +143,10 @@ export class PluginGateway implements OnGatewayInit {
       // Find the provider entry by plugin ID
       const entry = this.registryService.getProviderEntryByPluginId(pluginId);
       if (!entry) {
-        return { error: `No provider found with pluginId: ${pluginId}` };
+        return { error: 'No provider found for the given pluginId' };
       }
       if (!entry.activated) {
-        return { error: `Provider '${pluginId}' is not activated` };
+        return { error: 'Provider is not activated' };
       }
 
       // Invoke the allowed method on the plugin
