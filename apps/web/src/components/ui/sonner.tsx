@@ -2,17 +2,15 @@ import { Toaster as Sonner } from 'sonner';
 
 import { getThemeOption } from '@/lib/theme';
 import { useSettingsStore, selectEffectiveTheme } from '@/stores/useSettingsStore';
-import { usePluginStore } from '@/stores';
+import { getPluginTheme } from '@/stores/usePluginStore';
 
 type ToasterProps = React.ComponentProps<typeof Sonner>;
 
 const Toaster = ({ ...props }: ToasterProps) => {
   const effectiveTheme = useSettingsStore(selectEffectiveTheme);
   const themeOption = getThemeOption(effectiveTheme);
-  const pluginThemes = usePluginStore(s => s.themes);
-
   // Check built-in themes first, then plugin themes, default to dark
-  const isDark = themeOption?.isDark ?? pluginThemes.get(effectiveTheme)?.isDark ?? true;
+  const isDark = themeOption?.isDark ?? getPluginTheme(effectiveTheme)?.isDark ?? true;
 
   return (
     <Sonner

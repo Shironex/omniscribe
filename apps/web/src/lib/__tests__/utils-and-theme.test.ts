@@ -238,9 +238,9 @@ describe('theme-persistence', () => {
       expect(getPersistedTheme()).toBe('nord');
     });
 
-    it('returns "dark" when stored value is not a valid theme', () => {
+    it('returns stored value even for unknown theme IDs (plugin themes)', () => {
       localStorage.setItem(THEME_STORAGE_KEY, 'nonexistent-theme');
-      expect(getPersistedTheme()).toBe('dark');
+      expect(getPersistedTheme()).toBe('nonexistent-theme');
     });
 
     it('returns "dark" when localStorage throws', () => {

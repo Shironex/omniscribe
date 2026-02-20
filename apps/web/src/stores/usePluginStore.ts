@@ -487,6 +487,16 @@ export const usePluginStore = create<PluginStore>()(
           return { dispose: () => {} };
         }
 
+        // Warn if another plugin already registered the same bare theme ID
+        for (const [existingKey, existing] of get().themes) {
+          if (existing.id === reg.id && existingKey !== key) {
+            logger.warn(
+              `Theme ID "${reg.id}" from plugin "${pluginId}" collides with the same ID from plugin "${existing.pluginId}". The earlier registration will be shadowed.`
+            );
+            break;
+          }
+        }
+
         logger.debug('registerTheme', key);
 
         set(
@@ -737,6 +747,19 @@ export function getMoreMenuItems(aiMode?: string): WithPluginId<MoreMenuItemRegi
 export function getAllThemes(): WithPluginId<ThemeRegistration>[] {
   const state = usePluginStore.getState();
   return Array.from(state.themes.values());
+}
+
+/**
+ * Get a plugin theme registration by its bare theme ID (e.g. "codex-dark").
+ * The themes Map is keyed by compound keys (`${pluginId}:${reg.id}`),
+ * so direct `.get(themeId)` won't work — this scans values instead.
+ */
+export function getPluginTheme(themeId: string): WithPluginId<ThemeRegistration> | undefined {
+  const state = usePluginStore.getState();
+  for (const [, reg] of state.themes) {
+    if (reg.id === themeId) return reg;
+  }
+  return undefined;
 }
 
 /**

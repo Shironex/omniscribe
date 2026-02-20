@@ -56,8 +56,8 @@ export function AppearanceSection() {
   const currentTheme = themeOptions.find(t => t.value === effectiveTheme);
   const [activeTab, setActiveTab] = useState<TabValue>(() => {
     if (currentTheme) return currentTheme.isDark ? 'dark' : 'light';
-    // Check if it's a plugin theme
-    const pluginTheme = pluginThemesMap.get(effectiveTheme);
+    // Check if it's a plugin theme (Map is keyed by compound key, search by bare ID)
+    const pluginTheme = Array.from(pluginThemesMap.values()).find(t => t.id === effectiveTheme);
     return pluginTheme?.isDark ? 'dark' : 'light';
   });
 

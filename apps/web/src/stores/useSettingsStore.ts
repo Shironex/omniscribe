@@ -10,7 +10,7 @@ import type {
 import { createLogger } from '@omniscribe/shared';
 import { themeOptions } from '@/lib/theme';
 import { persistTheme, getPersistedTheme } from '@/lib/theme-persistence';
-import { usePluginStore } from '@/stores/usePluginStore';
+import { getPluginTheme } from '@/stores/usePluginStore';
 
 const logger = createLogger('Settings');
 
@@ -119,7 +119,7 @@ function applyThemeToDOM(theme: Theme) {
   root.classList.remove(...allThemeClasses);
 
   // Check if this is a plugin theme that needs a base class
-  const pluginTheme = usePluginStore.getState().themes.get(theme);
+  const pluginTheme = getPluginTheme(theme);
   if (pluginTheme) {
     // Plugin themes cascade on top of the base dark/light theme
     const baseClass = pluginTheme.isDark ? 'dark' : 'light';

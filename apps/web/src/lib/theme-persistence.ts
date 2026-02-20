@@ -9,7 +9,6 @@ export const THEME_STORAGE_KEY = 'omniscribe-theme';
  * Set of dark theme values, derived from the single source of truth in theme.ts.
  */
 const darkThemeSet: Set<string> = new Set(themeOptions.filter(t => t.isDark).map(t => t.value));
-const themeValueSet: Set<string> = new Set(themeOptions.map(t => t.value));
 
 /**
  * Persist the current theme to localStorage for instant restoration on next startup.
@@ -26,11 +25,14 @@ export function persistTheme(theme: string): void {
 /**
  * Read the persisted theme from localStorage.
  * Returns 'dark' as a safe fallback if nothing is stored or localStorage is unavailable.
+ *
+ * Accepts any non-empty stored value (not just built-in themes) because plugin
+ * themes use arbitrary string IDs that aren't known until plugins load later.
  */
 export function getPersistedTheme(): string {
   try {
     const stored = localStorage.getItem(THEME_STORAGE_KEY);
-    return stored && themeValueSet.has(stored) ? stored : 'dark';
+    return stored ? stored : 'dark';
   } catch {
     return 'dark';
   }
