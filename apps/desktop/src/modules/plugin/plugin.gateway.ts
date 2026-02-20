@@ -15,8 +15,15 @@ import { CORS_CONFIG } from '../shared/cors.config';
 import { InternalPluginEvents } from '../shared/events';
 import { PluginRegistryService } from './plugin-registry.service';
 import { PluginLoaderService } from './plugin-loader.service';
-import { PluginEvents, createLogger, extractErrorMessage } from '@omniscribe/shared';
-import type { PluginSetEnabledPayload, PluginInvokePayload, ProviderInfo } from './types';
+import { ALLOWED_PROVIDER_INVOKE_METHODS } from '@omniscribe/plugin-api';
+import {
+  PluginEvents,
+  createLogger,
+  extractErrorMessage,
+  type PluginSetEnabledPayload,
+  type PluginInvokePayload,
+  type ProviderInfo,
+} from '@omniscribe/shared';
 
 @UseGuards(WsThrottlerGuard)
 @WebSocketGateway({
@@ -115,7 +122,7 @@ export class PluginGateway implements OnGatewayInit {
   }
 
   /**
-   * Invoke a method on a plugin by its aiMode.
+   * Invoke an allowed method on a plugin by its pluginId.
    * Used for ad-hoc plugin method calls from the frontend.
    */
   @SkipThrottle()
@@ -125,24 +132,24 @@ export class PluginGateway implements OnGatewayInit {
     @MessageBody() payload: PluginInvokePayload
   ): Promise<{ result?: unknown; error?: string }> {
     try {
-      const { pluginId, method, args = [] } = payload;
+      const { pluginId, method } = payload;
+      const args = Array.isArray(payload.args) ? payload.args : [];
+
+      // Security: only allow methods defined on the AiProviderPlugin interface
+      if (!ALLOWED_PROVIDER_INVOKE_METHODS.has(method)) {
+        return { error: 'Method is not allowed for remote invocation' };
+      }
 
       // Find the provider entry by plugin ID
-      const providers = this.registryService.listProviders();
-      const providerInfo = providers.find(p => p.id === pluginId);
-      if (!providerInfo) {
-        return { error: `No provider found with pluginId: ${pluginId}` };
-      }
-
-      const entry = this.registryService.getProviderEntry(providerInfo.aiMode);
+      const entry = this.registryService.getProviderEntryByPluginId(pluginId);
       if (!entry) {
-        return { error: `Provider entry not found for aiMode: ${providerInfo.aiMode}` };
+        return { error: 'No provider found for the given pluginId' };
       }
       if (!entry.activated) {
-        return { error: `Provider '${pluginId}' is not activated` };
+        return { error: 'Provider is not activated' };
       }
 
-      // Invoke the method on the plugin (type-safe access via dynamic lookup)
+      // Invoke the allowed method on the plugin
       const plugin = entry.plugin as unknown as Record<string, unknown>;
       const fn = plugin[method];
       if (typeof fn !== 'function') {

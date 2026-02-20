@@ -146,6 +146,53 @@ describe('PluginRegistryService', () => {
   });
 
   // ================================================================
+  // getProviderEntryByPluginId
+  // ================================================================
+  describe('getProviderEntryByPluginId', () => {
+    it('should return entry for registered plugin ID', () => {
+      const entry = createMockProvider('my-ai', {
+        manifest: createMockManifest({ id: 'my-plugin' }),
+      });
+      service.registerProvider(entry);
+
+      expect(service.getProviderEntryByPluginId('my-plugin')).toBe(entry);
+    });
+
+    it('should return undefined for unknown plugin ID', () => {
+      expect(service.getProviderEntryByPluginId('nonexistent')).toBeUndefined();
+    });
+
+    it('should update secondary index when overwriting same aiMode', () => {
+      const first = createMockProvider('my-ai', {
+        manifest: createMockManifest({ id: 'plugin-v1' }),
+      });
+      const second = createMockProvider('my-ai', {
+        manifest: createMockManifest({ id: 'plugin-v2' }),
+      });
+
+      service.registerProvider(first);
+      service.registerProvider(second);
+
+      expect(service.getProviderEntryByPluginId('plugin-v2')).toBe(second);
+    });
+
+    it('should handle two providers with different aiModes but distinct plugin IDs', () => {
+      const entryA = createMockProvider('ai-a', {
+        manifest: createMockManifest({ id: 'plugin-a' }),
+      });
+      const entryB = createMockProvider('ai-b', {
+        manifest: createMockManifest({ id: 'plugin-b' }),
+      });
+
+      service.registerProvider(entryA);
+      service.registerProvider(entryB);
+
+      expect(service.getProviderEntryByPluginId('plugin-a')).toBe(entryA);
+      expect(service.getProviderEntryByPluginId('plugin-b')).toBe(entryB);
+    });
+  });
+
+  // ================================================================
   // isPluginMode
   // ================================================================
   describe('isPluginMode', () => {

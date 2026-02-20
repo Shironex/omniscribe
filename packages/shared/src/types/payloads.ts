@@ -919,3 +919,50 @@ export interface ActiveSessionSnapshot {
 export interface SessionHookEndedPayload {
   claudeSessionId: string;
 }
+
+// ============================================
+// Plugin Payloads
+// ============================================
+
+/**
+ * CLI detection status for WebSocket transport.
+ * Structurally compatible with `CliDetectionResult` from `@omniscribe/plugin-api`.
+ */
+export interface CliDetectionStatus {
+  installed: boolean;
+  version?: string;
+  path?: string;
+  auth?: { authenticated: boolean };
+  error?: string;
+}
+
+/**
+ * Serializable provider info for WebSocket transport (no class instances).
+ */
+export interface ProviderInfo {
+  id: string;
+  displayName: string;
+  description: string;
+  aiMode: string;
+  icon?: string;
+  enabled: boolean;
+  activated: boolean;
+  cliStatus: CliDetectionStatus;
+}
+
+/**
+ * Payload for invoking a method on a plugin remotely.
+ */
+export interface PluginInvokePayload {
+  pluginId: string;
+  method: string;
+  args?: unknown[];
+}
+
+/**
+ * Payload for enabling/disabling a provider plugin.
+ */
+export interface PluginSetEnabledPayload {
+  aiMode: string;
+  enabled: boolean;
+}

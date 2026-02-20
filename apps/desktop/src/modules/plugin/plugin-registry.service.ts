@@ -15,6 +15,7 @@ import type { RegisteredProvider, ProviderInfo } from './types';
 export class PluginRegistryService {
   private readonly logger = createLogger('PluginRegistry');
   private providers = new Map<string, RegisteredProvider>();
+  private providersByPluginId = new Map<string, RegisteredProvider>();
 
   /**
    * Register a provider plugin entry in the registry.
@@ -27,6 +28,7 @@ export class PluginRegistryService {
       );
     }
     this.providers.set(entry.plugin.aiMode, entry);
+    this.providersByPluginId.set(entry.manifest.id, entry);
     this.logger.log(
       `Registered provider '${entry.manifest.displayName}' for aiMode '${entry.plugin.aiMode}'`
     );
@@ -56,6 +58,14 @@ export class PluginRegistryService {
    */
   getProviderEntry(aiMode: string): RegisteredProvider | undefined {
     return this.providers.get(aiMode);
+  }
+
+  /**
+   * Look up a provider entry by its manifest plugin ID (e.g. 'provider-claude').
+   * O(1) via secondary index. Returns undefined if no match is found.
+   */
+  getProviderEntryByPluginId(pluginId: string): RegisteredProvider | undefined {
+    return this.providersByPluginId.get(pluginId);
   }
 
   /**

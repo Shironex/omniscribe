@@ -5,6 +5,13 @@ import type {
   OmniscribePlugin,
 } from '@omniscribe/plugin-api';
 
+// Re-export payload types from shared for convenience
+export type {
+  ProviderInfo,
+  PluginInvokePayload,
+  PluginSetEnabledPayload,
+} from '@omniscribe/shared';
+
 /** Definition for registering a plugin at bootstrap */
 export interface PluginDefinition {
   /** Plugin manifest from package.json omniscribe field */
@@ -29,31 +36,6 @@ export interface RegisteredProvider {
   enabled: boolean;
   /** Whether the plugin is currently activated (lifecycle) */
   activated: boolean;
-}
-
-/** Serializable provider info for WebSocket transport (no class instances) */
-export interface ProviderInfo {
-  id: string;
-  displayName: string;
-  description: string;
-  aiMode: string;
-  icon?: string;
-  enabled: boolean;
-  activated: boolean;
-  cliStatus: CliDetectionResult;
-}
-
-/** Plugin invoke request payload */
-export interface PluginInvokePayload {
-  pluginId: string;
-  method: string;
-  args?: unknown[];
-}
-
-/** Plugin set-enabled payload */
-export interface PluginSetEnabledPayload {
-  aiMode: string;
-  enabled: boolean;
 }
 
 /**

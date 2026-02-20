@@ -10,33 +10,16 @@ import type {
   MoreMenuItemRegistration,
   ThemeRegistration,
   Disposable,
-  CliDetectionResult,
 } from '@omniscribe/plugin-api';
-import { ALL_THEMES, PluginEvents, createLogger } from '@omniscribe/shared';
+import { ALL_THEMES, PluginEvents, createLogger, type ProviderInfo } from '@omniscribe/shared';
 import { getSocket, emitAsync } from '@/lib/socket';
 import { injectThemeStyles, removeThemeStyles } from '@/lib/plugin-theme-injector';
 import type { NavigationGroup, NavigationItem } from '@/components/settings/navigation-config';
 
 const logger = createLogger('PluginStore');
 
-// ==========================================
-// Provider Info (mirrors backend ProviderInfo)
-// ==========================================
-
-/**
- * Serializable provider info from the backend.
- * Matches the `ProviderInfo` type in `apps/desktop/src/modules/plugin/types.ts`.
- */
-export interface ProviderInfo {
-  id: string;
-  displayName: string;
-  description: string;
-  aiMode: string;
-  icon?: string;
-  enabled: boolean;
-  activated: boolean;
-  cliStatus: CliDetectionResult;
-}
+// Re-export ProviderInfo for consumers that import from this store
+export type { ProviderInfo } from '@omniscribe/shared';
 
 // ==========================================
 // Registration entry types (registration + pluginId)

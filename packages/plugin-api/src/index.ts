@@ -58,6 +58,7 @@ export type {
 // Provider Plugin Interface
 // ==========================================
 export type { AiProviderPlugin, ProviderPluginContext } from './types/provider';
+export { ALLOWED_PROVIDER_INVOKE_METHODS } from './types/provider';
 
 // ==========================================
 // Frontend Plugin Types
