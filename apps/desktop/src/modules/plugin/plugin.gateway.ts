@@ -116,7 +116,7 @@ export class PluginGateway implements OnGatewayInit {
   }
 
   /**
-   * Invoke a method on a plugin by its aiMode.
+   * Invoke an allowed method on a plugin by its pluginId.
    * Used for ad-hoc plugin method calls from the frontend.
    */
   @SkipThrottle()
