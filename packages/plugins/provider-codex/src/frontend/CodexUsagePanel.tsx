@@ -11,6 +11,8 @@ import {
   Badge,
   emitAsync,
   getSocket,
+  UsageCard,
+  getStatusInfo,
 } from '@omniscribe/ui';
 import { RefreshCw, AlertTriangle, ExternalLink, Loader2, Activity } from 'lucide-react';
 import { UsageEvents } from '@omniscribe/shared';
@@ -44,57 +46,9 @@ interface ProviderUsageResponse {
 const POLLING_INTERVAL = 15 * 60 * 1000; // 15 minutes
 const STALE_THRESHOLD = 2 * 60 * 1000; // 2 minutes
 
-/** Raw hex color for progress based on percentage used */
-function getUsedHex(pct: number): string {
-  if (pct >= 90) return '#ef4444'; // red-500
-  if (pct >= 70) return '#eab308'; // yellow-500
-  return '#10A37F'; // OpenAI green
-}
-
-// ---- Metric Card ----
-
-function MetricCard({
-  metric,
-  isPrimary = false,
-  stale = false,
-}: {
-  metric: UsageMetric;
-  isPrimary?: boolean;
-  stale?: boolean;
-}) {
-  const usedPct = metric.percentageType === 'used' ? metric.percentage : 100 - metric.percentage;
-  const hex = getUsedHex(usedPct);
-
-  return (
-    <div
-      className={cn(
-        'rounded-lg border border-border/50 p-3 space-y-2',
-        isPrimary && 'bg-secondary/10',
-        stale && 'opacity-70'
-      )}
-    >
-      <div className="flex items-center justify-between">
-        <span
-          className={cn(
-            'text-xs font-medium',
-            isPrimary ? 'text-foreground' : 'text-muted-foreground'
-          )}
-        >
-          {metric.name}
-        </span>
-        <span className="text-xs font-mono tabular-nums" style={{ color: hex }}>
-          {Math.round(usedPct)}%
-        </span>
-      </div>
-      <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
-        <div
-          className="h-full transition-all duration-500 rounded-full"
-          style={{ width: `${Math.min(usedPct, 100)}%`, backgroundColor: hex }}
-        />
-      </div>
-      {metric.resetText && <p className="text-[10px] text-muted-foreground">{metric.resetText}</p>}
-    </div>
-  );
+/** Convert metric to "used" percentage */
+function toUsedPct(metric: UsageMetric): number {
+  return metric.percentageType === 'used' ? metric.percentage : 100 - metric.percentage;
 }
 
 // ---- Plan Badge ----
@@ -209,12 +163,8 @@ export function CodexUsagePanel({ embedded = false }: UsagePanelProps) {
 
   // Get primary metric for trigger progress bar
   const primaryMetric = metrics?.[0];
-  const primaryPct = primaryMetric
-    ? primaryMetric.percentageType === 'used'
-      ? primaryMetric.percentage
-      : 100 - primaryMetric.percentage
-    : 0;
-  const primaryHex = getUsedHex(primaryPct);
+  const primaryPct = primaryMetric ? toUsedPct(primaryMetric) : 0;
+  const primaryStatus = getStatusInfo(primaryPct);
 
   // Extract plan label from primary metric name if present (e.g., "Rate Limit (Plus)")
   const planMatch = primaryMetric?.name.match(/\((\w+)\)$/);
@@ -235,9 +185,7 @@ export function CodexUsagePanel({ embedded = false }: UsagePanelProps) {
 
   const trigger = (
     <Button variant="ghost" size="sm" className="h-8 gap-2 px-2 hover:bg-accent">
-      <span style={metrics ? { color: primaryHex } : undefined}>
-        <CodexIcon className="w-4 h-4" size={16} />
-      </span>
+      <CodexIcon className={cn('w-4 h-4', metrics && primaryStatus.color)} size={16} />
       {metrics && (
         <div
           className={cn(
@@ -246,8 +194,8 @@ export function CodexUsagePanel({ embedded = false }: UsagePanelProps) {
           )}
         >
           <div
-            className="h-full transition-all duration-500 rounded-full"
-            style={{ width: `${Math.min(primaryPct, 100)}%`, backgroundColor: primaryHex }}
+            className={cn('h-full transition-all duration-500 rounded-full', primaryStatus.bg)}
+            style={{ width: `${Math.min(primaryPct, 100)}%` }}
           />
         </div>
       )}
@@ -259,7 +207,7 @@ export function CodexUsagePanel({ embedded = false }: UsagePanelProps) {
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border/50 bg-secondary/10">
         <div className="flex items-center gap-2">
-          <CodexIcon size={16} className="text-[#10A37F]" />
+          <CodexIcon size={16} />
           <span className="text-sm font-semibold">Codex Usage</span>
           {planLabel && <PlanBadge planLabel={planLabel} />}
         </div>
@@ -301,7 +249,16 @@ export function CodexUsagePanel({ embedded = false }: UsagePanelProps) {
         ) : (
           <>
             {/* Primary metric (first) */}
-            {metrics[0] && <MetricCard metric={metrics[0]} isPrimary stale={isStale} />}
+            {metrics[0] && (
+              <UsageCard
+                title={metrics[0].name}
+                subtitle={metrics[0].category ?? 'Rate limit'}
+                percentage={toUsedPct(metrics[0])}
+                resetText={metrics[0].resetText}
+                isPrimary
+                stale={isStale}
+              />
+            )}
 
             {/* Secondary metrics (remaining) in a grid */}
             {metrics.length > 1 && (
@@ -309,7 +266,14 @@ export function CodexUsagePanel({ embedded = false }: UsagePanelProps) {
                 className={cn('grid gap-3', metrics.length === 2 ? 'grid-cols-1' : 'grid-cols-2')}
               >
                 {metrics.slice(1).map((m, i) => (
-                  <MetricCard key={i} metric={m} stale={isStale} />
+                  <UsageCard
+                    key={i}
+                    title={m.name}
+                    subtitle={m.category ?? 'Rate limit'}
+                    percentage={toUsedPct(m)}
+                    resetText={m.resetText}
+                    stale={isStale}
+                  />
                 ))}
               </div>
             )}
