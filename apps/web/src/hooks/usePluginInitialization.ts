@@ -1,8 +1,9 @@
 import { useEffect, useRef } from 'react';
+import type { FrontendPluginContext } from '@omniscribe/plugin-api';
 import { createLogger } from '@omniscribe/shared';
 import { usePluginStore } from '@/stores/usePluginStore';
 import { useConnectionStore } from '@/stores/useConnectionStore';
-import { createFrontendPluginContext } from '@/lib/plugin-context';
+import { createFrontendPluginContext, disposeFrontendPluginContext } from '@/lib/plugin-context';
 
 const logger = createLogger('PluginInit');
 
@@ -30,6 +31,7 @@ const BUNDLED_FRONTEND_ACTIVATORS: Record<
  */
 export function usePluginInitialization(): void {
   const initRef = useRef(false);
+  const contextsRef = useRef(new Map<string, FrontendPluginContext>());
   const connectionStatus = useConnectionStore(s => s.status);
   const providers = usePluginStore(s => s.providers);
   const frontendPluginsActivated = usePluginStore(s => s.frontendPluginsActivated);
@@ -42,10 +44,11 @@ export function usePluginInitialization(): void {
     }
   }, [connectionStatus]);
 
-  // Activate frontend plugins when providers are loaded from backend
+  // Activate/deactivate frontend plugins based on provider state
   useEffect(() => {
     if (providers.length === 0) return;
 
+    // Activate plugins that should be active
     for (const provider of providers) {
       if (!provider.enabled || !provider.activated) continue;
       if (frontendPluginsActivated.has(provider.id)) continue;
@@ -58,6 +61,7 @@ export function usePluginInitialization(): void {
         .then(mod => {
           if (mod.frontendActivate) {
             const context = createFrontendPluginContext(provider.id, usePluginStore);
+            contextsRef.current.set(provider.id, context);
             mod.frontendActivate(context);
             usePluginStore.getState().activateFrontendPlugin(provider.id);
             logger.info(`Frontend activated: ${provider.displayName}`);
@@ -66,6 +70,21 @@ export function usePluginInitialization(): void {
         .catch(err => {
           logger.error(`Failed to activate frontend for ${provider.id}:`, err);
         });
+    }
+
+    // Deactivate plugins that are no longer active
+    for (const pluginId of frontendPluginsActivated) {
+      const provider = providers.find(p => p.id === pluginId);
+      if (provider && provider.enabled && provider.activated) continue;
+
+      // Dispose context subscriptions
+      const context = contextsRef.current.get(pluginId);
+      if (context) {
+        disposeFrontendPluginContext(context);
+        contextsRef.current.delete(pluginId);
+      }
+      usePluginStore.getState().deactivateFrontendPlugin(pluginId);
+      logger.info(`Frontend deactivated: ${pluginId}`);
     }
   }, [providers, frontendPluginsActivated]);
 }

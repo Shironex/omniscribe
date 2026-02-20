@@ -1,5 +1,6 @@
 import type {
   PluginManifest,
+  PluginContext,
   AiProviderPlugin,
   CliDetectionResult,
   OmniscribePlugin,
@@ -36,6 +37,8 @@ export interface RegisteredProvider {
   enabled: boolean;
   /** Whether the plugin is currently activated (lifecycle) */
   activated: boolean;
+  /** Active plugin context (set during activation, cleared on deactivation) */
+  context?: PluginContext;
 }
 
 /**

@@ -12,6 +12,7 @@ import type {
   FrontendPluginContext,
   Disposable,
   PluginLogger,
+  PluginContext,
   SettingsCategoryRegistration,
   SettingsSectionRegistration,
   SessionStatusRendererRegistration,
@@ -35,6 +36,21 @@ import type { usePluginStore as UsePluginStoreType } from '@/stores/usePluginSto
  * @param store - The usePluginStore Zustand store
  * @returns A fully-typed FrontendPluginContext
  */
+/**
+ * Dispose all subscriptions in a plugin context.
+ * Called during frontend plugin deactivation to clean up resources.
+ */
+export function disposeFrontendPluginContext(context: PluginContext): void {
+  for (const disposable of context.subscriptions) {
+    try {
+      disposable.dispose();
+    } catch {
+      // Swallow disposal errors
+    }
+  }
+  context.subscriptions.length = 0;
+}
+
 export function createFrontendPluginContext(
   pluginId: string,
   store: typeof UsePluginStoreType

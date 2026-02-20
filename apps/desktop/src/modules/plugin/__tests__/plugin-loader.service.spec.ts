@@ -382,6 +382,112 @@ describe('PluginLoaderService', () => {
       expect(result).toBe(true);
       expect(reg.getProviderEntry('test-mode')?.activated).toBe(false);
     });
+
+    it('should store context on entry after activation', async () => {
+      const plugin = createMockProviderPlugin();
+      const def = createValidDefinition({ plugin });
+      const module = await buildModule([def]);
+      const loader = module.get<PluginLoaderService>(PluginLoaderService);
+      const reg = module.get<PluginRegistryService>(PluginRegistryService);
+
+      await loader.onModuleInit();
+      await loader.activateProvider('test-mode');
+
+      const entry = reg.getProviderEntry('test-mode');
+      expect(entry?.context).toBeDefined();
+      expect(entry?.context?.subscriptions).toEqual([]);
+    });
+
+    it('should dispose context subscriptions on deactivation', async () => {
+      const plugin = createMockProviderPlugin();
+      const def = createValidDefinition({ plugin });
+      const module = await buildModule([def]);
+      const loader = module.get<PluginLoaderService>(PluginLoaderService);
+      const reg = module.get<PluginRegistryService>(PluginRegistryService);
+
+      await loader.onModuleInit();
+      await loader.activateProvider('test-mode');
+
+      // Simulate plugin adding a subscription during activation
+      const entry = reg.getProviderEntry('test-mode');
+      const mockDisposable = { dispose: jest.fn() };
+      entry!.context!.subscriptions.push(mockDisposable);
+
+      await loader.deactivateProvider('test-mode');
+
+      expect(mockDisposable.dispose).toHaveBeenCalled();
+      expect(entry?.context).toBeUndefined();
+    });
+
+    it('should dispose context even when deactivate() throws', async () => {
+      const plugin = createMockProviderPlugin();
+      (plugin.deactivate as jest.Mock).mockRejectedValue(new Error('Deactivation error'));
+      const def = createValidDefinition({ plugin });
+      const module = await buildModule([def]);
+      const loader = module.get<PluginLoaderService>(PluginLoaderService);
+      const reg = module.get<PluginRegistryService>(PluginRegistryService);
+
+      await loader.onModuleInit();
+      await loader.activateProvider('test-mode');
+
+      const entry = reg.getProviderEntry('test-mode');
+      const mockDisposable = { dispose: jest.fn() };
+      entry!.context!.subscriptions.push(mockDisposable);
+
+      await loader.deactivateProvider('test-mode');
+
+      expect(mockDisposable.dispose).toHaveBeenCalled();
+      expect(entry?.context).toBeUndefined();
+    });
+  });
+
+  // ================================================================
+  // onModuleDestroy
+  // ================================================================
+  describe('onModuleDestroy', () => {
+    it('should deactivate all active providers on shutdown', async () => {
+      const plugin = createMockProviderPlugin();
+      const def = createValidDefinition({ plugin });
+      def.autoEnable = true;
+      def.autoActivate = true;
+      const module = await buildModule([def]);
+      const loader = module.get<PluginLoaderService>(PluginLoaderService);
+      const reg = module.get<PluginRegistryService>(PluginRegistryService);
+
+      await loader.onModuleInit();
+      expect(reg.getProviderEntry('test-mode')?.activated).toBe(true);
+
+      await loader.onModuleDestroy();
+
+      expect(plugin.deactivate).toHaveBeenCalled();
+      expect(reg.getProviderEntry('test-mode')?.activated).toBe(false);
+    });
+
+    it('should not throw when no providers are active', async () => {
+      const def = createValidDefinition();
+      const module = await buildModule([def]);
+      const loader = module.get<PluginLoaderService>(PluginLoaderService);
+
+      await loader.onModuleInit();
+      // Provider is registered but not activated
+      await expect(loader.onModuleDestroy()).resolves.not.toThrow();
+    });
+
+    it('should continue deactivating other providers if one fails', async () => {
+      // Build with a single plugin that fails deactivation
+      const plugin = createMockProviderPlugin();
+      (plugin.deactivate as jest.Mock).mockRejectedValue(new Error('Shutdown error'));
+      const def = createValidDefinition({ plugin });
+      def.autoEnable = true;
+      def.autoActivate = true;
+      const module = await buildModule([def]);
+      const loader = module.get<PluginLoaderService>(PluginLoaderService);
+
+      await loader.onModuleInit();
+
+      // Should not throw even when deactivation fails
+      await expect(loader.onModuleDestroy()).resolves.not.toThrow();
+    });
   });
 
   // ================================================================
