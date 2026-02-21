@@ -13,7 +13,7 @@ import type {
 } from '@omniscribe/plugin-api';
 import { ALL_THEMES, PluginEvents, createLogger, type ProviderInfo } from '@omniscribe/shared';
 import { getSocket, emitAsync } from '@/lib/socket';
-import { injectThemeStyles, removeThemeStyles } from '@/lib/plugin-theme-injector';
+import { injectThemeStyles, removeThemeStyles, isValidThemeId } from '@/lib/plugin-theme-injector';
 import type { NavigationGroup, NavigationItem } from '@/components/settings/navigation-config';
 
 const logger = createLogger('PluginStore');
@@ -479,6 +479,14 @@ export const usePluginStore = create<PluginStore>()(
       registerTheme: (pluginId: string, reg: ThemeRegistration): Disposable => {
         const key = `${pluginId}:${reg.id}`;
 
+        // Validate theme ID format (prevent CSS injection)
+        if (!isValidThemeId(reg.id)) {
+          logger.warn(
+            `Theme ID "${reg.id}" from plugin "${pluginId}" contains invalid characters. Registration skipped.`
+          );
+          return { dispose: () => {} };
+        }
+
         // Validate theme ID doesn't collide with built-in themes
         if (BUILTIN_THEME_IDS.has(reg.id)) {
           logger.warn(
@@ -499,6 +507,15 @@ export const usePluginStore = create<PluginStore>()(
 
         logger.debug('registerTheme', key);
 
+        // Inject CSS custom properties into the DOM (validates properties internally)
+        const injected = injectThemeStyles(reg.id, reg.cssProperties);
+        if (!injected) {
+          logger.warn(
+            `Theme "${reg.id}" from plugin "${pluginId}" has no valid CSS properties. Registration skipped.`
+          );
+          return { dispose: () => {} };
+        }
+
         set(
           state => {
             const next = new Map(state.themes);
@@ -508,9 +525,6 @@ export const usePluginStore = create<PluginStore>()(
           undefined,
           'plugin/registerTheme'
         );
-
-        // Inject CSS custom properties into the DOM
-        injectThemeStyles(reg.id, reg.cssProperties);
 
         return {
           dispose: () => {

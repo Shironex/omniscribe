@@ -87,12 +87,21 @@ describe('ClaudeCliDetectionService', () => {
   // ================================================================
   describe('getClaudeCliPaths', () => {
     it('should return Unix paths on non-Windows platforms', () => {
-      const result = service.getClaudeCliPaths();
+      const originalPlatform = Object.getOwnPropertyDescriptor(process, 'platform');
+      Object.defineProperty(process, 'platform', { value: 'linux', configurable: true });
 
-      expect(result.length).toBeGreaterThan(0);
-      const pathStr = result.join(' ');
-      expect(pathStr).toContain('.local/bin/claude');
-      expect(pathStr).toContain('/usr/local/bin/claude');
+      try {
+        const result = service.getClaudeCliPaths();
+
+        expect(result.length).toBeGreaterThan(0);
+        const pathStr = result.join(' ');
+        expect(pathStr).toContain('.local/bin/claude');
+        expect(pathStr).toContain('/usr/local/bin/claude');
+      } finally {
+        if (originalPlatform) {
+          Object.defineProperty(process, 'platform', originalPlatform);
+        }
+      }
     });
 
     it('should return Windows paths on Windows platform', () => {
