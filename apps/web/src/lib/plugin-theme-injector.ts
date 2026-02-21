@@ -23,13 +23,14 @@ const VALID_THEME_ID = /^[a-zA-Z][a-zA-Z0-9_-]{0,100}$/;
 const VALID_CSS_PROPERTY_KEY = /^--[a-zA-Z][a-zA-Z0-9-]*$/;
 
 /** Characters/patterns that could break out of a CSS declaration block, inject declarations, or load external resources. */
-const DANGEROUS_CSS_VALUE = /[{};]|<\/style|url\s*\(/i;
+const DANGEROUS_CSS_VALUE = /[{};]|<\/style|url\s*\(|expression\s*\(/i;
 
 /**
  * Validate that a theme ID is safe for CSS interpolation.
  *
  * Must match the pattern used by theme-persistence.ts — starts with a letter,
- * only contains alphanumeric characters, hyphens, or underscores, max 100 chars.
+ * only contains alphanumeric characters, hyphens, or underscores, up to 101 characters
+ * (1 required + up to 100 additional).
  *
  * @param themeId - The theme identifier to validate
  * @returns `true` if the ID is safe to use in CSS selectors
