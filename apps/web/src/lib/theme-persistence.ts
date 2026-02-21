@@ -10,6 +10,9 @@ export const THEME_STORAGE_KEY = 'omniscribe-theme';
  */
 const darkThemeSet: Set<string> = new Set(themeOptions.filter(t => t.isDark).map(t => t.value));
 
+/** Matches valid CSS class names: starts with a letter, only alphanumeric/hyphens/underscores, max 100 chars. */
+const VALID_THEME_ID = /^[a-zA-Z][a-zA-Z0-9_-]{0,100}$/;
+
 /**
  * Persist the current theme to localStorage for instant restoration on next startup.
  * Wrapped in try/catch because localStorage may be unavailable (e.g. incognito quota).
@@ -32,7 +35,9 @@ export function persistTheme(theme: string): void {
 export function getPersistedTheme(): string {
   try {
     const stored = localStorage.getItem(THEME_STORAGE_KEY);
-    return stored ? stored : 'dark';
+    // Accept non-empty values that look like valid CSS class names
+    // (plugin themes use arbitrary IDs not known until plugins load)
+    return stored && VALID_THEME_ID.test(stored) ? stored : 'dark';
   } catch {
     return 'dark';
   }

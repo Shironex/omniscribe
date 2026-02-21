@@ -491,7 +491,7 @@ export const usePluginStore = create<PluginStore>()(
         for (const [existingKey, existing] of get().themes) {
           if (existing.id === reg.id && existingKey !== key) {
             logger.warn(
-              `Theme ID "${reg.id}" from plugin "${pluginId}" collides with the same ID from plugin "${existing.pluginId}". The earlier registration will be shadowed.`
+              `Theme ID "${reg.id}" from plugin "${pluginId}" collides with the same ID already registered by plugin "${existing.pluginId}". The new registration may not be discoverable via getPluginTheme().`
             );
             break;
           }

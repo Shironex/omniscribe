@@ -5,6 +5,7 @@ import { APP_NAME } from '@omniscribe/shared';
 import type { Theme } from '@omniscribe/shared';
 import { themeOptions, darkThemes, lightThemes } from '@/lib/theme';
 import { useSettingsStore, usePluginStore } from '@/stores';
+import { getPluginTheme } from '@/stores/usePluginStore';
 import type { ThemeRegistration } from '@omniscribe/plugin-api';
 
 type TabValue = 'dark' | 'light';
@@ -56,8 +57,8 @@ export function AppearanceSection() {
   const currentTheme = themeOptions.find(t => t.value === effectiveTheme);
   const [activeTab, setActiveTab] = useState<TabValue>(() => {
     if (currentTheme) return currentTheme.isDark ? 'dark' : 'light';
-    // Check if it's a plugin theme (Map is keyed by compound key, search by bare ID)
-    const pluginTheme = Array.from(pluginThemesMap.values()).find(t => t.id === effectiveTheme);
+    // Check if it's a plugin theme
+    const pluginTheme = getPluginTheme(effectiveTheme);
     return pluginTheme?.isDark ? 'dark' : 'light';
   });
 

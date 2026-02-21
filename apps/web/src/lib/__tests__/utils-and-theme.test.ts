@@ -238,9 +238,14 @@ describe('theme-persistence', () => {
       expect(getPersistedTheme()).toBe('nord');
     });
 
-    it('returns stored value even for unknown theme IDs (plugin themes)', () => {
-      localStorage.setItem(THEME_STORAGE_KEY, 'nonexistent-theme');
-      expect(getPersistedTheme()).toBe('nonexistent-theme');
+    it('returns stored value for valid plugin theme IDs', () => {
+      localStorage.setItem(THEME_STORAGE_KEY, 'my-plugin-theme');
+      expect(getPersistedTheme()).toBe('my-plugin-theme');
+    });
+
+    it('returns "dark" when stored value is not a valid CSS class name', () => {
+      localStorage.setItem(THEME_STORAGE_KEY, 'has spaces');
+      expect(getPersistedTheme()).toBe('dark');
     });
 
     it('returns "dark" when localStorage throws', () => {

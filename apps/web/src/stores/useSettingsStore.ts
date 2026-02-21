@@ -10,7 +10,7 @@ import type {
 import { createLogger } from '@omniscribe/shared';
 import { themeOptions } from '@/lib/theme';
 import { persistTheme, getPersistedTheme } from '@/lib/theme-persistence';
-import { getPluginTheme } from '@/stores/usePluginStore';
+import { usePluginStore, getPluginTheme } from '@/stores/usePluginStore';
 
 const logger = createLogger('Settings');
 
@@ -282,6 +282,15 @@ export const useSettingsStore = create<SettingsStore>()(
     { name: 'settings' }
   )
 );
+
+// Re-apply theme when plugin themes change (handles race condition on initial
+// load where applyThemeToDOM runs before plugins have registered their themes).
+usePluginStore.subscribe((state, prevState) => {
+  if (state.themes !== prevState.themes) {
+    const { theme, previewTheme } = useSettingsStore.getState();
+    applyThemeToDOM(previewTheme ?? theme);
+  }
+});
 
 // Selectors
 
