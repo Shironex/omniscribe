@@ -10,7 +10,7 @@ import {
   cn,
   Badge,
   emitAsync,
-  getSocket,
+  isSocketConnected,
   UsageCard,
   getStatusInfo,
 } from '@omniscribe/ui';
@@ -132,12 +132,7 @@ export function CodexUsagePanel({ embedded = false }: UsagePanelProps) {
       fetchUsage();
 
       // Check socket connected
-      let connected = false;
-      try {
-        connected = getSocket().connected;
-      } catch {
-        // Socket not initialized yet
-      }
+      const connected = isSocketConnected();
 
       if (connected) {
         pollingRef.current = setInterval(() => {
