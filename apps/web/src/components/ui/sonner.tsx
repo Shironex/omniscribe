@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Toaster as Sonner } from 'sonner';
 
 import { getThemeOption } from '@/lib/theme';
@@ -13,7 +14,12 @@ const Toaster = ({ ...props }: ToasterProps) => {
   const pluginThemes = usePluginStore(s => s.themes);
 
   // Check built-in themes first, then plugin themes, default to dark
-  const pluginTheme = Array.from(pluginThemes.values()).find(t => t.id === effectiveTheme);
+  const pluginTheme = useMemo(() => {
+    for (const reg of pluginThemes.values()) {
+      if (reg.id === effectiveTheme) return reg;
+    }
+    return undefined;
+  }, [pluginThemes, effectiveTheme]);
   const isDark = themeOption?.isDark ?? pluginTheme?.isDark ?? true;
 
   return (
