@@ -11,7 +11,12 @@
  */
 
 import * as os from 'os';
-import { createLogger, extractErrorMessage, stripAnsiCodes } from '@omniscribe/shared';
+import {
+  createLogger,
+  extractErrorMessage,
+  stripAnsiCodes,
+  buildSafeEnv,
+} from '@omniscribe/shared';
 import type { ClaudeUsage } from '@omniscribe/shared';
 import { ClaudeUsageParserService } from './usage-parser.service';
 
@@ -43,127 +48,6 @@ interface IWindowsPtyForkOptions extends IPtyForkOptions {
 /** Minimal node-pty module interface for dynamic require */
 interface NodePtyModule {
   spawn: (file: string, args: string[], options: IPtyForkOptions) => IPty;
-}
-
-// ---- Environment variable filtering (inlined from env-utils.ts) ----
-
-/** Environment variable allowlist for spawned terminal processes */
-const ENV_ALLOWLIST: string[] = [
-  // Shell basics
-  'HOME',
-  'USER',
-  'LOGNAME',
-  'SHELL',
-  'LANG',
-  'LC_ALL',
-  'LC_CTYPE',
-  'LC_MESSAGES',
-  'LC_COLLATE',
-  'LC_MONETARY',
-  'LC_NUMERIC',
-  'LC_TIME',
-  // Path resolution
-  'PATH',
-  // Windows platform
-  'COMSPEC',
-  'SYSTEMROOT',
-  'SYSTEMDRIVE',
-  'WINDIR',
-  'APPDATA',
-  'LOCALAPPDATA',
-  'PROGRAMFILES',
-  'PROGRAMFILES(X86)',
-  'COMMONPROGRAMFILES',
-  'USERPROFILE',
-  // Temp directories
-  'TMPDIR',
-  'TMP',
-  'TEMP',
-  // macOS-specific
-  'COMMAND_MODE',
-  '__CF_USER_TEXT_ENCODING',
-  // Display (Linux/X11/Wayland)
-  'DISPLAY',
-  'WAYLAND_DISPLAY',
-  'XDG_RUNTIME_DIR',
-  'XDG_SESSION_TYPE',
-  'XDG_DATA_DIRS',
-  'XDG_CONFIG_DIRS',
-  'DBUS_SESSION_BUS_ADDRESS',
-  // SSH
-  'SSH_AUTH_SOCK',
-  'SSH_AGENT_PID',
-  // Development tools (version managers, package managers)
-  'NVM_DIR',
-  'NVM_BIN',
-  'NVM_INC',
-  'VOLTA_HOME',
-  'FNM_DIR',
-  'FNM_MULTISHELL_PATH',
-  'PNPM_HOME',
-  'BUN_INSTALL',
-  'GOPATH',
-  'GOROOT',
-  'CARGO_HOME',
-  'RUSTUP_HOME',
-  'PYENV_ROOT',
-  'RBENV_ROOT',
-  'ASDF_DIR',
-  'ASDF_DATA_DIR',
-  'HOMEBREW_PREFIX',
-  'HOMEBREW_CELLAR',
-  'HOMEBREW_REPOSITORY',
-  // Editor
-  'EDITOR',
-  'VISUAL',
-  'TERM',
-  'COLORTERM',
-  // Git
-  'GIT_EXEC_PATH',
-  'GIT_TEMPLATE_DIR',
-  // Proxy
-  'HTTP_PROXY',
-  'HTTPS_PROXY',
-  'NO_PROXY',
-  'ALL_PROXY',
-  'http_proxy',
-  'https_proxy',
-  'no_proxy',
-  'all_proxy',
-];
-
-/** Patterns that must NEVER be passed to spawned processes */
-const ENV_BLOCKLIST_PATTERNS: RegExp[] = [
-  /^ELECTRON_/i,
-  /^NODE_OPTIONS$/i,
-  /^NODE_EXTRA_CA_CERTS$/i,
-  /SECRET/i,
-  /PASSWORD/i,
-  /TOKEN/i,
-  /CREDENTIAL/i,
-  /API_KEY/i,
-  /PRIVATE_KEY/i,
-  /^LD_PRELOAD$/i,
-  /^LD_LIBRARY_PATH$/i,
-  /^DYLD_/i,
-  /^BASH_ENV$/i,
-  /^ENV$/i,
-  /^BASH_FUNC_/i,
-];
-
-/**
- * Build a sanitized environment from process.env.
- * Applies allowlist + blocklist filtering to prevent leaking secrets.
- */
-function buildDefaultSafeEnv(): Record<string, string> {
-  const safeEnv: Record<string, string> = {};
-  for (const key of ENV_ALLOWLIST) {
-    const value = process.env[key];
-    if (value !== undefined && !ENV_BLOCKLIST_PATTERNS.some(p => p.test(key))) {
-      safeEnv[key] = value;
-    }
-  }
-  return safeEnv;
 }
 
 /**
@@ -243,7 +127,7 @@ export class ClaudeUsageFetcherService {
         : ['-c', `claude --add-dir "${workingDir}"`];
 
       // Build PTY spawn options
-      const safeEnv = env ?? buildDefaultSafeEnv();
+      const safeEnv = env ?? buildSafeEnv();
       const ptyOptions: IPtyForkOptions = {
         name: 'xterm-256color',
         cols: 120,

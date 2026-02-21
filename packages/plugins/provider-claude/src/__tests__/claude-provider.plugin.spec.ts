@@ -45,22 +45,22 @@ jest.mock('readline', () => ({
   })),
 }));
 
-jest.mock('@omniscribe/shared', () => ({
-  createLogger: () => ({
-    debug: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-  }),
-  extractErrorMessage: (err: unknown) => (err instanceof Error ? err.message : String(err)),
-  normalizePath: (p: string) => p.replace(/\\/g, '/'),
-  // eslint-disable-next-line no-control-regex
-  stripAnsiCodes: (s: string) => s.replace(new RegExp('\x1B\\[[0-9;]*[a-zA-Z]', 'g'), ''),
-  getClaudeSessionsDir: jest.fn().mockReturnValue('/home/user/.claude/projects/encoded'),
-  getSessionsIndexPath: jest
-    .fn()
-    .mockReturnValue('/home/user/.claude/projects/encoded/sessions-index.json'),
-}));
+jest.mock('@omniscribe/shared', () => {
+  const actual = jest.requireActual('@omniscribe/shared');
+  return {
+    ...actual,
+    createLogger: () => ({
+      debug: jest.fn(),
+      info: jest.fn(),
+      warn: jest.fn(),
+      error: jest.fn(),
+    }),
+    getClaudeSessionsDir: jest.fn().mockReturnValue('/home/user/.claude/projects/encoded'),
+    getSessionsIndexPath: jest
+      .fn()
+      .mockReturnValue('/home/user/.claude/projects/encoded/sessions-index.json'),
+  };
+});
 
 // Import after mocks
 import { ClaudeProviderPlugin } from '../claude-provider.plugin';

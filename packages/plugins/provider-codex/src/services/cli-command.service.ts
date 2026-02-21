@@ -15,10 +15,8 @@
 
 import * as os from 'os';
 import * as path from 'path';
-import * as fs from 'fs';
-import { execFileSync } from 'child_process';
 import type { CliCommandConfig, LaunchContext } from '@omniscribe/plugin-api';
-import { createLogger } from '@omniscribe/shared';
+import { createLogger, findCliCommandSync } from '@omniscribe/shared';
 
 const logger = createLogger('CodexCliCommand');
 
@@ -116,59 +114,7 @@ export class CodexCliCommandService {
    * to the bare 'codex' command if nothing is found.
    */
   resolveCodexCommand(): string {
-    return this.findCliCommand('codex', this.getCodexCliPaths());
-  }
-
-  /**
-   * Find a CLI command, checking PATH first, then known installation locations.
-   */
-  private findCliCommand(command: string, knownPaths: string[]): string {
-    const pathResult = this.findInPath(command);
-    if (pathResult) {
-      return pathResult;
-    }
-
-    // On Windows, also try with .cmd and .exe extensions
-    if (os.platform() === 'win32') {
-      const cmdResult = this.findInPath(`${command}.cmd`);
-      if (cmdResult) {
-        return cmdResult;
-      }
-      const exeResult = this.findInPath(`${command}.exe`);
-      if (exeResult) {
-        return exeResult;
-      }
-    }
-
-    // Check known installation paths
-    const knownPath = this.findFirstExistingPath(knownPaths);
-    if (knownPath) {
-      return knownPath;
-    }
-
-    // Fall back to the bare command (will likely fail, but provides clear error)
-    logger.info(
-      `CLI not found in PATH or known locations, falling back to bare command: ${command}`
-    );
-    return command;
-  }
-
-  /**
-   * Find an executable in the system PATH using 'where' (Windows) or 'which' (Unix).
-   */
-  private findInPath(command: string): string | null {
-    try {
-      const whichCmd = os.platform() === 'win32' ? 'where' : 'which';
-      const result = execFileSync(whichCmd, [command], {
-        encoding: 'utf-8',
-        stdio: ['pipe', 'pipe', 'pipe'],
-      });
-      const firstLine = result.trim().split(/\r?\n/)[0];
-      return firstLine || null;
-    } catch (error) {
-      logger.debug(`CLI "${command}" not found in PATH`, error);
-      return null;
-    }
+    return findCliCommandSync('codex', this.getCodexCliPaths(), logger);
   }
 
   /**
@@ -222,21 +168,5 @@ export class CodexCliCommandService {
       // Snap packages
       '/snap/bin/codex',
     ];
-  }
-
-  /**
-   * Find the first existing path from a list of paths.
-   */
-  private findFirstExistingPath(paths: string[]): string | null {
-    for (const p of paths) {
-      try {
-        if (fs.existsSync(p)) {
-          return p;
-        }
-      } catch (error) {
-        logger.debug(`Error checking path ${p}`, error);
-      }
-    }
-    return null;
   }
 }

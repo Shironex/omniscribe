@@ -16,14 +16,18 @@ jest.mock('fs', () => ({
   existsSync: jest.fn(),
 }));
 
-jest.mock('@omniscribe/shared', () => ({
-  createLogger: () => ({
-    debug: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-  }),
-}));
+jest.mock('@omniscribe/shared', () => {
+  const actual = jest.requireActual('@omniscribe/shared');
+  return {
+    ...actual,
+    createLogger: () => ({
+      debug: jest.fn(),
+      info: jest.fn(),
+      warn: jest.fn(),
+      error: jest.fn(),
+    }),
+  };
+});
 
 // Import after mocks are set up
 import { CodexCliCommandService } from '../services/cli-command.service';

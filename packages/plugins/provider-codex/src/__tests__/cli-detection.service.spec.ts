@@ -36,15 +36,18 @@ jest.mock('os', () => ({
   platform: jest.fn().mockReturnValue('linux'),
 }));
 
-jest.mock('@omniscribe/shared', () => ({
-  createLogger: () => ({
-    debug: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-  }),
-  normalizePath: (p: string) => p.replace(/\\/g, '/'),
-}));
+jest.mock('@omniscribe/shared', () => {
+  const actual = jest.requireActual('@omniscribe/shared');
+  return {
+    ...actual,
+    createLogger: () => ({
+      debug: jest.fn(),
+      info: jest.fn(),
+      warn: jest.fn(),
+      error: jest.fn(),
+    }),
+  };
+});
 
 // ---- Import after mocks ----
 

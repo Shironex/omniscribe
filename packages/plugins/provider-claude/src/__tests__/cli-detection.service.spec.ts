@@ -31,21 +31,28 @@ jest.mock('util', () => ({
 
 jest.mock('os', () => ({
   homedir: jest.fn().mockReturnValue('/home/testuser'),
+  platform: jest.fn().mockReturnValue('linux'),
 }));
 
-jest.mock('@omniscribe/shared', () => ({
-  createLogger: () => ({
-    debug: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-  }),
-  normalizePath: (p: string) => p.replace(/\\/g, '/'),
-}));
+jest.mock('@omniscribe/shared', () => {
+  const actual = jest.requireActual('@omniscribe/shared');
+  return {
+    ...actual,
+    createLogger: () => ({
+      debug: jest.fn(),
+      info: jest.fn(),
+      warn: jest.fn(),
+      error: jest.fn(),
+    }),
+  };
+});
 
 // ---- Import after mocks ----
 
 import { ClaudeCliDetectionService } from '../services/cli-detection.service';
+import * as os from 'os';
+
+const mockedPlatform = os.platform as jest.MockedFunction<typeof os.platform>;
 
 // ---- Tests ----
 
@@ -87,26 +94,18 @@ describe('ClaudeCliDetectionService', () => {
   // ================================================================
   describe('getClaudeCliPaths', () => {
     it('should return Unix paths on non-Windows platforms', () => {
-      const originalPlatform = Object.getOwnPropertyDescriptor(process, 'platform');
-      Object.defineProperty(process, 'platform', { value: 'linux', configurable: true });
+      mockedPlatform.mockReturnValue('linux' as NodeJS.Platform);
 
-      try {
-        const result = service.getClaudeCliPaths();
+      const result = service.getClaudeCliPaths();
 
-        expect(result.length).toBeGreaterThan(0);
-        const pathStr = result.join(' ');
-        expect(pathStr).toContain('.local/bin/claude');
-        expect(pathStr).toContain('/usr/local/bin/claude');
-      } finally {
-        if (originalPlatform) {
-          Object.defineProperty(process, 'platform', originalPlatform);
-        }
-      }
+      expect(result.length).toBeGreaterThan(0);
+      const pathStr = result.join(' ');
+      expect(pathStr).toContain('.local/bin/claude');
+      expect(pathStr).toContain('/usr/local/bin/claude');
     });
 
     it('should return Windows paths on Windows platform', () => {
-      const originalPlatform = Object.getOwnPropertyDescriptor(process, 'platform');
-      Object.defineProperty(process, 'platform', { value: 'win32', configurable: true });
+      mockedPlatform.mockReturnValue('win32' as NodeJS.Platform);
       process.env['APPDATA'] = 'C:/Users/test/AppData/Roaming';
       process.env['LOCALAPPDATA'] = 'C:/Users/test/AppData/Local';
 
@@ -119,9 +118,7 @@ describe('ClaudeCliDetectionService', () => {
       } finally {
         delete process.env['APPDATA'];
         delete process.env['LOCALAPPDATA'];
-        if (originalPlatform) {
-          Object.defineProperty(process, 'platform', originalPlatform);
-        }
+        mockedPlatform.mockReturnValue('linux' as NodeJS.Platform);
       }
     });
   });

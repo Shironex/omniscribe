@@ -12,54 +12,28 @@
  * Platform-aware path lists derived from Automaker's system-paths.ts.
  */
 
-import { existsSync, readFileSync, readdirSync } from 'fs';
+import { readFileSync } from 'fs';
 import { exec, execFile } from 'child_process';
 import { join } from 'path';
-import { homedir, platform } from 'os';
+import { homedir } from 'os';
 import { promisify } from 'util';
 import type { CliDetectionResult } from '@omniscribe/plugin-api';
-import { createLogger, normalizePath } from '@omniscribe/shared';
+import {
+  createLogger,
+  joinPaths,
+  getHomeDir,
+  isWindows,
+  findCliInPath,
+  findCliInLocalPaths,
+  getNvmBinPaths,
+  getFnmBinPaths,
+  getNvmWindowsCliPaths,
+} from '@omniscribe/shared';
 
 const logger = createLogger('CodexCliDetection');
 
 const execAsync = promisify(exec);
 const execFileAsync = promisify(execFile);
-
-// ---- Path utilities ----
-
-function joinPaths(...paths: string[]): string {
-  return normalizePath(join(...paths));
-}
-
-function getHomeDir(): string {
-  return normalizePath(homedir());
-}
-
-function isWindows(): boolean {
-  return platform() === 'win32';
-}
-
-// ---- CLI path search utilities ----
-
-async function findCliInPath(toolName: string): Promise<string | undefined> {
-  try {
-    const command = isWindows() ? `where ${toolName}` : `which ${toolName}`;
-    const { stdout } = await execAsync(command);
-    const firstPath = stdout.trim().split('\n')[0]?.trim();
-    return firstPath || undefined;
-  } catch {
-    return undefined;
-  }
-}
-
-function findCliInLocalPaths(localPaths: string[]): string | undefined {
-  for (const localPath of localPaths) {
-    if (existsSync(localPath)) {
-      return localPath;
-    }
-  }
-  return undefined;
-}
 
 // ---- Auth file token detection ----
 
@@ -71,68 +45,6 @@ const API_KEY_KEYS = ['api_key', 'OPENAI_API_KEY'] as const;
 
 function hasNonEmptyStringField(record: Record<string, unknown>, keys: readonly string[]): boolean {
   return keys.some(key => typeof record[key] === 'string' && record[key]);
-}
-
-// ---- NVM / fnm path scanning ----
-
-/**
- * Get NVM-installed Node.js bin paths for CLI tools.
- * Scans $NVM_DIR/versions/node/{version}/bin/ for installed node versions.
- */
-function getNvmBinPaths(): string[] {
-  const nvmDir = process.env['NVM_DIR'] || join(homedir(), '.nvm');
-  const versionsDir = join(nvmDir, 'versions', 'node');
-
-  try {
-    if (!existsSync(versionsDir)) {
-      return [];
-    }
-    const versions = readdirSync(versionsDir);
-    return versions.map(version => join(versionsDir, version, 'bin'));
-  } catch {
-    return [];
-  }
-}
-
-/**
- * Get fnm (Fast Node Manager) installed Node.js bin paths.
- * Scans possible fnm directories for installed node versions.
- */
-function getFnmBinPaths(): string[] {
-  const home = homedir();
-  const possibleFnmDirs = [
-    join(home, '.local', 'share', 'fnm', 'node-versions'),
-    join(home, '.fnm', 'node-versions'),
-    // macOS Application Support
-    join(home, 'Library', 'Application Support', 'fnm', 'node-versions'),
-  ];
-
-  const binPaths: string[] = [];
-
-  for (const fnmDir of possibleFnmDirs) {
-    try {
-      if (!existsSync(fnmDir)) {
-        continue;
-      }
-      const versions = readdirSync(fnmDir);
-      for (const version of versions) {
-        binPaths.push(join(fnmDir, version, 'installation', 'bin'));
-      }
-    } catch {
-      // Ignore errors for this directory
-    }
-  }
-
-  return binPaths;
-}
-
-/**
- * Get NVM for Windows (nvm4w) symlink paths for the codex CLI.
- */
-function getNvmWindowsCliPaths(): string[] {
-  const nvmSymlink = process.env['NVM_SYMLINK'];
-  if (!nvmSymlink) return [];
-  return [join(nvmSymlink, 'codex.cmd'), join(nvmSymlink, 'codex')];
 }
 
 /**
@@ -308,7 +220,7 @@ export class CodexCliDetectionService {
         joinPaths(localAppData, 'pnpm/codex.cmd'),
         joinPaths(localAppData, 'pnpm/codex'),
         // NVM for Windows symlink paths
-        ...getNvmWindowsCliPaths(),
+        ...getNvmWindowsCliPaths('codex'),
       ];
     }
 
