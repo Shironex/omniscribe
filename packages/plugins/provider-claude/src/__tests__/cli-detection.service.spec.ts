@@ -3,49 +3,60 @@
 const mockExistsSync = jest.fn();
 const mockReadFileSync = jest.fn();
 const mockExecFileAsync = jest.fn();
-const mockExecAsync = jest.fn();
 
 jest.mock('fs', () => ({
   existsSync: (...args: unknown[]) => mockExistsSync(...args),
   readFileSync: (...args: unknown[]) => mockReadFileSync(...args),
 }));
 
-// Track which child_process function was promisified via a WeakSet
-const execRef = jest.fn();
-const execFileRef = jest.fn();
+// execFileRef is callback-aware: when cli-resolution's execFilePromise calls
+// execFile(cmd, args, opts, callback), it delegates to mockExecFileAsync.
+const execFileRef = jest.fn(
+  (cmd: string, args: string[], _opts: unknown, cb?: (...cbArgs: unknown[]) => void) => {
+    if (typeof cb === 'function') {
+      mockExecFileAsync(cmd, args)
+        .then((r: { stdout: string; stderr?: string }) => cb(null, r.stdout ?? '', r.stderr ?? ''))
+        .catch((e: Error) => cb(e, '', ''));
+    }
+  }
+);
 
 jest.mock('child_process', () => ({
-  exec: execRef,
   execFile: execFileRef,
 }));
 
-// Mock util.promisify to intercept both exec and execFile async versions
+// Mock util.promisify — only execFile is used (findCliInPath + getVersion)
 jest.mock('util', () => ({
-  promisify: (fn: unknown) => {
-    if (fn === execRef) {
-      return (...args: unknown[]) => mockExecAsync(...args);
-    }
-    return (...args: unknown[]) => mockExecFileAsync(...args);
-  },
+  promisify:
+    () =>
+    (...args: unknown[]) =>
+      mockExecFileAsync(...args),
 }));
 
 jest.mock('os', () => ({
   homedir: jest.fn().mockReturnValue('/home/testuser'),
+  platform: jest.fn().mockReturnValue('linux'),
 }));
 
-jest.mock('@omniscribe/shared', () => ({
-  createLogger: () => ({
-    debug: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-  }),
-  normalizePath: (p: string) => p.replace(/\\/g, '/'),
-}));
+jest.mock('@omniscribe/shared', () => {
+  const actual = jest.requireActual('@omniscribe/shared');
+  return {
+    ...actual,
+    createLogger: () => ({
+      debug: jest.fn(),
+      info: jest.fn(),
+      warn: jest.fn(),
+      error: jest.fn(),
+    }),
+  };
+});
 
 // ---- Import after mocks ----
 
 import { ClaudeCliDetectionService } from '../services/cli-detection.service';
+import * as os from 'os';
+
+const mockedPlatform = os.platform as jest.MockedFunction<typeof os.platform>;
 
 // ---- Tests ----
 
@@ -87,26 +98,18 @@ describe('ClaudeCliDetectionService', () => {
   // ================================================================
   describe('getClaudeCliPaths', () => {
     it('should return Unix paths on non-Windows platforms', () => {
-      const originalPlatform = Object.getOwnPropertyDescriptor(process, 'platform');
-      Object.defineProperty(process, 'platform', { value: 'linux', configurable: true });
+      mockedPlatform.mockReturnValue('linux' as NodeJS.Platform);
 
-      try {
-        const result = service.getClaudeCliPaths();
+      const result = service.getClaudeCliPaths();
 
-        expect(result.length).toBeGreaterThan(0);
-        const pathStr = result.join(' ');
-        expect(pathStr).toContain('.local/bin/claude');
-        expect(pathStr).toContain('/usr/local/bin/claude');
-      } finally {
-        if (originalPlatform) {
-          Object.defineProperty(process, 'platform', originalPlatform);
-        }
-      }
+      expect(result.length).toBeGreaterThan(0);
+      const pathStr = result.join(' ');
+      expect(pathStr).toContain('.local/bin/claude');
+      expect(pathStr).toContain('/usr/local/bin/claude');
     });
 
     it('should return Windows paths on Windows platform', () => {
-      const originalPlatform = Object.getOwnPropertyDescriptor(process, 'platform');
-      Object.defineProperty(process, 'platform', { value: 'win32', configurable: true });
+      mockedPlatform.mockReturnValue('win32' as NodeJS.Platform);
       process.env['APPDATA'] = 'C:/Users/test/AppData/Roaming';
       process.env['LOCALAPPDATA'] = 'C:/Users/test/AppData/Local';
 
@@ -119,9 +122,7 @@ describe('ClaudeCliDetectionService', () => {
       } finally {
         delete process.env['APPDATA'];
         delete process.env['LOCALAPPDATA'];
-        if (originalPlatform) {
-          Object.defineProperty(process, 'platform', originalPlatform);
-        }
+        mockedPlatform.mockReturnValue('linux' as NodeJS.Platform);
       }
     });
   });
@@ -131,7 +132,7 @@ describe('ClaudeCliDetectionService', () => {
   // ================================================================
   describe('findClaudeCli', () => {
     it('should return path method when found in PATH', async () => {
-      mockExecAsync.mockResolvedValue({ stdout: '/usr/local/bin/claude\n' });
+      mockExecFileAsync.mockResolvedValue({ stdout: '/usr/local/bin/claude\n' });
 
       const result = await service.findClaudeCli();
 
@@ -139,7 +140,7 @@ describe('ClaudeCliDetectionService', () => {
     });
 
     it('should fall back to local paths when not in PATH', async () => {
-      mockExecAsync.mockRejectedValue(new Error('not found'));
+      mockExecFileAsync.mockRejectedValue(new Error('not found'));
       mockExistsSync.mockImplementation((p: string) => {
         return p.includes('.local/bin/claude');
       });
@@ -151,7 +152,7 @@ describe('ClaudeCliDetectionService', () => {
     });
 
     it('should return method none when not found anywhere', async () => {
-      mockExecAsync.mockRejectedValue(new Error('not found'));
+      mockExecFileAsync.mockRejectedValue(new Error('not found'));
       mockExistsSync.mockReturnValue(false);
 
       const result = await service.findClaudeCli();
@@ -161,7 +162,7 @@ describe('ClaudeCliDetectionService', () => {
     });
 
     it('should prefer PATH over local paths', async () => {
-      mockExecAsync.mockResolvedValue({ stdout: '/usr/bin/claude\n' });
+      mockExecFileAsync.mockResolvedValue({ stdout: '/usr/bin/claude\n' });
       mockExistsSync.mockReturnValue(true);
 
       const result = await service.findClaudeCli();
@@ -346,8 +347,12 @@ describe('ClaudeCliDetectionService', () => {
   // ================================================================
   describe('detect', () => {
     it('should return CliDetectionResult structure', async () => {
-      mockExecAsync.mockResolvedValue({ stdout: '/usr/local/bin/claude\n' });
-      mockExecFileAsync.mockResolvedValue({ stdout: '1.0.27\n' });
+      mockExecFileAsync.mockImplementation((cmd: string) => {
+        if (cmd === 'which' || cmd === 'where') {
+          return Promise.resolve({ stdout: '/usr/local/bin/claude\n' });
+        }
+        return Promise.resolve({ stdout: '1.0.27\n' });
+      });
       mockExistsSync.mockReturnValue(true);
       mockReadFileSync.mockReturnValue(JSON.stringify({ claudeAiOauth: { accessToken: 'token' } }));
 
@@ -360,7 +365,7 @@ describe('ClaudeCliDetectionService', () => {
     });
 
     it('should return not-installed when CLI is not found', async () => {
-      mockExecAsync.mockRejectedValue(new Error('not found'));
+      mockExecFileAsync.mockRejectedValue(new Error('not found'));
       mockExistsSync.mockReturnValue(false);
 
       const result = await service.detect();
@@ -375,8 +380,12 @@ describe('ClaudeCliDetectionService', () => {
   // ================================================================
   describe('getFullStatus', () => {
     it('should assemble full status when CLI is installed and authenticated', async () => {
-      mockExecAsync.mockResolvedValue({ stdout: '/usr/local/bin/claude\n' });
-      mockExecFileAsync.mockResolvedValue({ stdout: '1.0.27\n' });
+      mockExecFileAsync.mockImplementation((cmd: string) => {
+        if (cmd === 'which' || cmd === 'where') {
+          return Promise.resolve({ stdout: '/usr/local/bin/claude\n' });
+        }
+        return Promise.resolve({ stdout: '1.0.27\n' });
+      });
       mockExistsSync.mockReturnValue(true);
       mockReadFileSync.mockReturnValue(JSON.stringify({ claudeAiOauth: { accessToken: 'token' } }));
 
@@ -392,7 +401,7 @@ describe('ClaudeCliDetectionService', () => {
     });
 
     it('should return not installed status when CLI is not found', async () => {
-      mockExecAsync.mockRejectedValue(new Error('not found'));
+      mockExecFileAsync.mockRejectedValue(new Error('not found'));
       mockExistsSync.mockReturnValue(false);
 
       const result = await service.getFullStatus();
@@ -404,16 +413,20 @@ describe('ClaudeCliDetectionService', () => {
     });
 
     it('should not fetch version when CLI is not found', async () => {
-      mockExecAsync.mockRejectedValue(new Error('not found'));
+      mockExecFileAsync.mockRejectedValue(new Error('not found'));
       mockExistsSync.mockReturnValue(false);
 
       await service.getFullStatus();
 
-      expect(mockExecFileAsync).not.toHaveBeenCalled();
+      // findCliInPath calls execFile('which'/'where'), but version should not be fetched
+      const versionCalls = mockExecFileAsync.mock.calls.filter(
+        (call: unknown[]) => call[0] !== 'which' && call[0] !== 'where'
+      );
+      expect(versionCalls).toHaveLength(0);
     });
 
     it('should include platform and arch from process', async () => {
-      mockExecAsync.mockRejectedValue(new Error('not found'));
+      mockExecFileAsync.mockRejectedValue(new Error('not found'));
       mockExistsSync.mockReturnValue(false);
 
       const result = await service.getFullStatus();

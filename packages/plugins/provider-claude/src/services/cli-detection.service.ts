@@ -10,55 +10,22 @@
  */
 
 import { existsSync, readFileSync } from 'fs';
-import { exec, execFile } from 'child_process';
-import { join } from 'path';
-import { homedir } from 'os';
+import { execFile } from 'child_process';
 import { promisify } from 'util';
 import type { CliDetectionResult } from '@omniscribe/plugin-api';
 import type { ClaudeCliStatus } from '@omniscribe/shared';
-import { createLogger, normalizePath } from '@omniscribe/shared';
+import { createLogger } from '@omniscribe/shared';
+import {
+  joinPaths,
+  getHomeDir,
+  isWindows,
+  findCliInPath,
+  findCliInLocalPaths,
+} from '@omniscribe/shared/node';
 
 const logger = createLogger('ClaudeCliDetection');
 
-const execAsync = promisify(exec);
 const execFileAsync = promisify(execFile);
-
-// ---- Path utilities (inlined from apps/desktop/src/main/utils/path.ts) ----
-
-function joinPaths(...paths: string[]): string {
-  return normalizePath(join(...paths));
-}
-
-function getHomeDir(): string {
-  return normalizePath(homedir());
-}
-
-function isWindows(): boolean {
-  return process.platform === 'win32';
-}
-
-// ---- CLI path search utilities (inlined from apps/desktop/src/main/utils/cli-detection.ts) ----
-
-async function findCliInPath(toolName: string): Promise<string | undefined> {
-  const platform = process.platform;
-  try {
-    const command = platform === 'win32' ? `where ${toolName}` : `which ${toolName}`;
-    const { stdout } = await execAsync(command);
-    const firstPath = stdout.trim().split('\n')[0]?.trim();
-    return firstPath || undefined;
-  } catch {
-    return undefined;
-  }
-}
-
-function findCliInLocalPaths(localPaths: string[]): string | undefined {
-  for (const localPath of localPaths) {
-    if (existsSync(localPath)) {
-      return localPath;
-    }
-  }
-  return undefined;
-}
 
 /**
  * Internal detection result with method tracking (richer than plugin-api CliDetectionResult).

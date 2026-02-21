@@ -9,6 +9,7 @@ jest.mock('os', () => ({
 }));
 
 jest.mock('child_process', () => ({
+  execFile: jest.fn(),
   execFileSync: jest.fn(),
 }));
 
@@ -16,14 +17,18 @@ jest.mock('fs', () => ({
   existsSync: jest.fn(),
 }));
 
-jest.mock('@omniscribe/shared', () => ({
-  createLogger: () => ({
-    debug: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-  }),
-}));
+jest.mock('@omniscribe/shared', () => {
+  const actual = jest.requireActual('@omniscribe/shared');
+  return {
+    ...actual,
+    createLogger: () => ({
+      debug: jest.fn(),
+      info: jest.fn(),
+      warn: jest.fn(),
+      error: jest.fn(),
+    }),
+  };
+});
 
 // Import after mocks are set up
 import { ClaudeCliCommandService } from '../services/cli-command.service';

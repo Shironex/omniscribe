@@ -12,54 +12,28 @@
  * Platform-aware path lists derived from Automaker's system-paths.ts.
  */
 
-import { existsSync, readFileSync, readdirSync } from 'fs';
+import { readFileSync } from 'fs';
 import { exec, execFile } from 'child_process';
 import { join } from 'path';
-import { homedir, platform } from 'os';
+import { homedir } from 'os';
 import { promisify } from 'util';
 import type { CliDetectionResult } from '@omniscribe/plugin-api';
-import { createLogger, normalizePath } from '@omniscribe/shared';
+import { createLogger } from '@omniscribe/shared';
+import {
+  joinPaths,
+  getHomeDir,
+  isWindows,
+  findCliInPath,
+  findCliInLocalPaths,
+  getNvmBinPaths,
+  getFnmBinPaths,
+  getNvmWindowsCliPaths,
+} from '@omniscribe/shared/node';
 
 const logger = createLogger('CodexCliDetection');
 
 const execAsync = promisify(exec);
 const execFileAsync = promisify(execFile);
-
-// ---- Path utilities ----
-
-function joinPaths(...paths: string[]): string {
-  return normalizePath(join(...paths));
-}
-
-function getHomeDir(): string {
-  return normalizePath(homedir());
-}
-
-function isWindows(): boolean {
-  return platform() === 'win32';
-}
-
-// ---- CLI path search utilities ----
-
-async function findCliInPath(toolName: string): Promise<string | undefined> {
-  try {
-    const command = isWindows() ? `where ${toolName}` : `which ${toolName}`;
-    const { stdout } = await execAsync(command);
-    const firstPath = stdout.trim().split('\n')[0]?.trim();
-    return firstPath || undefined;
-  } catch {
-    return undefined;
-  }
-}
-
-function findCliInLocalPaths(localPaths: string[]): string | undefined {
-  for (const localPath of localPaths) {
-    if (existsSync(localPath)) {
-      return localPath;
-    }
-  }
-  return undefined;
-}
 
 // ---- Auth file token detection ----
 
@@ -71,68 +45,6 @@ const API_KEY_KEYS = ['api_key', 'OPENAI_API_KEY'] as const;
 
 function hasNonEmptyStringField(record: Record<string, unknown>, keys: readonly string[]): boolean {
   return keys.some(key => typeof record[key] === 'string' && record[key]);
-}
-
-// ---- NVM / fnm path scanning ----
-
-/**
- * Get NVM-installed Node.js bin paths for CLI tools.
- * Scans $NVM_DIR/versions/node/{version}/bin/ for installed node versions.
- */
-function getNvmBinPaths(): string[] {
-  const nvmDir = process.env['NVM_DIR'] || join(homedir(), '.nvm');
-  const versionsDir = join(nvmDir, 'versions', 'node');
-
-  try {
-    if (!existsSync(versionsDir)) {
-      return [];
-    }
-    const versions = readdirSync(versionsDir);
-    return versions.map(version => join(versionsDir, version, 'bin'));
-  } catch {
-    return [];
-  }
-}
-
-/**
- * Get fnm (Fast Node Manager) installed Node.js bin paths.
- * Scans possible fnm directories for installed node versions.
- */
-function getFnmBinPaths(): string[] {
-  const home = homedir();
-  const possibleFnmDirs = [
-    join(home, '.local', 'share', 'fnm', 'node-versions'),
-    join(home, '.fnm', 'node-versions'),
-    // macOS Application Support
-    join(home, 'Library', 'Application Support', 'fnm', 'node-versions'),
-  ];
-
-  const binPaths: string[] = [];
-
-  for (const fnmDir of possibleFnmDirs) {
-    try {
-      if (!existsSync(fnmDir)) {
-        continue;
-      }
-      const versions = readdirSync(fnmDir);
-      for (const version of versions) {
-        binPaths.push(join(fnmDir, version, 'installation', 'bin'));
-      }
-    } catch {
-      // Ignore errors for this directory
-    }
-  }
-
-  return binPaths;
-}
-
-/**
- * Get NVM for Windows (nvm4w) symlink paths for the codex CLI.
- */
-function getNvmWindowsCliPaths(): string[] {
-  const nvmSymlink = process.env['NVM_SYMLINK'];
-  if (!nvmSymlink) return [];
-  return [join(nvmSymlink, 'codex.cmd'), join(nvmSymlink, 'codex')];
 }
 
 /**
@@ -284,67 +196,76 @@ export class CodexCliDetectionService {
 
   /**
    * Get common Codex CLI installation paths across all platforms.
-   *
-   * Includes standard locations, npm global, Volta, pnpm, Yarn,
-   * NVM, fnm, Snap, Linuxbrew, and Homebrew paths.
-   *
-   * Derived from Automaker's system-paths.ts getCodexCliPaths().
+   * Delegates to the standalone `getCodexCliPaths()` function.
    */
   getCodexCliPaths(): string[] {
-    const home = getHomeDir();
+    return getCodexCliPaths();
+  }
+}
 
-    if (isWindows()) {
-      const appData = process.env['APPDATA'] || joinPaths(home, 'AppData/Roaming');
-      const localAppData = process.env['LOCALAPPDATA'] || joinPaths(home, 'AppData/Local');
-      return [
-        joinPaths(home, '.local/bin/codex.exe'),
-        joinPaths(appData, 'npm/codex.cmd'),
-        joinPaths(appData, 'npm/codex'),
-        joinPaths(appData, '.npm-global/bin/codex.cmd'),
-        joinPaths(appData, '.npm-global/bin/codex'),
-        // Volta on Windows
-        joinPaths(home, '.volta/bin/codex.exe'),
-        // pnpm on Windows
-        joinPaths(localAppData, 'pnpm/codex.cmd'),
-        joinPaths(localAppData, 'pnpm/codex'),
-        // NVM for Windows symlink paths
-        ...getNvmWindowsCliPaths(),
-      ];
-    }
+/**
+ * Get common Codex CLI installation paths across all platforms.
+ *
+ * Includes standard locations, npm global, Volta, pnpm, Yarn,
+ * NVM, fnm, Snap, Linuxbrew, and Homebrew paths.
+ *
+ * Standalone function so that other services (e.g. usage-fetcher) can
+ * import the path list without instantiating CodexCliDetectionService.
+ */
+export function getCodexCliPaths(): string[] {
+  const home = getHomeDir();
 
-    // macOS and Linux paths
-
-    // NVM-installed Node.js bin paths
-    const nvmBinPaths = getNvmBinPaths().map(binPath => join(binPath, 'codex'));
-
-    // fnm-installed Node.js bin paths
-    const fnmBinPaths = getFnmBinPaths().map(binPath => join(binPath, 'codex'));
-
-    // pnpm global bin path
-    const pnpmHome = process.env['PNPM_HOME'] || joinPaths(homedir(), '.local/share/pnpm');
-
+  if (isWindows()) {
+    const appData = process.env['APPDATA'] || joinPaths(home, 'AppData/Roaming');
+    const localAppData = process.env['LOCALAPPDATA'] || joinPaths(home, 'AppData/Local');
     return [
-      // Standard locations
-      joinPaths(home, '.local/bin/codex'),
-      '/opt/homebrew/bin/codex',
-      '/usr/local/bin/codex',
-      '/usr/bin/codex',
-      joinPaths(home, '.npm-global/bin/codex'),
-      // Linuxbrew
-      '/home/linuxbrew/.linuxbrew/bin/codex',
-      // Volta
-      joinPaths(home, '.volta/bin/codex'),
-      // pnpm global
-      joinPaths(pnpmHome, 'codex'),
-      // Yarn global
-      joinPaths(home, '.yarn/bin/codex'),
-      joinPaths(home, '.config/yarn/global/node_modules/.bin/codex'),
-      // Snap packages
-      '/snap/bin/codex',
-      // NVM paths (dynamically resolved)
-      ...nvmBinPaths,
-      // fnm paths (dynamically resolved)
-      ...fnmBinPaths,
+      joinPaths(home, '.local/bin/codex.exe'),
+      joinPaths(appData, 'npm/codex.cmd'),
+      joinPaths(appData, 'npm/codex'),
+      joinPaths(appData, '.npm-global/bin/codex.cmd'),
+      joinPaths(appData, '.npm-global/bin/codex'),
+      // Volta on Windows
+      joinPaths(home, '.volta/bin/codex.exe'),
+      // pnpm on Windows
+      joinPaths(localAppData, 'pnpm/codex.cmd'),
+      joinPaths(localAppData, 'pnpm/codex'),
+      // NVM for Windows symlink paths
+      ...getNvmWindowsCliPaths('codex'),
     ];
   }
+
+  // macOS and Linux paths
+
+  // NVM-installed Node.js bin paths
+  const nvmBinPaths = getNvmBinPaths().map(binPath => join(binPath, 'codex'));
+
+  // fnm-installed Node.js bin paths
+  const fnmBinPaths = getFnmBinPaths().map(binPath => join(binPath, 'codex'));
+
+  // pnpm global bin path
+  const pnpmHome = process.env['PNPM_HOME'] || joinPaths(homedir(), '.local/share/pnpm');
+
+  return [
+    // Standard locations
+    joinPaths(home, '.local/bin/codex'),
+    '/opt/homebrew/bin/codex',
+    '/usr/local/bin/codex',
+    '/usr/bin/codex',
+    joinPaths(home, '.npm-global/bin/codex'),
+    // Linuxbrew
+    '/home/linuxbrew/.linuxbrew/bin/codex',
+    // Volta
+    joinPaths(home, '.volta/bin/codex'),
+    // pnpm global
+    joinPaths(pnpmHome, 'codex'),
+    // Yarn global
+    joinPaths(home, '.yarn/bin/codex'),
+    joinPaths(home, '.config/yarn/global/node_modules/.bin/codex'),
+    // Snap packages
+    '/snap/bin/codex',
+    // NVM paths (dynamically resolved)
+    ...nvmBinPaths,
+    // fnm paths (dynamically resolved)
+    ...fnmBinPaths,
+  ];
 }

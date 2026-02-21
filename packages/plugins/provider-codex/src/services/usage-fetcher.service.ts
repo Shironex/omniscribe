@@ -11,13 +11,15 @@
  * Adapted from Automaker's CodexAppServerService and CodexUsageService.
  */
 
-import { spawn, execFile, type ChildProcess } from 'child_process';
+import { spawn, type ChildProcess } from 'child_process';
 import * as readline from 'readline';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import { createLogger, extractErrorMessage } from '@omniscribe/shared';
+import { findCliInPath, findCliInLocalPaths } from '@omniscribe/shared/node';
 import type { CodexUsageData, CodexRateLimitWindow, CodexPlanType } from '../types';
+import { getCodexCliPaths } from './cli-detection.service';
 
 const logger = createLogger('CodexUsageFetcher');
 
@@ -32,62 +34,16 @@ const REQUEST_TIMEOUT = 10_000;
 // ---------------------------------------------------------------------------
 
 /**
- * Known installation paths for the Codex CLI binary.
- */
-function getCodexCliPaths(): string[] {
-  const home = os.homedir();
-
-  if (process.platform === 'win32') {
-    const appData = process.env.APPDATA || path.join(home, 'AppData', 'Roaming');
-    const localAppData = process.env.LOCALAPPDATA || path.join(home, 'AppData', 'Local');
-    return [
-      path.join(home, '.local', 'bin', 'codex.exe'),
-      path.join(appData, 'npm', 'codex.cmd'),
-      path.join(appData, 'npm', 'codex'),
-      path.join(home, '.volta', 'bin', 'codex.exe'),
-      path.join(localAppData, 'pnpm', 'codex.cmd'),
-    ];
-  }
-
-  return [
-    path.join(home, '.local', 'bin', 'codex'),
-    '/opt/homebrew/bin/codex',
-    '/usr/local/bin/codex',
-    '/usr/bin/codex',
-    path.join(home, '.npm-global', 'bin', 'codex'),
-    path.join(home, '.volta', 'bin', 'codex'),
-  ];
-}
-
-/**
  * Find the Codex CLI path.
- * First tries `which`/`where` on PATH, then checks known installation paths.
+ * Uses shared async path resolution from @omniscribe/shared and the canonical
+ * path list from cli-detection.service.
  */
 async function findCodexCli(): Promise<string | null> {
-  // 1. Try PATH lookup
-  const whichCmd = process.platform === 'win32' ? 'where' : 'which';
-  try {
-    const result = await new Promise<string>((resolve, reject) => {
-      execFile(whichCmd, ['codex'], { timeout: 5000 }, (error, stdout) => {
-        if (error) reject(error);
-        else resolve(stdout.trim().split('\n')[0]);
-      });
-    });
-    if (result && fs.existsSync(result)) return result;
-  } catch {
-    // Not on PATH, try known locations
-  }
+  const pathResult = await findCliInPath('codex');
+  if (pathResult) return pathResult;
 
-  // 2. Check known installation paths
-  for (const candidatePath of getCodexCliPaths()) {
-    try {
-      if (fs.existsSync(candidatePath)) return candidatePath;
-    } catch {
-      // Skip inaccessible paths
-    }
-  }
-
-  return null;
+  const localPath = findCliInLocalPaths(getCodexCliPaths());
+  return localPath ?? null;
 }
 
 // ---------------------------------------------------------------------------

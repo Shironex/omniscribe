@@ -8,7 +8,14 @@ jest.mock('fs', () => ({
 
 jest.mock('child_process', () => ({
   exec: jest.fn(),
-  execFile: jest.fn(),
+  // Callback-aware: cli-resolution's execFilePromise calls execFile(cmd, args, opts, cb)
+  execFile: jest.fn(
+    (_cmd: string, _args: unknown, _opts: unknown, cb?: (...cbArgs: unknown[]) => void) => {
+      if (typeof cb === 'function') {
+        cb(new Error('not found'), '', '');
+      }
+    }
+  ),
   execFileSync: jest.fn().mockReturnValue('/usr/local/bin/codex\n'),
   spawn: jest.fn(),
 }));
@@ -32,18 +39,18 @@ jest.mock('readline', () => ({
   })),
 }));
 
-jest.mock('@omniscribe/shared', () => ({
-  createLogger: () => ({
-    debug: jest.fn(),
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-  }),
-  extractErrorMessage: (err: unknown) => (err instanceof Error ? err.message : String(err)),
-  normalizePath: (p: string) => p.replace(/\\/g, '/'),
-  // eslint-disable-next-line no-control-regex
-  stripAnsiCodes: (s: string) => s.replace(new RegExp('\x1B\\[[0-9;]*[a-zA-Z]', 'g'), ''),
-}));
+jest.mock('@omniscribe/shared', () => {
+  const actual = jest.requireActual('@omniscribe/shared');
+  return {
+    ...actual,
+    createLogger: () => ({
+      debug: jest.fn(),
+      info: jest.fn(),
+      warn: jest.fn(),
+      error: jest.fn(),
+    }),
+  };
+});
 
 // Import after mocks
 import { CodexProviderPlugin } from '../codex-provider.plugin';
