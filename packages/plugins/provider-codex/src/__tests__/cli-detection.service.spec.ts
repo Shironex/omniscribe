@@ -14,7 +14,17 @@ jest.mock('fs', () => ({
 
 // Track which child_process function was promisified via references
 const execRef = jest.fn();
-const execFileRef = jest.fn();
+// execFileRef is callback-aware: when cli-resolution's execFilePromise calls
+// execFile(cmd, args, opts, callback), it delegates to mockExecFileAsync.
+const execFileRef = jest.fn(
+  (cmd: string, args: string[], _opts: unknown, cb?: (...cbArgs: unknown[]) => void) => {
+    if (typeof cb === 'function') {
+      mockExecFileAsync(cmd, args)
+        .then((r: { stdout: string; stderr?: string }) => cb(null, r.stdout ?? '', r.stderr ?? ''))
+        .catch((e: Error) => cb(e, '', ''));
+    }
+  }
+);
 
 jest.mock('child_process', () => ({
   exec: execRef,

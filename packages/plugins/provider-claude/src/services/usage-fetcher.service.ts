@@ -11,12 +11,8 @@
  */
 
 import * as os from 'os';
-import {
-  createLogger,
-  extractErrorMessage,
-  stripAnsiCodes,
-  buildSafeEnv,
-} from '@omniscribe/shared';
+import { createLogger, extractErrorMessage, stripAnsiCodes } from '@omniscribe/shared';
+import { buildSafeEnv } from '@omniscribe/shared/node';
 import type { ClaudeUsage } from '@omniscribe/shared';
 import { ClaudeUsageParserService } from './usage-parser.service';
 

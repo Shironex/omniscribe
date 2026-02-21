@@ -16,7 +16,8 @@
 import * as os from 'os';
 import * as path from 'path';
 import type { CliCommandConfig, LaunchContext } from '@omniscribe/plugin-api';
-import { createLogger, findCliCommandSync } from '@omniscribe/shared';
+import { createLogger } from '@omniscribe/shared';
+import { findCliCommandSync } from '@omniscribe/shared/node';
 
 const logger = createLogger('CodexCliCommand');
 

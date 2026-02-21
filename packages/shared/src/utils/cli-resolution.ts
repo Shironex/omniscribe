@@ -10,17 +10,52 @@
 import { existsSync, readdirSync } from 'fs';
 import { execFile, execFileSync } from 'child_process';
 import { join } from 'path';
-import { homedir } from 'os';
-import { promisify } from 'util';
-import { isWindows } from './platform';
+import { homedir, platform } from 'os';
+import { normalizePath } from './path';
 
-const execFileAsync = promisify(execFile);
+/**
+ * Promise wrapper for execFile.
+ * Avoids importing `promisify` from `util` which breaks the Vite browser
+ * build (Rollup errors on `util` externalization unlike `path`/`os`/`fs`).
+ */
+function execFilePromise(
+  file: string,
+  args: readonly string[],
+  options?: { timeout?: number }
+): Promise<{ stdout: string; stderr: string }> {
+  return new Promise((resolve, reject) => {
+    execFile(file, [...args], options ?? {}, (error, stdout, stderr) => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve({ stdout, stderr });
+      }
+    });
+  });
+}
 
 // ---- Minimal logger interface for optional diagnostic output ----
 
 interface CliLogger {
   debug: (message: string, ...args: unknown[]) => void;
   info: (message: string, ...args: unknown[]) => void;
+}
+
+// ---- Cross-platform path helpers ----
+
+/** Join path segments and normalize separators to forward slashes. */
+export function joinPaths(...paths: string[]): string {
+  return normalizePath(join(...paths));
+}
+
+/** Get the user's home directory with normalized separators. */
+export function getHomeDir(): string {
+  return normalizePath(homedir());
+}
+
+/** Check if the current platform is Windows. */
+export function isWindows(): boolean {
+  return platform() === 'win32';
 }
 
 // ---- Synchronous CLI resolution (for cli-command services) ----
@@ -110,7 +145,7 @@ export function findFirstExistingPath(paths: string[], logger?: CliLogger): stri
 export async function findCliInPath(toolName: string): Promise<string | undefined> {
   try {
     const whichCmd = isWindows() ? 'where' : 'which';
-    const { stdout } = await execFileAsync(whichCmd, [toolName], { timeout: 5000 });
+    const { stdout } = await execFilePromise(whichCmd, [toolName], { timeout: 5000 });
     const firstPath = stdout.trim().split(/\r?\n/)[0]?.trim();
     return firstPath || undefined;
   } catch {

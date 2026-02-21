@@ -22,7 +22,14 @@ jest.mock('fs', () => ({
 
 jest.mock('child_process', () => ({
   exec: jest.fn(),
-  execFile: jest.fn(),
+  // Callback-aware: cli-resolution's execFilePromise calls execFile(cmd, args, opts, cb)
+  execFile: jest.fn(
+    (_cmd: string, _args: unknown, _opts: unknown, cb?: (...cbArgs: unknown[]) => void) => {
+      if (typeof cb === 'function') {
+        cb(new Error('not found'), '', '');
+      }
+    }
+  ),
   execFileSync: jest.fn().mockReturnValue('/usr/local/bin/claude\n'),
 }));
 

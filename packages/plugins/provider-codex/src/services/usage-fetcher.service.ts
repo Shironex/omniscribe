@@ -16,12 +16,8 @@ import * as readline from 'readline';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import {
-  createLogger,
-  extractErrorMessage,
-  findCliInPath,
-  findCliInLocalPaths,
-} from '@omniscribe/shared';
+import { createLogger, extractErrorMessage } from '@omniscribe/shared';
+import { findCliInPath, findCliInLocalPaths } from '@omniscribe/shared/node';
 import type { CodexUsageData, CodexRateLimitWindow, CodexPlanType } from '../types';
 import { getCodexCliPaths } from './cli-detection.service';
 

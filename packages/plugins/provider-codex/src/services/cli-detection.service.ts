@@ -18,8 +18,8 @@ import { join } from 'path';
 import { homedir } from 'os';
 import { promisify } from 'util';
 import type { CliDetectionResult } from '@omniscribe/plugin-api';
+import { createLogger } from '@omniscribe/shared';
 import {
-  createLogger,
   joinPaths,
   getHomeDir,
   isWindows,
@@ -28,7 +28,7 @@ import {
   getNvmBinPaths,
   getFnmBinPaths,
   getNvmWindowsCliPaths,
-} from '@omniscribe/shared';
+} from '@omniscribe/shared/node';
 
 const logger = createLogger('CodexCliDetection');
 

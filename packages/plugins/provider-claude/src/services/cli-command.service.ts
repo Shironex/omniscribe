@@ -12,7 +12,8 @@
 import * as os from 'os';
 import * as path from 'path';
 import type { CliCommandConfig, LaunchContext } from '@omniscribe/plugin-api';
-import { createLogger, findCliCommandSync } from '@omniscribe/shared';
+import { createLogger } from '@omniscribe/shared';
+import { findCliCommandSync } from '@omniscribe/shared/node';
 import { OMNISCRIBE_SYSTEM_PROMPT } from './system-prompt';
 
 const logger = createLogger('ClaudeCliCommand');

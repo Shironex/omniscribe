@@ -14,14 +14,14 @@ import { execFile } from 'child_process';
 import { promisify } from 'util';
 import type { CliDetectionResult } from '@omniscribe/plugin-api';
 import type { ClaudeCliStatus } from '@omniscribe/shared';
+import { createLogger } from '@omniscribe/shared';
 import {
-  createLogger,
   joinPaths,
   getHomeDir,
   isWindows,
   findCliInPath,
   findCliInLocalPaths,
-} from '@omniscribe/shared';
+} from '@omniscribe/shared/node';
 
 const logger = createLogger('ClaudeCliDetection');
 
