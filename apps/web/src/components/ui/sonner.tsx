@@ -1,18 +1,26 @@
+import { useMemo } from 'react';
 import { Toaster as Sonner } from 'sonner';
 
 import { getThemeOption } from '@/lib/theme';
 import { useSettingsStore, selectEffectiveTheme } from '@/stores/useSettingsStore';
-import { usePluginStore } from '@/stores';
+import { usePluginStore } from '@/stores/usePluginStore';
 
 type ToasterProps = React.ComponentProps<typeof Sonner>;
 
 const Toaster = ({ ...props }: ToasterProps) => {
   const effectiveTheme = useSettingsStore(selectEffectiveTheme);
   const themeOption = getThemeOption(effectiveTheme);
+  // Subscribe to plugin themes for reactivity when plugins register/unregister themes
   const pluginThemes = usePluginStore(s => s.themes);
 
   // Check built-in themes first, then plugin themes, default to dark
-  const isDark = themeOption?.isDark ?? pluginThemes.get(effectiveTheme)?.isDark ?? true;
+  const pluginTheme = useMemo(() => {
+    for (const reg of pluginThemes.values()) {
+      if (reg.id === effectiveTheme) return reg;
+    }
+    return undefined;
+  }, [pluginThemes, effectiveTheme]);
+  const isDark = themeOption?.isDark ?? pluginTheme?.isDark ?? true;
 
   return (
     <Sonner
