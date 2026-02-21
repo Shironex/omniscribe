@@ -25,8 +25,9 @@ const ALLOWED_EVENT_PREFIXES = ['plugin:', 'usage:'] as const;
 function assertAllowedEvent(event: string): void {
   const allowed = ALLOWED_EVENT_PREFIXES.some(prefix => event.startsWith(prefix));
   if (!allowed) {
+    const safeEvent = event.length > 100 ? event.slice(0, 100) + '...' : event;
     throw new Error(
-      `Plugin SDK: event "${event}" is not allowed. Plugins may only emit events with these prefixes: ${ALLOWED_EVENT_PREFIXES.join(', ')}`
+      `Plugin SDK: event "${safeEvent}" is not allowed. Plugins may only emit events with these prefixes: ${ALLOWED_EVENT_PREFIXES.join(', ')}`
     );
   }
 }

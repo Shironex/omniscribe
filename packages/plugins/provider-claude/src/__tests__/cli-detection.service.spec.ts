@@ -110,16 +110,18 @@ describe('ClaudeCliDetectionService', () => {
       process.env['APPDATA'] = 'C:/Users/test/AppData/Roaming';
       process.env['LOCALAPPDATA'] = 'C:/Users/test/AppData/Local';
 
-      const result = service.getClaudeCliPaths();
+      try {
+        const result = service.getClaudeCliPaths();
 
-      expect(result.length).toBeGreaterThan(0);
-      const pathStr = result.join(' ');
-      expect(pathStr).toContain('claude.exe');
-
-      delete process.env['APPDATA'];
-      delete process.env['LOCALAPPDATA'];
-      if (originalPlatform) {
-        Object.defineProperty(process, 'platform', originalPlatform);
+        expect(result.length).toBeGreaterThan(0);
+        const pathStr = result.join(' ');
+        expect(pathStr).toContain('claude.exe');
+      } finally {
+        delete process.env['APPDATA'];
+        delete process.env['LOCALAPPDATA'];
+        if (originalPlatform) {
+          Object.defineProperty(process, 'platform', originalPlatform);
+        }
       }
     });
   });

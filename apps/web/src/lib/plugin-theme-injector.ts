@@ -16,14 +16,14 @@ import { ALL_THEMES } from '@omniscribe/shared';
 /** Attribute used to identify plugin theme style elements in the DOM */
 const THEME_ATTR = 'data-plugin-theme';
 
-/** Valid theme ID: starts with a letter, alphanumeric/hyphens/underscores, max 100 chars. */
+/** Valid theme ID: starts with a letter, alphanumeric/hyphens/underscores, max 101 chars total. */
 const VALID_THEME_ID = /^[a-zA-Z][a-zA-Z0-9_-]{0,100}$/;
 
 /** Valid CSS custom property key: must start with `--` followed by a letter and alphanumeric/hyphens. */
 const VALID_CSS_PROPERTY_KEY = /^--[a-zA-Z][a-zA-Z0-9-]*$/;
 
-/** Characters that could break out of a CSS declaration block or style element. */
-const DANGEROUS_CSS_VALUE = /[{}]|<\/style/i;
+/** Characters/patterns that could break out of a CSS declaration block, inject declarations, or load external resources. */
+const DANGEROUS_CSS_VALUE = /[{};]|<\/style|url\s*\(/i;
 
 /**
  * Validate that a theme ID is safe for CSS interpolation.
@@ -111,8 +111,10 @@ export function injectThemeStyles(themeId: string, cssProperties: Record<string,
  * @param themeId - The theme identifier to remove styles for
  */
 export function removeThemeStyles(themeId: string): void {
+  // Validate even for removal — only process IDs that could have been injected
+  if (!isValidThemeId(themeId)) return;
+
   // Use CSS.escape when available (browsers), fall back to validated ID (jsdom/tests).
-  // Since theme IDs are validated before injection, the fallback is safe.
   const escaped = typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(themeId) : themeId;
   const existing = document.head.querySelector(`style[${THEME_ATTR}="${escaped}"]`);
   if (existing) {

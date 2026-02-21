@@ -84,6 +84,17 @@ describe('isSafeCssValue', () => {
     expect(isSafeCssValue('{color: red}')).toBe(false);
   });
 
+  it('rejects values containing semicolons (declaration injection)', () => {
+    expect(isSafeCssValue('red; position: fixed')).toBe(false);
+    expect(isSafeCssValue('0 0% 0%; z-index: 9999')).toBe(false);
+  });
+
+  it('rejects values containing url() (external resource loading)', () => {
+    expect(isSafeCssValue('url(https://attacker.com/log)')).toBe(false);
+    expect(isSafeCssValue('url(data:image/png;base64,abc)')).toBe(false);
+    expect(isSafeCssValue('URL( https://evil.com )')).toBe(false);
+  });
+
   it('rejects values containing </style tag', () => {
     expect(isSafeCssValue('red</style><script>alert(1)</script>')).toBe(false);
     expect(isSafeCssValue('</STYLE>')).toBe(false);
