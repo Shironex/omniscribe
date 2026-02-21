@@ -9,6 +9,7 @@ jest.mock('os', () => ({
 }));
 
 jest.mock('child_process', () => ({
+  execFile: jest.fn(),
   execFileSync: jest.fn(),
 }));
 

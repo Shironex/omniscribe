@@ -4,10 +4,8 @@ export { extractErrorMessage } from './error';
 export { formatFileSize } from './format';
 export { normalizePath } from './path';
 export { stripAnsiCodes } from './ansi';
+export { joinPaths, getHomeDir, isWindows } from './platform';
 export {
-  joinPaths,
-  getHomeDir,
-  isWindows,
   findCliCommandSync,
   findInPathSync,
   findFirstExistingPath,

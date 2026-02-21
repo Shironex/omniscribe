@@ -84,7 +84,7 @@ describe('CodexCliDetectionService', () => {
   // ================================================================
   describe('findCodexCli', () => {
     it('should return path when found in PATH', async () => {
-      mockExecAsync.mockResolvedValue({ stdout: '/usr/local/bin/codex\n' });
+      mockExecFileAsync.mockResolvedValue({ stdout: '/usr/local/bin/codex\n' });
 
       const result = await service.findCodexCli();
 
@@ -92,7 +92,7 @@ describe('CodexCliDetectionService', () => {
     });
 
     it('should fall back to local paths when not in PATH', async () => {
-      mockExecAsync.mockRejectedValue(new Error('not found'));
+      mockExecFileAsync.mockRejectedValue(new Error('not found'));
       mockExistsSync.mockImplementation((p: string) => {
         return p.includes('.local/bin/codex');
       });
@@ -104,7 +104,7 @@ describe('CodexCliDetectionService', () => {
     });
 
     it('should return undefined when not found anywhere', async () => {
-      mockExecAsync.mockRejectedValue(new Error('not found'));
+      mockExecFileAsync.mockRejectedValue(new Error('not found'));
       mockExistsSync.mockReturnValue(false);
 
       const result = await service.findCodexCli();
@@ -113,7 +113,7 @@ describe('CodexCliDetectionService', () => {
     });
 
     it('should prefer PATH over local paths', async () => {
-      mockExecAsync.mockResolvedValue({ stdout: '/usr/bin/codex\n' });
+      mockExecFileAsync.mockResolvedValue({ stdout: '/usr/bin/codex\n' });
       mockExistsSync.mockReturnValue(true);
 
       const result = await service.findCodexCli();
@@ -323,8 +323,12 @@ describe('CodexCliDetectionService', () => {
   // ================================================================
   describe('detect', () => {
     it('should return CliDetectionResult structure when installed', async () => {
-      mockExecAsync.mockResolvedValue({ stdout: '/usr/local/bin/codex\n' });
-      mockExecFileAsync.mockResolvedValue({ stdout: '0.1.0\n' });
+      mockExecFileAsync.mockImplementation((cmd: string) => {
+        if (cmd === 'which' || cmd === 'where') {
+          return Promise.resolve({ stdout: '/usr/local/bin/codex\n' });
+        }
+        return Promise.resolve({ stdout: '0.1.0\n' });
+      });
       mockExistsSync.mockReturnValue(true);
       mockReadFileSync.mockReturnValue(JSON.stringify({ access_token: 'token' }));
 
@@ -337,7 +341,7 @@ describe('CodexCliDetectionService', () => {
     });
 
     it('should return not-installed when CLI is not found', async () => {
-      mockExecAsync.mockRejectedValue(new Error('not found'));
+      mockExecFileAsync.mockRejectedValue(new Error('not found'));
       mockExistsSync.mockReturnValue(false);
 
       const result = await service.detect();

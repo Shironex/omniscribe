@@ -3,30 +3,24 @@
 const mockExistsSync = jest.fn();
 const mockReadFileSync = jest.fn();
 const mockExecFileAsync = jest.fn();
-const mockExecAsync = jest.fn();
 
 jest.mock('fs', () => ({
   existsSync: (...args: unknown[]) => mockExistsSync(...args),
   readFileSync: (...args: unknown[]) => mockReadFileSync(...args),
 }));
 
-// Track which child_process function was promisified via a WeakSet
-const execRef = jest.fn();
 const execFileRef = jest.fn();
 
 jest.mock('child_process', () => ({
-  exec: execRef,
   execFile: execFileRef,
 }));
 
-// Mock util.promisify to intercept both exec and execFile async versions
+// Mock util.promisify — only execFile is used (findCliInPath + getVersion)
 jest.mock('util', () => ({
-  promisify: (fn: unknown) => {
-    if (fn === execRef) {
-      return (...args: unknown[]) => mockExecAsync(...args);
-    }
-    return (...args: unknown[]) => mockExecFileAsync(...args);
-  },
+  promisify:
+    () =>
+    (...args: unknown[]) =>
+      mockExecFileAsync(...args),
 }));
 
 jest.mock('os', () => ({
@@ -128,7 +122,7 @@ describe('ClaudeCliDetectionService', () => {
   // ================================================================
   describe('findClaudeCli', () => {
     it('should return path method when found in PATH', async () => {
-      mockExecAsync.mockResolvedValue({ stdout: '/usr/local/bin/claude\n' });
+      mockExecFileAsync.mockResolvedValue({ stdout: '/usr/local/bin/claude\n' });
 
       const result = await service.findClaudeCli();
 
@@ -136,7 +130,7 @@ describe('ClaudeCliDetectionService', () => {
     });
 
     it('should fall back to local paths when not in PATH', async () => {
-      mockExecAsync.mockRejectedValue(new Error('not found'));
+      mockExecFileAsync.mockRejectedValue(new Error('not found'));
       mockExistsSync.mockImplementation((p: string) => {
         return p.includes('.local/bin/claude');
       });
@@ -148,7 +142,7 @@ describe('ClaudeCliDetectionService', () => {
     });
 
     it('should return method none when not found anywhere', async () => {
-      mockExecAsync.mockRejectedValue(new Error('not found'));
+      mockExecFileAsync.mockRejectedValue(new Error('not found'));
       mockExistsSync.mockReturnValue(false);
 
       const result = await service.findClaudeCli();
@@ -158,7 +152,7 @@ describe('ClaudeCliDetectionService', () => {
     });
 
     it('should prefer PATH over local paths', async () => {
-      mockExecAsync.mockResolvedValue({ stdout: '/usr/bin/claude\n' });
+      mockExecFileAsync.mockResolvedValue({ stdout: '/usr/bin/claude\n' });
       mockExistsSync.mockReturnValue(true);
 
       const result = await service.findClaudeCli();
@@ -343,8 +337,12 @@ describe('ClaudeCliDetectionService', () => {
   // ================================================================
   describe('detect', () => {
     it('should return CliDetectionResult structure', async () => {
-      mockExecAsync.mockResolvedValue({ stdout: '/usr/local/bin/claude\n' });
-      mockExecFileAsync.mockResolvedValue({ stdout: '1.0.27\n' });
+      mockExecFileAsync.mockImplementation((cmd: string) => {
+        if (cmd === 'which' || cmd === 'where') {
+          return Promise.resolve({ stdout: '/usr/local/bin/claude\n' });
+        }
+        return Promise.resolve({ stdout: '1.0.27\n' });
+      });
       mockExistsSync.mockReturnValue(true);
       mockReadFileSync.mockReturnValue(JSON.stringify({ claudeAiOauth: { accessToken: 'token' } }));
 
@@ -357,7 +355,7 @@ describe('ClaudeCliDetectionService', () => {
     });
 
     it('should return not-installed when CLI is not found', async () => {
-      mockExecAsync.mockRejectedValue(new Error('not found'));
+      mockExecFileAsync.mockRejectedValue(new Error('not found'));
       mockExistsSync.mockReturnValue(false);
 
       const result = await service.detect();
@@ -372,8 +370,12 @@ describe('ClaudeCliDetectionService', () => {
   // ================================================================
   describe('getFullStatus', () => {
     it('should assemble full status when CLI is installed and authenticated', async () => {
-      mockExecAsync.mockResolvedValue({ stdout: '/usr/local/bin/claude\n' });
-      mockExecFileAsync.mockResolvedValue({ stdout: '1.0.27\n' });
+      mockExecFileAsync.mockImplementation((cmd: string) => {
+        if (cmd === 'which' || cmd === 'where') {
+          return Promise.resolve({ stdout: '/usr/local/bin/claude\n' });
+        }
+        return Promise.resolve({ stdout: '1.0.27\n' });
+      });
       mockExistsSync.mockReturnValue(true);
       mockReadFileSync.mockReturnValue(JSON.stringify({ claudeAiOauth: { accessToken: 'token' } }));
 
@@ -389,7 +391,7 @@ describe('ClaudeCliDetectionService', () => {
     });
 
     it('should return not installed status when CLI is not found', async () => {
-      mockExecAsync.mockRejectedValue(new Error('not found'));
+      mockExecFileAsync.mockRejectedValue(new Error('not found'));
       mockExistsSync.mockReturnValue(false);
 
       const result = await service.getFullStatus();
@@ -401,16 +403,20 @@ describe('ClaudeCliDetectionService', () => {
     });
 
     it('should not fetch version when CLI is not found', async () => {
-      mockExecAsync.mockRejectedValue(new Error('not found'));
+      mockExecFileAsync.mockRejectedValue(new Error('not found'));
       mockExistsSync.mockReturnValue(false);
 
       await service.getFullStatus();
 
-      expect(mockExecFileAsync).not.toHaveBeenCalled();
+      // findCliInPath calls execFile('which'/'where'), but version should not be fetched
+      const versionCalls = mockExecFileAsync.mock.calls.filter(
+        (call: unknown[]) => call[0] !== 'which' && call[0] !== 'where'
+      );
+      expect(versionCalls).toHaveLength(0);
     });
 
     it('should include platform and arch from process', async () => {
-      mockExecAsync.mockRejectedValue(new Error('not found'));
+      mockExecFileAsync.mockRejectedValue(new Error('not found'));
       mockExistsSync.mockReturnValue(false);
 
       const result = await service.getFullStatus();

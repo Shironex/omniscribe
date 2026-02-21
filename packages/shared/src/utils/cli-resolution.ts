@@ -8,45 +8,19 @@
  */
 
 import { existsSync, readdirSync } from 'fs';
-import { exec, execFileSync } from 'child_process';
+import { execFile, execFileSync } from 'child_process';
 import { join } from 'path';
-import { homedir, platform } from 'os';
+import { homedir } from 'os';
 import { promisify } from 'util';
-import { normalizePath } from './path';
+import { isWindows } from './platform';
 
-// Lazy-initialized promisified exec.
-// Cannot be top-level because `exec` may be undefined in test contexts
-// where only `execFileSync` is mocked.
-let _execAsync: ((cmd: string) => Promise<{ stdout: string; stderr: string }>) | undefined;
-function getExecAsync() {
-  if (!_execAsync) {
-    _execAsync = promisify(exec);
-  }
-  return _execAsync;
-}
+const execFileAsync = promisify(execFile);
 
 // ---- Minimal logger interface for optional diagnostic output ----
 
 interface CliLogger {
   debug: (message: string, ...args: unknown[]) => void;
   info: (message: string, ...args: unknown[]) => void;
-}
-
-// ---- Cross-platform path helpers ----
-
-/** Join path segments and normalize separators to forward slashes. */
-export function joinPaths(...paths: string[]): string {
-  return normalizePath(join(...paths));
-}
-
-/** Get the user's home directory with normalized separators. */
-export function getHomeDir(): string {
-  return normalizePath(homedir());
-}
-
-/** Check if the current platform is Windows. */
-export function isWindows(): boolean {
-  return platform() === 'win32';
 }
 
 // ---- Synchronous CLI resolution (for cli-command services) ----
@@ -131,14 +105,13 @@ export function findFirstExistingPath(paths: string[], logger?: CliLogger): stri
 
 /**
  * Find a CLI tool in the system PATH asynchronously.
- * Uses `which` (Unix) or `where` (Windows) shell commands.
+ * Uses `which` (Unix) or `where` (Windows) via execFile (no shell).
  */
 export async function findCliInPath(toolName: string): Promise<string | undefined> {
   try {
-    const execAsync = getExecAsync();
-    const command = isWindows() ? `where ${toolName}` : `which ${toolName}`;
-    const { stdout } = await execAsync(command);
-    const firstPath = stdout.trim().split('\n')[0]?.trim();
+    const whichCmd = isWindows() ? 'where' : 'which';
+    const { stdout } = await execFileAsync(whichCmd, [toolName], { timeout: 5000 });
+    const firstPath = stdout.trim().split(/\r?\n/)[0]?.trim();
     return firstPath || undefined;
   } catch {
     return undefined;
@@ -171,7 +144,9 @@ export function getNvmBinPaths(): string[] {
     if (!existsSync(versionsDir)) {
       return [];
     }
-    const versions = readdirSync(versionsDir);
+    const versions = readdirSync(versionsDir, { withFileTypes: true })
+      .filter(dirent => dirent.isDirectory())
+      .map(dirent => dirent.name);
     return versions.map(version => join(versionsDir, version, 'bin'));
   } catch {
     return [];
@@ -198,7 +173,9 @@ export function getFnmBinPaths(): string[] {
       if (!existsSync(fnmDir)) {
         continue;
       }
-      const versions = readdirSync(fnmDir);
+      const versions = readdirSync(fnmDir, { withFileTypes: true })
+        .filter(dirent => dirent.isDirectory())
+        .map(dirent => dirent.name);
       for (const version of versions) {
         binPaths.push(join(fnmDir, version, 'installation', 'bin'));
       }

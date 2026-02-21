@@ -23,7 +23,7 @@ import {
   findCliInLocalPaths,
 } from '@omniscribe/shared';
 import type { CodexUsageData, CodexRateLimitWindow, CodexPlanType } from '../types';
-import { CodexCliDetectionService } from './cli-detection.service';
+import { getCodexCliPaths } from './cli-detection.service';
 
 const logger = createLogger('CodexUsageFetcher');
 
@@ -37,19 +37,16 @@ const REQUEST_TIMEOUT = 10_000;
 // CLI path resolution helpers
 // ---------------------------------------------------------------------------
 
-/** Shared detection service instance for accessing the canonical CLI paths. */
-const detectionService = new CodexCliDetectionService();
-
 /**
  * Find the Codex CLI path.
  * Uses shared async path resolution from @omniscribe/shared and the canonical
- * path list from CodexCliDetectionService.
+ * path list from cli-detection.service.
  */
 async function findCodexCli(): Promise<string | null> {
   const pathResult = await findCliInPath('codex');
   if (pathResult) return pathResult;
 
-  const localPath = findCliInLocalPaths(detectionService.getCodexCliPaths());
+  const localPath = findCliInLocalPaths(getCodexCliPaths());
   return localPath ?? null;
 }
 
