@@ -7,6 +7,7 @@ import { useTaskStore } from '@/stores/useTaskStore';
 import { useSessionHistoryStore } from '@/stores/useSessionHistoryStore';
 import { useConnectionStore } from '@/stores/useConnectionStore';
 import { useTerminalStore } from '@/stores/useTerminalStore';
+import { usePluginStore } from '@/stores/usePluginStore';
 
 export interface UseStoreListenersReturn {
   initAllListeners: () => void;
@@ -55,6 +56,10 @@ export function useStoreListeners(): UseStoreListenersReturn {
   const initTerminalListeners = useTerminalStore(state => state.initListeners);
   const cleanupTerminalListeners = useTerminalStore(state => state.cleanupListeners);
 
+  // Plugin store (provider status, enabled, error events)
+  const initPluginListeners = usePluginStore(state => state.initListeners);
+  const cleanupPluginListeners = usePluginStore(state => state.cleanupListeners);
+
   const initAllListeners = useCallback(() => {
     initConnectionListeners();
     initSessionListeners();
@@ -64,6 +69,7 @@ export function useStoreListeners(): UseStoreListenersReturn {
     initTaskListeners();
     initSessionHistoryListeners();
     initTerminalListeners();
+    initPluginListeners();
   }, [
     initConnectionListeners,
     initSessionListeners,
@@ -73,6 +79,7 @@ export function useStoreListeners(): UseStoreListenersReturn {
     initTaskListeners,
     initSessionHistoryListeners,
     initTerminalListeners,
+    initPluginListeners,
   ]);
 
   const cleanupAllListeners = useCallback(() => {
@@ -84,6 +91,7 @@ export function useStoreListeners(): UseStoreListenersReturn {
     cleanupTaskListeners();
     cleanupSessionHistoryListeners();
     cleanupTerminalListeners();
+    cleanupPluginListeners();
   }, [
     cleanupConnectionListeners,
     cleanupSessionListeners,
@@ -93,6 +101,7 @@ export function useStoreListeners(): UseStoreListenersReturn {
     cleanupTaskListeners,
     cleanupSessionHistoryListeners,
     cleanupTerminalListeners,
+    cleanupPluginListeners,
   ]);
 
   return {

@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { AiProviderPlugin, CliDetectionResult } from '@omniscribe/plugin-api';
+import type { AiProviderPlugin, CliDetectionResult, PluginContext } from '@omniscribe/plugin-api';
 import { createLogger, VALID_AI_MODES } from '@omniscribe/shared';
 import type { BuiltinAiMode } from '@omniscribe/shared';
 import type { RegisteredProvider, ProviderInfo } from './types';
@@ -102,6 +102,32 @@ export class PluginRegistryService {
       (VALID_AI_MODES as readonly string[]).includes(aiMode as BuiltinAiMode) ||
       this.providers.has(aiMode)
     );
+  }
+
+  /**
+   * Mark a provider as activated and store its context.
+   * Returns false if no provider exists for the given aiMode.
+   */
+  markActivated(aiMode: string, context: PluginContext): boolean {
+    const entry = this.providers.get(aiMode);
+    if (!entry) return false;
+    entry.activated = true;
+    entry.context = context;
+    this.logger.log(`Provider '${aiMode}' activated`);
+    return true;
+  }
+
+  /**
+   * Mark a provider as deactivated and clear its context.
+   * Returns false if no provider exists for the given aiMode.
+   */
+  markDeactivated(aiMode: string): boolean {
+    const entry = this.providers.get(aiMode);
+    if (!entry) return false;
+    entry.activated = false;
+    entry.context = undefined;
+    this.logger.log(`Provider '${aiMode}' deactivated`);
+    return true;
   }
 
   /**

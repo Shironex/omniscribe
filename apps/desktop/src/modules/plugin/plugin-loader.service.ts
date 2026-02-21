@@ -84,8 +84,7 @@ export class PluginLoaderService implements OnModuleInit, OnModuleDestroy {
         this.storageService
       );
       await entry.plugin.activate(context);
-      entry.activated = true;
-      entry.context = context;
+      this.registry.markActivated(aiMode, context);
       this.eventEmitter.emit(InternalPluginEvents.ACTIVATED(entry.manifest.id), {
         pluginId: entry.manifest.id,
       });
@@ -110,9 +109,11 @@ export class PluginLoaderService implements OnModuleInit, OnModuleDestroy {
   async deactivateProvider(aiMode: string): Promise<boolean> {
     const entry = this.registry.getProviderEntry(aiMode);
     if (!entry || !entry.activated) return false;
+    // Save context ref before clearing via registry (needed for disposal in finally)
+    const context = entry.context;
     try {
       await entry.plugin.deactivate();
-      entry.activated = false;
+      this.registry.markDeactivated(aiMode);
       this.eventEmitter.emit(InternalPluginEvents.DEACTIVATED(entry.manifest.id), {
         pluginId: entry.manifest.id,
       });
@@ -121,12 +122,11 @@ export class PluginLoaderService implements OnModuleInit, OnModuleDestroy {
       const msg = extractErrorMessage(error);
       this.logger.warn(`Error deactivating provider '${aiMode}': ${msg}`);
       // Mark as deactivated regardless -- best-effort cleanup
-      entry.activated = false;
+      this.registry.markDeactivated(aiMode);
     } finally {
       // Dispose context subscriptions regardless of deactivation success/failure
-      if (entry.context) {
-        disposePluginContext(entry.context);
-        entry.context = undefined;
+      if (context) {
+        disposePluginContext(context);
       }
     }
     return true;
