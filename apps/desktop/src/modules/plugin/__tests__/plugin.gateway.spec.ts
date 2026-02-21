@@ -183,6 +183,7 @@ describe('PluginGateway', () => {
 
       expect(result.success).toBe(false);
       expect(result.error).toContain('Invalid payload');
+      expect(mockRegistryService.setEnabled).not.toHaveBeenCalled();
     });
 
     it('should return error when aiMode is not a string', async () => {
@@ -263,6 +264,7 @@ describe('PluginGateway', () => {
       const result = await gateway.handleInvoke(mockSocket, null as unknown as PluginInvokePayload);
 
       expect(result.error).toContain('Invalid payload');
+      expect(mockRegistryService.getProviderEntryByPluginId).not.toHaveBeenCalled();
     });
 
     it('should return error when pluginId is not a string', async () => {

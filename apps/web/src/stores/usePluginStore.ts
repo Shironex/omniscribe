@@ -38,7 +38,7 @@ type WithPluginId<T> = T & { pluginId: string };
 // Store state
 // ==========================================
 
-interface PluginStoreState extends SocketStoreState {
+interface PluginState extends SocketStoreState {
   /** Provider info from backend (via WebSocket) */
   providers: ProviderInfo[];
 
@@ -74,7 +74,7 @@ interface PluginStoreState extends SocketStoreState {
 // Store actions
 // ==========================================
 
-interface PluginStoreActions extends SocketStoreActions {
+interface PluginActions extends SocketStoreActions {
   /** Replace providers array */
   setProviders: (providers: ProviderInfo[]) => void;
 
@@ -110,7 +110,7 @@ interface PluginStoreActions extends SocketStoreActions {
 // Combined store type
 // ==========================================
 
-type PluginStore = PluginStoreState & PluginStoreActions;
+type PluginStore = PluginState & PluginActions;
 
 // ==========================================
 // Helpers
@@ -138,7 +138,7 @@ export const usePluginStore = create<PluginStore>()(
   devtools(
     (set, get) => {
       // Create common socket actions
-      const socketActions = createSocketActions<PluginStoreState>(set, 'plugin');
+      const socketActions = createSocketActions<PluginState>(set, 'plugin');
 
       // Create socket listeners with proper cleanup
       const { initListeners, cleanupListeners } = createSocketListeners<PluginStore>(
@@ -150,15 +150,21 @@ export const usePluginStore = create<PluginStore>()(
             {
               event: PluginEvents.PROVIDER_STATUS,
               handler: (data, get) => {
-                const result = data as { providers: ProviderInfo[] };
-                logger.debug('Received provider status', result.providers.length, 'providers');
-                get().setProviders(result.providers);
+                const result = data as { providers?: ProviderInfo[] };
+                const providers = result?.providers ?? [];
+                logger.debug('Received provider status', providers.length, 'providers');
+                get().setProviders(providers);
               },
             },
             {
               event: PluginEvents.PROVIDER_ENABLED,
               handler: data => {
-                const { aiMode, enabled } = data as { aiMode: string; enabled: boolean };
+                const payload = data as { aiMode?: string; enabled?: boolean };
+                if (typeof payload?.aiMode !== 'string' || typeof payload?.enabled !== 'boolean') {
+                  logger.warn('Received malformed provider enabled payload');
+                  return;
+                }
+                const { aiMode, enabled } = payload;
                 logger.debug('Received provider enabled', aiMode, enabled);
                 set(
                   state => ({
@@ -180,7 +186,9 @@ export const usePluginStore = create<PluginStore>()(
             {
               event: PluginEvents.PROVIDER_ERROR,
               handler: data => {
-                const { pluginId, error } = data as { pluginId: string; error: string };
+                const payload = data as { pluginId?: string; error?: string };
+                const pluginId = payload?.pluginId ?? 'unknown';
+                const error = payload?.error ?? 'Unknown error';
                 logger.error('Provider error', pluginId, error);
               },
             },
@@ -192,7 +200,8 @@ export const usePluginStore = create<PluginStore>()(
               {}
             )
               .then(data => {
-                get().setProviders(data.providers);
+                const providers = (data as { providers?: ProviderInfo[] })?.providers ?? [];
+                get().setProviders(providers);
               })
               .catch(err => {
                 logger.error('Failed to fetch initial providers', err);
@@ -227,6 +236,9 @@ export const usePluginStore = create<PluginStore>()(
         setProviderEnabled: (aiMode: string, enabled: boolean) => {
           logger.info('setProviderEnabled', aiMode, enabled);
 
+          // Capture previous state for rollback
+          const previous = get().providers.find(p => p.aiMode === aiMode);
+
           // Optimistic UI update (also clear activated when disabling)
           set(
             state => ({
@@ -246,11 +258,13 @@ export const usePluginStore = create<PluginStore>()(
             { aiMode, enabled }
           ).catch(err => {
             logger.error('Failed to set provider enabled', err);
-            // Rollback on failure
+            // Rollback on failure — restore both enabled and activated
             set(
               state => ({
                 providers: state.providers.map(p =>
-                  p.aiMode === aiMode ? { ...p, enabled: !enabled } : p
+                  p.aiMode === aiMode && previous
+                    ? { ...p, enabled: previous.enabled, activated: previous.activated }
+                    : p
                 ),
               }),
               undefined,

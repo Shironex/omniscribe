@@ -35,8 +35,6 @@ export function usePluginInitialization(): void {
 
   // Activate/deactivate frontend plugins based on provider state
   useEffect(() => {
-    if (providers.length === 0) return;
-
     // Activate plugins that should be active
     for (const provider of providers) {
       if (!provider.enabled || !provider.activated) continue;
