@@ -74,6 +74,12 @@ export class PluginGateway implements OnGatewayInit {
     @MessageBody() payload: PluginSetEnabledPayload
   ): Promise<{ success: boolean; error?: string }> {
     try {
+      if (!payload || typeof payload.aiMode !== 'string' || typeof payload.enabled !== 'boolean') {
+        return {
+          success: false,
+          error: 'Invalid payload: aiMode (string) and enabled (boolean) are required',
+        };
+      }
       const { aiMode, enabled } = payload;
       const success = this.registryService.setEnabled(aiMode, enabled);
       if (!success) {
@@ -135,6 +141,9 @@ export class PluginGateway implements OnGatewayInit {
     @MessageBody() payload: PluginInvokePayload
   ): Promise<{ result?: unknown; error?: string }> {
     try {
+      if (!payload || typeof payload.pluginId !== 'string' || typeof payload.method !== 'string') {
+        return { error: 'Invalid payload: pluginId (string) and method (string) are required' };
+      }
       const { pluginId, method } = payload;
       const args = Array.isArray(payload.args) ? payload.args : [];
 

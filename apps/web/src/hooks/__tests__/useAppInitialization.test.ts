@@ -20,6 +20,8 @@ const mockInitConnection = vi.fn();
 const mockCleanupConnection = vi.fn();
 const mockInitTerminal = vi.fn();
 const mockCleanupTerminal = vi.fn();
+const mockInitPlugin = vi.fn();
+const mockCleanupPlugin = vi.fn();
 const mockCleanupUpdate = vi.fn();
 const mockInitUpdate = vi.fn().mockReturnValue(mockCleanupUpdate);
 const mockConnectSocket = vi.fn().mockResolvedValue(undefined);
@@ -77,6 +79,11 @@ vi.mock('@/stores/useTerminalStore', () => ({
     sel({ initListeners: mockInitTerminal, cleanupListeners: mockCleanupTerminal }),
 }));
 
+vi.mock('@/stores/usePluginStore', () => ({
+  usePluginStore: (sel: Selector) =>
+    sel({ initListeners: mockInitPlugin, cleanupListeners: mockCleanupPlugin }),
+}));
+
 vi.mock('@/stores/useSettingsStore', () => ({
   useSettingsStore: { getState: () => ({ setClaudeCliStatus: vi.fn() }) },
 }));
@@ -129,6 +136,7 @@ describe('useAppInitialization', () => {
       mockInitTask.mockImplementation(() => callOrder.push('initTask'));
       mockInitSessionHistory.mockImplementation(() => callOrder.push('initSessionHistory'));
       mockInitTerminal.mockImplementation(() => callOrder.push('initTerminal'));
+      mockInitPlugin.mockImplementation(() => callOrder.push('initPlugin'));
       mockConnectSocket.mockImplementation(() => {
         callOrder.push('connectSocket');
         return Promise.resolve();
@@ -142,7 +150,7 @@ describe('useAppInitialization', () => {
       const connectIndex = callOrder.indexOf('connectSocket');
       expect(connectIndex).toBeGreaterThan(-1);
 
-      // All 8 store inits must appear before connectSocket
+      // All 9 store inits must appear before connectSocket
       const storeInits = [
         'initConnection',
         'initSession',
@@ -152,6 +160,7 @@ describe('useAppInitialization', () => {
         'initTask',
         'initSessionHistory',
         'initTerminal',
+        'initPlugin',
       ];
       for (const init of storeInits) {
         const idx = callOrder.indexOf(init);
@@ -191,6 +200,7 @@ describe('useAppInitialization', () => {
       expect(mockCleanupTask).toHaveBeenCalledTimes(1);
       expect(mockCleanupSessionHistory).toHaveBeenCalledTimes(1);
       expect(mockCleanupTerminal).toHaveBeenCalledTimes(1);
+      expect(mockCleanupPlugin).toHaveBeenCalledTimes(1);
       expect(mockCleanupUpdate).toHaveBeenCalledTimes(1);
     });
   });

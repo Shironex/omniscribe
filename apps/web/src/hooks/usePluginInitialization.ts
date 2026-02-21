@@ -2,7 +2,6 @@ import { useEffect, useRef } from 'react';
 import type { FrontendPluginContext } from '@omniscribe/plugin-api';
 import { createLogger } from '@omniscribe/shared';
 import { usePluginStore } from '@/stores/usePluginStore';
-import { useConnectionStore } from '@/stores/useConnectionStore';
 import { createFrontendPluginContext, disposeFrontendPluginContext } from '@/lib/plugin-context';
 
 const logger = createLogger('PluginInit');
@@ -24,30 +23,18 @@ const BUNDLED_FRONTEND_ACTIVATORS: Record<
 };
 
 /**
- * Hook that initializes plugin socket listeners and activates frontend
- * plugins once the backend reports provider status.
+ * Hook that activates/deactivates frontend plugins once the backend
+ * reports provider status. Socket listeners are managed by useStoreListeners.
  *
  * Called from useAppInitialization to wire into the app boot sequence.
  */
 export function usePluginInitialization(): void {
-  const initRef = useRef(false);
   const contextsRef = useRef(new Map<string, FrontendPluginContext>());
-  const connectionStatus = useConnectionStore(s => s.status);
   const providers = usePluginStore(s => s.providers);
   const frontendPluginsActivated = usePluginStore(s => s.frontendPluginsActivated);
 
-  // Initialize plugin socket listeners once connected
-  useEffect(() => {
-    if (connectionStatus === 'connected' && !initRef.current) {
-      initRef.current = true;
-      usePluginStore.getState().initSocketListeners();
-    }
-  }, [connectionStatus]);
-
   // Activate/deactivate frontend plugins based on provider state
   useEffect(() => {
-    if (providers.length === 0) return;
-
     // Activate plugins that should be active
     for (const provider of providers) {
       if (!provider.enabled || !provider.activated) continue;

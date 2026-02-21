@@ -164,6 +164,48 @@ describe('PluginGateway', () => {
       expect(result.error).toContain('No provider registered');
     });
 
+    it('should return error for undefined payload', async () => {
+      const result = await gateway.handleSetEnabled(
+        mockSocket,
+        undefined as unknown as PluginSetEnabledPayload
+      );
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('Invalid payload');
+      expect(mockRegistryService.setEnabled).not.toHaveBeenCalled();
+    });
+
+    it('should return error for null payload', async () => {
+      const result = await gateway.handleSetEnabled(
+        mockSocket,
+        null as unknown as PluginSetEnabledPayload
+      );
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('Invalid payload');
+      expect(mockRegistryService.setEnabled).not.toHaveBeenCalled();
+    });
+
+    it('should return error when aiMode is not a string', async () => {
+      const result = await gateway.handleSetEnabled(mockSocket, {
+        aiMode: 42,
+        enabled: true,
+      } as unknown as PluginSetEnabledPayload);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('Invalid payload');
+    });
+
+    it('should return error when enabled is not a boolean', async () => {
+      const result = await gateway.handleSetEnabled(mockSocket, {
+        aiMode: 'test-mode',
+        enabled: 'yes',
+      } as unknown as PluginSetEnabledPayload);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('Invalid payload');
+    });
+
     it('should not activate if already activated', async () => {
       const payload: PluginSetEnabledPayload = { aiMode: 'test-mode', enabled: true };
       mockRegistryService.setEnabled.mockReturnValue(true);
@@ -208,6 +250,41 @@ describe('PluginGateway', () => {
   // handleInvoke
   // ================================================================
   describe('handleInvoke', () => {
+    it('should return error for undefined payload', async () => {
+      const result = await gateway.handleInvoke(
+        mockSocket,
+        undefined as unknown as PluginInvokePayload
+      );
+
+      expect(result.error).toContain('Invalid payload');
+      expect(mockRegistryService.getProviderEntryByPluginId).not.toHaveBeenCalled();
+    });
+
+    it('should return error for null payload', async () => {
+      const result = await gateway.handleInvoke(mockSocket, null as unknown as PluginInvokePayload);
+
+      expect(result.error).toContain('Invalid payload');
+      expect(mockRegistryService.getProviderEntryByPluginId).not.toHaveBeenCalled();
+    });
+
+    it('should return error when pluginId is not a string', async () => {
+      const result = await gateway.handleInvoke(mockSocket, {
+        pluginId: 123,
+        method: 'detectCli',
+      } as unknown as PluginInvokePayload);
+
+      expect(result.error).toContain('Invalid payload');
+    });
+
+    it('should return error when method is not a string', async () => {
+      const result = await gateway.handleInvoke(mockSocket, {
+        pluginId: 'test-provider',
+        method: null,
+      } as unknown as PluginInvokePayload);
+
+      expect(result.error).toContain('Invalid payload');
+    });
+
     it('should invoke an allowed method on the plugin and return result', async () => {
       const payload: PluginInvokePayload = {
         pluginId: 'test-provider',

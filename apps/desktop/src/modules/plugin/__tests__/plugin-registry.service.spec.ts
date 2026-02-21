@@ -275,6 +275,62 @@ describe('PluginRegistryService', () => {
   });
 
   // ================================================================
+  // markActivated
+  // ================================================================
+  describe('markActivated', () => {
+    it('should mark provider as activated and store context', () => {
+      const entry = createMockProvider('test-mode', { activated: false });
+      service.registerProvider(entry);
+
+      const mockContext = { pluginId: 'test-provider', subscriptions: [] } as any;
+      const result = service.markActivated('test-mode', mockContext);
+
+      expect(result).toBe(true);
+      const updated = service.getProviderEntry('test-mode');
+      expect(updated?.activated).toBe(true);
+      expect(updated?.context).toBe(mockContext);
+    });
+
+    it('should return false for unknown aiMode', () => {
+      expect(service.markActivated('unknown', {} as any)).toBe(false);
+    });
+  });
+
+  // ================================================================
+  // markDeactivated
+  // ================================================================
+  describe('markDeactivated', () => {
+    it('should mark provider as deactivated and clear context', () => {
+      const entry = createMockProvider('test-mode', {
+        activated: true,
+        context: { pluginId: 'test-provider', subscriptions: [] } as any,
+      });
+      service.registerProvider(entry);
+
+      const result = service.markDeactivated('test-mode');
+
+      expect(result).toBe(true);
+      const updated = service.getProviderEntry('test-mode');
+      expect(updated?.activated).toBe(false);
+      expect(updated?.context).toBeUndefined();
+    });
+
+    it('should return false for unknown aiMode', () => {
+      expect(service.markDeactivated('unknown')).toBe(false);
+    });
+
+    it('should be safe to call when already deactivated', () => {
+      const entry = createMockProvider('test-mode', { activated: false });
+      service.registerProvider(entry);
+
+      const result = service.markDeactivated('test-mode');
+
+      expect(result).toBe(true);
+      expect(service.getProviderEntry('test-mode')?.activated).toBe(false);
+    });
+  });
+
+  // ================================================================
   // setEnabled
   // ================================================================
   describe('setEnabled', () => {

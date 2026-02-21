@@ -12,8 +12,15 @@ import type {
   Disposable,
 } from '@omniscribe/plugin-api';
 import { ALL_THEMES, PluginEvents, createLogger, type ProviderInfo } from '@omniscribe/shared';
-import { getSocket, emitAsync } from '@/lib/socket';
+import { emitAsync } from '@/lib/socket';
 import { injectThemeStyles, removeThemeStyles, isValidThemeId } from '@/lib/plugin-theme-injector';
+import {
+  SocketStoreState,
+  SocketStoreActions,
+  initialSocketState,
+  createSocketActions,
+  createSocketListeners,
+} from './utils';
 import type { NavigationGroup, NavigationItem } from '@/components/settings/navigation-config';
 
 const logger = createLogger('PluginStore');
@@ -31,7 +38,7 @@ type WithPluginId<T> = T & { pluginId: string };
 // Store state
 // ==========================================
 
-interface PluginStoreState {
+interface PluginState extends SocketStoreState {
   /** Provider info from backend (via WebSocket) */
   providers: ProviderInfo[];
 
@@ -61,16 +68,13 @@ interface PluginStoreState {
 
   /** Tracks which plugins have had activateFrontend() called */
   frontendPluginsActivated: Set<string>;
-
-  /** Socket listeners setup flag */
-  listenersInitialized: boolean;
 }
 
 // ==========================================
 // Store actions
 // ==========================================
 
-interface PluginStoreActions {
+interface PluginActions extends SocketStoreActions {
   /** Replace providers array */
   setProviders: (providers: ProviderInfo[]) => void;
 
@@ -96,15 +100,17 @@ interface PluginStoreActions {
   registerMoreMenuItem: (pluginId: string, reg: MoreMenuItemRegistration) => Disposable;
   registerTheme: (pluginId: string, reg: ThemeRegistration) => Disposable;
 
-  /** Set up socket listeners for plugin events */
-  initSocketListeners: () => void;
+  /** Initialize socket listeners */
+  initListeners: () => void;
+  /** Clean up socket listeners */
+  cleanupListeners: () => void;
 }
 
 // ==========================================
 // Combined store type
 // ==========================================
 
-type PluginStore = PluginStoreState & PluginStoreActions;
+type PluginStore = PluginState & PluginActions;
 
 // ==========================================
 // Helpers
@@ -130,480 +136,509 @@ function matchesShowFor(showFor: string | string[], aiMode?: string): boolean {
 
 export const usePluginStore = create<PluginStore>()(
   devtools(
-    (set, get) => ({
-      // Initial state
-      providers: [],
-      settingsCategories: new Map(),
-      settingsSections: new Map(),
-      statusRenderers: new Map(),
-      usagePanels: new Map(),
-      terminalHeaderActions: new Map(),
-      actionBarItems: new Map(),
-      moreMenuItems: new Map(),
-      themes: new Map(),
-      frontendPluginsActivated: new Set(),
-      listenersInitialized: false,
+    (set, get) => {
+      // Create common socket actions
+      const socketActions = createSocketActions<PluginState>(set, 'plugin');
 
-      // ==========================================
-      // Provider actions
-      // ==========================================
-
-      setProviders: (providers: ProviderInfo[]) => {
-        logger.debug('setProviders', providers.length, 'providers');
-        set({ providers }, undefined, 'plugin/setProviders');
-      },
-
-      setProviderEnabled: (aiMode: string, enabled: boolean) => {
-        logger.info('setProviderEnabled', aiMode, enabled);
-
-        // Optimistic UI update (also clear activated when disabling)
-        set(
-          state => ({
-            providers: state.providers.map(p =>
-              p.aiMode === aiMode ? { ...p, enabled, ...(enabled ? {} : { activated: false }) } : p
-            ),
-          }),
-          undefined,
-          'plugin/setProviderEnabled'
-        );
-
-        // Emit to backend
-        emitAsync<{ aiMode: string; enabled: boolean }, { success: boolean }>(
-          PluginEvents.SET_ENABLED,
-          { aiMode, enabled }
-        ).catch(err => {
-          logger.error('Failed to set provider enabled', err);
-          // Rollback on failure
-          set(
-            state => ({
-              providers: state.providers.map(p =>
-                p.aiMode === aiMode ? { ...p, enabled: !enabled } : p
-              ),
-            }),
-            undefined,
-            'plugin/setProviderEnabled:rollback'
-          );
-        });
-      },
-
-      // ==========================================
-      // Frontend plugin lifecycle
-      // ==========================================
-
-      activateFrontendPlugin: (pluginId: string) => {
-        logger.info('activateFrontendPlugin', pluginId);
-        set(
-          state => {
-            const next = new Set(state.frontendPluginsActivated);
-            next.add(pluginId);
-            return { frontendPluginsActivated: next };
-          },
-          undefined,
-          'plugin/activateFrontendPlugin'
-        );
-      },
-
-      deactivateFrontendPlugin: (pluginId: string) => {
-        logger.info('deactivateFrontendPlugin', pluginId);
-
-        // Remove theme CSS from DOM before removing from store
-        const currentThemes = get().themes;
-        for (const [, theme] of currentThemes) {
-          if (theme.pluginId === pluginId) {
-            removeThemeStyles(theme.id);
-          }
-        }
-
-        set(
-          state => {
-            // Remove from activated set
-            const nextActivated = new Set(state.frontendPluginsActivated);
-            nextActivated.delete(pluginId);
-
-            // Remove all registrations for this plugin
-            const removeForPlugin = <T extends { pluginId: string }>(
-              map: Map<string, T>
-            ): Map<string, T> => {
-              const next = new Map<string, T>();
-              for (const [key, value] of map) {
-                if (value.pluginId !== pluginId) {
-                  next.set(key, value);
+      // Create socket listeners with proper cleanup
+      const { initListeners, cleanupListeners } = createSocketListeners<PluginStore>(
+        get,
+        set,
+        'plugin',
+        {
+          listeners: [
+            {
+              event: PluginEvents.PROVIDER_STATUS,
+              handler: (data, get) => {
+                const result = data as { providers?: ProviderInfo[] };
+                const providers = result?.providers ?? [];
+                logger.debug('Received provider status', providers.length, 'providers');
+                get().setProviders(providers);
+              },
+            },
+            {
+              event: PluginEvents.PROVIDER_ENABLED,
+              handler: data => {
+                const payload = data as { aiMode?: string; enabled?: boolean };
+                if (typeof payload?.aiMode !== 'string' || typeof payload?.enabled !== 'boolean') {
+                  logger.warn('Received malformed provider enabled payload');
+                  return;
                 }
-              }
-              return next;
-            };
-
-            return {
-              frontendPluginsActivated: nextActivated,
-              settingsCategories: removeForPlugin(state.settingsCategories),
-              settingsSections: removeForPlugin(state.settingsSections),
-              statusRenderers: removeForPlugin(state.statusRenderers),
-              usagePanels: removeForPlugin(state.usagePanels),
-              terminalHeaderActions: removeForPlugin(state.terminalHeaderActions),
-              actionBarItems: removeForPlugin(state.actionBarItems),
-              moreMenuItems: removeForPlugin(state.moreMenuItems),
-              themes: removeForPlugin(state.themes),
-            };
+                const { aiMode, enabled } = payload;
+                logger.debug('Received provider enabled', aiMode, enabled);
+                set(
+                  state => ({
+                    providers: state.providers.map(p =>
+                      p.aiMode === aiMode
+                        ? {
+                            ...p,
+                            enabled,
+                            ...(enabled ? {} : { activated: false }),
+                          }
+                        : p
+                    ),
+                  }),
+                  undefined,
+                  'plugin/providerEnabled'
+                );
+              },
+            },
+            {
+              event: PluginEvents.PROVIDER_ERROR,
+              handler: data => {
+                const payload = data as { pluginId?: string; error?: string };
+                const pluginId = payload?.pluginId ?? 'unknown';
+                const error = payload?.error ?? 'Unknown error';
+                logger.error('Provider error', pluginId, error);
+              },
+            },
+          ],
+          onConnect: get => {
+            // Fetch initial provider list on connect/reconnect
+            emitAsync<Record<string, never>, { providers: ProviderInfo[] }>(
+              PluginEvents.LIST_PROVIDERS,
+              {}
+            )
+              .then(data => {
+                const providers = (data as { providers?: ProviderInfo[] })?.providers ?? [];
+                get().setProviders(providers);
+              })
+              .catch(err => {
+                logger.error('Failed to fetch initial providers', err);
+              });
           },
-          undefined,
-          'plugin/deactivateFrontendPlugin'
-        );
-      },
-
-      // ==========================================
-      // Registration methods
-      // ==========================================
-
-      registerSettingsCategory: (
-        pluginId: string,
-        reg: SettingsCategoryRegistration
-      ): Disposable => {
-        const key = `${pluginId}:${reg.categoryId}`;
-        logger.debug('registerSettingsCategory', key);
-
-        set(
-          state => {
-            const next = new Map(state.settingsCategories);
-            next.set(key, { ...reg, pluginId });
-            return { settingsCategories: next };
-          },
-          undefined,
-          'plugin/registerSettingsCategory'
-        );
-
-        // Also register each section within the category
-        const sectionDisposables: Disposable[] = [];
-        for (const section of reg.sections) {
-          sectionDisposables.push(get().registerSettingsSection(pluginId, section));
         }
+      );
 
-        return {
-          dispose: () => {
-            set(
-              state => {
-                const next = new Map(state.settingsCategories);
-                next.delete(key);
-                return { settingsCategories: next };
-              },
-              undefined,
-              'plugin/unregisterSettingsCategory'
-            );
-            // Also dispose all sections
-            for (const d of sectionDisposables) {
-              d.dispose();
-            }
-          },
-        };
-      },
+      return {
+        // Initial state (spread common state + custom state)
+        ...initialSocketState,
+        providers: [],
+        settingsCategories: new Map(),
+        settingsSections: new Map(),
+        statusRenderers: new Map(),
+        usagePanels: new Map(),
+        terminalHeaderActions: new Map(),
+        actionBarItems: new Map(),
+        moreMenuItems: new Map(),
+        themes: new Map(),
+        frontendPluginsActivated: new Set(),
 
-      registerSettingsSection: (pluginId: string, reg: SettingsSectionRegistration): Disposable => {
-        const key = `${pluginId}:${reg.sectionId}`;
-        logger.debug('registerSettingsSection', key);
+        // ==========================================
+        // Provider actions
+        // ==========================================
 
-        set(
-          state => {
-            const next = new Map(state.settingsSections);
-            next.set(key, { ...reg, pluginId });
-            return { settingsSections: next };
-          },
-          undefined,
-          'plugin/registerSettingsSection'
-        );
+        setProviders: (providers: ProviderInfo[]) => {
+          logger.debug('setProviders', providers.length, 'providers');
+          set({ providers }, undefined, 'plugin/setProviders');
+        },
 
-        return {
-          dispose: () => {
-            set(
-              state => {
-                const next = new Map(state.settingsSections);
-                next.delete(key);
-                return { settingsSections: next };
-              },
-              undefined,
-              'plugin/unregisterSettingsSection'
-            );
-          },
-        };
-      },
+        setProviderEnabled: (aiMode: string, enabled: boolean) => {
+          logger.info('setProviderEnabled', aiMode, enabled);
 
-      registerStatusRenderer: (
-        pluginId: string,
-        reg: SessionStatusRendererRegistration
-      ): Disposable => {
-        const key = `${pluginId}:${reg.id}`;
-        logger.debug('registerStatusRenderer', key);
+          // Capture previous state for rollback
+          const previous = get().providers.find(p => p.aiMode === aiMode);
 
-        set(
-          state => {
-            const next = new Map(state.statusRenderers);
-            next.set(key, { ...reg, pluginId });
-            return { statusRenderers: next };
-          },
-          undefined,
-          'plugin/registerStatusRenderer'
-        );
-
-        return {
-          dispose: () => {
-            set(
-              state => {
-                const next = new Map(state.statusRenderers);
-                next.delete(key);
-                return { statusRenderers: next };
-              },
-              undefined,
-              'plugin/unregisterStatusRenderer'
-            );
-          },
-        };
-      },
-
-      registerUsagePanel: (pluginId: string, reg: UsagePanelRegistration): Disposable => {
-        const key = `${pluginId}:${reg.id}`;
-        logger.debug('registerUsagePanel', key);
-
-        set(
-          state => {
-            const next = new Map(state.usagePanels);
-            next.set(key, { ...reg, pluginId });
-            return { usagePanels: next };
-          },
-          undefined,
-          'plugin/registerUsagePanel'
-        );
-
-        return {
-          dispose: () => {
-            set(
-              state => {
-                const next = new Map(state.usagePanels);
-                next.delete(key);
-                return { usagePanels: next };
-              },
-              undefined,
-              'plugin/unregisterUsagePanel'
-            );
-          },
-        };
-      },
-
-      registerTerminalHeaderAction: (
-        pluginId: string,
-        reg: TerminalHeaderActionRegistration
-      ): Disposable => {
-        const key = `${pluginId}:${reg.id}`;
-        logger.debug('registerTerminalHeaderAction', key);
-
-        set(
-          state => {
-            const next = new Map(state.terminalHeaderActions);
-            next.set(key, { ...reg, pluginId });
-            return { terminalHeaderActions: next };
-          },
-          undefined,
-          'plugin/registerTerminalHeaderAction'
-        );
-
-        return {
-          dispose: () => {
-            set(
-              state => {
-                const next = new Map(state.terminalHeaderActions);
-                next.delete(key);
-                return { terminalHeaderActions: next };
-              },
-              undefined,
-              'plugin/unregisterTerminalHeaderAction'
-            );
-          },
-        };
-      },
-
-      registerActionBarItem: (pluginId: string, reg: ActionBarItemRegistration): Disposable => {
-        const key = `${pluginId}:${reg.id}`;
-        logger.debug('registerActionBarItem', key);
-
-        set(
-          state => {
-            const next = new Map(state.actionBarItems);
-            next.set(key, { ...reg, pluginId });
-            return { actionBarItems: next };
-          },
-          undefined,
-          'plugin/registerActionBarItem'
-        );
-
-        return {
-          dispose: () => {
-            set(
-              state => {
-                const next = new Map(state.actionBarItems);
-                next.delete(key);
-                return { actionBarItems: next };
-              },
-              undefined,
-              'plugin/unregisterActionBarItem'
-            );
-          },
-        };
-      },
-
-      registerMoreMenuItem: (pluginId: string, reg: MoreMenuItemRegistration): Disposable => {
-        const key = `${pluginId}:${reg.id}`;
-        logger.debug('registerMoreMenuItem', key);
-
-        set(
-          state => {
-            const next = new Map(state.moreMenuItems);
-            next.set(key, { ...reg, pluginId });
-            return { moreMenuItems: next };
-          },
-          undefined,
-          'plugin/registerMoreMenuItem'
-        );
-
-        return {
-          dispose: () => {
-            set(
-              state => {
-                const next = new Map(state.moreMenuItems);
-                next.delete(key);
-                return { moreMenuItems: next };
-              },
-              undefined,
-              'plugin/unregisterMoreMenuItem'
-            );
-          },
-        };
-      },
-
-      registerTheme: (pluginId: string, reg: ThemeRegistration): Disposable => {
-        const key = `${pluginId}:${reg.id}`;
-
-        // Validate theme ID format (prevent CSS injection)
-        if (!isValidThemeId(reg.id)) {
-          logger.warn(
-            `Theme ID "${reg.id}" from plugin "${pluginId}" contains invalid characters. Registration skipped.`
-          );
-          return { dispose: () => {} };
-        }
-
-        // Validate theme ID doesn't collide with built-in themes
-        if (BUILTIN_THEME_IDS.has(reg.id)) {
-          logger.warn(
-            `Theme ID "${reg.id}" from plugin "${pluginId}" collides with a built-in theme. Registration skipped.`
-          );
-          return { dispose: () => {} };
-        }
-
-        // Warn if another plugin already registered the same bare theme ID
-        for (const [existingKey, existing] of get().themes) {
-          if (existing.id === reg.id && existingKey !== key) {
-            logger.warn(
-              `Theme ID "${reg.id}" from plugin "${pluginId}" collides with the same ID already registered by plugin "${existing.pluginId}". The new registration may not be discoverable via getPluginTheme().`
-            );
-            break;
-          }
-        }
-
-        logger.debug('registerTheme', key);
-
-        // Inject CSS custom properties into the DOM (validates properties internally)
-        const injected = injectThemeStyles(reg.id, reg.cssProperties);
-        if (!injected) {
-          logger.warn(
-            `Theme "${reg.id}" from plugin "${pluginId}" has no valid CSS properties. Registration skipped.`
-          );
-          return { dispose: () => {} };
-        }
-
-        set(
-          state => {
-            const next = new Map(state.themes);
-            next.set(key, { ...reg, pluginId });
-            return { themes: next };
-          },
-          undefined,
-          'plugin/registerTheme'
-        );
-
-        return {
-          dispose: () => {
-            // Remove CSS from DOM before removing from store
-            removeThemeStyles(reg.id);
-            set(
-              state => {
-                const next = new Map(state.themes);
-                next.delete(key);
-                return { themes: next };
-              },
-              undefined,
-              'plugin/unregisterTheme'
-            );
-          },
-        };
-      },
-
-      // ==========================================
-      // Socket listeners
-      // ==========================================
-
-      initSocketListeners: () => {
-        if (get().listenersInitialized) return;
-
-        logger.info('Initializing plugin socket listeners');
-        const socket = getSocket();
-
-        // Listen for provider status updates (full list broadcast)
-        socket.on(
-          PluginEvents.PROVIDER_STATUS,
-          (data: { providers: ProviderInfo[] } | ProviderInfo[]) => {
-            const list = Array.isArray(data) ? data : data.providers;
-            logger.debug('Received provider status', list.length, 'providers');
-            get().setProviders(list);
-          }
-        );
-
-        // Listen for individual provider enabled change
-        socket.on(PluginEvents.PROVIDER_ENABLED, (data: { aiMode: string; enabled: boolean }) => {
-          logger.debug('Received provider enabled', data.aiMode, data.enabled);
+          // Optimistic UI update (also clear activated when disabling)
           set(
             state => ({
               providers: state.providers.map(p =>
-                p.aiMode === data.aiMode
-                  ? {
-                      ...p,
-                      enabled: data.enabled,
-                      ...(data.enabled ? {} : { activated: false }),
-                    }
+                p.aiMode === aiMode
+                  ? { ...p, enabled, ...(enabled ? {} : { activated: false }) }
                   : p
               ),
             }),
             undefined,
-            'plugin/providerEnabled'
+            'plugin/setProviderEnabled'
           );
-        });
 
-        // Listen for provider errors
-        socket.on(PluginEvents.PROVIDER_ERROR, (data: { pluginId: string; error: string }) => {
-          logger.error('Provider error', data.pluginId, data.error);
-        });
-
-        set({ listenersInitialized: true }, undefined, 'plugin/listenersInitialized');
-
-        // Fetch initial provider list
-        emitAsync<Record<string, never>, { providers: ProviderInfo[] } | ProviderInfo[]>(
-          PluginEvents.LIST_PROVIDERS,
-          {}
-        )
-          .then(data => {
-            const list = Array.isArray(data) ? data : data.providers;
-            get().setProviders(list);
-          })
-          .catch(err => {
-            logger.error('Failed to fetch initial providers', err);
+          // Emit to backend
+          emitAsync<{ aiMode: string; enabled: boolean }, { success: boolean }>(
+            PluginEvents.SET_ENABLED,
+            { aiMode, enabled }
+          ).catch(err => {
+            logger.error('Failed to set provider enabled', err);
+            // Rollback on failure — restore both enabled and activated
+            set(
+              state => ({
+                providers: state.providers.map(p =>
+                  p.aiMode === aiMode && previous
+                    ? { ...p, enabled: previous.enabled, activated: previous.activated }
+                    : p
+                ),
+              }),
+              undefined,
+              'plugin/setProviderEnabled:rollback'
+            );
           });
-      },
-    }),
+        },
+
+        // ==========================================
+        // Frontend plugin lifecycle
+        // ==========================================
+
+        activateFrontendPlugin: (pluginId: string) => {
+          logger.info('activateFrontendPlugin', pluginId);
+          set(
+            state => {
+              const next = new Set(state.frontendPluginsActivated);
+              next.add(pluginId);
+              return { frontendPluginsActivated: next };
+            },
+            undefined,
+            'plugin/activateFrontendPlugin'
+          );
+        },
+
+        deactivateFrontendPlugin: (pluginId: string) => {
+          logger.info('deactivateFrontendPlugin', pluginId);
+
+          // Remove theme CSS from DOM before removing from store
+          const currentThemes = get().themes;
+          for (const [, theme] of currentThemes) {
+            if (theme.pluginId === pluginId) {
+              removeThemeStyles(theme.id);
+            }
+          }
+
+          set(
+            state => {
+              // Remove from activated set
+              const nextActivated = new Set(state.frontendPluginsActivated);
+              nextActivated.delete(pluginId);
+
+              // Remove all registrations for this plugin
+              const removeForPlugin = <T extends { pluginId: string }>(
+                map: Map<string, T>
+              ): Map<string, T> => {
+                const next = new Map<string, T>();
+                for (const [key, value] of map) {
+                  if (value.pluginId !== pluginId) {
+                    next.set(key, value);
+                  }
+                }
+                return next;
+              };
+
+              return {
+                frontendPluginsActivated: nextActivated,
+                settingsCategories: removeForPlugin(state.settingsCategories),
+                settingsSections: removeForPlugin(state.settingsSections),
+                statusRenderers: removeForPlugin(state.statusRenderers),
+                usagePanels: removeForPlugin(state.usagePanels),
+                terminalHeaderActions: removeForPlugin(state.terminalHeaderActions),
+                actionBarItems: removeForPlugin(state.actionBarItems),
+                moreMenuItems: removeForPlugin(state.moreMenuItems),
+                themes: removeForPlugin(state.themes),
+              };
+            },
+            undefined,
+            'plugin/deactivateFrontendPlugin'
+          );
+        },
+
+        // ==========================================
+        // Registration methods
+        // ==========================================
+
+        registerSettingsCategory: (
+          pluginId: string,
+          reg: SettingsCategoryRegistration
+        ): Disposable => {
+          const key = `${pluginId}:${reg.categoryId}`;
+          logger.debug('registerSettingsCategory', key);
+
+          set(
+            state => {
+              const next = new Map(state.settingsCategories);
+              next.set(key, { ...reg, pluginId });
+              return { settingsCategories: next };
+            },
+            undefined,
+            'plugin/registerSettingsCategory'
+          );
+
+          // Also register each section within the category
+          const sectionDisposables: Disposable[] = [];
+          for (const section of reg.sections) {
+            sectionDisposables.push(get().registerSettingsSection(pluginId, section));
+          }
+
+          return {
+            dispose: () => {
+              set(
+                state => {
+                  const next = new Map(state.settingsCategories);
+                  next.delete(key);
+                  return { settingsCategories: next };
+                },
+                undefined,
+                'plugin/unregisterSettingsCategory'
+              );
+              // Also dispose all sections
+              for (const d of sectionDisposables) {
+                d.dispose();
+              }
+            },
+          };
+        },
+
+        registerSettingsSection: (
+          pluginId: string,
+          reg: SettingsSectionRegistration
+        ): Disposable => {
+          const key = `${pluginId}:${reg.sectionId}`;
+          logger.debug('registerSettingsSection', key);
+
+          set(
+            state => {
+              const next = new Map(state.settingsSections);
+              next.set(key, { ...reg, pluginId });
+              return { settingsSections: next };
+            },
+            undefined,
+            'plugin/registerSettingsSection'
+          );
+
+          return {
+            dispose: () => {
+              set(
+                state => {
+                  const next = new Map(state.settingsSections);
+                  next.delete(key);
+                  return { settingsSections: next };
+                },
+                undefined,
+                'plugin/unregisterSettingsSection'
+              );
+            },
+          };
+        },
+
+        registerStatusRenderer: (
+          pluginId: string,
+          reg: SessionStatusRendererRegistration
+        ): Disposable => {
+          const key = `${pluginId}:${reg.id}`;
+          logger.debug('registerStatusRenderer', key);
+
+          set(
+            state => {
+              const next = new Map(state.statusRenderers);
+              next.set(key, { ...reg, pluginId });
+              return { statusRenderers: next };
+            },
+            undefined,
+            'plugin/registerStatusRenderer'
+          );
+
+          return {
+            dispose: () => {
+              set(
+                state => {
+                  const next = new Map(state.statusRenderers);
+                  next.delete(key);
+                  return { statusRenderers: next };
+                },
+                undefined,
+                'plugin/unregisterStatusRenderer'
+              );
+            },
+          };
+        },
+
+        registerUsagePanel: (pluginId: string, reg: UsagePanelRegistration): Disposable => {
+          const key = `${pluginId}:${reg.id}`;
+          logger.debug('registerUsagePanel', key);
+
+          set(
+            state => {
+              const next = new Map(state.usagePanels);
+              next.set(key, { ...reg, pluginId });
+              return { usagePanels: next };
+            },
+            undefined,
+            'plugin/registerUsagePanel'
+          );
+
+          return {
+            dispose: () => {
+              set(
+                state => {
+                  const next = new Map(state.usagePanels);
+                  next.delete(key);
+                  return { usagePanels: next };
+                },
+                undefined,
+                'plugin/unregisterUsagePanel'
+              );
+            },
+          };
+        },
+
+        registerTerminalHeaderAction: (
+          pluginId: string,
+          reg: TerminalHeaderActionRegistration
+        ): Disposable => {
+          const key = `${pluginId}:${reg.id}`;
+          logger.debug('registerTerminalHeaderAction', key);
+
+          set(
+            state => {
+              const next = new Map(state.terminalHeaderActions);
+              next.set(key, { ...reg, pluginId });
+              return { terminalHeaderActions: next };
+            },
+            undefined,
+            'plugin/registerTerminalHeaderAction'
+          );
+
+          return {
+            dispose: () => {
+              set(
+                state => {
+                  const next = new Map(state.terminalHeaderActions);
+                  next.delete(key);
+                  return { terminalHeaderActions: next };
+                },
+                undefined,
+                'plugin/unregisterTerminalHeaderAction'
+              );
+            },
+          };
+        },
+
+        registerActionBarItem: (pluginId: string, reg: ActionBarItemRegistration): Disposable => {
+          const key = `${pluginId}:${reg.id}`;
+          logger.debug('registerActionBarItem', key);
+
+          set(
+            state => {
+              const next = new Map(state.actionBarItems);
+              next.set(key, { ...reg, pluginId });
+              return { actionBarItems: next };
+            },
+            undefined,
+            'plugin/registerActionBarItem'
+          );
+
+          return {
+            dispose: () => {
+              set(
+                state => {
+                  const next = new Map(state.actionBarItems);
+                  next.delete(key);
+                  return { actionBarItems: next };
+                },
+                undefined,
+                'plugin/unregisterActionBarItem'
+              );
+            },
+          };
+        },
+
+        registerMoreMenuItem: (pluginId: string, reg: MoreMenuItemRegistration): Disposable => {
+          const key = `${pluginId}:${reg.id}`;
+          logger.debug('registerMoreMenuItem', key);
+
+          set(
+            state => {
+              const next = new Map(state.moreMenuItems);
+              next.set(key, { ...reg, pluginId });
+              return { moreMenuItems: next };
+            },
+            undefined,
+            'plugin/registerMoreMenuItem'
+          );
+
+          return {
+            dispose: () => {
+              set(
+                state => {
+                  const next = new Map(state.moreMenuItems);
+                  next.delete(key);
+                  return { moreMenuItems: next };
+                },
+                undefined,
+                'plugin/unregisterMoreMenuItem'
+              );
+            },
+          };
+        },
+
+        registerTheme: (pluginId: string, reg: ThemeRegistration): Disposable => {
+          const key = `${pluginId}:${reg.id}`;
+
+          // Validate theme ID format (prevent CSS injection)
+          if (!isValidThemeId(reg.id)) {
+            logger.warn(
+              `Theme ID "${reg.id}" from plugin "${pluginId}" contains invalid characters. Registration skipped.`
+            );
+            return { dispose: () => {} };
+          }
+
+          // Validate theme ID doesn't collide with built-in themes
+          if (BUILTIN_THEME_IDS.has(reg.id)) {
+            logger.warn(
+              `Theme ID "${reg.id}" from plugin "${pluginId}" collides with a built-in theme. Registration skipped.`
+            );
+            return { dispose: () => {} };
+          }
+
+          // Warn if another plugin already registered the same bare theme ID
+          for (const [existingKey, existing] of get().themes) {
+            if (existing.id === reg.id && existingKey !== key) {
+              logger.warn(
+                `Theme ID "${reg.id}" from plugin "${pluginId}" collides with the same ID already registered by plugin "${existing.pluginId}". The new registration may not be discoverable via getPluginTheme().`
+              );
+              break;
+            }
+          }
+
+          logger.debug('registerTheme', key);
+
+          // Inject CSS custom properties into the DOM (validates properties internally)
+          const injected = injectThemeStyles(reg.id, reg.cssProperties);
+          if (!injected) {
+            logger.warn(
+              `Theme "${reg.id}" from plugin "${pluginId}" has no valid CSS properties. Registration skipped.`
+            );
+            return { dispose: () => {} };
+          }
+
+          set(
+            state => {
+              const next = new Map(state.themes);
+              next.set(key, { ...reg, pluginId });
+              return { themes: next };
+            },
+            undefined,
+            'plugin/registerTheme'
+          );
+
+          return {
+            dispose: () => {
+              // Remove CSS from DOM before removing from store
+              removeThemeStyles(reg.id);
+              set(
+                state => {
+                  const next = new Map(state.themes);
+                  next.delete(key);
+                  return { themes: next };
+                },
+                undefined,
+                'plugin/unregisterTheme'
+              );
+            },
+          };
+        },
+
+        // Common socket actions + listener lifecycle
+        ...socketActions,
+        initListeners,
+        cleanupListeners,
+      };
+    },
     { name: 'plugin' }
   )
 );
