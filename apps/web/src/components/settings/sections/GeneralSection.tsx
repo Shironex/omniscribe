@@ -194,7 +194,7 @@ export function GeneralSection() {
 
         {/* Status: Up to date */}
         {status === 'idle' && hasChecked && (
-          <div className="flex items-center gap-2 text-sm text-emerald-400">
+          <div className="flex items-center gap-2 text-sm text-status-success">
             <CheckCircle className="w-4 h-4" />
             <span>You're up to date!</span>
           </div>
@@ -271,7 +271,7 @@ export function GeneralSection() {
           <div className="space-y-3">
             {IS_MAC ? (
               <>
-                <div className="flex items-center gap-2 text-sm text-emerald-400">
+                <div className="flex items-center gap-2 text-sm text-status-success">
                   <CheckCircle className="w-4 h-4" />
                   <span>Update verified, but auto-install is unavailable on macOS.</span>
                 </div>
@@ -279,7 +279,7 @@ export function GeneralSection() {
               </>
             ) : (
               <>
-                <div className="flex items-center gap-2 text-sm text-emerald-400">
+                <div className="flex items-center gap-2 text-sm text-status-success">
                   <CheckCircle className="w-4 h-4" />
                   <span>Update downloaded. Restart to install.</span>
                 </div>

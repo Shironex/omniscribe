@@ -17,9 +17,9 @@ interface QuickActionPillsProps {
 const variantStyles: Record<string, string> = {
   default: 'bg-card hover:bg-border text-foreground-secondary hover:text-foreground',
   primary: 'bg-primary/10 hover:bg-primary/20 text-primary',
-  success: 'bg-green-500/10 hover:bg-green-500/20 text-green-400',
-  warning: 'bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400',
-  danger: 'bg-red-500/10 hover:bg-red-500/20 text-red-400',
+  success: 'bg-status-success/10 hover:bg-status-success/20 text-status-success',
+  warning: 'bg-status-warning/10 hover:bg-status-warning/20 text-status-warning',
+  danger: 'bg-status-error/10 hover:bg-status-error/20 text-status-error',
 };
 
 export function QuickActionPills({ actions, onRunAction, className }: QuickActionPillsProps) {

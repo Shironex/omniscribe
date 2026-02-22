@@ -30,7 +30,7 @@ const statusConfig: Record<TaskStatus, StatusConfig> = {
   in_progress: {
     icon: Loader2,
     label: 'In Progress',
-    className: 'text-blue-400 animate-spin',
+    className: 'text-status-info animate-spin',
   },
   pending: {
     icon: Circle,
@@ -40,7 +40,7 @@ const statusConfig: Record<TaskStatus, StatusConfig> = {
   completed: {
     icon: CheckCircle2,
     label: 'Completed',
-    className: 'text-green-500',
+    className: 'text-status-success',
   },
 };
 

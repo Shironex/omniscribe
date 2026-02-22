@@ -121,7 +121,7 @@ export function TerminalHeader({
           <button
             type="button"
             onClick={onResume}
-            className="flex items-center gap-1 px-1.5 py-0.5 rounded text-xs text-emerald-400 hover:bg-emerald-500/10 transition-colors"
+            className="flex items-center gap-1 px-1.5 py-0.5 rounded text-xs text-status-success hover:bg-status-success/10 transition-colors"
             title="Resume this session"
           >
             <RotateCcw size={12} />
