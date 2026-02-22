@@ -157,7 +157,12 @@ function createRegistration<T extends object>(
   actionLabel: string
 ): (pluginId: string, reg: T) => Disposable {
   return (pluginId: string, reg: T): Disposable => {
-    const key = `${pluginId}:${String((reg as Record<string, unknown>)[idField])}`;
+    const id = (reg as Record<string, unknown>)[idField];
+    if (id == null) {
+      logger.warn(`Registration for ${actionLabel} is missing required field "${idField}"`);
+      return { dispose: () => {} };
+    }
+    const key = `${pluginId}:${String(id)}`;
     logger.debug(`register${actionLabel}`, key);
 
     set(
@@ -165,6 +170,7 @@ function createRegistration<T extends object>(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const next = new Map(state[mapKey] as Map<string, any>);
         next.set(key, { ...reg, pluginId });
+        // Computed property key [mapKey] loses type narrowing, so cast is needed
         return { [mapKey]: next } as unknown as Partial<PluginState>;
       },
       undefined,
@@ -178,6 +184,7 @@ function createRegistration<T extends object>(
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const next = new Map(state[mapKey] as Map<string, any>);
             next.delete(key);
+            // Computed property key [mapKey] loses type narrowing, so cast is needed
             return { [mapKey]: next } as unknown as Partial<PluginState>;
           },
           undefined,
@@ -197,6 +204,14 @@ export const usePluginStore = create<PluginStore>()(
     (set, get) => {
       // Create common socket actions
       const socketActions = createSocketActions<PluginState>(set, 'plugin');
+
+      // Pre-create factory for registerSettingsCategory (avoids re-creation per call)
+      const registerSettingsCategoryCore = createRegistration<SettingsCategoryRegistration>(
+        set,
+        'settingsCategories',
+        'categoryId',
+        'SettingsCategory'
+      );
 
       // Create socket listeners with proper cleanup
       const { initListeners, cleanupListeners } = createSocketListeners<PluginStore>(
@@ -398,13 +413,8 @@ export const usePluginStore = create<PluginStore>()(
           pluginId: string,
           reg: SettingsCategoryRegistration
         ): Disposable => {
-          // Core category registration via factory
-          const categoryDisposable = createRegistration<SettingsCategoryRegistration>(
-            set,
-            'settingsCategories',
-            'categoryId',
-            'SettingsCategory'
-          )(pluginId, reg);
+          // Core category registration via pre-created factory
+          const categoryDisposable = registerSettingsCategoryCore(pluginId, reg);
 
           // Also register each section within the category
           const sectionDisposables: Disposable[] = [];

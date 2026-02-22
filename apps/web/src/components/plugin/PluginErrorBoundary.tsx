@@ -2,6 +2,8 @@ import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { AlertTriangle, RotateCcw } from 'lucide-react';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 
+const MAX_RETRIES = 3;
+
 interface PluginErrorBoundaryProps {
   /** Plugin ID for error attribution */
   pluginId: string;
@@ -11,6 +13,7 @@ interface PluginErrorBoundaryProps {
 interface PluginErrorBoundaryState {
   hasError: boolean;
   error: Error | null;
+  retryCount: number;
 }
 
 /**
@@ -20,6 +23,7 @@ interface PluginErrorBoundaryState {
  * warning icon with tooltip details and a retry button. This prevents
  * a broken plugin from crashing the entire application UI.
  *
+ * Retries are limited to MAX_RETRIES to prevent infinite crash-retry loops.
  * Following the existing TerminalErrorBoundary pattern.
  */
 export class PluginErrorBoundary extends Component<
@@ -28,7 +32,7 @@ export class PluginErrorBoundary extends Component<
 > {
   constructor(props: PluginErrorBoundaryProps) {
     super(props);
-    this.state = { hasError: false, error: null };
+    this.state = { hasError: false, error: null, retryCount: 0 };
   }
 
   static getDerivedStateFromError(error: Error): Partial<PluginErrorBoundaryState> {
@@ -40,23 +44,29 @@ export class PluginErrorBoundary extends Component<
   }
 
   handleRetry = () => {
-    this.setState({ hasError: false, error: null });
+    if (this.state.retryCount >= MAX_RETRIES) return;
+    this.setState(prev => ({ hasError: false, error: null, retryCount: prev.retryCount + 1 }));
   };
 
   render() {
     if (this.state.hasError) {
+      const canRetry = this.state.retryCount < MAX_RETRIES;
+
       return (
         <Tooltip>
           <TooltipTrigger asChild>
             <span className="inline-flex items-center gap-1">
               <AlertTriangle className="w-3 h-3 text-muted-foreground" />
-              <button
-                onClick={this.handleRetry}
-                className="inline-flex items-center text-muted-foreground hover:text-foreground transition-colors"
-                aria-label={`Retry plugin ${this.props.pluginId}`}
-              >
-                <RotateCcw className="w-3 h-3" />
-              </button>
+              {canRetry && (
+                <button
+                  type="button"
+                  onClick={this.handleRetry}
+                  className="inline-flex items-center text-muted-foreground hover:text-foreground transition-colors"
+                  aria-label={`Retry plugin ${this.props.pluginId}`}
+                >
+                  <RotateCcw className="w-3 h-3" />
+                </button>
+              )}
             </span>
           </TooltipTrigger>
           <TooltipContent>

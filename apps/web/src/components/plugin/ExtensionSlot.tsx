@@ -1,6 +1,9 @@
 import { useMemo, Fragment, type ComponentType } from 'react';
+import { createLogger } from '@omniscribe/shared';
 import { usePluginStore, matchesShowFor } from '@/stores/usePluginStore';
 import { PluginErrorBoundary } from './PluginErrorBoundary';
+
+const logger = createLogger('ExtensionSlot');
 
 interface ExtensionSlotProps {
   /** Named extension point to render */
@@ -15,7 +18,11 @@ interface ExtensionSlotProps {
   context?: Record<string, unknown>;
   /** Filter registrations by AI mode */
   aiMode?: string;
-  /** Render all matches or just the first (highest priority) */
+  /**
+   * Render all matches or just the first (highest priority).
+   * Note: `status-display` and `usage-panel` slots always return at most one
+   * entry (highest priority by order) regardless of this setting.
+   */
   renderMode?: 'all' | 'first';
   /** Optional className for the wrapper div */
   className?: string;
@@ -45,8 +52,47 @@ function selectMapForSlot(name: string): (s: any) => Map<string, any> | undefine
     case 'usage-panel':
       return s => s.usagePanels;
     default:
+      logger.warn(`Unknown extension slot name: "${name}"`);
       return () => undefined;
   }
+}
+
+/** Collect registrations filtered by showFor (used by terminal-header-actions, action-bar, more-menu) */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function resolveShowForSlot(map: Map<string, any>, aiMode?: string): SlotRegistration[] {
+  const matches: SlotRegistration[] = [];
+  for (const [, reg] of map) {
+    if (matchesShowFor(reg.showFor, aiMode)) {
+      matches.push({
+        id: reg.id,
+        pluginId: reg.pluginId,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        component: reg.icon as ComponentType<any>,
+        order: reg.order,
+      });
+    }
+  }
+  matches.sort((a, b) => (a.order ?? 100) - (b.order ?? 100));
+  return matches;
+}
+
+/** Collect registrations filtered by exact aiMode match, returning only highest priority (used by status-display, usage-panel) */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function resolveAiModeSlot(map: Map<string, any>, aiMode?: string): SlotRegistration[] {
+  const matches: SlotRegistration[] = [];
+  for (const [, reg] of map) {
+    if (reg.aiMode === (aiMode ?? '')) {
+      matches.push({
+        id: reg.id,
+        pluginId: reg.pluginId,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        component: reg.component as ComponentType<any>,
+        order: reg.order,
+      });
+    }
+  }
+  matches.sort((a, b) => (a.order ?? 100) - (b.order ?? 100));
+  return matches.length > 0 ? [matches[0]] : [];
 }
 
 /**
@@ -76,92 +122,14 @@ export function ExtensionSlot({
     if (!registrationMap) return [];
 
     switch (name) {
-      case 'terminal-header-actions': {
-        const matches: SlotRegistration[] = [];
-        for (const [, reg] of registrationMap) {
-          if (matchesShowFor(reg.showFor, aiMode)) {
-            matches.push({
-              id: reg.id,
-              pluginId: reg.pluginId,
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              component: reg.icon as ComponentType<any>,
-              order: reg.order,
-            });
-          }
-        }
-        matches.sort((a, b) => (a.order ?? 100) - (b.order ?? 100));
-        return matches;
-      }
+      case 'terminal-header-actions':
+      case 'action-bar':
+      case 'more-menu':
+        return resolveShowForSlot(registrationMap, aiMode);
 
-      case 'action-bar': {
-        const matches: SlotRegistration[] = [];
-        for (const [, reg] of registrationMap) {
-          if (matchesShowFor(reg.showFor, aiMode)) {
-            matches.push({
-              id: reg.id,
-              pluginId: reg.pluginId,
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              component: reg.icon as ComponentType<any>,
-              order: reg.order,
-            });
-          }
-        }
-        matches.sort((a, b) => (a.order ?? 100) - (b.order ?? 100));
-        return matches;
-      }
-
-      case 'more-menu': {
-        const matches: SlotRegistration[] = [];
-        for (const [, reg] of registrationMap) {
-          if (matchesShowFor(reg.showFor, aiMode)) {
-            matches.push({
-              id: reg.id,
-              pluginId: reg.pluginId,
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              component: reg.icon as ComponentType<any>,
-              order: reg.order,
-            });
-          }
-        }
-        matches.sort((a, b) => (a.order ?? 100) - (b.order ?? 100));
-        return matches;
-      }
-
-      case 'status-display': {
-        const matches: SlotRegistration[] = [];
-        for (const [, reg] of registrationMap) {
-          if (reg.aiMode === (aiMode ?? '')) {
-            matches.push({
-              id: reg.id,
-              pluginId: reg.pluginId,
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              component: reg.component as ComponentType<any>,
-              order: reg.order,
-            });
-          }
-        }
-        // Return only highest priority (lowest order)
-        matches.sort((a, b) => (a.order ?? 100) - (b.order ?? 100));
-        return matches.length > 0 ? [matches[0]] : [];
-      }
-
-      case 'usage-panel': {
-        const matches: SlotRegistration[] = [];
-        for (const [, reg] of registrationMap) {
-          if (reg.aiMode === (aiMode ?? '')) {
-            matches.push({
-              id: reg.id,
-              pluginId: reg.pluginId,
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              component: reg.component as ComponentType<any>,
-              order: reg.order,
-            });
-          }
-        }
-        // Return only highest priority (lowest order)
-        matches.sort((a, b) => (a.order ?? 100) - (b.order ?? 100));
-        return matches.length > 0 ? [matches[0]] : [];
-      }
+      case 'status-display':
+      case 'usage-panel':
+        return resolveAiModeSlot(registrationMap, aiMode);
 
       default:
         return [];
