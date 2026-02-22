@@ -229,7 +229,7 @@ export function SessionHistoryPanel({
         <Button
           onClick={handleContinueLast}
           disabled={!projectPath}
-          className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 h-auto text-xs font-medium bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 hover:text-emerald-400"
+          className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 h-auto text-xs font-medium bg-status-success/15 text-status-success hover:bg-status-success/25 hover:text-status-success"
         >
           <PlayCircle size={13} />
           Continue Last Conversation

@@ -168,13 +168,13 @@ export function SessionStatusDisplay({ session, gitBranch }: SessionStatusDispla
           <GitBranch size={11} className="text-muted-foreground" />
           <span className="truncate max-w-24">{branchName}</span>
           {ahead !== undefined && ahead > 0 && (
-            <span className="flex items-center gap-0.5 text-green-500 text-2xs">
+            <span className="flex items-center gap-0.5 text-status-success text-2xs">
               <ArrowUp size={9} />
               {ahead}
             </span>
           )}
           {behind !== undefined && behind > 0 && (
-            <span className="flex items-center gap-0.5 text-orange-500 text-2xs">
+            <span className="flex items-center gap-0.5 text-status-warning text-2xs">
               <ArrowDown size={9} />
               {behind}
             </span>
@@ -185,7 +185,7 @@ export function SessionStatusDisplay({ session, gitBranch }: SessionStatusDispla
       {/* Worktree indicator */}
       {session.worktreePath && (
         <div
-          className="flex items-center gap-1 text-xs text-cyan-500 shrink-0 px-1.5 py-0.5 rounded bg-cyan-500/10"
+          className="flex items-center gap-1 text-xs text-status-accent shrink-0 px-1.5 py-0.5 rounded bg-status-accent/10"
           title={session.worktreePath}
         >
           <FolderGit2 size={11} />
@@ -196,7 +196,7 @@ export function SessionStatusDisplay({ session, gitBranch }: SessionStatusDispla
       {/* Skip-permissions indicator */}
       {session.skipPermissions && (
         <div
-          className="flex items-center gap-1 text-xs text-amber-400 shrink-0 px-1.5 py-0.5 rounded bg-amber-500/10"
+          className="flex items-center gap-1 text-xs text-status-warning shrink-0 px-1.5 py-0.5 rounded bg-status-warning/10"
           title="Running with skip-permissions mode"
           role="status"
           aria-label="Running with skip-permissions mode"
@@ -209,7 +209,7 @@ export function SessionStatusDisplay({ session, gitBranch }: SessionStatusDispla
       {/* Resumed session indicator */}
       {session.isResumed && (
         <div
-          className="flex items-center gap-1 text-xs text-emerald-400 shrink-0 px-1.5 py-0.5 rounded bg-emerald-500/10"
+          className="flex items-center gap-1 text-xs text-status-success shrink-0 px-1.5 py-0.5 rounded bg-status-success/10"
           title="Resumed from previous Claude Code session"
           role="status"
           aria-label="Resumed from previous Claude Code session"

@@ -37,12 +37,12 @@ export function PluginCard({ provider, onToggle, isToggling }: PluginCardProps) 
             {provider.displayName}
           </span>
           {provider.enabled && provider.activated && (
-            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-status-success/10 text-status-success border border-status-success/20">
               Active
             </span>
           )}
           {provider.enabled && !provider.activated && (
-            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-blue-500/10 text-blue-500 border border-blue-500/20">
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-status-info/10 text-status-info border border-status-info/20">
               Enabled
             </span>
           )}

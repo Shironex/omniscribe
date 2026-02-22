@@ -38,7 +38,7 @@ export function SessionHistoryItem({ entry, onResume, onFork }: SessionHistoryIt
             variant="ghost"
             size="icon"
             onClick={() => onFork(entry)}
-            className="h-auto w-auto p-1 opacity-0 group-hover:opacity-100 focus:opacity-100 text-blue-400 hover:bg-blue-500/10 hover:text-blue-400"
+            className="h-auto w-auto p-1 opacity-0 group-hover:opacity-100 focus:opacity-100 text-status-info hover:bg-status-info/10 hover:text-status-info"
             title="Fork this session"
             aria-label="Fork this session"
           >
@@ -48,7 +48,7 @@ export function SessionHistoryItem({ entry, onResume, onFork }: SessionHistoryIt
             variant="ghost"
             size="icon"
             onClick={() => onResume(entry)}
-            className="h-auto w-auto p-1 opacity-0 group-hover:opacity-100 focus:opacity-100 text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-400"
+            className="h-auto w-auto p-1 opacity-0 group-hover:opacity-100 focus:opacity-100 text-status-success hover:bg-status-success/10 hover:text-status-success"
             title="Resume this session"
             aria-label="Resume this session"
           >

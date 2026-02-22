@@ -194,7 +194,7 @@ export function GeneralSection() {
 
         {/* Status: Up to date */}
         {status === 'idle' && hasChecked && (
-          <div className="flex items-center gap-2 text-sm text-emerald-400">
+          <div className="flex items-center gap-2 text-sm text-status-success">
             <CheckCircle className="w-4 h-4" />
             <span>You're up to date!</span>
           </div>
@@ -224,7 +224,7 @@ export function GeneralSection() {
                 )}
               </span>
               {updateInfo.channel === 'beta' && (
-                <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400">
+                <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-status-warning-bg text-status-warning">
                   Beta
                 </span>
               )}
@@ -271,7 +271,7 @@ export function GeneralSection() {
           <div className="space-y-3">
             {IS_MAC ? (
               <>
-                <div className="flex items-center gap-2 text-sm text-emerald-400">
+                <div className="flex items-center gap-2 text-sm text-status-success">
                   <CheckCircle className="w-4 h-4" />
                   <span>Update verified, but auto-install is unavailable on macOS.</span>
                 </div>
@@ -279,7 +279,7 @@ export function GeneralSection() {
               </>
             ) : (
               <>
-                <div className="flex items-center gap-2 text-sm text-emerald-400">
+                <div className="flex items-center gap-2 text-sm text-status-success">
                   <CheckCircle className="w-4 h-4" />
                   <span>Update downloaded. Restart to install.</span>
                 </div>
@@ -295,7 +295,7 @@ export function GeneralSection() {
         {/* Status: Release still building */}
         {status === 'error' && error === UPDATE_ERROR_RELEASE_PENDING && (
           <div className="space-y-2">
-            <div className="flex items-start gap-2 text-sm text-amber-400">
+            <div className="flex items-start gap-2 text-sm text-status-warning">
               <Clock className="w-4 h-4 mt-0.5 shrink-0" />
               <span>
                 {channel === 'beta'

@@ -20,13 +20,13 @@ export interface StatusCounts {
 }
 
 const statusConfig: Record<SessionStatus, { label: string; color: string }> = {
-  starting: { label: 'Starting', color: 'bg-orange-500' },
-  idle: { label: 'Idle', color: 'bg-gray-500' },
-  working: { label: 'Working', color: 'bg-blue-500' },
-  planning: { label: 'Planning', color: 'bg-purple-500' },
-  needsInput: { label: 'Needs Input', color: 'bg-yellow-500' },
-  done: { label: 'Done', color: 'bg-green-500' },
-  error: { label: 'Error', color: 'bg-red-500' },
+  starting: { label: 'Starting', color: 'bg-status-pending' },
+  idle: { label: 'Idle', color: 'bg-muted-foreground' },
+  working: { label: 'Working', color: 'bg-status-info' },
+  planning: { label: 'Planning', color: 'bg-primary' },
+  needsInput: { label: 'Needs Input', color: 'bg-status-warning' },
+  done: { label: 'Done', color: 'bg-status-success' },
+  error: { label: 'Error', color: 'bg-status-error' },
 };
 
 interface StatusLegendProps {
