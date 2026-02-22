@@ -84,7 +84,6 @@ vi.mock('@/stores/usePluginStore', () => ({
       return (sel as (s: typeof mockPluginState) => unknown)(mockPluginState);
     return mockPluginState;
   }),
-  getSettingsNavigation: vi.fn(() => []),
 }));
 
 // Barrel re-export from @/stores also needs the settings store and plugin store

@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { Puzzle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { usePluginStore } from '@/stores';
@@ -14,6 +14,14 @@ export function PluginMarketplace() {
 
   // Track which provider is currently being toggled (prevents double-click)
   const [togglingAiMode, setTogglingAiMode] = useState<string | null>(null);
+  const toggleTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+
+  // Clean up timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (toggleTimeoutRef.current) clearTimeout(toggleTimeoutRef.current);
+    };
+  }, []);
 
   const handleToggle = useCallback(
     (aiMode: string, enabled: boolean) => {
@@ -22,7 +30,8 @@ export function PluginMarketplace() {
 
       // Clear toggling state after a short delay
       // The optimistic update in usePluginStore handles the immediate UI change
-      setTimeout(() => {
+      if (toggleTimeoutRef.current) clearTimeout(toggleTimeoutRef.current);
+      toggleTimeoutRef.current = setTimeout(() => {
         setTogglingAiMode(null);
       }, 500);
     },
