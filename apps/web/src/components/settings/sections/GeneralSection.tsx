@@ -224,7 +224,7 @@ export function GeneralSection() {
                 )}
               </span>
               {updateInfo.channel === 'beta' && (
-                <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400">
+                <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-status-warning-bg text-status-warning">
                   Beta
                 </span>
               )}
@@ -295,7 +295,7 @@ export function GeneralSection() {
         {/* Status: Release still building */}
         {status === 'error' && error === UPDATE_ERROR_RELEASE_PENDING && (
           <div className="space-y-2">
-            <div className="flex items-start gap-2 text-sm text-amber-400">
+            <div className="flex items-start gap-2 text-sm text-status-warning">
               <Clock className="w-4 h-4 mt-0.5 shrink-0" />
               <span>
                 {channel === 'beta'

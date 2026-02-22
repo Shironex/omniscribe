@@ -20,7 +20,7 @@ export interface StatusCounts {
 }
 
 const statusConfig: Record<SessionStatus, { label: string; color: string }> = {
-  starting: { label: 'Starting', color: 'bg-status-warning' },
+  starting: { label: 'Starting', color: 'bg-status-pending' },
   idle: { label: 'Idle', color: 'bg-muted-foreground' },
   working: { label: 'Working', color: 'bg-status-info' },
   planning: { label: 'Planning', color: 'bg-primary' },
