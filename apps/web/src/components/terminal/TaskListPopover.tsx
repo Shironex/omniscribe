@@ -83,7 +83,8 @@ const TaskRow = memo(function TaskRow({ task }: { task: TaskItem }) {
   return (
     <div
       className={cn(
-        'flex items-center gap-1.5 px-2 py-1 text-xs',
+        'flex items-center gap-1.5 px-2.5 py-1 mx-1 my-0.5 text-xs rounded-full',
+        isCompleted ? 'bg-muted/30' : 'bg-muted/50',
         'animate-in fade-in-0 slide-in-from-top-1 duration-200',
         'transition-all duration-200'
       )}
