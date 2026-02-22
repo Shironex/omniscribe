@@ -57,6 +57,7 @@ export function useTerminalKeyboard(
 
         // Primary+V: paste
         if (isPrimaryModifier && !e.shiftKey && key === 'v' && e.type === 'keydown') {
+          e.preventDefault();
           pasteFromClipboard(sessionIdRef);
           return false;
         }
@@ -69,6 +70,7 @@ export function useTerminalKeyboard(
           return false;
         }
         if (e.ctrlKey && e.shiftKey && key === 'v' && e.type === 'keydown') {
+          e.preventDefault();
           pasteFromClipboard(sessionIdRef);
           return false;
         }
