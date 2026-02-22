@@ -55,21 +55,22 @@ export function useTerminalKeyboard(
           return true;
         }
 
-        // Primary+V: paste
-        if (isPrimaryModifier && !e.shiftKey && key === 'v' && e.type === 'keydown') {
+        // Primary+V or Ctrl+Shift+V: paste
+        if (
+          ((isPrimaryModifier && !e.shiftKey) || (e.ctrlKey && e.shiftKey)) &&
+          key === 'v' &&
+          e.type === 'keydown'
+        ) {
+          e.preventDefault();
           pasteFromClipboard(sessionIdRef);
           return false;
         }
 
-        // Ctrl+Shift+C/V: Linux-style copy/paste
+        // Ctrl+Shift+C: Linux-style copy
         if (e.ctrlKey && e.shiftKey && key === 'c' && e.type === 'keydown') {
           if (terminal.hasSelection()) {
             copyTerminalSelection(terminal);
           }
-          return false;
-        }
-        if (e.ctrlKey && e.shiftKey && key === 'v' && e.type === 'keydown') {
-          pasteFromClipboard(sessionIdRef);
           return false;
         }
 
