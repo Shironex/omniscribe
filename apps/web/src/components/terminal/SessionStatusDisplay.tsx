@@ -185,7 +185,7 @@ export function SessionStatusDisplay({ session, gitBranch }: SessionStatusDispla
       {/* Worktree indicator */}
       {session.worktreePath && (
         <div
-          className="flex items-center gap-1 text-xs text-status-info shrink-0 px-1.5 py-0.5 rounded bg-status-info/10"
+          className="flex items-center gap-1 text-xs text-status-accent shrink-0 px-1.5 py-0.5 rounded bg-status-accent/10"
           title={session.worktreePath}
         >
           <FolderGit2 size={11} />

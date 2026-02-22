@@ -90,6 +90,10 @@
   --status-error-bg: oklch(65% 0.18 25 / 0.2);
   --status-info: oklch(68% 0.14 135);
   --status-info-bg: oklch(68% 0.14 135 / 0.2);
+  --status-pending: oklch(0.75 0.14 65);
+  --status-pending-bg: oklch(0.75 0.14 65 / 0.2);
+  --status-accent: oklch(0.68 0.14 190);
+  --status-accent-bg: oklch(0.68 0.14 190 / 0.2);
   --status-backlog: oklch(55% 0 0);
   --status-in-progress: oklch(78% 0.12 85);
   --status-waiting: oklch(70% 0.15 55);
