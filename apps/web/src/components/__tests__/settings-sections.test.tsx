@@ -217,8 +217,6 @@ vi.mock('@/stores/usePluginStore', () => ({
       return (sel as (s: typeof mockPluginState) => unknown)(mockPluginState);
     return mockPluginState;
   }),
-  getSettingsNavigation: vi.fn(() => []),
-  getAllThemes: vi.fn(() => []),
 }));
 
 // ---------------------------------------------------------------------------

@@ -1,12 +1,5 @@
-import { Fragment, type ComponentType } from 'react';
-import {
-  usePluginStore,
-  getTerminalHeaderActions,
-  getActionBarItems,
-  getMoreMenuItems,
-  getStatusRenderer,
-  getUsagePanel,
-} from '@/stores/usePluginStore';
+import { useMemo, Fragment, type ComponentType } from 'react';
+import { usePluginStore, matchesShowFor } from '@/stores/usePluginStore';
 import { PluginErrorBoundary } from './PluginErrorBoundary';
 
 interface ExtensionSlotProps {
@@ -37,6 +30,25 @@ interface SlotRegistration {
   order?: number;
 }
 
+/** Picks the registration Map relevant to a given slot name */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function selectMapForSlot(name: string): (s: any) => Map<string, any> | undefined {
+  switch (name) {
+    case 'terminal-header-actions':
+      return s => s.terminalHeaderActions;
+    case 'action-bar':
+      return s => s.actionBarItems;
+    case 'more-menu':
+      return s => s.moreMenuItems;
+    case 'status-display':
+      return s => s.statusRenderers;
+    case 'usage-panel':
+      return s => s.usagePanels;
+    default:
+      return () => undefined;
+  }
+}
+
 /**
  * Generic extension point renderer.
  *
@@ -53,91 +65,108 @@ export function ExtensionSlot({
   renderMode = 'all',
   className,
 }: ExtensionSlotProps) {
-  // Subscribe to relevant registration maps so we re-render when they change.
-  // The selector picks the specific map for the slot name to minimize re-renders.
-  const terminalHeaderActions = usePluginStore(s => s.terminalHeaderActions);
-  const actionBarItems = usePluginStore(s => s.actionBarItems);
-  const moreMenuItems = usePluginStore(s => s.moreMenuItems);
-  const statusRenderers = usePluginStore(s => s.statusRenderers);
-  const usagePanels = usePluginStore(s => s.usagePanels);
+  // Subscribe to only the specific Map for this slot (not all 5).
+  // The selector is memoized on `name` so Zustand gets a stable reference.
 
-  // These subscriptions exist to trigger re-renders when maps change
-  void terminalHeaderActions;
-  void actionBarItems;
-  void moreMenuItems;
-  void statusRenderers;
-  void usagePanels;
+  const selector = useMemo(() => selectMapForSlot(name), [name]);
+  const registrationMap = usePluginStore(selector);
 
-  // Resolve registrations based on slot name
-  let registrations: SlotRegistration[] = [];
+  // Resolve and filter registrations from the subscribed Map
+  const registrations = useMemo((): SlotRegistration[] => {
+    if (!registrationMap) return [];
 
-  switch (name) {
-    case 'terminal-header-actions':
-      registrations = getTerminalHeaderActions(aiMode).map(r => ({
-        id: r.id,
-        pluginId: r.pluginId,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        component: r.icon as ComponentType<any>,
-        order: r.order,
-      }));
-      break;
-
-    case 'action-bar':
-      registrations = getActionBarItems(aiMode).map(r => ({
-        id: r.id,
-        pluginId: r.pluginId,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        component: r.icon as ComponentType<any>,
-        order: r.order,
-      }));
-      break;
-
-    case 'more-menu':
-      registrations = getMoreMenuItems(aiMode).map(r => ({
-        id: r.id,
-        pluginId: r.pluginId,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        component: r.icon as ComponentType<any>,
-        order: r.order,
-      }));
-      break;
-
-    case 'status-display': {
-      const renderer = getStatusRenderer(aiMode ?? '');
-      if (renderer) {
-        registrations = [
-          {
-            id: renderer.id,
-            pluginId: renderer.pluginId,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            component: renderer.component as ComponentType<any>,
-            order: renderer.order,
-          },
-        ];
+    switch (name) {
+      case 'terminal-header-actions': {
+        const matches: SlotRegistration[] = [];
+        for (const [, reg] of registrationMap) {
+          if (matchesShowFor(reg.showFor, aiMode)) {
+            matches.push({
+              id: reg.id,
+              pluginId: reg.pluginId,
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              component: reg.icon as ComponentType<any>,
+              order: reg.order,
+            });
+          }
+        }
+        matches.sort((a, b) => (a.order ?? 100) - (b.order ?? 100));
+        return matches;
       }
-      break;
-    }
 
-    case 'usage-panel': {
-      const panel = getUsagePanel(aiMode ?? '');
-      if (panel) {
-        registrations = [
-          {
-            id: panel.id,
-            pluginId: panel.pluginId,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            component: panel.component as ComponentType<any>,
-            order: panel.order,
-          },
-        ];
+      case 'action-bar': {
+        const matches: SlotRegistration[] = [];
+        for (const [, reg] of registrationMap) {
+          if (matchesShowFor(reg.showFor, aiMode)) {
+            matches.push({
+              id: reg.id,
+              pluginId: reg.pluginId,
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              component: reg.icon as ComponentType<any>,
+              order: reg.order,
+            });
+          }
+        }
+        matches.sort((a, b) => (a.order ?? 100) - (b.order ?? 100));
+        return matches;
       }
-      break;
-    }
 
-    default:
-      // Unknown slot name -- render nothing
-      break;
-  }
+      case 'more-menu': {
+        const matches: SlotRegistration[] = [];
+        for (const [, reg] of registrationMap) {
+          if (matchesShowFor(reg.showFor, aiMode)) {
+            matches.push({
+              id: reg.id,
+              pluginId: reg.pluginId,
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              component: reg.icon as ComponentType<any>,
+              order: reg.order,
+            });
+          }
+        }
+        matches.sort((a, b) => (a.order ?? 100) - (b.order ?? 100));
+        return matches;
+      }
+
+      case 'status-display': {
+        const matches: SlotRegistration[] = [];
+        for (const [, reg] of registrationMap) {
+          if (reg.aiMode === (aiMode ?? '')) {
+            matches.push({
+              id: reg.id,
+              pluginId: reg.pluginId,
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              component: reg.component as ComponentType<any>,
+              order: reg.order,
+            });
+          }
+        }
+        // Return only highest priority (lowest order)
+        matches.sort((a, b) => (a.order ?? 100) - (b.order ?? 100));
+        return matches.length > 0 ? [matches[0]] : [];
+      }
+
+      case 'usage-panel': {
+        const matches: SlotRegistration[] = [];
+        for (const [, reg] of registrationMap) {
+          if (reg.aiMode === (aiMode ?? '')) {
+            matches.push({
+              id: reg.id,
+              pluginId: reg.pluginId,
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              component: reg.component as ComponentType<any>,
+              order: reg.order,
+            });
+          }
+        }
+        // Return only highest priority (lowest order)
+        matches.sort((a, b) => (a.order ?? 100) - (b.order ?? 100));
+        return matches.length > 0 ? [matches[0]] : [];
+      }
+
+      default:
+        return [];
+    }
+  }, [registrationMap, name, aiMode]);
 
   if (registrations.length === 0) return null;
 

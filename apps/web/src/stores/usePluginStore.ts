@@ -21,7 +21,6 @@ import {
   createSocketActions,
   createSocketListeners,
 } from './utils';
-import type { NavigationGroup, NavigationItem } from '@/components/settings/navigation-config';
 
 const logger = createLogger('PluginStore');
 
@@ -123,11 +122,70 @@ const BUILTIN_THEME_IDS = new Set(ALL_THEMES.map(String));
  * Check if a `showFor` field matches a given aiMode.
  * Matches if showFor is '*', equals the aiMode, or is an array containing '*' or the aiMode.
  */
-function matchesShowFor(showFor: string | string[], aiMode?: string): boolean {
+export function matchesShowFor(showFor: string | string[], aiMode?: string): boolean {
   if (!aiMode) return true;
   if (showFor === '*') return true;
   if (typeof showFor === 'string') return showFor === aiMode;
   return showFor.includes('*') || showFor.includes(aiMode);
+}
+
+/** Registration Map property names (used for bulk cleanup in deactivateFrontendPlugin) */
+const REGISTRATION_MAP_KEYS = [
+  'settingsCategories',
+  'settingsSections',
+  'statusRenderers',
+  'usagePanels',
+  'terminalHeaderActions',
+  'actionBarItems',
+  'moreMenuItems',
+  'themes',
+] as const satisfies ReadonlyArray<keyof PluginState>;
+
+/**
+ * Generic factory that creates a registration method for a given Map property.
+ * Produces a function `(pluginId, reg) => Disposable` that sets/deletes from
+ * the named Map using a compound key, with devtools action labels.
+ */
+function createRegistration<T extends object>(
+  set: (
+    fn: (state: PluginState) => Partial<PluginState>,
+    replace: undefined,
+    action: string
+  ) => void,
+  mapKey: (typeof REGISTRATION_MAP_KEYS)[number],
+  idField: keyof T & string,
+  actionLabel: string
+): (pluginId: string, reg: T) => Disposable {
+  return (pluginId: string, reg: T): Disposable => {
+    const key = `${pluginId}:${String((reg as Record<string, unknown>)[idField])}`;
+    logger.debug(`register${actionLabel}`, key);
+
+    set(
+      state => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const next = new Map(state[mapKey] as Map<string, any>);
+        next.set(key, { ...reg, pluginId });
+        return { [mapKey]: next } as unknown as Partial<PluginState>;
+      },
+      undefined,
+      `plugin/register${actionLabel}`
+    );
+
+    return {
+      dispose: () => {
+        set(
+          state => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const next = new Map(state[mapKey] as Map<string, any>);
+            next.delete(key);
+            return { [mapKey]: next } as unknown as Partial<PluginState>;
+          },
+          undefined,
+          `plugin/unregister${actionLabel}`
+        );
+      },
+    };
+  };
 }
 
 // ==========================================
@@ -307,7 +365,7 @@ export const usePluginStore = create<PluginStore>()(
               const nextActivated = new Set(state.frontendPluginsActivated);
               nextActivated.delete(pluginId);
 
-              // Remove all registrations for this plugin
+              // Remove all registrations for this plugin from every Map
               const removeForPlugin = <T extends { pluginId: string }>(
                 map: Map<string, T>
               ): Map<string, T> => {
@@ -320,17 +378,12 @@ export const usePluginStore = create<PluginStore>()(
                 return next;
               };
 
-              return {
-                frontendPluginsActivated: nextActivated,
-                settingsCategories: removeForPlugin(state.settingsCategories),
-                settingsSections: removeForPlugin(state.settingsSections),
-                statusRenderers: removeForPlugin(state.statusRenderers),
-                usagePanels: removeForPlugin(state.usagePanels),
-                terminalHeaderActions: removeForPlugin(state.terminalHeaderActions),
-                actionBarItems: removeForPlugin(state.actionBarItems),
-                moreMenuItems: removeForPlugin(state.moreMenuItems),
-                themes: removeForPlugin(state.themes),
-              };
+              const cleaned: Partial<PluginState> = { frontendPluginsActivated: nextActivated };
+              for (const mapKey of REGISTRATION_MAP_KEYS) {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                (cleaned as any)[mapKey] = removeForPlugin(state[mapKey] as Map<string, any>);
+              }
+              return cleaned;
             },
             undefined,
             'plugin/deactivateFrontendPlugin'
@@ -338,25 +391,20 @@ export const usePluginStore = create<PluginStore>()(
         },
 
         // ==========================================
-        // Registration methods
+        // Registration methods (factory-generated)
         // ==========================================
 
         registerSettingsCategory: (
           pluginId: string,
           reg: SettingsCategoryRegistration
         ): Disposable => {
-          const key = `${pluginId}:${reg.categoryId}`;
-          logger.debug('registerSettingsCategory', key);
-
-          set(
-            state => {
-              const next = new Map(state.settingsCategories);
-              next.set(key, { ...reg, pluginId });
-              return { settingsCategories: next };
-            },
-            undefined,
-            'plugin/registerSettingsCategory'
-          );
+          // Core category registration via factory
+          const categoryDisposable = createRegistration<SettingsCategoryRegistration>(
+            set,
+            'settingsCategories',
+            'categoryId',
+            'SettingsCategory'
+          )(pluginId, reg);
 
           // Also register each section within the category
           const sectionDisposables: Disposable[] = [];
@@ -366,16 +414,7 @@ export const usePluginStore = create<PluginStore>()(
 
           return {
             dispose: () => {
-              set(
-                state => {
-                  const next = new Map(state.settingsCategories);
-                  next.delete(key);
-                  return { settingsCategories: next };
-                },
-                undefined,
-                'plugin/unregisterSettingsCategory'
-              );
-              // Also dispose all sections
+              categoryDisposable.dispose();
               for (const d of sectionDisposables) {
                 d.dispose();
               }
@@ -383,188 +422,47 @@ export const usePluginStore = create<PluginStore>()(
           };
         },
 
-        registerSettingsSection: (
-          pluginId: string,
-          reg: SettingsSectionRegistration
-        ): Disposable => {
-          const key = `${pluginId}:${reg.sectionId}`;
-          logger.debug('registerSettingsSection', key);
+        registerSettingsSection: createRegistration<SettingsSectionRegistration>(
+          set,
+          'settingsSections',
+          'sectionId',
+          'SettingsSection'
+        ),
 
-          set(
-            state => {
-              const next = new Map(state.settingsSections);
-              next.set(key, { ...reg, pluginId });
-              return { settingsSections: next };
-            },
-            undefined,
-            'plugin/registerSettingsSection'
-          );
+        registerStatusRenderer: createRegistration<SessionStatusRendererRegistration>(
+          set,
+          'statusRenderers',
+          'id',
+          'StatusRenderer'
+        ),
 
-          return {
-            dispose: () => {
-              set(
-                state => {
-                  const next = new Map(state.settingsSections);
-                  next.delete(key);
-                  return { settingsSections: next };
-                },
-                undefined,
-                'plugin/unregisterSettingsSection'
-              );
-            },
-          };
-        },
+        registerUsagePanel: createRegistration<UsagePanelRegistration>(
+          set,
+          'usagePanels',
+          'id',
+          'UsagePanel'
+        ),
 
-        registerStatusRenderer: (
-          pluginId: string,
-          reg: SessionStatusRendererRegistration
-        ): Disposable => {
-          const key = `${pluginId}:${reg.id}`;
-          logger.debug('registerStatusRenderer', key);
+        registerTerminalHeaderAction: createRegistration<TerminalHeaderActionRegistration>(
+          set,
+          'terminalHeaderActions',
+          'id',
+          'TerminalHeaderAction'
+        ),
 
-          set(
-            state => {
-              const next = new Map(state.statusRenderers);
-              next.set(key, { ...reg, pluginId });
-              return { statusRenderers: next };
-            },
-            undefined,
-            'plugin/registerStatusRenderer'
-          );
+        registerActionBarItem: createRegistration<ActionBarItemRegistration>(
+          set,
+          'actionBarItems',
+          'id',
+          'ActionBarItem'
+        ),
 
-          return {
-            dispose: () => {
-              set(
-                state => {
-                  const next = new Map(state.statusRenderers);
-                  next.delete(key);
-                  return { statusRenderers: next };
-                },
-                undefined,
-                'plugin/unregisterStatusRenderer'
-              );
-            },
-          };
-        },
-
-        registerUsagePanel: (pluginId: string, reg: UsagePanelRegistration): Disposable => {
-          const key = `${pluginId}:${reg.id}`;
-          logger.debug('registerUsagePanel', key);
-
-          set(
-            state => {
-              const next = new Map(state.usagePanels);
-              next.set(key, { ...reg, pluginId });
-              return { usagePanels: next };
-            },
-            undefined,
-            'plugin/registerUsagePanel'
-          );
-
-          return {
-            dispose: () => {
-              set(
-                state => {
-                  const next = new Map(state.usagePanels);
-                  next.delete(key);
-                  return { usagePanels: next };
-                },
-                undefined,
-                'plugin/unregisterUsagePanel'
-              );
-            },
-          };
-        },
-
-        registerTerminalHeaderAction: (
-          pluginId: string,
-          reg: TerminalHeaderActionRegistration
-        ): Disposable => {
-          const key = `${pluginId}:${reg.id}`;
-          logger.debug('registerTerminalHeaderAction', key);
-
-          set(
-            state => {
-              const next = new Map(state.terminalHeaderActions);
-              next.set(key, { ...reg, pluginId });
-              return { terminalHeaderActions: next };
-            },
-            undefined,
-            'plugin/registerTerminalHeaderAction'
-          );
-
-          return {
-            dispose: () => {
-              set(
-                state => {
-                  const next = new Map(state.terminalHeaderActions);
-                  next.delete(key);
-                  return { terminalHeaderActions: next };
-                },
-                undefined,
-                'plugin/unregisterTerminalHeaderAction'
-              );
-            },
-          };
-        },
-
-        registerActionBarItem: (pluginId: string, reg: ActionBarItemRegistration): Disposable => {
-          const key = `${pluginId}:${reg.id}`;
-          logger.debug('registerActionBarItem', key);
-
-          set(
-            state => {
-              const next = new Map(state.actionBarItems);
-              next.set(key, { ...reg, pluginId });
-              return { actionBarItems: next };
-            },
-            undefined,
-            'plugin/registerActionBarItem'
-          );
-
-          return {
-            dispose: () => {
-              set(
-                state => {
-                  const next = new Map(state.actionBarItems);
-                  next.delete(key);
-                  return { actionBarItems: next };
-                },
-                undefined,
-                'plugin/unregisterActionBarItem'
-              );
-            },
-          };
-        },
-
-        registerMoreMenuItem: (pluginId: string, reg: MoreMenuItemRegistration): Disposable => {
-          const key = `${pluginId}:${reg.id}`;
-          logger.debug('registerMoreMenuItem', key);
-
-          set(
-            state => {
-              const next = new Map(state.moreMenuItems);
-              next.set(key, { ...reg, pluginId });
-              return { moreMenuItems: next };
-            },
-            undefined,
-            'plugin/registerMoreMenuItem'
-          );
-
-          return {
-            dispose: () => {
-              set(
-                state => {
-                  const next = new Map(state.moreMenuItems);
-                  next.delete(key);
-                  return { moreMenuItems: next };
-                },
-                undefined,
-                'plugin/unregisterMoreMenuItem'
-              );
-            },
-          };
-        },
+        registerMoreMenuItem: createRegistration<MoreMenuItemRegistration>(
+          set,
+          'moreMenuItems',
+          'id',
+          'MoreMenuItem'
+        ),
 
         registerTheme: (pluginId: string, reg: ThemeRegistration): Disposable => {
           const key = `${pluginId}:${reg.id}`;
@@ -595,8 +493,6 @@ export const usePluginStore = create<PluginStore>()(
             }
           }
 
-          logger.debug('registerTheme', key);
-
           // Inject CSS custom properties into the DOM (validates properties internally)
           const injected = injectThemeStyles(reg.id, reg.cssProperties);
           if (!injected) {
@@ -606,29 +502,19 @@ export const usePluginStore = create<PluginStore>()(
             return { dispose: () => {} };
           }
 
-          set(
-            state => {
-              const next = new Map(state.themes);
-              next.set(key, { ...reg, pluginId });
-              return { themes: next };
-            },
-            undefined,
-            'plugin/registerTheme'
-          );
+          // Use factory for the core Map set/delete, then layer CSS cleanup on dispose
+          const coreDisposable = createRegistration<ThemeRegistration>(
+            set,
+            'themes',
+            'id',
+            'Theme'
+          )(pluginId, reg);
 
           return {
             dispose: () => {
               // Remove CSS from DOM before removing from store
               removeThemeStyles(reg.id);
-              set(
-                state => {
-                  const next = new Map(state.themes);
-                  next.delete(key);
-                  return { themes: next };
-                },
-                undefined,
-                'plugin/unregisterTheme'
-              );
+              coreDisposable.dispose();
             },
           };
         },
@@ -644,164 +530,16 @@ export const usePluginStore = create<PluginStore>()(
 );
 
 // ==========================================
-// Exported selectors
+// Exported selectors (non-reactive, for use outside React)
 // ==========================================
-
-/**
- * Get merged settings navigation: core nav groups + plugin-registered categories/sections.
- * Plugin categories are inserted based on their `order` field.
- */
-export function getSettingsNavigation(): NavigationGroup[] {
-  const state = usePluginStore.getState();
-
-  // Collect plugin categories with their sections
-  const pluginGroups: Array<NavigationGroup & { order: number }> = [];
-
-  for (const [, cat] of state.settingsCategories) {
-    // Find all sections for this category
-    const sections: Array<WithPluginId<SettingsSectionRegistration>> = [];
-    for (const [, section] of state.settingsSections) {
-      if (section.categoryId === cat.categoryId) {
-        sections.push(section);
-      }
-    }
-
-    // Sort sections by order
-    sections.sort((a, b) => (a.order ?? 100) - (b.order ?? 100));
-
-    const items: NavigationItem[] = sections.map(s => ({
-      id: s.sectionId,
-      label: s.label,
-      icon: s.icon as NavigationItem['icon'],
-    }));
-
-    if (items.length > 0) {
-      pluginGroups.push({
-        label: cat.label,
-        items,
-        order: cat.order ?? 100,
-      });
-    }
-  }
-
-  // Sort plugin groups by order
-  pluginGroups.sort((a, b) => a.order - b.order);
-
-  return pluginGroups;
-}
-
-/**
- * Get the status renderer for a given AI mode.
- * Returns undefined if no renderer is registered for the mode.
- */
-export function getStatusRenderer(
-  aiMode: string
-): WithPluginId<SessionStatusRendererRegistration> | undefined {
-  const state = usePluginStore.getState();
-  const matches: WithPluginId<SessionStatusRendererRegistration>[] = [];
-
-  for (const [, reg] of state.statusRenderers) {
-    if (reg.aiMode === aiMode) {
-      matches.push(reg);
-    }
-  }
-
-  if (matches.length === 0) return undefined;
-
-  // Return highest priority (lowest order)
-  matches.sort((a, b) => (a.order ?? 100) - (b.order ?? 100));
-  return matches[0];
-}
-
-/**
- * Get the usage panel for a given AI mode.
- * Returns undefined if no panel is registered for the mode.
- */
-export function getUsagePanel(aiMode: string): WithPluginId<UsagePanelRegistration> | undefined {
-  const state = usePluginStore.getState();
-  const matches: WithPluginId<UsagePanelRegistration>[] = [];
-
-  for (const [, reg] of state.usagePanels) {
-    if (reg.aiMode === aiMode) {
-      matches.push(reg);
-    }
-  }
-
-  if (matches.length === 0) return undefined;
-
-  // Return highest priority (lowest order)
-  matches.sort((a, b) => (a.order ?? 100) - (b.order ?? 100));
-  return matches[0];
-}
-
-/**
- * Get terminal header actions for a given AI mode.
- * Matches by aiMode or wildcard '*' in showFor.
- */
-export function getTerminalHeaderActions(
-  aiMode?: string
-): WithPluginId<TerminalHeaderActionRegistration>[] {
-  const state = usePluginStore.getState();
-  const matches: WithPluginId<TerminalHeaderActionRegistration>[] = [];
-
-  for (const [, reg] of state.terminalHeaderActions) {
-    if (matchesShowFor(reg.showFor, aiMode)) {
-      matches.push(reg);
-    }
-  }
-
-  matches.sort((a, b) => (a.order ?? 100) - (b.order ?? 100));
-  return matches;
-}
-
-/**
- * Get action bar items for a given AI mode.
- * Matches by aiMode or wildcard '*' in showFor.
- */
-export function getActionBarItems(aiMode?: string): WithPluginId<ActionBarItemRegistration>[] {
-  const state = usePluginStore.getState();
-  const matches: WithPluginId<ActionBarItemRegistration>[] = [];
-
-  for (const [, reg] of state.actionBarItems) {
-    if (matchesShowFor(reg.showFor, aiMode)) {
-      matches.push(reg);
-    }
-  }
-
-  matches.sort((a, b) => (a.order ?? 100) - (b.order ?? 100));
-  return matches;
-}
-
-/**
- * Get more menu items for a given AI mode.
- * Matches by aiMode or wildcard '*' in showFor.
- */
-export function getMoreMenuItems(aiMode?: string): WithPluginId<MoreMenuItemRegistration>[] {
-  const state = usePluginStore.getState();
-  const matches: WithPluginId<MoreMenuItemRegistration>[] = [];
-
-  for (const [, reg] of state.moreMenuItems) {
-    if (matchesShowFor(reg.showFor, aiMode)) {
-      matches.push(reg);
-    }
-  }
-
-  matches.sort((a, b) => (a.order ?? 100) - (b.order ?? 100));
-  return matches;
-}
-
-/**
- * Get all registered themes (for merging with built-in themes).
- */
-export function getAllThemes(): WithPluginId<ThemeRegistration>[] {
-  const state = usePluginStore.getState();
-  return Array.from(state.themes.values());
-}
 
 /**
  * Get a plugin theme registration by its bare theme ID (e.g. "codex-dark").
  * The themes Map is keyed by compound keys (`${pluginId}:${reg.id}`),
  * so direct `.get(themeId)` won't work — this scans values instead.
+ *
+ * **Non-reactive** — uses `getState()` snapshot. Use in Zustand actions
+ * or one-time reads (e.g. useState initializer), not for subscriptions.
  */
 export function getPluginTheme(themeId: string): WithPluginId<ThemeRegistration> | undefined {
   const state = usePluginStore.getState();
@@ -809,12 +547,4 @@ export function getPluginTheme(themeId: string): WithPluginId<ThemeRegistration>
     if (reg.id === themeId) return reg;
   }
   return undefined;
-}
-
-/**
- * Get provider info for a given AI mode.
- */
-export function getProviderByAiMode(aiMode: string): ProviderInfo | undefined {
-  const state = usePluginStore.getState();
-  return state.providers.find(p => p.aiMode === aiMode);
 }
