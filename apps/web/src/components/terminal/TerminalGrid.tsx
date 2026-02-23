@@ -146,7 +146,7 @@ export function TerminalGrid({
   return (
     <div data-testid="terminal-grid" className={cn('h-full w-full flex flex-col', className)}>
       {/* Main grid area for active sessions */}
-      <div className="flex-1 min-h-0 p-2">
+      <div className="flex-1 min-h-0 p-3">
         {sessionCount > 0 ? (
           <DndContext
             sensors={sensors}
