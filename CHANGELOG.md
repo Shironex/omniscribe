@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## 1.1.0-beta.4 (2026-02-23)
+
+### Bug Fixes
+
+- **Plugin arbitrary execution** — Add method allowlist to prevent arbitrary code execution via `plugin:invoke` event (#191)
+- **Plugin deactivation lifecycle** — Fix broken deactivation lifecycle causing context leaks, missing cleanup, and no shutdown hooks (#192)
+- **Plugin theme lookup** — Fix theme Map lookup mismatch in 3 locations causing themes to not apply correctly (#193)
+- **Plugin CSS injection** — Sanitize plugin theme CSS to block `expression()` and scope SDK socket access (#199)
+- **Theme-aware status colors** — Replace hardcoded colors with theme-aware CSS variables and add `--status-pending`/`--status-accent` to all 26 theme files (#203)
+- **Terminal double paste** — Prevent double paste on Ctrl+V by adding `e.preventDefault()` (#204)
+- **UI spacing and task pills** — Improve spacing, task pill styling, and fix window corner artifacts (#205)
+
+### Refactoring
+
+- **Shared CLI utilities** — Extract shared CLI utilities from provider plugins into `@omniscribe/shared/node` sub-path (#200)
+- **Plugin backend quality** — Improve validation, socket cleanup, and registry encapsulation in plugin backend (#201)
+- **Plugin store frontend** — Reduce plugin store boilerplate, fix non-reactive selectors, and fix ExtensionSlot over-subscription (#202)
+
 ## 1.1.0-beta.3 (2026-02-20)
 
 ### Bug Fixes
