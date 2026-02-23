@@ -66,11 +66,11 @@ function SortableTab({
       tabIndex={isActive ? 0 : -1}
       aria-selected={isActive}
       className={cn(
-        'no-drag group flex items-center gap-2 px-3 h-full min-w-0',
-        'cursor-pointer transition-colors border-r border-border',
+        'no-drag group flex items-center gap-2 px-3 h-7 min-w-0',
+        'cursor-pointer transition-colors rounded-lg',
         isActive
-          ? 'bg-card text-foreground'
-          : 'text-foreground-secondary hover:bg-card/50 hover:text-foreground'
+          ? 'bg-card text-foreground shadow-sm'
+          : 'text-foreground-secondary hover:bg-muted-foreground/10 hover:text-foreground'
       )}
       onClick={() => onSelectTab(tab.id)}
       onKeyDown={e => {
@@ -146,7 +146,10 @@ export function ProjectTabs({
   const draggedTab = activeDragId ? tabs.find(t => t.id === activeDragId) : null;
 
   return (
-    <div className="flex items-center overflow-x-auto no-scrollbar shrink min-w-0" role="tablist">
+    <div
+      className="flex items-center gap-1 py-1 px-1 overflow-x-auto no-scrollbar shrink min-w-0"
+      role="tablist"
+    >
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
@@ -171,8 +174,8 @@ export function ProjectTabs({
           {draggedTab ? (
             <div
               className={cn(
-                'no-drag flex items-center gap-2 px-3 h-11 min-w-0',
-                'bg-card text-foreground border border-border rounded shadow-lg'
+                'no-drag flex items-center gap-2 px-3 h-7 min-w-0',
+                'bg-card text-foreground border border-border rounded-lg shadow-lg'
               )}
             >
               {draggedTab.status && <StatusDot status={draggedTab.status} />}
@@ -189,7 +192,7 @@ export function ProjectTabs({
             size="icon"
             data-testid="new-tab-button"
             onClick={onNewTab}
-            className="no-drag px-3 h-full"
+            className="no-drag px-2 h-7 w-7 rounded-lg"
             aria-label="New tab"
           >
             <Plus size={16} />
