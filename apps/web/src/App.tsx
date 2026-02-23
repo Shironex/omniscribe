@@ -26,6 +26,7 @@ import { resumeSession } from '@/lib/session';
 import { extractErrorMessage, DEFAULT_WORKTREE_SETTINGS, EDITOR_OPTIONS } from '@omniscribe/shared';
 import { toast } from 'sonner';
 import { IS_ELECTRON } from '@/lib/platform';
+import { cn } from '@/lib/utils';
 
 function App() {
   useAppInitialization();
@@ -242,7 +243,10 @@ function App() {
   return (
     <div
       data-testid="app-ready"
-      className={`h-screen w-screen bg-background text-foreground flex flex-col overflow-hidden${IS_ELECTRON ? ' rounded-t-[10px]' : ''}`}
+      className={cn(
+        'h-screen w-screen bg-background text-foreground flex flex-col overflow-hidden',
+        IS_ELECTRON && 'rounded-t-[10px]'
+      )}
     >
       <TopBar
         tabs={tabs}
