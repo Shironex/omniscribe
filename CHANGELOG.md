@@ -2,37 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## 1.1.0-beta.4 (2026-02-23)
-
-### Bug Fixes
-
-- **Plugin arbitrary execution** — Add method allowlist to prevent arbitrary code execution via `plugin:invoke` event (#191)
-- **Plugin deactivation lifecycle** — Fix broken deactivation lifecycle causing context leaks, missing cleanup, and no shutdown hooks (#192)
-- **Plugin theme lookup** — Fix theme Map lookup mismatch in 3 locations causing themes to not apply correctly (#193)
-- **Plugin CSS injection** — Sanitize plugin theme CSS to block `expression()` and scope SDK socket access (#199)
-- **Theme-aware status colors** — Replace hardcoded colors with theme-aware CSS variables and add `--status-pending`/`--status-accent` to all 26 theme files (#203)
-- **Terminal double paste** — Prevent double paste on Ctrl+V by adding `e.preventDefault()` (#204)
-- **UI spacing and task pills** — Improve spacing, task pill styling, and fix window corner artifacts (#205)
-
-### Refactoring
-
-- **Shared CLI utilities** — Extract shared CLI utilities from provider plugins into `@omniscribe/shared/node` sub-path (#200)
-- **Plugin backend quality** — Improve validation, socket cleanup, and registry encapsulation in plugin backend (#201)
-- **Plugin store frontend** — Reduce plugin store boilerplate, fix non-reactive selectors, and fix ExtensionSlot over-subscription (#202)
-
-## 1.1.0-beta.3 (2026-02-20)
-
-### Bug Fixes
-
-- **Weekly usage parsing broken** — Claude Code v2.1.49 TUI renders word separators as `ESC[nC` (Cursor Forward) instead of literal spaces; `stripAnsiCodes` now replaces these with spaces, fixing "Current week (all models)" label matching that was showing 0% instead of the actual percentage
-
-## 1.1.0-beta.2 (2026-02-20)
-
-### Bug Fixes
-
-- **Codex usage panel theme colors** — Codex usage popover now uses theme-aware colors (`text-primary`, `bg-primary`, `text-status-warning`, `text-status-error`) via the shared `getStatusInfo`/`UsageCard` utilities instead of hardcoded hex values (`#10A37F`, `#eab308`, `#ef4444`), matching Claude usage panel behavior across all themes
-
-## 1.1.0-beta.1 (2026-02-20)
+## 1.1.0 (2026-02-26)
 
 ### Features
 
@@ -44,6 +14,7 @@ All notable changes to this project will be documented in this file.
 - **Dynamic settings & marketplace** — Registry-driven settings navigation with per-plugin sections and a marketplace UI for managing providers (#179)
 - **Multi-provider usage popover** — Tabbed usage popover showing per-provider usage data with provider-specific panels (#179)
 - **Documentation site** — Docusaurus-powered docs with architecture guides, feature docs, SDK reference, and download page (#179)
+- **Pill-shaped workspace tabs** — Redesigned workspace tabs with pill-shaped styling for a cleaner look (#206)
 
 ### Bug Fixes
 
@@ -51,6 +22,22 @@ All notable changes to this project will be documented in this file.
 - **Mode picker cleanup** — Hide disabled providers from mode picker dropdowns (#179)
 - **Extension UI refresh** — Update extension UI when toggling providers on/off (#179)
 - **CI plugin builds** — Build plugin packages before typecheck and tests, add missing frontend dependencies (#179)
+- **Plugin arbitrary execution** — Add method allowlist to prevent arbitrary code execution via `plugin:invoke` event (#191)
+- **Plugin deactivation lifecycle** — Fix broken deactivation lifecycle causing context leaks, missing cleanup, and no shutdown hooks (#192)
+- **Plugin theme lookup** — Fix theme Map lookup mismatch in 3 locations causing themes to not apply correctly (#193)
+- **Plugin CSS injection** — Sanitize plugin theme CSS to block `expression()` and scope SDK socket access (#199)
+- **Theme-aware status colors** — Replace hardcoded colors with theme-aware CSS variables and add `--status-pending`/`--status-accent` to all 26 theme files (#203)
+- **Terminal double paste** — Prevent double paste on Ctrl+V by adding `e.preventDefault()` (#204)
+- **UI spacing and task pills** — Improve spacing, task pill styling, and fix window corner artifacts (#205)
+- **Codex usage panel theme colors** — Codex usage popover now uses theme-aware colors via shared `getStatusInfo`/`UsageCard` utilities instead of hardcoded hex values, matching Claude usage panel behavior across all themes
+- **Weekly usage parsing** — Fix Claude Code v2.1.49 TUI rendering word separators as `ESC[nC` instead of spaces, causing 0% usage display
+- **CI workflow permissions** — Add missing `permissions` blocks to workflow files (#217, #218)
+
+### Refactoring
+
+- **Shared CLI utilities** — Extract shared CLI utilities from provider plugins into `@omniscribe/shared/node` sub-path (#200)
+- **Plugin backend quality** — Improve validation, socket cleanup, and registry encapsulation in plugin backend (#201)
+- **Plugin store frontend** — Reduce plugin store boilerplate, fix non-reactive selectors, and fix ExtensionSlot over-subscription (#202)
 
 ### Testing
 
@@ -61,8 +48,8 @@ All notable changes to this project will be documented in this file.
 
 ### Stats
 
-- 1 PR merged (68 commits)
-- 208 files changed — +37,822 / −10,424 lines
+- 14 PRs merged (99 commits)
+- 263 files changed — +39,208 / −10,614 lines
 
 ## 1.0.0 (2026-02-18)
 
