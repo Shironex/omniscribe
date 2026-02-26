@@ -118,7 +118,7 @@ export class GithubService {
 
       // Check for timeout
       if (execError.killed) {
-        throw new Error(`gh command timed out after ${timeoutMs}ms: ${command}`);
+        throw new Error(`gh command timed out after ${timeoutMs}ms: ${command}`, { cause: error });
       }
 
       // Return stdout/stderr even on non-zero exit codes
@@ -129,7 +129,7 @@ export class GithubService {
         };
       }
 
-      throw new Error(`gh command failed: ${execError.message}`);
+      throw new Error(`gh command failed: ${execError.message}`, { cause: error });
     }
   }
 

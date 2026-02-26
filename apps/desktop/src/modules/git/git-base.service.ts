@@ -53,7 +53,9 @@ export class GitBaseService {
       // Check for timeout
       if (execError.killed) {
         this.logger.warn(`Git command timed out after ${timeoutMs}ms: ${commandStr}`);
-        throw new Error(`Git command timed out after ${timeoutMs}ms: ${commandStr}`);
+        throw new Error(`Git command timed out after ${timeoutMs}ms: ${commandStr}`, {
+          cause: error,
+        });
       }
 
       // For non-fatal exit codes (1-127), return stdout/stderr.
@@ -74,7 +76,7 @@ export class GitBaseService {
       }
 
       this.logger.error('Git command failed', execError);
-      throw new Error(`Git command failed: ${execError.message}`);
+      throw new Error(`Git command failed: ${execError.message}`, { cause: error });
     }
   }
 }
