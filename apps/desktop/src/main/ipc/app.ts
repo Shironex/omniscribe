@@ -156,7 +156,7 @@ export function registerAppHandlers(): void {
         'code' in err &&
         (err as NodeJS.ErrnoException).code === 'ENOENT'
       ) {
-        throw new Error('Log file not found');
+        throw new Error('Log file not found', { cause: err });
       }
       throw err;
     }

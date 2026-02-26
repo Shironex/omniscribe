@@ -46,7 +46,7 @@ export function useQuickActionExecution(
       logger.debug('Executing quick action', actionId, 'on session', sessionId);
 
       const params = action.params ?? {};
-      let command = '';
+      let command: string;
       if (action.handler === 'terminal:execute' || action.handler === 'shell') {
         command = String(params.command ?? params.cmd ?? '');
       } else if (action.handler === 'script') {
