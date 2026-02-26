@@ -4,7 +4,6 @@ const mockExistsSync = jest.fn();
 const mockReadFileSync = jest.fn();
 const mockReaddirSync = jest.fn();
 const mockExecFileAsync = jest.fn();
-const mockExecAsync = jest.fn();
 
 jest.mock('fs', () => ({
   existsSync: (...args: unknown[]) => mockExistsSync(...args),
@@ -12,8 +11,6 @@ jest.mock('fs', () => ({
   readdirSync: (...args: unknown[]) => mockReaddirSync(...args),
 }));
 
-// Track which child_process function was promisified via references
-const execRef = jest.fn();
 // execFileRef is callback-aware: when cli-resolution's execFilePromise calls
 // execFile(cmd, args, opts, callback), it delegates to mockExecFileAsync.
 const execFileRef = jest.fn(
@@ -27,16 +24,12 @@ const execFileRef = jest.fn(
 );
 
 jest.mock('child_process', () => ({
-  exec: execRef,
   execFile: execFileRef,
 }));
 
-// Mock util.promisify to intercept both exec and execFile async versions
+// Mock util.promisify to intercept execFile async version
 jest.mock('util', () => ({
-  promisify: (fn: unknown) => {
-    if (fn === execRef) {
-      return (...args: unknown[]) => mockExecAsync(...args);
-    }
+  promisify: () => {
     return (...args: unknown[]) => mockExecFileAsync(...args);
   },
 }));
@@ -245,7 +238,7 @@ describe('CodexCliDetectionService', () => {
 
       try {
         delete process.env['OPENAI_API_KEY'];
-        mockExecAsync.mockResolvedValue({ stdout: 'logged in as user@test.com', stderr: '' });
+        mockExecFileAsync.mockResolvedValue({ stdout: 'logged in as user@test.com', stderr: '' });
 
         const result = await service.checkAuth('/usr/local/bin/codex');
 
@@ -265,7 +258,7 @@ describe('CodexCliDetectionService', () => {
       mockReadFileSync.mockImplementation(() => {
         throw new Error('ENOENT');
       });
-      mockExecAsync.mockRejectedValue(new Error('not found'));
+      mockExecFileAsync.mockRejectedValue(new Error('not found'));
 
       const original = process.env['OPENAI_API_KEY'];
 

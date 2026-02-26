@@ -13,7 +13,7 @@
  */
 
 import { readFileSync } from 'fs';
-import { exec, execFile } from 'child_process';
+import { execFile } from 'child_process';
 import { join } from 'path';
 import { homedir } from 'os';
 import { promisify } from 'util';
@@ -32,7 +32,6 @@ import {
 
 const logger = createLogger('CodexCliDetection');
 
-const execAsync = promisify(exec);
 const execFileAsync = promisify(execFile);
 
 // ---- Auth file token detection ----
@@ -138,7 +137,7 @@ export class CodexCliDetectionService {
     // Slow check: codex login status (only if fast checks failed)
     if (cliPath) {
       try {
-        const { stdout, stderr } = await execAsync(`"${cliPath}" login status`, {
+        const { stdout, stderr } = await execFileAsync(cliPath, ['login', 'status'], {
           env: { ...process.env, TERM: 'dumb' },
           timeout: 10000,
         });
