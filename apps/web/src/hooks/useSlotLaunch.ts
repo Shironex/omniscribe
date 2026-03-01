@@ -3,7 +3,7 @@ import { toast } from 'sonner';
 import { createLogger, extractErrorMessage } from '@omniscribe/shared';
 import type { PreLaunchSlot } from '@/components/terminal/TerminalGrid';
 import { createSession } from '@/lib/session';
-import { useSessionStore } from '@/stores';
+import { useSessionStore } from '@/stores/useSessionStore';
 import type { FrontendSessionConfig } from '@/stores/useSessionStore';
 
 const logger = createLogger('PreLaunchSlots');

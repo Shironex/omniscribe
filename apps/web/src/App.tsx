@@ -1,32 +1,42 @@
-import { useCallback, useMemo, useEffect, useState } from 'react';
-import {
-  TopBar,
-  IdleLandingView,
-  WelcomeView,
-  SettingsModal,
-  LaunchPresetsModal,
-  SessionHistoryPanel,
-  PersistentProjectGrid,
-} from '@/components';
-import {
-  useAppInitialization,
-  useWorkspaceTabs,
-  useWorkspacePreferences,
-  useProjectSessions,
-  usePreLaunchSlots,
-  useProjectGit,
-  useSessionLifecycle,
-  useAppKeyboardShortcuts,
-  useQuickActionExecution,
-  useDefaultAiMode,
-} from '@/hooks';
+import { lazy, Suspense, useCallback, useMemo, useEffect, useState } from 'react';
+import { TopBar } from '@/components/shared/TopBar';
+import { IdleLandingView } from '@/components/shared/IdleLandingView';
+import { WelcomeView } from '@/components/shared/WelcomeView';
+import { PersistentProjectGrid } from '@/components/terminal/PersistentProjectGrid';
+import { useAppInitialization } from '@/hooks/useAppInitialization';
+import { useWorkspaceTabs } from '@/hooks/useWorkspaceTabs';
+import { useWorkspacePreferences } from '@/hooks/useWorkspacePreferences';
+import { useProjectSessions } from '@/hooks/useProjectSessions';
+import { usePreLaunchSlots } from '@/hooks/usePreLaunchSlots';
+import { useProjectGit } from '@/hooks/useProjectGit';
+import { useSessionLifecycle } from '@/hooks/useSessionLifecycle';
+import { useAppKeyboardShortcuts } from '@/hooks/useAppKeyboardShortcuts';
+import { useQuickActionExecution } from '@/hooks/useQuickActionExecution';
+import { useDefaultAiMode } from '@/hooks/useDefaultAiMode';
 import { useUpdateToast } from '@/hooks/useUpdateToast';
-import { useTerminalStore, useWorkspaceStore, useSettingsStore, useSessionStore } from '@/stores';
+import { useTerminalStore } from '@/stores/useTerminalStore';
+import { useWorkspaceStore } from '@/stores/useWorkspaceStore';
+import { useSettingsStore } from '@/stores/useSettingsStore';
+import { useSessionStore } from '@/stores/useSessionStore';
 import { resumeSession } from '@/lib/session';
 import { extractErrorMessage, DEFAULT_WORKTREE_SETTINGS, EDITOR_OPTIONS } from '@omniscribe/shared';
 import { toast } from 'sonner';
 import { IS_ELECTRON } from '@/lib/platform';
 import { cn } from '@/lib/utils';
+
+const SettingsModal = lazy(() =>
+  import('@/components/settings/SettingsModal').then(m => ({ default: m.SettingsModal }))
+);
+const LaunchPresetsModal = lazy(() =>
+  import('@/components/terminal/LaunchPresetsModal').then(m => ({
+    default: m.LaunchPresetsModal,
+  }))
+);
+const SessionHistoryPanel = lazy(() =>
+  import('@/components/shared/SessionHistoryPanel').then(m => ({
+    default: m.SessionHistoryPanel,
+  }))
+);
 
 function App() {
   useAppInitialization();
@@ -321,27 +331,33 @@ function App() {
         </div>
 
         {/* Session History Panel */}
-        <SessionHistoryPanel
-          isOpen={isHistoryOpen}
-          onClose={() => setIsHistoryOpen(false)}
-          projectPath={activeProjectPath}
-          currentBranch={currentBranch}
-        />
+        <Suspense fallback={null}>
+          <SessionHistoryPanel
+            isOpen={isHistoryOpen}
+            onClose={() => setIsHistoryOpen(false)}
+            projectPath={activeProjectPath}
+            currentBranch={currentBranch}
+          />
+        </Suspense>
       </main>
 
-      <SettingsModal />
+      <Suspense fallback={null}>
+        <SettingsModal />
+      </Suspense>
 
-      <LaunchPresetsModal
-        open={isLaunchModalOpen}
-        onOpenChange={setIsLaunchModalOpen}
-        branches={branches}
-        claudeAvailable={claudeAvailable}
-        currentBranch={currentBranch}
-        defaultAiMode={defaultAiMode}
-        existingSessionCount={terminalSessions.length}
-        worktreeMode={worktreeMode}
-        onCreateSessions={handleBatchAddSessions}
-      />
+      <Suspense fallback={null}>
+        <LaunchPresetsModal
+          open={isLaunchModalOpen}
+          onOpenChange={setIsLaunchModalOpen}
+          branches={branches}
+          claudeAvailable={claudeAvailable}
+          currentBranch={currentBranch}
+          defaultAiMode={defaultAiMode}
+          existingSessionCount={terminalSessions.length}
+          worktreeMode={worktreeMode}
+          onCreateSessions={handleBatchAddSessions}
+        />
+      </Suspense>
     </div>
   );
 }

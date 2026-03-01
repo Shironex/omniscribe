@@ -1,4 +1,5 @@
-import { useWorkspaceStore, useSettingsStore } from '@/stores';
+import { useWorkspaceStore } from '@/stores/useWorkspaceStore';
+import { useSettingsStore } from '@/stores/useSettingsStore';
 import { DEFAULT_SESSION_SETTINGS } from '@omniscribe/shared';
 import type { AiMode } from '@omniscribe/shared';
 

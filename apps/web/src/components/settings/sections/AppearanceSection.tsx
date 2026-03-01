@@ -4,7 +4,8 @@ import { cn } from '@/lib/utils';
 import { APP_NAME } from '@omniscribe/shared';
 import type { Theme } from '@omniscribe/shared';
 import { themeOptions, darkThemes, lightThemes } from '@/lib/theme';
-import { useSettingsStore, usePluginStore } from '@/stores';
+import { useSettingsStore } from '@/stores/useSettingsStore';
+import { usePluginStore } from '@/stores/usePluginStore';
 import { getPluginTheme } from '@/stores/usePluginStore';
 import type { ThemeRegistration } from '@omniscribe/plugin-api';
 

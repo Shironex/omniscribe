@@ -13,7 +13,7 @@ import {
   User,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useSettingsStore } from '@/stores';
+import { useSettingsStore } from '@/stores/useSettingsStore';
 
 export function GithubSection() {
   const githubCliStatus = useSettingsStore(state => state.githubCliStatus);

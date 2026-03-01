@@ -2,7 +2,7 @@ import { cn } from '@/lib/utils';
 import { Settings, Play, LayoutGrid, History, Plus, Square } from 'lucide-react';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
-import { useSettingsStore } from '@/stores';
+import { useSettingsStore } from '@/stores/useSettingsStore';
 import { IS_MAC } from '@/lib/platform';
 import { MAX_CONCURRENT_SESSIONS } from '@omniscribe/shared';
 

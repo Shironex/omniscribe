@@ -4,7 +4,7 @@ import { useSessionStore, type FrontendSessionConfig } from '@/stores/useSession
 import { mapToTerminalSessions } from '@/lib/session-mappers';
 
 const logger = createLogger('ProjectSessions');
-import type { StatusCounts } from '@/components';
+import type { StatusCounts } from '@/components/shared/StatusLegend';
 import type { TerminalSession, PreLaunchSlot } from '@/components/terminal/TerminalGrid';
 
 interface UseProjectSessionsReturn {

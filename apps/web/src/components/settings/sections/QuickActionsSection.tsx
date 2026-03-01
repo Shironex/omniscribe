@@ -1,6 +1,6 @@
 import { Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useWorkspaceStore } from '@/stores';
+import { useWorkspaceStore } from '@/stores/useWorkspaceStore';
 import type { SessionSettings, QuickActionMode } from '@omniscribe/shared';
 import { DEFAULT_SESSION_SETTINGS } from '@omniscribe/shared';
 

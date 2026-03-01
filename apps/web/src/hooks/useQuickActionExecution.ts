@@ -1,7 +1,8 @@
 import { useCallback, useMemo } from 'react';
 import { createLogger, DEFAULT_SESSION_SETTINGS } from '@omniscribe/shared';
 import type { SessionSettings } from '@omniscribe/shared';
-import { useQuickActionStore, useWorkspaceStore } from '@/stores';
+import { useQuickActionStore } from '@/stores/useQuickActionStore';
+import { useWorkspaceStore } from '@/stores/useWorkspaceStore';
 import { writeToTerminal } from '@/lib/terminal';
 import type { TerminalSession } from '@/components/terminal/TerminalGrid';
 

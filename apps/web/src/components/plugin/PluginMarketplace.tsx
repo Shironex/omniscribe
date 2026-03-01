@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { Puzzle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { usePluginStore } from '@/stores';
+import { usePluginStore } from '@/stores/usePluginStore';
 import { PluginCard } from './PluginCard';
 
 /**

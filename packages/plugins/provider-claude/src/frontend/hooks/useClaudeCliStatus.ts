@@ -7,7 +7,7 @@ import type {
   ClaudeInstallCommand,
 } from '@omniscribe/shared';
 import { writeClipboard } from '@/lib/clipboard';
-import { useSettingsStore } from '@/stores';
+import { useSettingsStore } from '@/stores/useSettingsStore';
 
 const logger = createLogger('ClaudeCliStatus');
 

@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import type { NavigationItem, NavigationGroup } from './navigation-config';
 import { CORE_NAV_GROUPS } from './navigation-config';
-import { usePluginStore } from '@/stores';
+import { usePluginStore } from '@/stores/usePluginStore';
 import { PluginErrorBoundary } from '@/components/plugin/PluginErrorBoundary';
 import type { SettingsSectionId } from '@omniscribe/shared';
 
