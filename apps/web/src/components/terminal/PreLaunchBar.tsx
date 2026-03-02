@@ -1,6 +1,6 @@
+import React, { useState, useRef, useEffect, useMemo, type ComponentType } from 'react';
 import { cn } from '@/lib/utils';
 import { Play, X, Terminal, Bot, ChevronDown } from 'lucide-react';
-import { useState, useRef, useEffect, useMemo, type ComponentType } from 'react';
 import type { Branch } from '@/components/shared/BranchSelector';
 import { BranchAutocomplete } from '@/components/shared/BranchAutocomplete';
 import { usePluginStore } from '@/stores/usePluginStore';
@@ -38,7 +38,7 @@ interface AIModeOption {
   color: string;
 }
 
-export function PreLaunchBar({
+export const PreLaunchBar = React.memo(function PreLaunchBar({
   slot,
   slotIndex,
   branches,
@@ -220,4 +220,6 @@ export function PreLaunchBar({
       </Button>
     </div>
   );
-}
+});
+
+PreLaunchBar.displayName = 'PreLaunchBar';

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useCallback, useState, useRef } from 'react';
 import { X, RefreshCw, PlayCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { useShallow } from 'zustand/react/shallow';
 import { createLogger, extractErrorMessage, type ClaudeSessionEntry } from '@omniscribe/shared';
 import { useSessionHistoryStore, selectSessionHistory } from '@/stores/useSessionHistoryStore';
 import { useSessionStore } from '@/stores/useSessionStore';
@@ -74,12 +75,13 @@ export function SessionHistoryPanel({
     }
   }, [isOpen]);
 
-  // Filter out sessions that are currently active
-  const activeSessions = useSessionStore(state => state.sessions);
-  const activeClaudeIds = useMemo(
-    () => new Set(activeSessions.map(s => s.claudeSessionId).filter(Boolean)),
-    [activeSessions]
+  // Filter out sessions that are currently active.
+  // useShallow compares the array of session IDs to prevent re-renders from
+  // unrelated session state changes (e.g., status updates).
+  const activeClaudeIdList = useSessionStore(
+    useShallow(state => state.sessions.map(s => s.claudeSessionId).filter(Boolean))
   );
+  const activeClaudeIds = useMemo(() => new Set(activeClaudeIdList), [activeClaudeIdList]);
 
   // Unique branches for filter dropdown
   const uniqueBranches = useMemo(

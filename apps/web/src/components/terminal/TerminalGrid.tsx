@@ -3,8 +3,7 @@ import { cn } from '@/lib/utils';
 import { DndContext, DragOverlay, closestCenter } from '@dnd-kit/core';
 import { SortableContext, rectSwappingStrategy } from '@dnd-kit/sortable';
 import { SortableTerminalWrapper } from './SortableTerminalWrapper';
-import { TerminalCard } from './TerminalCard';
-import type { QuickActionItem } from './TerminalCard';
+import { TerminalCard, EMPTY_QUICK_ACTIONS, type QuickActionItem } from './TerminalCard';
 import { TerminalHeader } from './TerminalHeader';
 import type { TerminalSession } from './TerminalHeader';
 import { PreLaunchSection } from './PreLaunchSection';
@@ -58,7 +57,7 @@ export function TerminalGrid({
   branches,
   claudeAvailable,
   worktreeMode,
-  quickActions = [],
+  quickActions = EMPTY_QUICK_ACTIONS,
   isActive = true,
   focusedSessionId,
   onFocusSession,
