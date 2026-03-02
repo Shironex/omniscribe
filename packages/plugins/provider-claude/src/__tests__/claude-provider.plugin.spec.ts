@@ -62,6 +62,13 @@ jest.mock('@omniscribe/shared', () => {
       warn: jest.fn(),
       error: jest.fn(),
     }),
+  };
+});
+
+jest.mock('@omniscribe/shared/node', () => {
+  const actual = jest.requireActual('@omniscribe/shared/node');
+  return {
+    ...actual,
     getClaudeSessionsDir: jest.fn().mockReturnValue('/home/user/.claude/projects/encoded'),
     getSessionsIndexPath: jest
       .fn()

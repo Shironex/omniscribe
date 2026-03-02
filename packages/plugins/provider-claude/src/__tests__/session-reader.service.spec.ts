@@ -61,6 +61,9 @@ jest.mock('@omniscribe/shared', () => ({
     error: jest.fn(),
   }),
   extractErrorMessage: (err: unknown) => (err instanceof Error ? err.message : String(err)),
+}));
+
+jest.mock('@omniscribe/shared/node', () => ({
   getClaudeSessionsDir: (...args: unknown[]) => mockGetClaudeSessionsDir(...args),
   getSessionsIndexPath: (...args: unknown[]) => mockGetSessionsIndexPath(...args),
 }));

@@ -17,9 +17,8 @@ import {
   ClaudeSessionsIndex,
   createLogger,
   extractErrorMessage,
-  getClaudeSessionsDir,
-  getSessionsIndexPath,
 } from '@omniscribe/shared';
+import { getClaudeSessionsDir, getSessionsIndexPath } from '@omniscribe/shared/node';
 import type { ProviderSessionEntry } from '@omniscribe/plugin-api';
 
 /**

@@ -7,9 +7,8 @@ import {
   ClaudeSessionsIndex,
   createLogger,
   extractErrorMessage,
-  getClaudeSessionsDir,
-  getSessionsIndexPath,
 } from '@omniscribe/shared';
+import { getClaudeSessionsDir, getSessionsIndexPath } from '@omniscribe/shared/node';
 
 /**
  * Parsed fields from a .jsonl line

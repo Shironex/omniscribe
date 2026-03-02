@@ -22,3 +22,9 @@ export {
 } from './utils/cli-resolution';
 
 export { ENV_ALLOWLIST, ENV_BLOCKLIST_PATTERNS, buildSafeEnv } from './utils/env-utils';
+
+export {
+  encodeProjectPath,
+  getClaudeSessionsDir,
+  getSessionsIndexPath,
+} from './utils/claude-paths';
