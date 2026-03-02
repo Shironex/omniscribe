@@ -1,9 +1,9 @@
-import React, { useState, useRef, useEffect, useMemo, type ComponentType } from 'react';
+import React from 'react';
 import { cn } from '@/lib/utils';
-import { Play, X, Terminal, Bot, ChevronDown } from 'lucide-react';
+import { Play, X } from 'lucide-react';
 import type { Branch } from '@/components/shared/BranchSelector';
 import { BranchAutocomplete } from '@/components/shared/BranchAutocomplete';
-import { usePluginStore } from '@/stores/usePluginStore';
+import { AiModeDropdown } from '@/components/shared/AiModeDropdown';
 import { getPrelaunchShortcutForIndex } from '@/lib/prelaunch-shortcuts';
 import { Button } from '@/components/ui/button';
 import type { AiMode, WorktreeMode } from '@omniscribe/shared';
@@ -31,13 +31,6 @@ interface PreLaunchBarProps {
   className?: string;
 }
 
-interface AIModeOption {
-  value: AiMode;
-  label: string;
-  icon: ComponentType<{ size?: string | number; className?: string }>;
-  color: string;
-}
-
 export const PreLaunchBar = React.memo(function PreLaunchBar({
   slot,
   slotIndex,
@@ -51,57 +44,6 @@ export const PreLaunchBar = React.memo(function PreLaunchBar({
   onCreateBranch,
   className,
 }: PreLaunchBarProps) {
-  const [isAIModeOpen, setIsAIModeOpen] = useState(false);
-  const aiModeRef = useRef<HTMLDivElement>(null);
-  const providers = usePluginStore(s => s.providers);
-  const statusRenderers = usePluginStore(s => s.statusRenderers);
-
-  // Build AI mode options dynamically from registered providers
-  const aiModeOptions: AIModeOption[] = useMemo(() => {
-    const options: AIModeOption[] = [];
-
-    // Add enabled provider modes with icons from status renderers
-    for (const provider of providers.filter(p => p.enabled)) {
-      let icon: ComponentType<{ size?: string | number; className?: string }> = Bot;
-      for (const [, reg] of statusRenderers) {
-        if (reg.aiMode === provider.aiMode) {
-          icon = reg.component as ComponentType<{ size?: string | number; className?: string }>;
-          break;
-        }
-      }
-      options.push({
-        value: provider.aiMode as AiMode,
-        label: provider.displayName,
-        icon,
-        color: 'text-primary',
-      });
-    }
-
-    // Always add plain mode (built-in, not a plugin)
-    options.push({
-      value: 'plain',
-      label: 'Plain',
-      icon: Terminal,
-      color: 'text-muted-foreground',
-    });
-
-    return options;
-  }, [providers, statusRenderers]);
-
-  // Close AI mode dropdown when clicking outside
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (aiModeRef.current && !aiModeRef.current.contains(event.target as Node)) {
-        setIsAIModeOpen(false);
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const selectedMode = aiModeOptions.find(m => m.value === slot.aiMode) || aiModeOptions[0];
-  const SelectedIcon = selectedMode.icon;
   const shortcutKey =
     slot.shortcutKey || (slotIndex ? getPrelaunchShortcutForIndex(slotIndex - 1) : null);
 
@@ -114,67 +56,11 @@ export const PreLaunchBar = React.memo(function PreLaunchBar({
       )}
     >
       {/* AI Mode selector */}
-      <div ref={aiModeRef} className="relative">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setIsAIModeOpen(!isAIModeOpen)}
-          className="min-w-[100px] text-xs"
-        >
-          <SelectedIcon size={14} className={selectedMode.color} />
-          <span data-testid="ai-mode-label">{selectedMode.label}</span>
-          <ChevronDown
-            size={12}
-            className={cn(
-              'text-muted-foreground transition-transform ml-auto',
-              isAIModeOpen && 'rotate-180'
-            )}
-          />
-        </Button>
-
-        {/* AI Mode dropdown */}
-        {isAIModeOpen && (
-          <div
-            className={cn(
-              'absolute bottom-full left-0 mb-1 z-50',
-              'bg-muted border border-border rounded-lg shadow-xl',
-              'overflow-hidden animate-fade-in min-w-[120px]'
-            )}
-          >
-            {aiModeOptions.map(option => {
-              const Icon = option.icon;
-              // Disable non-plain modes whose provider CLI is not installed
-              const isDisabled =
-                option.value !== 'plain' &&
-                !providers.find(p => p.aiMode === option.value)?.cliStatus?.installed;
-              return (
-                <Button
-                  key={option.value}
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    if (isDisabled) return;
-                    onUpdate(slot.id, { aiMode: option.value });
-                    setIsAIModeOpen(false);
-                  }}
-                  disabled={isDisabled}
-                  title={isDisabled ? 'CLI is not installed' : undefined}
-                  className={cn(
-                    'w-full justify-start text-xs',
-                    option.value === slot.aiMode && 'bg-primary/10 text-primary'
-                  )}
-                >
-                  <Icon size={14} className={option.color} />
-                  <span>{option.label}</span>
-                  {isDisabled && (
-                    <span className="ml-auto text-[10px] text-muted-foreground">Not installed</span>
-                  )}
-                </Button>
-              );
-            })}
-          </div>
-        )}
-      </div>
+      <AiModeDropdown
+        value={slot.aiMode}
+        onChange={mode => onUpdate(slot.id, { aiMode: mode })}
+        direction="up"
+      />
 
       {/* Branch selector -- hidden when worktrees are disabled */}
       {worktreeMode !== 'never' && (

@@ -5,6 +5,7 @@ import { useSessionStore } from '@/stores/useSessionStore';
 import { useTerminalStore } from '@/stores/useTerminalStore';
 import { mapToTerminalSessions } from '@/lib/session-mappers';
 import { TerminalGrid } from './TerminalGrid';
+import { TerminalGridProvider } from './TerminalGridContext';
 import type { PreLaunchSlot } from './PreLaunchBar';
 import type { Branch } from '@/components/shared/BranchSelector';
 import type { QuickActionItem } from './TerminalCard';
@@ -31,7 +32,7 @@ interface PersistentProjectGridProps {
     updates: Partial<Pick<PreLaunchSlot, 'aiMode' | 'branch'>>
   ) => void;
   onLaunch: (slotId: string) => void;
-  // Shared callbacks (work for all projects)
+  // Session action callbacks (provided via context to children)
   onKill: (sessionId: string) => void;
   onSessionClose: (sessionId: string, exitCode: number) => void;
   onQuickAction?: (sessionId: string, actionId: string) => void;
@@ -43,6 +44,9 @@ interface PersistentProjectGridProps {
  * Wrapper around TerminalGrid that persists across tab switches.
  * Each project gets its own instance, deriving sessions from the store.
  * Inactive grids are hidden via CSS but remain mounted to preserve xterm instances.
+ *
+ * Provides session action callbacks via TerminalGridContext so that
+ * TerminalCard/TerminalHeader can consume them without prop drilling.
  */
 export function PersistentProjectGrid({
   projectPath,
@@ -134,30 +138,39 @@ export function PersistentProjectGrid({
   // Don't render if no sessions and no pre-launch slots
   if (terminalSessions.length === 0 && effectivePreLaunchSlots.length === 0) return null;
 
+  // Context value for session action callbacks
+  const contextValue = useMemo(
+    () => ({
+      onKill,
+      onSessionClose,
+      onQuickAction,
+      onResume,
+      onOpenInEditor,
+      quickActions: effectiveQuickActions,
+    }),
+    [onKill, onSessionClose, onQuickAction, onResume, onOpenInEditor, effectiveQuickActions]
+  );
+
   return (
     <div className={cn('absolute inset-0', isActive ? 'z-10' : 'invisible pointer-events-none')}>
-      <TerminalGrid
-        sessions={orderedSessions}
-        isActive={isActive}
-        preLaunchSlots={effectivePreLaunchSlots}
-        launchingSlotIds={isActive ? launchingSlotIds : undefined}
-        branches={effectiveBranches}
-        worktreeMode={isActive ? worktreeMode : undefined}
-        quickActions={effectiveQuickActions}
-        focusedSessionId={focusedSessionId}
-        onFocusSession={handleFocusSession}
-        onAddSlot={onAddSlot}
-        onOpenLaunchModal={onOpenLaunchModal}
-        onRemoveSlot={onRemoveSlot}
-        onUpdateSlot={onUpdateSlot}
-        onLaunch={onLaunch}
-        onKill={onKill}
-        onSessionClose={onSessionClose}
-        onQuickAction={onQuickAction}
-        onResume={onResume}
-        onOpenInEditor={onOpenInEditor}
-        onReorderSessions={handleReorderSessions}
-      />
+      <TerminalGridProvider value={contextValue}>
+        <TerminalGrid
+          sessions={orderedSessions}
+          isActive={isActive}
+          preLaunchSlots={effectivePreLaunchSlots}
+          launchingSlotIds={isActive ? launchingSlotIds : undefined}
+          branches={effectiveBranches}
+          worktreeMode={isActive ? worktreeMode : undefined}
+          focusedSessionId={focusedSessionId}
+          onFocusSession={handleFocusSession}
+          onAddSlot={onAddSlot}
+          onOpenLaunchModal={onOpenLaunchModal}
+          onRemoveSlot={onRemoveSlot}
+          onUpdateSlot={onUpdateSlot}
+          onLaunch={onLaunch}
+          onReorderSessions={handleReorderSessions}
+        />
+      </TerminalGridProvider>
     </div>
   );
 }

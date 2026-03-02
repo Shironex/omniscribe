@@ -14,13 +14,12 @@ import { useAppKeyboardShortcuts } from '@/hooks/useAppKeyboardShortcuts';
 import { useQuickActionExecution } from '@/hooks/useQuickActionExecution';
 import { useDefaultAiMode } from '@/hooks/useDefaultAiMode';
 import { useUpdateToast } from '@/hooks/useUpdateToast';
-import { useTerminalStore } from '@/stores/useTerminalStore';
+import { useSessionOrderSync } from '@/hooks/useSessionOrderSync';
+import { useSessionActions } from '@/hooks/useSessionActions';
+import { useSessionStore } from '@/stores/useSessionStore';
 import { useWorkspaceStore } from '@/stores/useWorkspaceStore';
 import { useSettingsStore } from '@/stores/useSettingsStore';
-import { useSessionStore } from '@/stores/useSessionStore';
-import { resumeSession } from '@/lib/session';
-import { extractErrorMessage, DEFAULT_WORKTREE_SETTINGS, EDITOR_OPTIONS } from '@omniscribe/shared';
-import { toast } from 'sonner';
+import { DEFAULT_WORKTREE_SETTINGS } from '@omniscribe/shared';
 import { IS_ELECTRON } from '@/lib/platform';
 import { cn } from '@/lib/utils';
 
@@ -42,6 +41,7 @@ function App() {
   useAppInitialization();
   useUpdateToast();
   useWorkspacePreferences();
+  useSessionOrderSync();
 
   const {
     tabs,
@@ -77,43 +77,11 @@ function App() {
     handleSessionClose,
   } = useProjectSessions(activeProjectPath, preLaunchSlots);
 
-  // Stable store action for handleResume (no need for a second hook call)
-  const updateSession = useSessionStore(state => state.updateSession);
-
-  // Session order reconciliation is handled by subscribe() below.
-  // allSessions is still needed reactively for projectPathsWithGrids computation.
   const allSessions = useSessionStore(state => state.sessions);
 
-  useEffect(() => {
-    const reconcile = (state: ReturnType<typeof useSessionStore.getState>) => {
-      const currentOrder = useTerminalStore.getState().sessionOrder;
-      const allIds = state.sessions.map(session => session.id);
-      const allIdSet = new Set(allIds);
-      const currentOrderSet = new Set(currentOrder);
-      const validOrder = currentOrder.filter(id => allIdSet.has(id));
-      const newIds = allIds.filter(id => !currentOrderSet.has(id));
-
-      if (newIds.length > 0 || validOrder.length !== currentOrder.length) {
-        useTerminalStore.getState().setSessionOrder([...validOrder, ...newIds]);
-      }
-    };
-
-    // Initial sync for pre-existing sessions
-    reconcile(useSessionStore.getState());
-
-    let prevSessions = useSessionStore.getState().sessions;
-    const unsub = useSessionStore.subscribe(state => {
-      // Skip if sessions array reference hasn't changed
-      if (state.sessions === prevSessions) return;
-      prevSessions = state.sessions;
-      reconcile(state);
-    });
-    return unsub;
-  }, []);
-
   const { handleStopAll, handleKillSession } = useSessionLifecycle(activeProjectSessions);
-
   const { quickActionsForTerminal, handleQuickAction } = useQuickActionExecution(terminalSessions);
+  const { handleResume, handleOpenInEditor } = useSessionActions(activeProjectPath);
 
   const workspaceTabs = useWorkspaceStore(state => state.tabs);
   const recentProjects = useMemo(
@@ -128,7 +96,6 @@ function App() {
     for (const session of allSessions) {
       paths.add(session.projectPath);
     }
-    // Include active project when it has pre-launch slots (before any sessions exist)
     if (activeProjectPath && preLaunchSlots.length > 0) {
       paths.add(activeProjectPath);
     }
@@ -184,58 +151,6 @@ function App() {
     state => (state.preferences.worktree ?? DEFAULT_WORKTREE_SETTINGS).mode
   );
 
-  // Resume session handler
-  const handleResume = useCallback(
-    async (sessionId: string) => {
-      const session = useSessionStore.getState().sessions.find(s => s.id === sessionId);
-      if (!session?.claudeSessionId || !session.projectPath) return;
-      try {
-        const resumed = await resumeSession(
-          session.claudeSessionId,
-          session.projectPath,
-          session.branch
-        );
-        if (resumed.terminalSessionId !== undefined) {
-          updateSession(resumed.id, {
-            terminalSessionId: resumed.terminalSessionId,
-          });
-        }
-        toast.success('Session resumed');
-      } catch (error) {
-        const msg = extractErrorMessage(error, 'Failed to resume');
-        toast.error(msg);
-      }
-    },
-    [updateSession]
-  );
-
-  // Open in editor handler
-  const handleOpenInEditor = useCallback(
-    async (sessionId: string) => {
-      const session = useSessionStore.getState().sessions.find(s => s.id === sessionId);
-      const folderPath = session?.worktreePath ?? activeProjectPath;
-      if (!folderPath) {
-        toast.error('No project path available');
-        return;
-      }
-
-      const editorProtocol = useTerminalStore.getState().editorProtocol;
-      const editor = EDITOR_OPTIONS.find(e => e.id === editorProtocol);
-      if (!editor) {
-        toast.error('No editor configured. Set one in Settings → Terminal.');
-        return;
-      }
-
-      try {
-        await window.electronAPI?.app?.openInEditor(editorProtocol, folderPath);
-      } catch (error) {
-        const msg = extractErrorMessage(error, 'Failed to open in editor');
-        toast.error(msg);
-      }
-    },
-    [activeProjectPath]
-  );
-
   useAppKeyboardShortcuts({
     canLaunch,
     isLaunching,
@@ -256,7 +171,6 @@ function App() {
   });
 
   // Trigger refit when switching tabs so terminals recalculate dimensions.
-  // Use double-rAF to ensure CSS visibility change has painted before refitting.
   useEffect(() => {
     if (activeProjectPath) {
       let rafId = requestAnimationFrame(() => {

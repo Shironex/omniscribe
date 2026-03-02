@@ -1,35 +1,15 @@
-import { useState, useEffect, useRef, type ComponentType } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
-import { Terminal, ChevronDown, X, Bot } from 'lucide-react';
+import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogOverlay, DialogPortal, DialogTitle } from '@/components/ui/dialog';
 import { BranchAutocomplete } from '@/components/shared/BranchAutocomplete';
-import { useClickOutside } from '@/hooks/useClickOutside';
-import { usePluginStore } from '@/stores/usePluginStore';
+import { AiModeDropdown } from '@/components/shared/AiModeDropdown';
 import { GridPresetCard } from './GridPresetCard';
 import type { AiMode, WorktreeMode } from '@omniscribe/shared';
 import type { Branch } from '@/components/shared/BranchSelector';
-
-/**
- * Get the icon component for an AI mode from registered status renderers.
- * Falls back to Bot icon for provider modes and Terminal for plain.
- */
-function getModeIcon(
-  mode: string,
-  statusRenderers: Map<string, { aiMode: string; component: unknown; pluginId: string }>
-): ComponentType<{ className?: string; size?: string | number }> {
-  if (mode === 'plain') return Terminal;
-
-  for (const [, reg] of statusRenderers) {
-    if (reg.aiMode === mode) {
-      return reg.component as ComponentType<{ className?: string; size?: string | number }>;
-    }
-  }
-
-  return Bot;
-}
 
 const GRID_PRESETS = [1, 2, 3, 4, 6, 8, 9, 12] as const;
 
@@ -57,15 +37,11 @@ export function LaunchPresetsModal({
   worktreeMode,
   onCreateSessions,
 }: LaunchPresetsModalProps) {
-  const statusRenderers = usePluginStore(s => s.statusRenderers);
-  const providers = usePluginStore(s => s.providers);
   const [selectedCount, setSelectedCount] = useState<number | null>(null);
   const [aiMode, setAiMode] = useState<AiMode>(defaultAiMode);
   const [branch, setBranch] = useState(currentBranch);
-  const [isAIModeOpen, setIsAIModeOpen] = useState(false);
 
   const prevOpenRef = useRef(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const maxNewSlots = 12 - existingSessionCount;
 
@@ -75,15 +51,9 @@ export function LaunchPresetsModal({
       setSelectedCount(null);
       setAiMode(defaultAiMode);
       setBranch(currentBranch);
-      setIsAIModeOpen(false);
     }
     prevOpenRef.current = open;
   }, [open, defaultAiMode, currentBranch]);
-
-  // Close AI mode dropdown on click outside
-  useClickOutside(dropdownRef, () => {
-    if (isAIModeOpen) setIsAIModeOpen(false);
-  });
 
   const handleCreate = () => {
     if (selectedCount === null) return;
@@ -108,13 +78,6 @@ export function LaunchPresetsModal({
             'data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%]',
             'data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]'
           )}
-          onEscapeKeyDown={e => {
-            // When the AI mode dropdown is open, close it instead of the dialog
-            if (isAIModeOpen) {
-              e.preventDefault();
-              setIsAIModeOpen(false);
-            }
-          }}
         >
           {/* Header */}
           <div className="flex items-center justify-between px-6 pt-6 pb-2">
@@ -159,96 +122,7 @@ export function LaunchPresetsModal({
 
               <div className="flex items-center gap-3">
                 {/* AI Mode selector */}
-                <div ref={dropdownRef} className="relative">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setIsAIModeOpen(!isAIModeOpen)}
-                    className="min-w-[110px] text-xs"
-                  >
-                    {(() => {
-                      const ModeIcon = getModeIcon(aiMode, statusRenderers);
-                      return (
-                        <ModeIcon
-                          size={14}
-                          className={aiMode === 'plain' ? 'text-muted-foreground' : 'text-primary'}
-                        />
-                      );
-                    })()}
-                    <span>
-                      {providers.find(p => p.aiMode === aiMode)?.displayName ??
-                        (aiMode === 'plain' ? 'Plain' : aiMode)}
-                    </span>
-                    <ChevronDown
-                      size={12}
-                      className={cn(
-                        'text-muted-foreground transition-transform ml-auto',
-                        isAIModeOpen && 'rotate-180'
-                      )}
-                    />
-                  </Button>
-
-                  {isAIModeOpen && (
-                    <div
-                      className={cn(
-                        'absolute top-full left-0 mt-1 z-50',
-                        'bg-muted border border-border rounded-lg shadow-xl',
-                        'overflow-hidden animate-fade-in min-w-[120px]'
-                      )}
-                    >
-                      {/* Provider modes (only enabled plugins) */}
-                      {providers
-                        .filter(p => p.enabled)
-                        .map(provider => {
-                          const mode = provider.aiMode as AiMode;
-                          const isDisabled = !provider.cliStatus?.installed;
-                          const ModeIcon = getModeIcon(mode, statusRenderers);
-                          return (
-                            <Button
-                              key={mode}
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                if (isDisabled) return;
-                                setAiMode(mode);
-                                setIsAIModeOpen(false);
-                              }}
-                              disabled={isDisabled}
-                              title={isDisabled ? 'CLI is not installed' : undefined}
-                              className={cn(
-                                'w-full justify-start text-xs',
-                                mode === aiMode && 'bg-primary/10 text-primary'
-                              )}
-                            >
-                              <ModeIcon size={14} className="text-primary" />
-                              <span>{provider.displayName}</span>
-                              {isDisabled && (
-                                <span className="ml-auto text-[10px] text-muted-foreground">
-                                  Not installed
-                                </span>
-                              )}
-                            </Button>
-                          );
-                        })}
-                      {/* Plain mode (built-in, always available) */}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setAiMode('plain');
-                          setIsAIModeOpen(false);
-                        }}
-                        className={cn(
-                          'w-full justify-start text-xs',
-                          'plain' === aiMode && 'bg-primary/10 text-primary'
-                        )}
-                      >
-                        <Terminal size={14} className="text-muted-foreground" />
-                        <span>Plain</span>
-                      </Button>
-                    </div>
-                  )}
-                </div>
+                <AiModeDropdown value={aiMode} onChange={setAiMode} direction="down" />
 
                 {/* Branch selector — hidden when worktrees are disabled */}
                 {worktreeMode !== 'never' && (

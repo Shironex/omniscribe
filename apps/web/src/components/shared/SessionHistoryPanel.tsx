@@ -1,20 +1,10 @@
-import { useEffect, useMemo, useCallback, useState, useRef } from 'react';
 import { X, RefreshCw, PlayCircle } from 'lucide-react';
-import { toast } from 'sonner';
-import { useShallow } from 'zustand/react/shallow';
-import { createLogger, extractErrorMessage, type ClaudeSessionEntry } from '@omniscribe/shared';
-import { useSessionHistoryStore, selectSessionHistory } from '@/stores/useSessionHistoryStore';
-import { useSessionStore } from '@/stores/useSessionStore';
-import { resumeSession, forkSession, continueLastSession } from '@/lib/session';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { SessionHistoryFilters } from './SessionHistoryFilters';
 import { SessionHistoryItem } from './SessionHistoryItem';
-
-const logger = createLogger('SessionHistoryPanel');
-
-const MAX_HISTORY_ITEMS = 30;
+import { useSessionHistory } from '@/hooks/useSessionHistory';
 
 interface SessionHistoryPanelProps {
   isOpen: boolean;
@@ -36,149 +26,23 @@ export function SessionHistoryPanel({
   currentBranch,
   className,
 }: SessionHistoryPanelProps) {
-  const sessions = useSessionHistoryStore(selectSessionHistory);
-  const isLoading = useSessionHistoryStore(state => state.isLoading);
-  const error = useSessionHistoryStore(state => state.error);
-  const fetchHistory = useSessionHistoryStore(state => state.fetchHistory);
-  const updateSession = useSessionStore(state => state.updateSession);
-
-  // Search & filter state
-  const [searchText, setSearchText] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [selectedBranch, setSelectedBranch] = useState<string>('');
-  const [sortNewestFirst, setSortNewestFirst] = useState(true);
-  const debounceTimer = useRef<ReturnType<typeof setTimeout>>();
-
-  // Debounce search input (300ms)
-  useEffect(() => {
-    debounceTimer.current = setTimeout(() => {
-      setDebouncedSearch(searchText);
-    }, 300);
-    return () => {
-      if (debounceTimer.current) clearTimeout(debounceTimer.current);
-    };
-  }, [searchText]);
-
-  // Fetch history when panel opens or project changes
-  useEffect(() => {
-    if (isOpen && projectPath) {
-      fetchHistory(projectPath);
-    }
-  }, [isOpen, projectPath, fetchHistory]);
-
-  // Reset filters when panel closes
-  useEffect(() => {
-    if (!isOpen) {
-      setSearchText('');
-      setDebouncedSearch('');
-      setSelectedBranch('');
-    }
-  }, [isOpen]);
-
-  // Filter out sessions that are currently active.
-  // useShallow compares the array of session IDs to prevent re-renders from
-  // unrelated session state changes (e.g., status updates).
-  const activeClaudeIdList = useSessionStore(
-    useShallow(state => state.sessions.map(s => s.claudeSessionId).filter(Boolean))
-  );
-  const activeClaudeIds = useMemo(() => new Set(activeClaudeIdList), [activeClaudeIdList]);
-
-  // Unique branches for filter dropdown
-  const uniqueBranches = useMemo(
-    () => Array.from(new Set(sessions.map(s => s.gitBranch).filter(Boolean))).sort(),
-    [sessions]
-  );
-
-  // Filter + sort + limit
-  const filteredSessions = useMemo(() => {
-    let result = sessions.filter(s => !activeClaudeIds.has(s.sessionId));
-
-    // Text search (case-insensitive, matches summary or firstPrompt)
-    if (debouncedSearch) {
-      const lower = debouncedSearch.toLowerCase();
-      result = result.filter(
-        s =>
-          (s.summary && s.summary.toLowerCase().includes(lower)) ||
-          (s.firstPrompt && s.firstPrompt.toLowerCase().includes(lower))
-      );
-    }
-
-    // Branch filter
-    if (selectedBranch) {
-      result = result.filter(s => s.gitBranch === selectedBranch);
-    }
-
-    // Sort
-    result = [...result].sort((a, b) => {
-      const timeA = new Date(a.modified).getTime();
-      const timeB = new Date(b.modified).getTime();
-      return sortNewestFirst ? timeB - timeA : timeA - timeB;
-    });
-
-    // Limit
-    return result.slice(0, MAX_HISTORY_ITEMS);
-  }, [sessions, activeClaudeIds, debouncedSearch, selectedBranch, sortNewestFirst]);
-
-  const handleResume = useCallback(
-    async (entry: ClaudeSessionEntry) => {
-      if (!projectPath) return;
-      try {
-        const session = await resumeSession(
-          entry.sessionId,
-          projectPath,
-          entry.gitBranch,
-          entry.summary || entry.firstPrompt?.slice(0, 50)
-        );
-        if (session.terminalSessionId !== undefined) {
-          updateSession(session.id, { terminalSessionId: session.terminalSessionId });
-        }
-        toast.success('Session resumed successfully');
-      } catch (err) {
-        const msg = extractErrorMessage(err, 'Failed to resume session');
-        logger.error('Resume failed:', err);
-        toast.error(msg);
-      }
-    },
-    [projectPath, updateSession]
-  );
-
-  const handleFork = useCallback(
-    async (entry: ClaudeSessionEntry) => {
-      if (!projectPath) return;
-      try {
-        const session = await forkSession(
-          entry.sessionId,
-          projectPath,
-          entry.gitBranch,
-          `Fork: ${(entry.summary || entry.firstPrompt || 'session').slice(0, 40)}`
-        );
-        if (session.terminalSessionId !== undefined) {
-          updateSession(session.id, { terminalSessionId: session.terminalSessionId });
-        }
-        toast.success('Session forked successfully');
-      } catch (err) {
-        const msg = extractErrorMessage(err, 'Failed to fork session');
-        logger.error('Fork failed:', err);
-        toast.error(msg);
-      }
-    },
-    [projectPath, updateSession]
-  );
-
-  const handleContinueLast = useCallback(async () => {
-    if (!projectPath) return;
-    try {
-      const session = await continueLastSession(projectPath, currentBranch);
-      if (session.terminalSessionId !== undefined) {
-        updateSession(session.id, { terminalSessionId: session.terminalSessionId });
-      }
-      toast.success('Continuing last session');
-    } catch (err) {
-      const msg = extractErrorMessage(err, 'Failed to continue last session');
-      logger.error('Continue last failed:', err);
-      toast.error(msg);
-    }
-  }, [projectPath, currentBranch, updateSession]);
+  const {
+    filteredSessions,
+    isLoading,
+    error,
+    searchText,
+    setSearchText,
+    debouncedSearch,
+    selectedBranch,
+    setSelectedBranch,
+    uniqueBranches,
+    sortNewestFirst,
+    handleToggleSort,
+    handleResume,
+    handleFork,
+    handleContinueLast,
+    handleRefresh,
+  } = useSessionHistory({ isOpen, projectPath, currentBranch });
 
   return (
     <div
@@ -200,7 +64,7 @@ export function SessionHistoryPanel({
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => projectPath && fetchHistory(projectPath)}
+                onClick={handleRefresh}
                 className="h-auto w-auto p-1"
                 aria-label="Refresh session history"
               >
@@ -246,7 +110,7 @@ export function SessionHistoryPanel({
         onBranchChange={setSelectedBranch}
         uniqueBranches={uniqueBranches}
         sortNewestFirst={sortNewestFirst}
-        onToggleSort={() => setSortNewestFirst(prev => !prev)}
+        onToggleSort={handleToggleSort}
       />
 
       {/* Content */}
