@@ -15,6 +15,8 @@ export interface QuickActionItem {
   category?: string;
 }
 
+export const EMPTY_QUICK_ACTIONS: QuickActionItem[] = [];
+
 interface TerminalCardProps {
   session: TerminalSession;
   quickActions: QuickActionItem[];

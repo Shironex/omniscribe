@@ -75,11 +75,13 @@ export function SessionHistoryPanel({
     }
   }, [isOpen]);
 
-  // Filter out sessions that are currently active (use useShallow to avoid
-  // re-renders from unrelated session state changes like status updates)
-  const activeClaudeIds = useSessionStore(
-    useShallow(state => new Set(state.sessions.map(s => s.claudeSessionId).filter(Boolean)))
+  // Filter out sessions that are currently active.
+  // useShallow compares the array of session IDs to prevent re-renders from
+  // unrelated session state changes (e.g., status updates).
+  const activeClaudeIdList = useSessionStore(
+    useShallow(state => state.sessions.map(s => s.claudeSessionId).filter(Boolean))
   );
+  const activeClaudeIds = useMemo(() => new Set(activeClaudeIdList), [activeClaudeIdList]);
 
   // Unique branches for filter dropdown
   const uniqueBranches = useMemo(

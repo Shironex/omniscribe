@@ -181,8 +181,13 @@ export const TerminalView: React.FC<TerminalViewProps> = React.memo(
 
     const theme = getTerminalTheme(settings.terminalThemeName);
 
-    const borderStyle = useMemo<React.CSSProperties>(
+    const containerStyle = useMemo<React.CSSProperties>(
       () => ({
+        width: '100%',
+        height: '100%',
+        overflow: 'hidden',
+        borderRadius: '4px',
+        position: 'relative',
         borderColor: BORDER_COLORS[status],
         borderWidth: '2px',
         borderStyle: 'solid',
@@ -194,14 +199,7 @@ export const TerminalView: React.FC<TerminalViewProps> = React.memo(
       <div
         data-testid={`terminal-view-${sessionId}`}
         className={cn('terminal-view', className)}
-        style={{
-          width: '100%',
-          height: '100%',
-          overflow: 'hidden',
-          borderRadius: '4px',
-          position: 'relative',
-          ...borderStyle,
-        }}
+        style={containerStyle}
       >
         {showSearch && (
           <TerminalSearchBar

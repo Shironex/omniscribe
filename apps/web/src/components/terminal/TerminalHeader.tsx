@@ -8,11 +8,9 @@ import { MoreMenuDropdown } from './MoreMenuDropdown';
 import { TaskListPopover } from './TaskListPopover';
 import { ExtensionSlot } from '@/components/plugin/ExtensionSlot';
 import type { TerminalDragHandleProps } from './SortableTerminalWrapper';
-import type { QuickActionItem } from './TerminalCard';
+import { EMPTY_QUICK_ACTIONS, type QuickActionItem } from './TerminalCard';
 import type { SessionStatus } from '@/components/shared/StatusLegend';
 import type { AiMode } from '@omniscribe/shared';
-
-const EMPTY_QUICK_ACTIONS: QuickActionItem[] = [];
 
 export interface GitBranchInfo {
   name: string;
