@@ -23,7 +23,10 @@ import { DEFAULT_WORKTREE_SETTINGS } from '@omniscribe/shared';
 import { IS_ELECTRON } from '@/lib/platform';
 import { cn } from '@/lib/utils';
 
-const SettingsModal = lazy(() =>
+import { SettingsModalShell } from '@/components/settings/SettingsModalShell';
+import { SettingsModalSkeleton } from '@/components/settings/SettingsModalSkeleton';
+
+const SettingsModalContent = lazy(() =>
   import('@/components/settings/SettingsModal').then(m => ({ default: m.SettingsModal }))
 );
 const LaunchPresetsModal = lazy(() =>
@@ -276,9 +279,11 @@ function App() {
       </main>
 
       {isSettingsOpen && (
-        <Suspense fallback={<div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs" />}>
-          <SettingsModal />
-        </Suspense>
+        <SettingsModalShell>
+          <Suspense fallback={<SettingsModalSkeleton />}>
+            <SettingsModalContent />
+          </Suspense>
+        </SettingsModalShell>
       )}
 
       {isLaunchModalOpen && (

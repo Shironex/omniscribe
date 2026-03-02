@@ -1,5 +1,7 @@
 import { useMemo } from 'react';
+import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { transitions } from '@/lib/animations';
 import type { NavigationItem, NavigationGroup } from './navigation-config';
 import { CORE_NAV_GROUPS } from './navigation-config';
 import { usePluginStore } from '@/stores/usePluginStore';
@@ -40,12 +42,7 @@ function NavButton({
       className={cn(
         'group w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ease-out text-left relative overflow-hidden',
         isActive
-          ? [
-              'bg-linear-to-r from-primary/15 via-primary/10 to-brand-600/5',
-              'text-foreground',
-              'border border-primary/25',
-              'shadow-xs shadow-primary/5',
-            ]
+          ? ['text-foreground']
           : [
               'text-muted-foreground hover:text-foreground',
               'hover:bg-muted/50',
@@ -54,22 +51,36 @@ function NavButton({
         'hover:scale-[1.01] active:scale-[0.98]'
       )}
     >
+      {/* Animated active indicator background */}
+      {isActive && (
+        <motion.div
+          layoutId="settings-active-indicator"
+          className="absolute inset-0 rounded-xl bg-linear-to-r from-primary/15 via-primary/10 to-brand-600/5 border border-primary/25 shadow-xs shadow-primary/5"
+          transition={transitions.springSmooth}
+        />
+      )}
       {/* Active indicator bar */}
       {isActive && (
-        <div className="absolute inset-y-0 left-0 w-0.5 bg-linear-to-b from-primary via-primary to-brand-600 rounded-r-full" />
+        <motion.div
+          layoutId="settings-active-bar"
+          className="absolute inset-y-0 left-0 w-0.5 bg-linear-to-b from-primary via-primary to-brand-600 rounded-r-full"
+          transition={transitions.springSmooth}
+        />
       )}
-      {pluginId ? (
-        <PluginErrorBoundary pluginId={pluginId}>{iconElement}</PluginErrorBoundary>
-      ) : (
-        iconElement
-      )}
-      <span
-        className={cn(
-          'truncate',
-          isActive ? 'text-foreground' : 'text-muted-foreground group-hover:text-foreground'
+      <span className="relative z-10 flex items-center gap-2.5">
+        {pluginId ? (
+          <PluginErrorBoundary pluginId={pluginId}>{iconElement}</PluginErrorBoundary>
+        ) : (
+          iconElement
         )}
-      >
-        {item.label}
+        <span
+          className={cn(
+            'truncate',
+            isActive ? 'text-foreground' : 'text-muted-foreground group-hover:text-foreground'
+          )}
+        >
+          {item.label}
+        </span>
       </span>
     </button>
   );

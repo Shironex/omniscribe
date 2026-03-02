@@ -1,3 +1,4 @@
+import { motion } from 'framer-motion';
 import { Loader2 } from 'lucide-react';
 import { useSplashScreen } from '@/hooks/useSplashScreen';
 
@@ -14,13 +15,10 @@ export function SplashScreen() {
   if (!isVisible) return null;
 
   return (
-    <div
+    <motion.div
       className="fixed inset-0 z-9999 flex flex-col items-center justify-center bg-background"
-      style={{
-        opacity: isDismissing ? 0 : 1,
-        transform: isDismissing ? 'scale(1.02)' : 'scale(1)',
-        transition: 'opacity 500ms ease-out, transform 500ms ease-out',
-      }}
+      animate={isDismissing ? { opacity: 0, scale: 1.02 } : { opacity: 1, scale: 1 }}
+      transition={{ duration: 0.5, ease: 'easeOut' }}
     >
       {/* Logo */}
       <img
@@ -50,6 +48,6 @@ export function SplashScreen() {
         <Loader2 className="h-5 w-5 animate-spin text-brand-400" />
         <p className="text-sm select-none text-foreground-muted">{statusText}</p>
       </div>
-    </div>
+    </motion.div>
   );
 }

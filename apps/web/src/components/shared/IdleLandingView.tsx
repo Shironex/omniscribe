@@ -3,6 +3,8 @@ import { BrainCircuit, Plus } from 'lucide-react';
 import { useMemo } from 'react';
 import { getGreeting } from '@/lib/date-utils';
 import { Button } from '@/components/ui/button';
+import { motion } from 'framer-motion';
+import { animationVariants, transitions } from '@/lib/animations';
 
 interface IdleLandingViewProps {
   onAddSession: () => void;
@@ -38,7 +40,7 @@ export function IdleLandingView({
       </div>
 
       {/* Glassmorphism card */}
-      <div
+      <motion.div
         className={cn(
           'relative flex flex-col items-center',
           'px-12 py-10 rounded-2xl',
@@ -46,12 +48,21 @@ export function IdleLandingView({
           'border border-border',
           'shadow-2xl'
         )}
+        initial="initial"
+        animate="animate"
+        transition={{ staggerChildren: 0.1 }}
       >
         {/* Greeting */}
-        <p className="text-sm text-foreground-secondary mb-6">{greeting}</p>
+        <motion.div variants={animationVariants.slideUp} transition={transitions.spring}>
+          <p className="text-sm text-foreground-secondary mb-6">{greeting}</p>
+        </motion.div>
 
         {/* Icon */}
-        <div className="mb-6">
+        <motion.div
+          className="mb-6"
+          variants={animationVariants.slideUp}
+          transition={transitions.spring}
+        >
           <div
             className={cn(
               'w-24 h-24 rounded-full',
@@ -61,41 +72,47 @@ export function IdleLandingView({
           >
             <BrainCircuit size={48} className="text-primary" strokeWidth={1.5} />
           </div>
-        </div>
+        </motion.div>
 
         {/* Text */}
-        <h2 className="text-lg font-medium text-foreground mb-2">No Active Sessions</h2>
-        <p className="text-sm text-foreground-secondary mb-8 text-center max-w-xs">
-          Add sessions to start orchestrating your AI coding assistants
-        </p>
+        <motion.div variants={animationVariants.slideUp} transition={transitions.spring}>
+          <h2 className="text-lg font-medium text-foreground mb-2">No Active Sessions</h2>
+          <p className="text-sm text-foreground-secondary mb-8 text-center max-w-xs">
+            Add sessions to start orchestrating your AI coding assistants
+          </p>
+        </motion.div>
 
         {/* Add session button - opens modal as primary action */}
-        <Button
-          onClick={handlePrimaryCTA}
-          type="button"
-          size={'icon'}
-          aria-label="Set up sessions"
-          className="group"
-        >
-          <Plus
-            className="text-white group-hover:rotate-90 transition-transform duration-200"
-            strokeWidth={2}
-          />
-        </Button>
+        <motion.div variants={animationVariants.slideUp} transition={transitions.spring}>
+          <Button
+            onClick={handlePrimaryCTA}
+            type="button"
+            size={'icon'}
+            aria-label="Set up sessions"
+            className="group"
+          >
+            <Plus
+              className="text-white group-hover:rotate-90 transition-transform duration-200"
+              strokeWidth={2}
+            />
+          </Button>
+        </motion.div>
 
         {/* Keyboard shortcut hint */}
-        <p className="mt-6 text-xs text-muted-foreground">
-          Press{' '}
-          <kbd className="px-1.5 py-0.5 rounded bg-muted border border-border font-mono text-foreground-secondary">
-            Shift+N
-          </kbd>{' '}
-          to set up sessions or{' '}
-          <kbd className="px-1.5 py-0.5 rounded bg-muted border border-border font-mono text-foreground-secondary">
-            N
-          </kbd>{' '}
-          to add one
-        </p>
-      </div>
+        <motion.div variants={animationVariants.slideUp} transition={transitions.spring}>
+          <p className="mt-6 text-xs text-muted-foreground">
+            Press{' '}
+            <kbd className="px-1.5 py-0.5 rounded bg-muted border border-border font-mono text-foreground-secondary">
+              Shift+N
+            </kbd>{' '}
+            to set up sessions or{' '}
+            <kbd className="px-1.5 py-0.5 rounded bg-muted border border-border font-mono text-foreground-secondary">
+              N
+            </kbd>{' '}
+            to add one
+          </p>
+        </motion.div>
+      </motion.div>
     </div>
   );
 }

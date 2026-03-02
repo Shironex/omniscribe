@@ -6,6 +6,8 @@ import { APP_NAME } from '@omniscribe/shared';
 import { getGreeting, formatRelativeTime } from '@/lib/date-utils';
 import { truncatePath } from '@/lib/path-utils';
 import { Button } from '@/components/ui/button';
+import { motion } from 'framer-motion';
+import { animationVariants, transitions } from '@/lib/animations';
 
 interface WelcomeViewProps {
   recentProjects: ProjectTab[];
@@ -61,133 +63,169 @@ export function WelcomeView({
     >
       {/* Background gradient blobs for glassmorphism effect */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 -left-20 w-72 h-72 bg-primary/30 rounded-full blur-[100px]" />
-        <div className="absolute bottom-1/4 -right-20 w-80 h-80 bg-brand-600/25 rounded-full blur-[120px]" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-brand-400/15 rounded-full blur-[100px]" />
+        <motion.div
+          className="absolute top-1/4 -left-20 w-72 h-72 bg-primary/30 rounded-full blur-[100px]"
+          animate={{ x: [0, 10, -5, 0], y: [0, -10, 5, 0] }}
+          transition={{ duration: 12, repeat: Infinity, ease: 'easeInOut' }}
+        />
+        <motion.div
+          className="absolute bottom-1/4 -right-20 w-80 h-80 bg-brand-600/25 rounded-full blur-[120px]"
+          animate={{ x: [0, -10, 5, 0], y: [0, 10, -5, 0] }}
+          transition={{ duration: 12, repeat: Infinity, ease: 'easeInOut' }}
+        />
+        <motion.div
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-brand-400/15 rounded-full blur-[100px]"
+          animate={{ x: [0, 10, -5, 0], y: [0, -10, 5, 0] }}
+          transition={{ duration: 12, repeat: Infinity, ease: 'easeInOut' }}
+        />
       </div>
 
       {/* Main content */}
-      <div className="relative z-10 flex flex-col items-center max-w-2xl w-full px-8">
+      <motion.div
+        className="relative z-10 flex flex-col items-center max-w-2xl w-full px-8"
+        initial="initial"
+        animate="animate"
+        transition={{ staggerChildren: 0.08 }}
+      >
         {/* Hero section */}
-        <div
-          className={cn(
-            'flex flex-col items-center',
-            'px-12 py-10 rounded-2xl mb-8',
-            'bg-background/95 backdrop-blur-xl',
-            'border border-border',
-            'shadow-2xl'
-          )}
-        >
-          {/* Greeting */}
-          <p className="text-sm text-foreground-secondary mb-4">{greeting}</p>
+        <motion.div variants={animationVariants.slideUp} transition={transitions.spring}>
+          <div
+            className={cn(
+              'flex flex-col items-center',
+              'px-12 py-10 rounded-2xl mb-8',
+              'bg-background/95 backdrop-blur-xl',
+              'border border-border',
+              'shadow-2xl'
+            )}
+          >
+            {/* Greeting */}
+            <p className="text-sm text-foreground-secondary mb-4">{greeting}</p>
 
-          {/* Logo/Icon */}
-          <div className="mb-6">
-            <div
-              className={cn(
-                'w-20 h-20 rounded-full',
-                'bg-linear-to-br from-primary/20 to-brand-600/20',
-                'flex items-center justify-center'
-              )}
-            >
-              <Sparkles size={40} className="text-primary" strokeWidth={1.5} />
+            {/* Logo/Icon */}
+            <div className="mb-6">
+              <div
+                className={cn(
+                  'w-20 h-20 rounded-full',
+                  'bg-linear-to-br from-primary/20 to-brand-600/20',
+                  'flex items-center justify-center'
+                )}
+              >
+                <Sparkles size={40} className="text-primary" strokeWidth={1.5} />
+              </div>
             </div>
-          </div>
 
-          {/* Tagline */}
-          <h1 className="text-xl font-semibold text-foreground mb-2">Welcome to {APP_NAME}</h1>
-          <p className="text-sm text-foreground-secondary text-center max-w-sm">
-            Orchestrate multiple AI coding assistants in parallel
-          </p>
-        </div>
+            {/* Tagline */}
+            <h1 className="text-xl font-semibold text-foreground mb-2">Welcome to {APP_NAME}</h1>
+            <p className="text-sm text-foreground-secondary text-center max-w-sm">
+              Orchestrate multiple AI coding assistants in parallel
+            </p>
+          </div>
+        </motion.div>
 
         {/* Recent Projects Section */}
         {hasRecentProjects && (
-          <div className="w-full mb-6">
+          <motion.div
+            className="w-full mb-6"
+            variants={animationVariants.slideUp}
+            transition={transitions.spring}
+          >
             <div className="flex items-center gap-2 mb-3 px-1">
               <Clock size={14} className="text-foreground-secondary" />
               <h2 className="text-sm font-medium text-foreground-secondary">Recent Projects</h2>
             </div>
-            <div className="space-y-2">
+            <motion.div
+              className="space-y-2"
+              variants={animationVariants.fadeIn}
+              transition={{ staggerChildren: 0.05 }}
+            >
               {recentProjects.slice(0, 5).map((project, index) => (
-                <Button
+                <motion.div
                   key={project.id}
-                  variant="outline"
-                  onClick={() => onSelectProject(project.id)}
-                  className={cn(
-                    'w-full justify-start h-auto px-4 py-3',
-                    'bg-card/50 backdrop-blur-lg',
-                    'border-border/60',
-                    'hover:bg-card/80 hover:border-border',
-                    'transition-all duration-200',
-                    'group'
-                  )}
+                  variants={animationVariants.slideUp}
+                  transition={transitions.fast}
                 >
-                  <div
+                  <Button
+                    variant="outline"
+                    onClick={() => onSelectProject(project.id)}
                     className={cn(
-                      'w-8 h-8 rounded-md flex items-center justify-center',
-                      'bg-primary/10 text-primary',
-                      'group-hover:bg-primary/20 transition-colors'
+                      'w-full justify-start h-auto px-4 py-3',
+                      'bg-card/50 backdrop-blur-lg',
+                      'border-border/60',
+                      'hover:bg-card/80 hover:border-border',
+                      'transition-all duration-200',
+                      'group'
                     )}
                   >
-                    <FolderOpen size={16} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-foreground truncate">{project.name}</span>
-                      <kbd className="hidden group-hover:inline-flex px-1.5 py-0.5 rounded bg-muted border border-border font-mono text-[10px] text-foreground-secondary">
-                        {index + 1}
-                      </kbd>
+                    <div
+                      className={cn(
+                        'w-8 h-8 rounded-md flex items-center justify-center',
+                        'bg-primary/10 text-primary',
+                        'group-hover:bg-primary/20 transition-colors'
+                      )}
+                    >
+                      <FolderOpen size={16} />
                     </div>
-                    <span className="text-xs text-foreground-secondary truncate block">
-                      {truncatePath(project.projectPath)}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-foreground truncate">{project.name}</span>
+                        <kbd className="hidden group-hover:inline-flex px-1.5 py-0.5 rounded bg-muted border border-border font-mono text-[10px] text-foreground-secondary">
+                          {index + 1}
+                        </kbd>
+                      </div>
+                      <span className="text-xs text-foreground-secondary truncate block">
+                        {truncatePath(project.projectPath)}
+                      </span>
+                    </div>
+                    <span className="text-xs text-muted-foreground whitespace-nowrap">
+                      {formatRelativeTime(project.lastAccessedAt)}
                     </span>
-                  </div>
-                  <span className="text-xs text-muted-foreground whitespace-nowrap">
-                    {formatRelativeTime(project.lastAccessedAt)}
-                  </span>
-                </Button>
+                  </Button>
+                </motion.div>
               ))}
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
         )}
 
         {/* Open Project Action */}
-        <Button
-          variant="default"
-          onClick={onOpenProject}
-          className={cn(
-            'gap-3 px-6 py-3 rounded-xl',
-            'bg-linear-to-r from-primary to-brand-600',
-            'text-white font-medium',
-            'shadow-lg shadow-primary/25',
-            'hover:shadow-xl hover:shadow-primary/30',
-            'hover:scale-[1.02] active:scale-[0.98]',
-            'transition-all duration-200'
-          )}
-        >
-          <FolderOpen size={20} />
-          <span>Open Project</span>
-        </Button>
+        <motion.div variants={animationVariants.slideUp} transition={transitions.spring}>
+          <Button
+            variant="default"
+            onClick={onOpenProject}
+            className={cn(
+              'gap-3 px-6 py-3 rounded-xl',
+              'bg-linear-to-r from-primary to-brand-600',
+              'text-white font-medium',
+              'shadow-lg shadow-primary/25',
+              'hover:shadow-xl hover:shadow-primary/30',
+              'hover:scale-[1.02] active:scale-[0.98]',
+              'transition-all duration-200'
+            )}
+          >
+            <FolderOpen size={20} />
+            <span>Open Project</span>
+          </Button>
+        </motion.div>
 
         {/* Keyboard hint */}
-        <p className="mt-4 text-xs text-muted-foreground">
-          Press{' '}
-          <kbd className="px-1.5 py-0.5 rounded bg-muted border border-border font-mono text-foreground-secondary">
-            Ctrl+O
-          </kbd>{' '}
-          to open a project
-          {hasRecentProjects && (
-            <>
-              {' or '}
-              <kbd className="px-1.5 py-0.5 rounded bg-muted border border-border font-mono text-foreground-secondary">
-                1-{Math.min(recentProjects.length, 9)}
-              </kbd>{' '}
-              for recent
-            </>
-          )}
-        </p>
-      </div>
+        <motion.div variants={animationVariants.slideUp} transition={transitions.spring}>
+          <p className="mt-4 text-xs text-muted-foreground">
+            Press{' '}
+            <kbd className="px-1.5 py-0.5 rounded bg-muted border border-border font-mono text-foreground-secondary">
+              Ctrl+O
+            </kbd>{' '}
+            to open a project
+            {hasRecentProjects && (
+              <>
+                {' or '}
+                <kbd className="px-1.5 py-0.5 rounded bg-muted border border-border font-mono text-foreground-secondary">
+                  1-{Math.min(recentProjects.length, 9)}
+                </kbd>{' '}
+                for recent
+              </>
+            )}
+          </p>
+        </motion.div>
+      </motion.div>
     </div>
   );
 }

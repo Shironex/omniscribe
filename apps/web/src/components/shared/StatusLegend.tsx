@@ -1,4 +1,6 @@
+import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { animationVariants } from '@/lib/animations';
 
 export type SessionStatus =
   | 'starting'
@@ -71,9 +73,16 @@ export function StatusDot({
 }) {
   const config = statusConfig[status];
   return (
-    <span
-      className={cn('w-2 h-2 rounded-full inline-block', config.color, className)}
-      title={title ?? config.label}
-    />
+    <AnimatePresence mode="wait">
+      <motion.span
+        key={status}
+        variants={animationVariants.pop}
+        initial="initial"
+        animate="animate"
+        exit="exit"
+        className={cn('w-2 h-2 rounded-full inline-block', config.color, className)}
+        title={title ?? config.label}
+      />
+    </AnimatePresence>
   );
 }

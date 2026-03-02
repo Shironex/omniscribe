@@ -1,5 +1,7 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { transitions } from '@/lib/animations';
 import { TerminalView } from './TerminalView';
 import { TerminalErrorBoundary } from './TerminalErrorBoundary';
 import { TerminalHeader } from './TerminalHeader';
@@ -48,15 +50,17 @@ export const TerminalCard = React.memo(function TerminalCard({
   );
 
   return (
-    <div
+    <motion.div
       data-testid={`session-card-${session.id}`}
       className={cn(
         'flex flex-col h-full min-h-0 min-w-0 rounded-lg overflow-hidden',
         'border border-border',
         'bg-card',
         isFocused && 'ring-2 ring-primary',
-        'transition-all duration-150'
+        'transition-shadow transition-colors duration-150'
       )}
+      animate={isFocused ? { scale: 1 } : { scale: 0.995 }}
+      transition={transitions.fast}
       onClick={handleFocus}
     >
       <TerminalHeader
@@ -88,6 +92,6 @@ export const TerminalCard = React.memo(function TerminalCard({
           <BackpressureOverlay terminalSessionId={session.terminalSessionId} />
         )}
       </div>
-    </div>
+    </motion.div>
   );
 });
