@@ -153,7 +153,7 @@ export const TerminalHeader = React.memo(function TerminalHeader({
               disabled={session.aiMode === 'plain'}
               disabledTooltip="Quick actions are available in AI sessions only"
               onToggle={() => {
-                setQuickActionsOpen(!quickActionsOpen);
+                setQuickActionsOpen(prev => !prev);
                 setMoreMenuOpen(false);
               }}
               onAction={handleQuickAction}
@@ -169,7 +169,7 @@ export const TerminalHeader = React.memo(function TerminalHeader({
             aiMode={session.aiMode}
             sessionId={session.id}
             onToggle={() => {
-              setMoreMenuOpen(!moreMenuOpen);
+              setMoreMenuOpen(prev => !prev);
               setQuickActionsOpen(false);
             }}
             onSettingsClick={

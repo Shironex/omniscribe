@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { createLogger, extractErrorMessage, GitEvents } from '@omniscribe/shared';
+import { createMemoizedSelector } from './utils/createMemoizedSelector';
 import type {
   BranchInfo,
   CommitInfo,
@@ -312,16 +313,18 @@ export const useGitStore = create<GitStore>()(
 export const selectBranches = (state: GitStore) => state.branches;
 
 /**
- * Select local branches only
+ * Select local branches only (memoized for stable references)
  */
-export const selectLocalBranches = (state: GitStore) =>
-  state.branches.filter(branch => !branch.isRemote);
+export const selectLocalBranches = createMemoizedSelector((state: GitStore) =>
+  state.branches.filter(branch => !branch.isRemote)
+);
 
 /**
- * Select remote branches only
+ * Select remote branches only (memoized for stable references)
  */
-export const selectRemoteBranches = (state: GitStore) =>
-  state.branches.filter(branch => branch.isRemote);
+export const selectRemoteBranches = createMemoizedSelector((state: GitStore) =>
+  state.branches.filter(branch => branch.isRemote)
+);
 
 /**
  * Select current branch

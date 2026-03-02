@@ -1,4 +1,4 @@
-import { useEffect, useRef, useMemo } from 'react';
+import { useEffect, useRef } from 'react';
 import { createLogger } from '@omniscribe/shared';
 import { useWorkspaceStore } from '@/stores/useWorkspaceStore';
 import { useSettingsStore } from '@/stores/useSettingsStore';
@@ -9,119 +9,72 @@ const logger = createLogger('Preferences');
 
 /**
  * Hook for workspace theme synchronization.
- * Syncs theme between project tabs and settings store.
+ *
+ * Uses a unidirectional sync pattern with two effects:
+ * 1. Tab → Settings: On workspace restore and tab switches, apply tab's theme to settings.
+ * 2. Settings → Tab: On user-initiated theme changes, persist to the active tab.
+ *
+ * A single ref (`lastAppliedByHookRef`) prevents the settings→tab effect from
+ * firing when the theme change was caused by a tab switch (not a user action).
  */
 export function useWorkspacePreferences(): void {
-  // Workspace store - use stable selectors
-  const workspaceTabs = useWorkspaceStore(state => state.tabs);
   const activeWorkspaceTabId = useWorkspaceStore(state => state.activeTabId);
-  const workspacePreferences = useWorkspaceStore(state => state.preferences);
-  const updateTabTheme = useWorkspaceStore(state => state.updateTabTheme);
   const isWorkspaceRestored = useWorkspaceStore(state => state.isRestored);
-
-  // Settings store
   const settingsTheme = useSettingsStore(state => state.theme);
-  const setSettingsTheme = useSettingsStore(state => state.setTheme);
+  const updateTabTheme = useWorkspaceStore(state => state.updateTabTheme);
 
-  // Compute active tab using useMemo (stable reference)
-  const activeTab = useMemo(() => {
-    if (!activeWorkspaceTabId) return undefined;
-    return workspaceTabs.find(tab => tab.id === activeWorkspaceTabId);
-  }, [workspaceTabs, activeWorkspaceTabId]);
+  // Distinguishes hook-initiated theme changes from user-initiated ones.
+  // When the hook applies a tab's theme to settings, it stores the theme here.
+  // The settings→tab effect checks this ref to avoid writing back.
+  const lastAppliedByHookRef = useRef<Theme | null>(null);
 
-  // Track if initial theme sync has happened
-  const hasInitialThemeSyncRef = useRef(false);
+  // Guards against the settings→tab effect running before initial sync completes.
+  // Without this, both effects fire in the same React commit on workspace restore,
+  // and the settings→tab effect could overwrite the tab theme with a stale value.
+  const hasInitialSyncRef = useRef(false);
 
-  // Track the previous active tab ID for detecting tab switches
-  const prevActiveTabIdRef = useRef<string | null>(null);
-
-  // Track the previous settings theme to detect user changes
-  const prevSettingsThemeRef = useRef<Theme | null>(null);
-
-  // Track if a tab switch is in progress to prevent race conditions
-  // This prevents the settings-to-tab effect from firing during programmatic theme changes
-  const isTabSwitchInProgressRef = useRef(false);
-
-  // Initial theme sync: Apply the active tab's theme on first load
+  // Tab → Settings: Apply the active tab's theme on initial restore and tab switches.
+  // Reads tab/preference data via getState() since those aren't trigger conditions.
   useEffect(() => {
-    // Only sync once after workspace state is restored from backend
-    if (hasInitialThemeSyncRef.current || !isWorkspaceRestored) {
-      return;
+    if (!isWorkspaceRestored) return;
+
+    const { tabs, preferences } = useWorkspaceStore.getState();
+    const activeTab = tabs.find(tab => tab.id === activeWorkspaceTabId);
+    const themeToApply = (activeTab?.theme ?? preferences.theme ?? 'dark') as Theme;
+    const currentTheme = useSettingsStore.getState().theme;
+
+    if (themeToApply !== currentTheme) {
+      logger.debug('Applying tab theme:', themeToApply);
+      lastAppliedByHookRef.current = themeToApply;
+      useSettingsStore.getState().setTheme(themeToApply);
+      // setTheme already calls persistTheme internally
+    } else {
+      // Theme matches but still persist so next startup uses this tab's theme
+      persistTheme(themeToApply);
     }
 
-    // Use tab theme if available, otherwise fall back to workspace preference or default
-    const themeToApply = activeTab?.theme ?? workspacePreferences.theme ?? 'dark';
-    hasInitialThemeSyncRef.current = true;
-    prevSettingsThemeRef.current = themeToApply as Theme;
+    hasInitialSyncRef.current = true;
+  }, [isWorkspaceRestored, activeWorkspaceTabId]);
 
-    if (themeToApply !== settingsTheme) {
-      logger.debug('Initial theme sync:', themeToApply);
-      setSettingsTheme(themeToApply as Theme);
-    }
-    // Always persist the backend-restored theme so next startup uses it
-    persistTheme(themeToApply);
-  }, [
-    isWorkspaceRestored,
-    activeTab?.theme,
-    workspacePreferences.theme,
-    settingsTheme,
-    setSettingsTheme,
-  ]);
-
-  // Tab switch: Apply the active tab's theme when switching projects
+  // Settings → Tab: When user changes theme in settings, persist to the active tab.
   useEffect(() => {
-    // Skip if not yet initialized
-    if (!hasInitialThemeSyncRef.current) {
+    if (!isWorkspaceRestored) return;
+
+    // Skip until initial tab→settings sync is done to prevent race condition
+    if (!hasInitialSyncRef.current) return;
+
+    // Skip if this change was triggered by our tab-switch effect above
+    if (lastAppliedByHookRef.current === settingsTheme) {
+      lastAppliedByHookRef.current = null;
       return;
     }
 
-    // Only trigger on actual tab switches
-    if (prevActiveTabIdRef.current === activeWorkspaceTabId) {
-      return;
-    }
-    prevActiveTabIdRef.current = activeWorkspaceTabId;
-
-    // Guard: Only apply theme if we have valid tab data
-    // This prevents race conditions where activeTabId updates before tabs array
-    if (!activeTab) {
-      return;
-    }
-
-    if (activeTab.theme && activeTab.theme !== settingsTheme) {
-      logger.debug('Tab switch theme:', activeTab.theme);
-      // Set flag to prevent the settings-to-tab effect from firing
-      isTabSwitchInProgressRef.current = true;
-      prevSettingsThemeRef.current = activeTab.theme;
-      setSettingsTheme(activeTab.theme);
-
-      // Clear flag after microtask queue flushes to allow state to settle
-      queueMicrotask(() => {
-        isTabSwitchInProgressRef.current = false;
-      });
-    }
-  }, [activeWorkspaceTabId, activeTab, settingsTheme, setSettingsTheme]);
-
-  // Settings change: When user changes theme in settings, update the active tab's theme
-  useEffect(() => {
-    // Skip initial sync - only persist user-initiated changes
-    if (!hasInitialThemeSyncRef.current) {
-      return;
-    }
-
-    // Skip if a tab switch is in progress - prevents race condition where
-    // changing settingsTheme during tab switch would write to wrong tab
-    if (isTabSwitchInProgressRef.current) {
-      return;
-    }
-
-    // Skip if this is a programmatic change (from tab switch)
-    if (prevSettingsThemeRef.current === settingsTheme) {
-      return;
-    }
-    prevSettingsThemeRef.current = settingsTheme;
-
+    const { tabs, activeTabId } = useWorkspaceStore.getState();
+    const activeTab = tabs.find(tab => tab.id === activeTabId);
     if (activeTab && settingsTheme !== activeTab.theme) {
       updateTabTheme(activeTab.id, settingsTheme);
     }
-  }, [settingsTheme, activeTab, updateTabTheme]);
+    // Persist user-initiated changes immediately for restart consistency
+    persistTheme(settingsTheme);
+  }, [settingsTheme, isWorkspaceRestored, updateTabTheme]);
 }

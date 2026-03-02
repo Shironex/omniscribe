@@ -1,3 +1,4 @@
+import { useShallow } from 'zustand/react/shallow';
 import { useTerminalStore } from '@/stores/useTerminalStore';
 import type { CursorStyle } from '@/stores/useTerminalStore';
 import type { TerminalThemeName } from '@/lib/terminal-themes';
@@ -16,27 +17,20 @@ export interface UseTerminalSettingsReturn {
 
 /**
  * Hook that selects all terminal settings from the settings store.
+ * Uses a single useShallow subscription instead of individual selectors.
  */
 export function useTerminalSettings(): UseTerminalSettingsReturn {
-  const fontSize = useTerminalStore(s => s.fontSize);
-  const fontFamily = useTerminalStore(s => s.fontFamily);
-  const fontWeight = useTerminalStore(s => s.fontWeight);
-  const lineHeight = useTerminalStore(s => s.lineHeight);
-  const letterSpacing = useTerminalStore(s => s.letterSpacing);
-  const cursorStyle = useTerminalStore(s => s.cursorStyle);
-  const cursorBlink = useTerminalStore(s => s.cursorBlink);
-  const scrollback = useTerminalStore(s => s.scrollback);
-  const terminalThemeName = useTerminalStore(s => s.terminalThemeName);
-
-  return {
-    fontSize,
-    fontFamily,
-    fontWeight,
-    lineHeight,
-    letterSpacing,
-    cursorStyle,
-    cursorBlink,
-    scrollback,
-    terminalThemeName,
-  };
+  return useTerminalStore(
+    useShallow(s => ({
+      fontSize: s.fontSize,
+      fontFamily: s.fontFamily,
+      fontWeight: s.fontWeight,
+      lineHeight: s.lineHeight,
+      letterSpacing: s.letterSpacing,
+      cursorStyle: s.cursorStyle,
+      cursorBlink: s.cursorBlink,
+      scrollback: s.scrollback,
+      terminalThemeName: s.terminalThemeName,
+    }))
+  );
 }

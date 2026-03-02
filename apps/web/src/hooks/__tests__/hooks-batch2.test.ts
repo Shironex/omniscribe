@@ -176,8 +176,13 @@ describe('usePreLaunchSlots', () => {
       { getState: () => ({ sessions: [] }) }
     );
 
+    const terminalState = { addSlotRequestCounter: 0 };
+    const terminalStoreFactory = Object.assign((sel: Selector) => sel(terminalState), {
+      getState: () => terminalState,
+      subscribe: () => () => {},
+    });
     vi.doMock('@/stores/useTerminalStore', () => ({
-      useTerminalStore: (sel: Selector) => sel({ addSlotRequestCounter: 0 }),
+      useTerminalStore: terminalStoreFactory,
     }));
 
     vi.doMock('@/stores/useSessionStore', () => ({

@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { createLogger, DEFAULT_SESSION_SETTINGS } from '@omniscribe/shared';
 import type { SessionSettings } from '@omniscribe/shared';
-import { useQuickActionStore } from '@/stores/useQuickActionStore';
+import { useQuickActionStore, selectEnabledActions } from '@/stores/useQuickActionStore';
 import { useWorkspaceStore } from '@/stores/useWorkspaceStore';
 import { writeToTerminal } from '@/lib/terminal';
 import type { TerminalSession } from '@/components/terminal/TerminalGrid';
@@ -19,14 +19,10 @@ interface UseQuickActionExecutionReturn {
 export function useQuickActionExecution(
   terminalSessions: TerminalSession[]
 ): UseQuickActionExecutionReturn {
-  const allQuickActions = useQuickActionStore(state => state.actions);
+  const quickActions = useQuickActionStore(selectEnabledActions);
   const preferences = useWorkspaceStore(state => state.preferences);
   const sessionSettings: SessionSettings = preferences.session ?? DEFAULT_SESSION_SETTINGS;
   const executionMode = sessionSettings.quickActionMode ?? 'paste-only';
-  const quickActions = useMemo(
-    () => allQuickActions.filter(a => a.enabled !== false),
-    [allQuickActions]
-  );
 
   const quickActionsForTerminal = useMemo(
     () => quickActions.map(a => ({ id: a.id, label: a.title, icon: a.icon, category: a.category })),

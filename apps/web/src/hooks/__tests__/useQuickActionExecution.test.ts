@@ -114,6 +114,10 @@ let mockPreferences: { session?: { quickActionMode?: 'paste-only' | 'execute' } 
 vi.mock('@/stores/useQuickActionStore', () => ({
   useQuickActionStore: (selector: (state: { actions: typeof mockActions }) => unknown) =>
     selector({ actions: mockActions }),
+  // selectEnabledActions is imported by the hook and passed as a selector to useQuickActionStore.
+  // The mock store calls whatever selector it receives with { actions: mockActions }.
+  selectEnabledActions: (state: { actions: typeof mockActions }) =>
+    state.actions.filter((a: { enabled?: boolean }) => a.enabled !== false),
 }));
 
 vi.mock('@/stores/useWorkspaceStore', () => ({
