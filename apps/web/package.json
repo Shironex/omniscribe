@@ -2,7 +2,9 @@
   "name": "@omniscribe/web",
   "version": "1.1.0",
   "private": true,
-  "sideEffects": false,
+  "sideEffects": [
+    "**/*.css"
+  ],
   "type": "module",
   "scripts": {
     "dev": "vite",

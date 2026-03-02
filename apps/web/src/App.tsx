@@ -130,6 +130,9 @@ function App() {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const handleToggleHistory = useCallback(() => setIsHistoryOpen(prev => !prev), []);
 
+  // Settings modal open state (for lazy-load gating)
+  const isSettingsOpen = useSettingsStore(state => state.isOpen);
+
   // Toggle settings modal
   const handleToggleSettings = useCallback(() => {
     const { isOpen, openSettings, closeSettings } = useSettingsStore.getState();
@@ -331,33 +334,39 @@ function App() {
         </div>
 
         {/* Session History Panel */}
-        <Suspense fallback={null}>
-          <SessionHistoryPanel
-            isOpen={isHistoryOpen}
-            onClose={() => setIsHistoryOpen(false)}
-            projectPath={activeProjectPath}
-            currentBranch={currentBranch}
-          />
-        </Suspense>
+        {isHistoryOpen && (
+          <Suspense fallback={null}>
+            <SessionHistoryPanel
+              isOpen={isHistoryOpen}
+              onClose={() => setIsHistoryOpen(false)}
+              projectPath={activeProjectPath}
+              currentBranch={currentBranch}
+            />
+          </Suspense>
+        )}
       </main>
 
-      <Suspense fallback={null}>
-        <SettingsModal />
-      </Suspense>
+      {isSettingsOpen && (
+        <Suspense fallback={<div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs" />}>
+          <SettingsModal />
+        </Suspense>
+      )}
 
-      <Suspense fallback={null}>
-        <LaunchPresetsModal
-          open={isLaunchModalOpen}
-          onOpenChange={setIsLaunchModalOpen}
-          branches={branches}
-          claudeAvailable={claudeAvailable}
-          currentBranch={currentBranch}
-          defaultAiMode={defaultAiMode}
-          existingSessionCount={terminalSessions.length}
-          worktreeMode={worktreeMode}
-          onCreateSessions={handleBatchAddSessions}
-        />
-      </Suspense>
+      {isLaunchModalOpen && (
+        <Suspense fallback={null}>
+          <LaunchPresetsModal
+            open={isLaunchModalOpen}
+            onOpenChange={setIsLaunchModalOpen}
+            branches={branches}
+            claudeAvailable={claudeAvailable}
+            currentBranch={currentBranch}
+            defaultAiMode={defaultAiMode}
+            existingSessionCount={terminalSessions.length}
+            worktreeMode={worktreeMode}
+            onCreateSessions={handleBatchAddSessions}
+          />
+        </Suspense>
+      )}
     </div>
   );
 }

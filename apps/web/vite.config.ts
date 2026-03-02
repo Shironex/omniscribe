@@ -53,16 +53,10 @@ export default defineConfig({
     sourcemap: true,
     rollupOptions: {
       output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom'],
-          xterm: [
-            '@xterm/xterm',
-            '@xterm/addon-fit',
-            '@xterm/addon-web-links',
-            '@xterm/addon-search',
-            '@xterm/addon-webgl',
-          ],
-          dndkit: ['@dnd-kit/core', '@dnd-kit/sortable', '@dnd-kit/utilities'],
+        manualChunks(id) {
+          if (/node_modules\/(react|react-dom)\//.test(id)) return 'vendor';
+          if (id.includes('node_modules/@xterm/')) return 'xterm';
+          if (id.includes('node_modules/@dnd-kit/')) return 'dndkit';
         },
       },
     },
