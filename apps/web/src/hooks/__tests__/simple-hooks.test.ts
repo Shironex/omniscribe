@@ -87,10 +87,14 @@ vi.mock('@/stores/useWorkspaceStore', () => ({
   }),
 }));
 
-// --- Barrel re-export mock ---
+// --- Barrel re-export mock (must mirror direct mocks above, including getState) ---
 vi.mock('@/stores', () => ({
-  useSettingsStore: (sel: Selector) => sel(mockSettingsState),
-  useWorkspaceStore: (sel: Selector) => sel(mockWorkspaceState),
+  useSettingsStore: Object.assign((sel: Selector) => sel(mockSettingsState), {
+    getState: () => mockSettingsState,
+  }),
+  useWorkspaceStore: Object.assign((sel: Selector) => sel(mockWorkspaceState), {
+    getState: () => mockWorkspaceState,
+  }),
 }));
 
 // --- theme-persistence mock ---
@@ -405,14 +409,15 @@ describe('useWorkspacePreferences', () => {
     expect(result.current).toBeUndefined();
   });
 
-  it('calls persistTheme on initial sync when workspace is restored', () => {
+  it('calls setTheme on initial sync when tab theme differs from settings', () => {
     mockWorkspaceState.isRestored = true;
     mockWorkspaceState.tabs = [{ id: 'tab-1', theme: 'solarized-light' }] as never[];
     mockWorkspaceState.activeTabId = 'tab-1';
 
     renderHook(() => useWorkspacePreferences());
 
-    expect(persistTheme).toHaveBeenCalledWith('solarized-light');
+    // setTheme is called (which internally persists the theme)
+    expect(mockSettingsState.setTheme).toHaveBeenCalledWith('solarized-light');
   });
 
   it('does not call persistTheme when workspace is not restored', () => {

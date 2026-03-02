@@ -42,9 +42,6 @@ export function useSlotState(
   // Track previous currentBranch to auto-update stale slots (Bug #3)
   const prevBranchRef = useRef(currentBranch);
 
-  // Track previous counter value for store subscription
-  const prevCounterRef = useRef(useTerminalStore.getState().addSlotRequestCounter);
-
   // Ref to always access current slots (avoids stale closures in async callbacks)
   const preLaunchSlotsRef = useRef(preLaunchSlots);
   preLaunchSlotsRef.current = preLaunchSlots;
@@ -115,11 +112,11 @@ export function useSlotState(
   // Listen to external add slot requests (from sidebar + button) via store subscription.
   // Uses subscribe() instead of reactive state + useEffect to avoid intermediate renders.
   useEffect(() => {
+    let prevCounter = useTerminalStore.getState().addSlotRequestCounter;
     const unsub = useTerminalStore.subscribe(state => {
-      if (state.addSlotRequestCounter > prevCounterRef.current) {
-        prevCounterRef.current = state.addSlotRequestCounter;
-        handleAddSession();
-      }
+      if (state.addSlotRequestCounter === prevCounter) return;
+      prevCounter = state.addSlotRequestCounter;
+      handleAddSession();
     });
     return unsub;
   }, [handleAddSession]);

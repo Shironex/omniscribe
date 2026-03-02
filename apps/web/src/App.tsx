@@ -80,21 +80,33 @@ function App() {
   // Stable store action for handleResume (no need for a second hook call)
   const updateSession = useSessionStore(state => state.updateSession);
 
-  // Session order reconciliation — use store subscription to sync outside React render cycle.
-  // When sessions change, reconcile sessionOrder: prune removed IDs, append new ones.
+  // Session order reconciliation is handled by subscribe() below.
+  // allSessions is still needed reactively for projectPathsWithGrids computation.
   const allSessions = useSessionStore(state => state.sessions);
 
   useEffect(() => {
-    const unsub = useSessionStore.subscribe(state => {
+    const reconcile = (state: ReturnType<typeof useSessionStore.getState>) => {
       const currentOrder = useTerminalStore.getState().sessionOrder;
       const allIds = state.sessions.map(session => session.id);
       const allIdSet = new Set(allIds);
+      const currentOrderSet = new Set(currentOrder);
       const validOrder = currentOrder.filter(id => allIdSet.has(id));
-      const newIds = allIds.filter(id => !currentOrder.includes(id));
+      const newIds = allIds.filter(id => !currentOrderSet.has(id));
 
       if (newIds.length > 0 || validOrder.length !== currentOrder.length) {
         useTerminalStore.getState().setSessionOrder([...validOrder, ...newIds]);
       }
+    };
+
+    // Initial sync for pre-existing sessions
+    reconcile(useSessionStore.getState());
+
+    let prevSessions = useSessionStore.getState().sessions;
+    const unsub = useSessionStore.subscribe(state => {
+      // Skip if sessions array reference hasn't changed
+      if (state.sessions === prevSessions) return;
+      prevSessions = state.sessions;
+      reconcile(state);
     });
     return unsub;
   }, []);

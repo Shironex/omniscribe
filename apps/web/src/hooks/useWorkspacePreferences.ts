@@ -28,6 +28,11 @@ export function useWorkspacePreferences(): void {
   // The settings→tab effect checks this ref to avoid writing back.
   const lastAppliedByHookRef = useRef<Theme | null>(null);
 
+  // Guards against the settings→tab effect running before initial sync completes.
+  // Without this, both effects fire in the same React commit on workspace restore,
+  // and the settings→tab effect could overwrite the tab theme with a stale value.
+  const hasInitialSyncRef = useRef(false);
+
   // Tab → Settings: Apply the active tab's theme on initial restore and tab switches.
   // Reads tab/preference data via getState() since those aren't trigger conditions.
   useEffect(() => {
@@ -42,14 +47,21 @@ export function useWorkspacePreferences(): void {
       logger.debug('Applying tab theme:', themeToApply);
       lastAppliedByHookRef.current = themeToApply;
       useSettingsStore.getState().setTheme(themeToApply);
+      // setTheme already calls persistTheme internally
+    } else {
+      // Theme matches but still persist so next startup uses this tab's theme
+      persistTheme(themeToApply);
     }
-    // Persist to localStorage so next startup uses this theme immediately
-    persistTheme(themeToApply);
+
+    hasInitialSyncRef.current = true;
   }, [isWorkspaceRestored, activeWorkspaceTabId]);
 
   // Settings → Tab: When user changes theme in settings, persist to the active tab.
   useEffect(() => {
     if (!isWorkspaceRestored) return;
+
+    // Skip until initial tab→settings sync is done to prevent race condition
+    if (!hasInitialSyncRef.current) return;
 
     // Skip if this change was triggered by our tab-switch effect above
     if (lastAppliedByHookRef.current === settingsTheme) {
@@ -62,5 +74,7 @@ export function useWorkspacePreferences(): void {
     if (activeTab && settingsTheme !== activeTab.theme) {
       updateTabTheme(activeTab.id, settingsTheme);
     }
+    // Persist user-initiated changes immediately for restart consistency
+    persistTheme(settingsTheme);
   }, [settingsTheme, isWorkspaceRestored, updateTabTheme]);
 }
