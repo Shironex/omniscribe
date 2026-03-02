@@ -19,6 +19,7 @@ import { RowPrimaryLayout } from './RowPrimaryLayout';
 import { ColumnPrimaryLayout } from './ColumnPrimaryLayout';
 
 const NOOP = () => {};
+const EMPTY_QUICK_ACTIONS: QuickActionItem[] = [];
 
 interface TerminalGridProps {
   sessions: TerminalSession[];
@@ -58,7 +59,7 @@ export function TerminalGrid({
   branches,
   claudeAvailable,
   worktreeMode,
-  quickActions = [],
+  quickActions = EMPTY_QUICK_ACTIONS,
   isActive = true,
   focusedSessionId,
   onFocusSession,

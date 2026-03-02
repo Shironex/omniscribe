@@ -1,3 +1,4 @@
+import React from 'react';
 import { RotateCcw, MessageSquare, GitBranch, GitFork } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatRelativeTime } from '@/lib/date-utils';
@@ -9,7 +10,11 @@ interface SessionHistoryItemProps {
   onFork: (entry: ClaudeSessionEntry) => void;
 }
 
-export function SessionHistoryItem({ entry, onResume, onFork }: SessionHistoryItemProps) {
+export const SessionHistoryItem = React.memo(function SessionHistoryItem({
+  entry,
+  onResume,
+  onFork,
+}: SessionHistoryItemProps) {
   return (
     <div className="group px-2 py-2 rounded hover:bg-card transition-colors">
       <div className="flex items-start justify-between gap-2">
@@ -58,4 +63,6 @@ export function SessionHistoryItem({ entry, onResume, onFork }: SessionHistoryIt
       </div>
     </div>
   );
-}
+});
+
+SessionHistoryItem.displayName = 'SessionHistoryItem';

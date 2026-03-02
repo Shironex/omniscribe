@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createLogger } from '@omniscribe/shared';
 import type { Terminal } from '@xterm/xterm';
 import type { FitAddon } from '@xterm/addon-fit';
@@ -27,6 +27,13 @@ export interface TerminalViewProps {
 }
 
 type TerminalStatus = 'connecting' | 'connected' | 'disconnected' | 'error';
+
+const BORDER_COLORS: Record<TerminalStatus, string> = {
+  connecting: 'var(--color-status-warning)',
+  connected: 'var(--color-status-success)',
+  disconnected: 'var(--color-status-error)',
+  error: 'var(--color-status-error)',
+};
 
 export const TerminalView: React.FC<TerminalViewProps> = React.memo(
   ({ sessionId, isActive = true, onClose, isFocused = false, className = '' }) => {
@@ -174,20 +181,14 @@ export const TerminalView: React.FC<TerminalViewProps> = React.memo(
 
     const theme = getTerminalTheme(settings.terminalThemeName);
 
-    const getBorderStyle = (): React.CSSProperties => {
-      const borderColors: Record<TerminalStatus, string> = {
-        connecting: 'var(--color-status-warning)',
-        connected: 'var(--color-status-success)',
-        disconnected: 'var(--color-status-error)',
-        error: 'var(--color-status-error)',
-      };
-
-      return {
-        borderColor: borderColors[status],
+    const borderStyle = useMemo<React.CSSProperties>(
+      () => ({
+        borderColor: BORDER_COLORS[status],
         borderWidth: '2px',
         borderStyle: 'solid',
-      };
-    };
+      }),
+      [status]
+    );
 
     return (
       <div
@@ -199,7 +200,7 @@ export const TerminalView: React.FC<TerminalViewProps> = React.memo(
           overflow: 'hidden',
           borderRadius: '4px',
           position: 'relative',
-          ...getBorderStyle(),
+          ...borderStyle,
         }}
       >
         {showSearch && (

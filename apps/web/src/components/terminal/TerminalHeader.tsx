@@ -1,5 +1,5 @@
+import React, { useState, useRef, useCallback, type HTMLAttributes } from 'react';
 import { cn } from '@/lib/utils';
-import { useState, useRef, useCallback, type HTMLAttributes } from 'react';
 import { GripVertical, RotateCcw } from 'lucide-react';
 import { useClickOutside } from '@/hooks/useClickOutside';
 import { SessionStatusDisplay } from './SessionStatusDisplay';
@@ -11,6 +11,8 @@ import type { TerminalDragHandleProps } from './SortableTerminalWrapper';
 import type { QuickActionItem } from './TerminalCard';
 import type { SessionStatus } from '@/components/shared/StatusLegend';
 import type { AiMode } from '@omniscribe/shared';
+
+const EMPTY_QUICK_ACTIONS: QuickActionItem[] = [];
 
 export interface GitBranchInfo {
   name: string;
@@ -52,10 +54,10 @@ interface TerminalHeaderProps {
   className?: string;
 }
 
-export function TerminalHeader({
+export const TerminalHeader = React.memo(function TerminalHeader({
   session,
   gitBranch,
-  quickActions = [],
+  quickActions = EMPTY_QUICK_ACTIONS,
   onSettingsClick,
   onOpenInEditor,
   onClose,
@@ -197,4 +199,6 @@ export function TerminalHeader({
       </div>
     </div>
   );
-}
+});
+
+TerminalHeader.displayName = 'TerminalHeader';

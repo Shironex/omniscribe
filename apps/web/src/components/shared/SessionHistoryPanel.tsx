@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useCallback, useState, useRef } from 'react';
 import { X, RefreshCw, PlayCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { useShallow } from 'zustand/react/shallow';
 import { createLogger, extractErrorMessage, type ClaudeSessionEntry } from '@omniscribe/shared';
 import { useSessionHistoryStore, selectSessionHistory } from '@/stores/useSessionHistoryStore';
 import { useSessionStore } from '@/stores/useSessionStore';
@@ -74,11 +75,10 @@ export function SessionHistoryPanel({
     }
   }, [isOpen]);
 
-  // Filter out sessions that are currently active
-  const activeSessions = useSessionStore(state => state.sessions);
-  const activeClaudeIds = useMemo(
-    () => new Set(activeSessions.map(s => s.claudeSessionId).filter(Boolean)),
-    [activeSessions]
+  // Filter out sessions that are currently active (use useShallow to avoid
+  // re-renders from unrelated session state changes like status updates)
+  const activeClaudeIds = useSessionStore(
+    useShallow(state => new Set(state.sessions.map(s => s.claudeSessionId).filter(Boolean)))
   );
 
   // Unique branches for filter dropdown

@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { X, Plus } from 'lucide-react';
 import {
   DndContext,
@@ -33,7 +33,7 @@ interface ProjectTabsProps {
   closeTabShortcut: string;
 }
 
-function SortableTab({
+const SortableTab = React.memo(function SortableTab({
   tab,
   isActive,
   onSelectTab,
@@ -106,7 +106,9 @@ function SortableTab({
       </Tooltip>
     </div>
   );
-}
+});
+
+SortableTab.displayName = 'SortableTab';
 
 export function ProjectTabs({
   tabs,

@@ -1,3 +1,4 @@
+import React, { useState, useRef, useEffect, useCallback, type ComponentType } from 'react';
 import { cn } from '@/lib/utils';
 import {
   Terminal,
@@ -8,7 +9,6 @@ import {
   ShieldOff,
   RotateCcw,
 } from 'lucide-react';
-import { useState, useRef, useEffect, useCallback, type ComponentType } from 'react';
 import { StatusDot } from '@/components/shared/StatusLegend';
 import { Input } from '@/components/ui/input';
 import { useSessionStore } from '@/stores/useSessionStore';
@@ -53,7 +53,10 @@ interface SessionStatusDisplayProps {
   gitBranch?: GitBranchInfo;
 }
 
-export function SessionStatusDisplay({ session, gitBranch }: SessionStatusDisplayProps) {
+export const SessionStatusDisplay = React.memo(function SessionStatusDisplay({
+  session,
+  gitBranch,
+}: SessionStatusDisplayProps) {
   const providers = usePluginStore(s => s.providers);
   const statusRenderers = usePluginStore(s => s.statusRenderers);
   const modeConfig = getModeConfig(session.aiMode, providers, statusRenderers);
@@ -227,4 +230,6 @@ export function SessionStatusDisplay({ session, gitBranch }: SessionStatusDispla
       )}
     </>
   );
-}
+});
+
+SessionStatusDisplay.displayName = 'SessionStatusDisplay';
