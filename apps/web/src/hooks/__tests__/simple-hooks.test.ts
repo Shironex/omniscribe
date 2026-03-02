@@ -56,7 +56,9 @@ const mockSettingsState = {
 };
 
 vi.mock('@/stores/useSettingsStore', () => ({
-  useSettingsStore: (sel: Selector) => sel(mockSettingsState),
+  useSettingsStore: Object.assign((sel: Selector) => sel(mockSettingsState), {
+    getState: () => mockSettingsState,
+  }),
 }));
 
 // --- useWorkspaceStore ---
@@ -80,7 +82,9 @@ const mockWorkspaceState = {
 };
 
 vi.mock('@/stores/useWorkspaceStore', () => ({
-  useWorkspaceStore: (sel: Selector) => sel(mockWorkspaceState),
+  useWorkspaceStore: Object.assign((sel: Selector) => sel(mockWorkspaceState), {
+    getState: () => mockWorkspaceState,
+  }),
 }));
 
 // --- Barrel re-export mock ---

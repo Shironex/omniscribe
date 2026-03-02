@@ -414,7 +414,10 @@ export const useSessionStore = create<SessionStore>()(
 // Selectors
 
 /**
- * Select sessions for a specific project
+ * Select sessions for a specific project.
+ * Note: This parameterized selector returns a new array on each call.
+ * Component consumers should wrap with `useShallow` or `useMemo` to avoid
+ * unnecessary re-renders on every store update.
  */
 export const selectSessionsForProject = (projectPath: string) => (state: SessionStore) =>
   state.sessions.filter(session => session.projectPath === projectPath);
@@ -426,7 +429,10 @@ export const selectSession = (sessionId: string) => (state: SessionStore) =>
   state.sessions.find(session => session.id === sessionId);
 
 /**
- * Select sessions by status
+ * Select sessions by status.
+ * Note: This parameterized selector returns a new array on each call.
+ * Component consumers should wrap with `useShallow` or `useMemo` to avoid
+ * unnecessary re-renders on every store update.
  */
 export const selectSessionsByStatus = (status: SessionStatus) => (state: SessionStore) =>
   state.sessions.filter(session => session.status === status);

@@ -301,7 +301,10 @@ export const selectEnabledActions = createMemoizedSelector((state: QuickActionSt
 );
 
 /**
- * Select actions by category
+ * Select actions by category.
+ * Note: This parameterized selector returns a new array on each call.
+ * Component consumers should wrap with `useShallow` or `useMemo` to avoid
+ * unnecessary re-renders on every store update.
  */
 export const selectActionsByCategory =
   (category: QuickAction['category']) => (state: QuickActionStore) =>

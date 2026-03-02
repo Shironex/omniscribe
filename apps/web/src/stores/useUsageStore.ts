@@ -4,6 +4,7 @@ import type { ClaudeUsage, UsageStatus, UsageError } from '@omniscribe/shared';
 import { createLogger, extractErrorMessage, UsageEvents } from '@omniscribe/shared';
 import { getSocket } from '@/lib/socket';
 import { emitAsync } from '@/lib/socketHelpers';
+import { createMemoizedSelector } from './utils/createMemoizedSelector';
 
 const logger = createLogger('UsageStore');
 
@@ -217,10 +218,10 @@ export const useUsageStore = create<UsageStore>()(
 // Selectors
 export const selectUsage = (state: UsageStore) => state.claudeUsage;
 export const selectUsageStatus = (state: UsageStore) => state.status;
-export const selectUsageError = (state: UsageStore) => ({
+export const selectUsageError = createMemoizedSelector((state: UsageStore) => ({
   error: state.error,
   message: state.errorMessage,
-});
+}));
 export const selectSessionPercentage = (state: UsageStore) =>
   state.claudeUsage?.sessionPercentage ?? 0;
 export const selectWeeklyPercentage = (state: UsageStore) =>

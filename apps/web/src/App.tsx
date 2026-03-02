@@ -80,21 +80,24 @@ function App() {
   // Stable store action for handleResume (no need for a second hook call)
   const updateSession = useSessionStore(state => state.updateSession);
 
-  // Session order reconciliation — use ALL sessions to preserve order across tab switches
+  // Session order reconciliation — use store subscription to sync outside React render cycle.
+  // When sessions change, reconcile sessionOrder: prune removed IDs, append new ones.
   const allSessions = useSessionStore(state => state.sessions);
-  const setSessionOrder = useTerminalStore(state => state.setSessionOrder);
 
   useEffect(() => {
-    const currentOrder = useTerminalStore.getState().sessionOrder;
-    const allIds = allSessions.map(session => session.id);
-    const allIdSet = new Set(allIds);
-    const validOrder = currentOrder.filter(id => allIdSet.has(id));
-    const newIds = allIds.filter(id => !currentOrder.includes(id));
+    const unsub = useSessionStore.subscribe(state => {
+      const currentOrder = useTerminalStore.getState().sessionOrder;
+      const allIds = state.sessions.map(session => session.id);
+      const allIdSet = new Set(allIds);
+      const validOrder = currentOrder.filter(id => allIdSet.has(id));
+      const newIds = allIds.filter(id => !currentOrder.includes(id));
 
-    if (newIds.length > 0 || validOrder.length !== currentOrder.length) {
-      setSessionOrder([...validOrder, ...newIds]);
-    }
-  }, [allSessions, setSessionOrder]);
+      if (newIds.length > 0 || validOrder.length !== currentOrder.length) {
+        useTerminalStore.getState().setSessionOrder([...validOrder, ...newIds]);
+      }
+    });
+    return unsub;
+  }, []);
 
   const { handleStopAll, handleKillSession } = useSessionLifecycle(activeProjectSessions);
 
