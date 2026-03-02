@@ -24,7 +24,6 @@ interface TopBarProps {
   statusCounts?: Partial<StatusCounts>;
   // Session setup actions
   onAddSlot?: () => void;
-  onOpenLaunchModal?: () => void;
   hasActiveProject?: boolean;
   sessionCount?: number;
   preLaunchSlotCount?: number;
@@ -34,8 +33,6 @@ interface TopBarProps {
   canLaunch: boolean;
   isLaunching?: boolean;
   hasActiveSessions: boolean;
-  onToggleHistory?: () => void;
-  isHistoryOpen?: boolean;
   className?: string;
 }
 
@@ -49,7 +46,6 @@ export function TopBar({
   currentBranch,
   statusCounts,
   onAddSlot,
-  onOpenLaunchModal,
   hasActiveProject = false,
   sessionCount = 0,
   preLaunchSlotCount = 0,
@@ -58,8 +54,6 @@ export function TopBar({
   canLaunch,
   isLaunching = false,
   hasActiveSessions,
-  onToggleHistory,
-  isHistoryOpen,
   className,
 }: TopBarProps) {
   return (
@@ -97,9 +91,6 @@ export function TopBar({
           hasActiveProject={hasActiveProject}
           sessionCount={sessionCount}
           preLaunchSlotCount={preLaunchSlotCount}
-          onToggleHistory={onToggleHistory}
-          isHistoryOpen={isHistoryOpen}
-          onOpenLaunchModal={onOpenLaunchModal}
           onAddSlot={onAddSlot}
           onStopAll={onStopAll}
           onLaunch={onLaunch}

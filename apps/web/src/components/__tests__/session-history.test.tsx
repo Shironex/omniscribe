@@ -41,6 +41,17 @@ vi.mock('@/stores/useSessionStore', () => ({
   }),
 }));
 
+// ─── Mock useAppUIStore ─────────────────────────────────────────────────────
+let mockAppUIState = { isHistoryOpen: false, closeHistory: vi.fn() };
+
+vi.mock('@/stores/useAppUIStore', () => ({
+  useAppUIStore: vi.fn((sel?: unknown) => {
+    if (typeof sel === 'function')
+      return (sel as (s: typeof mockAppUIState) => unknown)(mockAppUIState);
+    return mockAppUIState;
+  }),
+}));
+
 // ─── Lib mocks ───────────────────────────────────────────────────────────────
 vi.mock('@/lib/session', () => ({
   resumeSession: vi.fn(),
@@ -99,12 +110,12 @@ function makeSessions(count: number): ClaudeSessionEntry[] {
 describe('SessionHistoryPanel', () => {
   const fetchHistoryMock = vi.fn();
   const updateSessionMock = vi.fn();
-  const onCloseMock = vi.fn();
+  const closeHistoryMock = vi.fn();
 
   beforeEach(() => {
     fetchHistoryMock.mockClear();
     updateSessionMock.mockClear();
-    onCloseMock.mockClear();
+    closeHistoryMock.mockClear();
 
     mockSessionHistoryState = {
       sessions: [],
@@ -117,76 +128,85 @@ describe('SessionHistoryPanel', () => {
       sessions: [],
       updateSession: updateSessionMock,
     };
+
+    mockAppUIState = {
+      isHistoryOpen: false,
+      closeHistory: closeHistoryMock,
+    };
   });
 
-  it('renders with w-0 class when isOpen is false (collapsed)', () => {
-    const { container } = render(
-      <SessionHistoryPanel isOpen={false} onClose={onCloseMock} projectPath="/test" />
-    );
-    const root = container.firstElementChild as HTMLElement;
-    expect(root.className).toContain('w-0');
-    expect(root.className).not.toContain('w-80');
+  it('renders with collapsed state when isHistoryOpen is false', () => {
+    mockAppUIState = { ...mockAppUIState, isHistoryOpen: false };
+    render(<SessionHistoryPanel projectPath="/test" />);
+    // When isOpen is false, AnimatePresence renders nothing inside
+    expect(screen.queryByText('Session History')).toBeNull();
   });
 
-  it('renders with w-80 class when isOpen is true (expanded)', () => {
-    const { container } = render(
-      <SessionHistoryPanel isOpen={true} onClose={onCloseMock} projectPath="/test" />
-    );
-    const root = container.firstElementChild as HTMLElement;
-    expect(root.className).toContain('w-80');
+  it('renders expanded when isHistoryOpen is true', () => {
+    mockAppUIState = { ...mockAppUIState, isHistoryOpen: true };
+    render(<SessionHistoryPanel projectPath="/test" />);
+    expect(screen.getByText('Session History')).toBeTruthy();
   });
 
   it('shows "Session History" header text when open', () => {
-    render(<SessionHistoryPanel isOpen={true} onClose={onCloseMock} projectPath="/test" />);
+    mockAppUIState = { ...mockAppUIState, isHistoryOpen: true };
+    render(<SessionHistoryPanel projectPath="/test" />);
     expect(screen.getByText('Session History')).toBeTruthy();
   });
 
   it('shows "Loading history..." when isLoading is true', () => {
+    mockAppUIState = { ...mockAppUIState, isHistoryOpen: true };
     mockSessionHistoryState = {
       ...mockSessionHistoryState,
       isLoading: true,
     };
-    render(<SessionHistoryPanel isOpen={true} onClose={onCloseMock} projectPath="/test" />);
+    render(<SessionHistoryPanel projectPath="/test" />);
     expect(screen.getByText('Loading history...')).toBeTruthy();
   });
 
   it('shows error text when error is present', () => {
+    mockAppUIState = { ...mockAppUIState, isHistoryOpen: true };
     mockSessionHistoryState = {
       ...mockSessionHistoryState,
       error: 'Failed to load sessions',
     };
-    render(<SessionHistoryPanel isOpen={true} onClose={onCloseMock} projectPath="/test" />);
+    render(<SessionHistoryPanel projectPath="/test" />);
     expect(screen.getByText('Failed to load sessions')).toBeTruthy();
   });
 
   it('shows "No past sessions" when no sessions and not loading', () => {
-    render(<SessionHistoryPanel isOpen={true} onClose={onCloseMock} projectPath="/test" />);
+    mockAppUIState = { ...mockAppUIState, isHistoryOpen: true };
+    render(<SessionHistoryPanel projectPath="/test" />);
     expect(screen.getByText('No past sessions')).toBeTruthy();
   });
 
   it('calls fetchHistory when panel opens with projectPath', () => {
-    render(<SessionHistoryPanel isOpen={true} onClose={onCloseMock} projectPath="/my/project" />);
+    mockAppUIState = { ...mockAppUIState, isHistoryOpen: true };
+    render(<SessionHistoryPanel projectPath="/my/project" />);
     expect(fetchHistoryMock).toHaveBeenCalledWith('/my/project');
   });
 
   it('shows "Continue Last Conversation" button', () => {
-    render(<SessionHistoryPanel isOpen={true} onClose={onCloseMock} projectPath="/test" />);
+    mockAppUIState = { ...mockAppUIState, isHistoryOpen: true };
+    render(<SessionHistoryPanel projectPath="/test" />);
     expect(screen.getByText('Continue Last Conversation')).toBeTruthy();
   });
 
-  it('calls onClose when close button is clicked', () => {
-    render(<SessionHistoryPanel isOpen={true} onClose={onCloseMock} projectPath="/test" />);
+  it('calls closeHistory from store when close button is clicked', () => {
+    mockAppUIState = { ...mockAppUIState, isHistoryOpen: true };
+    render(<SessionHistoryPanel projectPath="/test" />);
     fireEvent.click(screen.getByLabelText('Close session history panel'));
-    expect(onCloseMock).toHaveBeenCalledOnce();
+    expect(closeHistoryMock).toHaveBeenCalledOnce();
   });
 
   it('renders session items when sessions exist', () => {
+    mockAppUIState = { ...mockAppUIState, isHistoryOpen: true };
     mockSessionHistoryState = {
       ...mockSessionHistoryState,
       sessions: makeSessions(3),
     };
 
-    render(<SessionHistoryPanel isOpen={true} onClose={onCloseMock} projectPath="/test" />);
+    render(<SessionHistoryPanel projectPath="/test" />);
 
     expect(screen.getByTestId('session-item-session-1')).toBeTruthy();
     expect(screen.getByTestId('session-item-session-2')).toBeTruthy();

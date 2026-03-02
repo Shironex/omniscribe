@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { useAppKeyboardShortcuts } from '../useAppKeyboardShortcuts';
+import { useAppUIStore } from '@/stores/useAppUIStore';
 import type { PreLaunchSlot } from '@/components/terminal/TerminalGrid';
 
 function fireKey(
@@ -35,12 +36,10 @@ function createDefaultParams(overrides: Partial<ShortcutParams> = {}): ShortcutP
     launchingSlotIds: new Set<string>(),
     activeProjectPath: '/project',
     handleAddSession: vi.fn(),
-    handleOpenLaunchModal: vi.fn(),
     handleLaunch: vi.fn(),
     handleLaunchSlot: vi.fn(),
     handleStopAll: vi.fn(),
     handleToggleSettings: vi.fn(),
-    handleToggleHistory: vi.fn(),
     handleCloseCurrentTab: vi.fn(),
     handleSelectTabByIndex: vi.fn(),
     ...overrides,
@@ -85,12 +84,14 @@ describe('useAppKeyboardShortcuts', () => {
       expect(params.handleToggleSettings).not.toHaveBeenCalled();
     });
 
-    it('Ctrl+Shift+H calls handleToggleHistory', () => {
+    it('Ctrl+Shift+H calls toggleHistory on store', () => {
+      const toggleSpy = vi.spyOn(useAppUIStore.getState(), 'toggleHistory');
       const params = createDefaultParams();
       renderHook(() => useAppKeyboardShortcuts(params));
 
       fireKey('h', { ctrlKey: true, shiftKey: true });
-      expect(params.handleToggleHistory).toHaveBeenCalledTimes(1);
+      expect(toggleSpy).toHaveBeenCalledTimes(1);
+      toggleSpy.mockRestore();
     });
 
     it('Ctrl+W calls handleCloseCurrentTab', () => {
@@ -197,20 +198,24 @@ describe('useAppKeyboardShortcuts', () => {
       expect(params.handleAddSession).not.toHaveBeenCalled();
     });
 
-    it('Shift+N opens launch modal', () => {
+    it('Shift+N opens launch modal via store', () => {
+      const openSpy = vi.spyOn(useAppUIStore.getState(), 'openLaunchModal');
       const params = createDefaultParams({ activeProjectPath: '/project' });
       renderHook(() => useAppKeyboardShortcuts(params));
 
       fireKey('n', { shiftKey: true });
-      expect(params.handleOpenLaunchModal).toHaveBeenCalledTimes(1);
+      expect(openSpy).toHaveBeenCalledTimes(1);
+      openSpy.mockRestore();
     });
 
     it('Shift+N does not fire when activeProjectPath is null', () => {
+      const openSpy = vi.spyOn(useAppUIStore.getState(), 'openLaunchModal');
       const params = createDefaultParams({ activeProjectPath: null });
       renderHook(() => useAppKeyboardShortcuts(params));
 
       fireKey('n', { shiftKey: true });
-      expect(params.handleOpenLaunchModal).not.toHaveBeenCalled();
+      expect(openSpy).not.toHaveBeenCalled();
+      openSpy.mockRestore();
     });
 
     it('L launches when canLaunch and not isLaunching', () => {

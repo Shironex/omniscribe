@@ -3,6 +3,7 @@ import { Settings, Play, LayoutGrid, History, Plus, Square } from 'lucide-react'
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
 import { useSettingsStore } from '@/stores/useSettingsStore';
+import { useAppUIStore } from '@/stores/useAppUIStore';
 import { IS_MAC } from '@/lib/platform';
 import { MAX_CONCURRENT_SESSIONS } from '@omniscribe/shared';
 
@@ -14,9 +15,6 @@ interface ActionBarProps {
   hasActiveProject: boolean;
   sessionCount: number;
   preLaunchSlotCount: number;
-  onToggleHistory?: () => void;
-  isHistoryOpen?: boolean;
-  onOpenLaunchModal?: () => void;
   onAddSlot?: () => void;
   onStopAll: () => void;
   onLaunch: () => void;
@@ -29,9 +27,6 @@ export function ActionBar({
   hasActiveProject,
   sessionCount,
   preLaunchSlotCount,
-  onToggleHistory,
-  isHistoryOpen,
-  onOpenLaunchModal,
   onAddSlot,
   onStopAll,
   onLaunch,
@@ -40,19 +35,22 @@ export function ActionBar({
   hasActiveSessions,
 }: ActionBarProps) {
   const openSettings = useSettingsStore(state => state.openSettings);
+  const toggleHistory = useAppUIStore(state => state.toggleHistory);
+  const isHistoryOpen = useAppUIStore(state => state.isHistoryOpen);
+  const openLaunchModal = useAppUIStore(state => state.openLaunchModal);
   const canAddMore =
     hasActiveProject && sessionCount + preLaunchSlotCount < MAX_CONCURRENT_SESSIONS;
 
   return (
     <>
       {/* Session History toggle */}
-      {hasActiveProject && onToggleHistory && (
+      {hasActiveProject && (
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
               variant="ghost"
               size="icon"
-              onClick={onToggleHistory}
+              onClick={toggleHistory}
               className={cn('no-drag w-7 h-7', isHistoryOpen && 'bg-primary/10 text-primary')}
               aria-label="Session history"
             >
@@ -90,14 +88,14 @@ export function ActionBar({
       </Tooltip>
 
       {/* Set Up Sessions */}
-      {canAddMore && onOpenLaunchModal && (
+      {canAddMore && (
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
               variant="ghost"
               size="icon"
               data-testid="setup-sessions-button"
-              onClick={onOpenLaunchModal}
+              onClick={openLaunchModal}
               className="no-drag w-7 h-7"
               aria-label="Set up sessions"
             >

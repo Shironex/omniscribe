@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { PRELAUNCH_SHORTCUT_KEYS } from '@/lib/prelaunch-shortcuts';
+import { useAppUIStore } from '@/stores/useAppUIStore';
 import type { PreLaunchSlot } from '@/components/terminal/TerminalGrid';
 
 interface UseAppKeyboardShortcutsParams {
@@ -11,12 +12,10 @@ interface UseAppKeyboardShortcutsParams {
   launchingSlotIds?: Set<string>;
   activeProjectPath: string | null;
   handleAddSession: () => void;
-  handleOpenLaunchModal: () => void;
   handleLaunch: () => void;
   handleLaunchSlot: (slotId: string) => void;
   handleStopAll: () => void;
   handleToggleSettings: () => void;
-  handleToggleHistory: () => void;
   handleCloseCurrentTab: () => void;
   handleSelectTabByIndex: (index: number) => void;
 }
@@ -33,12 +32,10 @@ export function useAppKeyboardShortcuts({
   launchingSlotIds,
   activeProjectPath,
   handleAddSession,
-  handleOpenLaunchModal,
   handleLaunch,
   handleLaunchSlot,
   handleStopAll,
   handleToggleSettings,
-  handleToggleHistory,
   handleCloseCurrentTab,
   handleSelectTabByIndex,
 }: UseAppKeyboardShortcutsParams): void {
@@ -68,7 +65,7 @@ export function useAppKeyboardShortcuts({
       // Cmd/Ctrl + Shift + H - Toggle session history panel (works even when typing)
       if (isMod && e.shiftKey && key === 'h') {
         e.preventDefault();
-        handleToggleHistory();
+        useAppUIStore.getState().toggleHistory();
         return;
       }
 
@@ -94,7 +91,7 @@ export function useAppKeyboardShortcuts({
       // Shift+N - Open launch presets modal
       if (key === 'n' && e.shiftKey && activeProjectPath) {
         e.preventDefault();
-        handleOpenLaunchModal();
+        useAppUIStore.getState().openLaunchModal();
         return;
       }
 
@@ -139,12 +136,10 @@ export function useAppKeyboardShortcuts({
     launchingSlotIds,
     activeProjectPath,
     handleAddSession,
-    handleOpenLaunchModal,
     handleLaunch,
     handleLaunchSlot,
     handleStopAll,
     handleToggleSettings,
-    handleToggleHistory,
     handleCloseCurrentTab,
     handleSelectTabByIndex,
   ]);

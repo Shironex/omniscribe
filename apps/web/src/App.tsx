@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useMemo, useEffect, useState } from 'react';
+import { lazy, Suspense, useCallback, useMemo, useEffect } from 'react';
 import { TopBar } from '@/components/shared/TopBar';
 import { IdleLandingView } from '@/components/shared/IdleLandingView';
 import { WelcomeView } from '@/components/shared/WelcomeView';
@@ -12,13 +12,13 @@ import { useProjectGit } from '@/hooks/useProjectGit';
 import { useSessionLifecycle } from '@/hooks/useSessionLifecycle';
 import { useAppKeyboardShortcuts } from '@/hooks/useAppKeyboardShortcuts';
 import { useQuickActionExecution } from '@/hooks/useQuickActionExecution';
-import { useDefaultAiMode } from '@/hooks/useDefaultAiMode';
 import { useUpdateToast } from '@/hooks/useUpdateToast';
 import { useSessionOrderSync } from '@/hooks/useSessionOrderSync';
 import { useSessionActions } from '@/hooks/useSessionActions';
 import { useSessionStore } from '@/stores/useSessionStore';
 import { useWorkspaceStore } from '@/stores/useWorkspaceStore';
 import { useSettingsStore } from '@/stores/useSettingsStore';
+import { useAppUIStore } from '@/stores/useAppUIStore';
 import { DEFAULT_WORKTREE_SETTINGS } from '@omniscribe/shared';
 import { IS_ELECTRON } from '@/lib/platform';
 import { cn } from '@/lib/utils';
@@ -86,13 +86,6 @@ function App() {
   const { quickActionsForTerminal, handleQuickAction } = useQuickActionExecution(terminalSessions);
   const { handleResume, handleOpenInEditor } = useSessionActions(activeProjectPath);
 
-  const workspaceTabs = useWorkspaceStore(state => state.tabs);
-  const recentProjects = useMemo(
-    () =>
-      [...workspaceTabs].sort((a, b) => b.lastAccessedAt.getTime() - a.lastAccessedAt.getTime()),
-    [workspaceTabs]
-  );
-
   // Unique project paths that need a persistent grid (sessions or pre-launch slots)
   const projectPathsWithGrids = useMemo(() => {
     const paths = new Set<string>();
@@ -107,13 +100,15 @@ function App() {
 
   const hasContent = terminalSessions.length > 0 || preLaunchSlots.length > 0;
 
-  // Launch presets modal state
-  const [isLaunchModalOpen, setIsLaunchModalOpen] = useState(false);
-  const handleOpenLaunchModal = useCallback(() => setIsLaunchModalOpen(true), []);
+  // Worktree mode (for PersistentProjectGrid)
+  const worktreeMode = useWorkspaceStore(
+    state => (state.preferences.worktree ?? DEFAULT_WORKTREE_SETTINGS).mode
+  );
 
-  // Session history panel state
-  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
-  const handleToggleHistory = useCallback(() => setIsHistoryOpen(prev => !prev), []);
+  // UI store state (for lazy-load gating)
+  const isHistoryOpen = useAppUIStore(state => state.isHistoryOpen);
+  const isLaunchModalOpen = useAppUIStore(state => state.isLaunchModalOpen);
+  const openLaunchModal = useAppUIStore(state => state.openLaunchModal);
 
   // Settings modal open state (for lazy-load gating)
   const isSettingsOpen = useSettingsStore(state => state.isOpen);
@@ -146,14 +141,6 @@ function App() {
     [handleSelectTab]
   );
 
-  // Default AI mode for modal
-  const { defaultAiMode, claudeAvailable } = useDefaultAiMode();
-
-  // Worktree mode (for conditional branch selector visibility)
-  const worktreeMode = useWorkspaceStore(
-    state => (state.preferences.worktree ?? DEFAULT_WORKTREE_SETTINGS).mode
-  );
-
   useAppKeyboardShortcuts({
     canLaunch,
     isLaunching,
@@ -163,12 +150,10 @@ function App() {
     launchingSlotIds,
     activeProjectPath,
     handleAddSession,
-    handleOpenLaunchModal,
     handleLaunch,
     handleLaunchSlot,
     handleStopAll,
     handleToggleSettings,
-    handleToggleHistory,
     handleCloseCurrentTab,
     handleSelectTabByIndex,
   });
@@ -203,7 +188,6 @@ function App() {
         currentBranch={currentBranch}
         statusCounts={statusCounts}
         onAddSlot={handleAddSession}
-        onOpenLaunchModal={handleOpenLaunchModal}
         hasActiveProject={!!activeProjectPath}
         sessionCount={terminalSessions.length}
         preLaunchSlotCount={preLaunchSlots.length}
@@ -212,8 +196,6 @@ function App() {
         canLaunch={canLaunch}
         isLaunching={isLaunching}
         hasActiveSessions={hasActiveSessions}
-        onToggleHistory={handleToggleHistory}
-        isHistoryOpen={isHistoryOpen}
       />
 
       <main className="flex-1 flex overflow-hidden bg-background">
@@ -233,7 +215,7 @@ function App() {
                 worktreeMode={isActiveGrid ? worktreeMode : undefined}
                 quickActions={isActiveGrid ? quickActionsForTerminal : undefined}
                 onAddSlot={handleAddSession}
-                onOpenLaunchModal={handleOpenLaunchModal}
+                onOpenLaunchModal={openLaunchModal}
                 onRemoveSlot={handleRemoveSlot}
                 onUpdateSlot={handleUpdateSlot}
                 onLaunch={handleLaunchSlot}
@@ -252,28 +234,19 @@ function App() {
               <div className="absolute inset-0 z-20">
                 <IdleLandingView
                   onAddSession={handleAddSession}
-                  onOpenLaunchModal={handleOpenLaunchModal}
+                  onOpenLaunchModal={openLaunchModal}
                 />
               </div>
             )
           ) : (
-            <WelcomeView
-              recentProjects={recentProjects}
-              onOpenProject={handleSelectDirectory}
-              onSelectProject={handleSelectTab}
-            />
+            <WelcomeView onOpenProject={handleSelectDirectory} onSelectProject={handleSelectTab} />
           )}
         </div>
 
         {/* Session History Panel */}
         {isHistoryOpen && (
           <Suspense fallback={null}>
-            <SessionHistoryPanel
-              isOpen={isHistoryOpen}
-              onClose={() => setIsHistoryOpen(false)}
-              projectPath={activeProjectPath}
-              currentBranch={currentBranch}
-            />
+            <SessionHistoryPanel projectPath={activeProjectPath} currentBranch={currentBranch} />
           </Suspense>
         )}
       </main>
@@ -289,14 +262,7 @@ function App() {
       {isLaunchModalOpen && (
         <Suspense fallback={null}>
           <LaunchPresetsModal
-            open={isLaunchModalOpen}
-            onOpenChange={setIsLaunchModalOpen}
-            branches={branches}
-            claudeAvailable={claudeAvailable}
-            currentBranch={currentBranch}
-            defaultAiMode={defaultAiMode}
-            existingSessionCount={terminalSessions.length}
-            worktreeMode={worktreeMode}
+            projectPath={activeProjectPath}
             onCreateSessions={handleBatchAddSessions}
           />
         </Suspense>

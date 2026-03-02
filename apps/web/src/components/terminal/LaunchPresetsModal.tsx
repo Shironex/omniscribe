@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -8,35 +8,44 @@ import { Dialog, DialogOverlay, DialogPortal, DialogTitle } from '@/components/u
 import { BranchAutocomplete } from '@/components/shared/BranchAutocomplete';
 import { AiModeDropdown } from '@/components/shared/AiModeDropdown';
 import { GridPresetCard } from './GridPresetCard';
-import type { AiMode, WorktreeMode } from '@omniscribe/shared';
-import type { Branch } from '@/components/shared/BranchSelector';
+import { useAppUIStore } from '@/stores/useAppUIStore';
+import { useGitStore, selectBranches, selectCurrentBranch } from '@/stores/useGitStore';
+import { useSessionStore, selectSessionsForProject } from '@/stores/useSessionStore';
+import { useWorkspaceStore } from '@/stores/useWorkspaceStore';
+import { useDefaultAiMode } from '@/hooks/useDefaultAiMode';
+import { DEFAULT_WORKTREE_SETTINGS } from '@omniscribe/shared';
+import type { AiMode } from '@omniscribe/shared';
 
 const GRID_PRESETS = [1, 2, 3, 4, 6, 8, 9, 12] as const;
 
 interface LaunchPresetsModalProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  branches: Branch[];
-  claudeAvailable: boolean;
-  currentBranch: string;
-  defaultAiMode: AiMode;
-  existingSessionCount: number;
-  /** Worktree mode — hides branch selector when 'never' */
-  worktreeMode?: WorktreeMode;
+  projectPath: string | null;
   onCreateSessions: (count: number, aiMode: AiMode, branch: string) => void;
 }
 
-export function LaunchPresetsModal({
-  open,
-  onOpenChange,
-  branches,
-  claudeAvailable: _claudeAvailable,
-  currentBranch,
-  defaultAiMode,
-  existingSessionCount,
-  worktreeMode,
-  onCreateSessions,
-}: LaunchPresetsModalProps) {
+export function LaunchPresetsModal({ projectPath, onCreateSessions }: LaunchPresetsModalProps) {
+  const open = useAppUIStore(state => state.isLaunchModalOpen);
+  const closeLaunchModal = useAppUIStore(state => state.closeLaunchModal);
+
+  const gitBranches = useGitStore(selectBranches);
+  const currentGitBranch = useGitStore(selectCurrentBranch);
+  const branches = useMemo(
+    () => gitBranches.map(b => ({ name: b.name, isRemote: b.isRemote, isCurrent: b.isCurrent })),
+    [gitBranches]
+  );
+  const currentBranch = currentGitBranch?.name ?? 'main';
+
+  const { defaultAiMode } = useDefaultAiMode();
+
+  const sessionsForProject = useSessionStore(
+    projectPath ? selectSessionsForProject(projectPath) : () => []
+  );
+  const existingSessionCount = sessionsForProject.length;
+
+  const worktreeMode = useWorkspaceStore(
+    state => (state.preferences.worktree ?? DEFAULT_WORKTREE_SETTINGS).mode
+  );
+
   const [selectedCount, setSelectedCount] = useState<number | null>(null);
   const [aiMode, setAiMode] = useState<AiMode>(defaultAiMode);
   const [branch, setBranch] = useState(currentBranch);
@@ -58,11 +67,16 @@ export function LaunchPresetsModal({
   const handleCreate = () => {
     if (selectedCount === null) return;
     onCreateSessions(selectedCount, aiMode, branch);
-    onOpenChange(false);
+    closeLaunchModal();
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={isOpen => {
+        if (!isOpen) closeLaunchModal();
+      }}
+    >
       <DialogPortal>
         <DialogOverlay className="bg-black/60 backdrop-blur-xs" />
         <DialogPrimitive.Content

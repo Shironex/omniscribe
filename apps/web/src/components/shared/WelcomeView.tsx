@@ -1,28 +1,28 @@
 import { cn } from '@/lib/utils';
 import { FolderOpen, Clock, Sparkles } from 'lucide-react';
 import { useEffect, useMemo } from 'react';
-import type { ProjectTab } from '@omniscribe/shared';
 import { APP_NAME } from '@omniscribe/shared';
 import { getGreeting, formatRelativeTime } from '@/lib/date-utils';
 import { truncatePath } from '@/lib/path-utils';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 import { animationVariants, transitions } from '@/lib/animations';
+import { useWorkspaceStore, selectTabs } from '@/stores/useWorkspaceStore';
 
 interface WelcomeViewProps {
-  recentProjects: ProjectTab[];
   onOpenProject: () => void;
   onSelectProject: (tabId: string) => void;
   className?: string;
 }
 
-export function WelcomeView({
-  recentProjects,
-  onOpenProject,
-  onSelectProject,
-  className,
-}: WelcomeViewProps) {
+export function WelcomeView({ onOpenProject, onSelectProject, className }: WelcomeViewProps) {
   const greeting = useMemo(() => getGreeting(), []);
+  const workspaceTabs = useWorkspaceStore(selectTabs);
+  const recentProjects = useMemo(
+    () =>
+      [...workspaceTabs].sort((a, b) => b.lastAccessedAt.getTime() - a.lastAccessedAt.getTime()),
+    [workspaceTabs]
+  );
   const hasRecentProjects = recentProjects.length > 0;
 
   // Handle keyboard shortcuts

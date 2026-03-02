@@ -7,10 +7,9 @@ import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip
 import { SessionHistoryFilters } from './SessionHistoryFilters';
 import { SessionHistoryItem } from './SessionHistoryItem';
 import { useSessionHistory } from '@/hooks/useSessionHistory';
+import { useAppUIStore } from '@/stores/useAppUIStore';
 
 interface SessionHistoryPanelProps {
-  isOpen: boolean;
-  onClose: () => void;
   projectPath: string | null;
   /** Current git branch — passed to continueLastSession */
   currentBranch?: string;
@@ -22,12 +21,12 @@ interface SessionHistoryPanelProps {
  * and allows resuming, forking, and searching past sessions.
  */
 export function SessionHistoryPanel({
-  isOpen,
-  onClose,
   projectPath,
   currentBranch,
   className,
 }: SessionHistoryPanelProps) {
+  const isOpen = useAppUIStore(state => state.isHistoryOpen);
+  const closeHistory = useAppUIStore(state => state.closeHistory);
   const {
     filteredSessions,
     isLoading,
@@ -81,7 +80,7 @@ export function SessionHistoryPanel({
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={onClose}
+                      onClick={closeHistory}
                       className="h-auto w-auto p-1"
                       aria-label="Close session history panel"
                     >
