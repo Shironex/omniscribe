@@ -2,10 +2,10 @@ import { useState, useCallback, useMemo } from 'react';
 import { createLogger, mapSessionStatus } from '@omniscribe/shared';
 import { useSessionStore, type FrontendSessionConfig } from '@/stores/useSessionStore';
 import { mapToTerminalSessions } from '@/lib/session-mappers';
+import type { StatusCounts } from '@/components/shared/StatusLegend';
+import type { TerminalSession, PreLaunchSlot } from '@/components/terminal/TerminalGrid';
 
 const logger = createLogger('ProjectSessions');
-import type { StatusCounts } from '@/components';
-import type { TerminalSession, PreLaunchSlot } from '@/components/terminal/TerminalGrid';
 
 interface UseProjectSessionsReturn {
   /** All sessions from store */

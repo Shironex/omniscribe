@@ -1,7 +1,8 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import type { PreLaunchSlot } from '@/components/terminal/TerminalGrid';
 
-import { useTerminalStore, useSessionStore, selectRunningSessionCount } from '@/stores';
+import { useTerminalStore } from '@/stores/useTerminalStore';
+import { useSessionStore, selectRunningSessionCount } from '@/stores/useSessionStore';
 import { useDefaultAiMode } from './useDefaultAiMode';
 import { toast } from 'sonner';
 import {

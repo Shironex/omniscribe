@@ -1,11 +1,12 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
-import { ErrorBoundary } from '@/components';
+import { ErrorBoundary } from '@/components/shared/ErrorBoundary';
 import { SplashScreen } from '@/components/splash';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { useWorkspaceStore, useConnectionStore } from '@/stores';
+import { useWorkspaceStore } from '@/stores/useWorkspaceStore';
+import { useConnectionStore } from '@/stores/useConnectionStore';
 import './styles/globals.css';
 
 const rootElement = document.getElementById('root');

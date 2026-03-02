@@ -1,7 +1,7 @@
 import { type ComponentType } from 'react';
 import { Monitor, AlertTriangle, RotateCcw, FlaskConical, Bot } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useWorkspaceStore } from '@/stores';
+import { useWorkspaceStore } from '@/stores/useWorkspaceStore';
 import { usePluginStore } from '@/stores/usePluginStore';
 import type { AiMode, SessionSettings } from '@omniscribe/shared';
 import { DEFAULT_SESSION_SETTINGS } from '@omniscribe/shared';

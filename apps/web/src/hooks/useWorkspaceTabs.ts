@@ -3,7 +3,7 @@ import { arrayMove } from '@dnd-kit/sortable';
 import { createLogger, mapSessionStatus, type UISessionStatus } from '@omniscribe/shared';
 import { useWorkspaceStore, type ProjectTab } from '@/stores/useWorkspaceStore';
 import { useSessionStore } from '@/stores/useSessionStore';
-import type { Tab } from '@/components';
+import type { Tab } from '@/components/shared/TopBar';
 
 const logger = createLogger('WorkspaceTabs');
 

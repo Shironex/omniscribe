@@ -176,18 +176,22 @@ describe('usePreLaunchSlots', () => {
       { getState: () => ({ sessions: [] }) }
     );
 
-    vi.doMock('@/stores', () => ({
+    vi.doMock('@/stores/useTerminalStore', () => ({
       useTerminalStore: (sel: Selector) => sel({ addSlotRequestCounter: 0 }),
-      useSessionStore: sessionStoreFactory,
-      selectRunningSessionCount: () => 0,
-      useSettingsStore: (sel: Selector) => sel({ claudeCliStatus: { installed: true } }),
-      useWorkspaceStore: (sel: Selector) =>
-        sel({ preferences: { session: { defaultMode: 'claude' } } }),
     }));
 
     vi.doMock('@/stores/useSessionStore', () => ({
       useSessionStore: sessionStoreFactory,
       selectRunningSessionCount: () => 0,
+    }));
+
+    vi.doMock('@/stores/useSettingsStore', () => ({
+      useSettingsStore: (sel: Selector) => sel({ claudeCliStatus: { installed: true } }),
+    }));
+
+    vi.doMock('@/stores/useWorkspaceStore', () => ({
+      useWorkspaceStore: (sel: Selector) =>
+        sel({ preferences: { session: { defaultMode: 'claude' } } }),
     }));
 
     vi.doMock('@/lib/session', () => ({

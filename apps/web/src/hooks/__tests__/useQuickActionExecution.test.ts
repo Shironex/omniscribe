@@ -111,9 +111,12 @@ let mockPreferences: { session?: { quickActionMode?: 'paste-only' | 'execute' } 
   session: { quickActionMode: 'paste-only' },
 };
 
-vi.mock('@/stores', () => ({
+vi.mock('@/stores/useQuickActionStore', () => ({
   useQuickActionStore: (selector: (state: { actions: typeof mockActions }) => unknown) =>
     selector({ actions: mockActions }),
+}));
+
+vi.mock('@/stores/useWorkspaceStore', () => ({
   useWorkspaceStore: (selector: (state: { preferences: typeof mockPreferences }) => unknown) =>
     selector({ preferences: mockPreferences }),
 }));
