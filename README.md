@@ -38,7 +38,7 @@
 
 ## About
 
-Omniscribe is a desktop application for managing multiple AI coding assistant sessions (Claude Code, etc.) simultaneously. Run up to 12 sessions in parallel, each with its own GPU-accelerated terminal, optional git worktree isolation, and MCP server configuration.
+Omniscribe is a desktop application for managing multiple AI coding assistant sessions simultaneously. With a plugin-based architecture supporting Claude Code and OpenAI Codex CLI, you can run up to 12 sessions in parallel, each with its own GPU-accelerated terminal, optional git worktree isolation, and MCP server configuration.
 
 ## Screenshots
 
@@ -153,7 +153,11 @@ omniscribe/
 │   ├── web/           # React frontend
 │   └── mcp-server/    # MCP status server
 └── packages/
-    └── shared/        # Shared types
+    ├── plugin-api/    # Plugin API contracts and base classes
+    ├── plugins/
+    │   ├── provider-claude/  # Claude Code provider plugin
+    │   └── provider-codex/   # OpenAI Codex CLI provider plugin
+    └── shared/        # Shared types and utilities
 ```
 
 **Communication Flow:**
@@ -208,19 +212,21 @@ Beta releases are tagged with a `-beta` suffix (e.g. `v0.5.0-beta.1`) and marked
 
 Track our progress on the [public project board](https://github.com/users/Shironex/projects/7).
 
-### v2.0 — Plugin System & Multi-Provider Support
+### v1.1 — Plugin System & Multi-Provider Support
 
-Transforming Omniscribe from a Claude Code-specific app into a **universal AI coding orchestrator**.
+Omniscribe is now a **universal AI coding orchestrator** with a plugin architecture supporting multiple providers.
 
-| Phase                      | Description                                                   | Status  |
-| -------------------------- | ------------------------------------------------------------- | ------- |
-| Plugin API Contracts       | Typed interfaces and manifest format for provider plugins     | Planned |
-| Backend Infrastructure     | Plugin registry, dynamic module loading, service delegation   | Planned |
-| Claude Provider Extraction | Move Claude-specific logic into a plugin package              | Planned |
-| Frontend Extensions        | Slot-based UI injection, dynamic settings, in-app marketplace | Planned |
-| Codex Provider Validation  | Second provider (OpenAI Codex CLI) proving the architecture   | Planned |
+| Phase                      | Description                                                   | Status      |
+| -------------------------- | ------------------------------------------------------------- | ----------- |
+| Plugin API Contracts       | Typed interfaces and manifest format for provider plugins     | Done        |
+| Backend Infrastructure     | Plugin registry, dynamic module loading, service delegation   | Done        |
+| Claude Provider Extraction | Move Claude-specific logic into a plugin package              | Done        |
+| Frontend Extensions        | Slot-based UI injection, dynamic settings, in-app marketplace | Done        |
+| Codex Provider             | Second provider (OpenAI Codex CLI) proving the architecture   | In Progress |
 
-**Want to add a provider?** See the [Plugin System Spec (Issue #173)](https://github.com/Shironex/omniscribe/issues/173) for the full architecture.
+The Codex provider is functional for session management and usage tracking. MCP integration for Codex is still in development.
+
+**Want to add a provider?** See the [Creating a Provider](https://shironex.github.io/omniscribe/sdk/creating-a-provider) guide and the [API Reference](https://shironex.github.io/omniscribe/docs/api).
 
 ## Contributing
 
@@ -228,8 +234,7 @@ Contributions are welcome! Feel free to:
 
 - [Submit an issue](https://github.com/Shironex/omniscribe/issues) for bugs or feature requests
 - Open a pull request with improvements
-- Check the [v2.0 milestone](https://github.com/Shironex/omniscribe/milestone/9) for planned work
-- Read the [Plugin System Spec](https://github.com/Shironex/omniscribe/issues/173) if you want to contribute a provider plugin
+- Read the [Creating a Provider](https://shironex.github.io/omniscribe/sdk/creating-a-provider) guide to contribute a provider plugin
 - Share feedback and suggestions
 
 ## License
