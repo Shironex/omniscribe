@@ -12,7 +12,7 @@ export interface TerminalDragHandleProps {
 interface SortableTerminalWrapperProps {
   id: string;
   sessionCount: number;
-  children: React.ReactNode;
+  children: (dragHandleProps: TerminalDragHandleProps | undefined) => React.ReactNode;
 }
 
 export function SortableTerminalWrapper({
@@ -56,17 +56,7 @@ export function SortableTerminalWrapper({
 
   return (
     <div ref={setNodeRef} style={style}>
-      {React.Children.map(children, child => {
-        if (!React.isValidElement(child)) return child;
-        return React.cloneElement(
-          child as React.ReactElement<{
-            dragHandleProps?: TerminalDragHandleProps;
-          }>,
-          {
-            dragHandleProps,
-          }
-        );
-      })}
+      {children(dragHandleProps)}
     </div>
   );
 }

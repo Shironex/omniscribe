@@ -39,6 +39,8 @@ export interface TerminalSession {
   customTitle?: string;
 }
 
+type ActiveDropdown = 'quick-actions' | 'more-menu' | null;
+
 interface TerminalHeaderProps {
   quickActions?: QuickActionItem[];
   session: TerminalSession;
@@ -64,23 +66,22 @@ export const TerminalHeader = React.memo(function TerminalHeader({
   dragHandleProps,
   className,
 }: TerminalHeaderProps) {
-  const [quickActionsOpen, setQuickActionsOpen] = useState(false);
-  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
+  const [activeDropdown, setActiveDropdown] = useState<ActiveDropdown>(null);
   const quickActionsRef = useRef<HTMLDivElement>(null);
   const moreMenuRef = useRef<HTMLDivElement>(null);
 
   useClickOutside(
     quickActionsRef,
-    useCallback(() => setQuickActionsOpen(false), [])
+    useCallback(() => setActiveDropdown(prev => (prev === 'quick-actions' ? null : prev)), [])
   );
   useClickOutside(
     moreMenuRef,
-    useCallback(() => setMoreMenuOpen(false), [])
+    useCallback(() => setActiveDropdown(prev => (prev === 'more-menu' ? null : prev)), [])
   );
 
   const handleQuickAction = useCallback(
     (actionId: string) => {
-      setQuickActionsOpen(false);
+      setActiveDropdown(null);
       onQuickAction?.(actionId);
     },
     [onQuickAction]
@@ -149,12 +150,11 @@ export const TerminalHeader = React.memo(function TerminalHeader({
           <div className="relative" ref={quickActionsRef}>
             <QuickActionsDropdown
               quickActions={quickActions}
-              isOpen={quickActionsOpen}
+              isOpen={activeDropdown === 'quick-actions'}
               disabled={session.aiMode === 'plain'}
               disabledTooltip="Quick actions are available in AI sessions only"
               onToggle={() => {
-                setQuickActionsOpen(prev => !prev);
-                setMoreMenuOpen(false);
+                setActiveDropdown(prev => (prev === 'quick-actions' ? null : 'quick-actions'));
               }}
               onAction={handleQuickAction}
             />
@@ -165,17 +165,16 @@ export const TerminalHeader = React.memo(function TerminalHeader({
 
         <div className="relative" ref={moreMenuRef}>
           <MoreMenuDropdown
-            isOpen={moreMenuOpen}
+            isOpen={activeDropdown === 'more-menu'}
             aiMode={session.aiMode}
             sessionId={session.id}
             onToggle={() => {
-              setMoreMenuOpen(prev => !prev);
-              setQuickActionsOpen(false);
+              setActiveDropdown(prev => (prev === 'more-menu' ? null : 'more-menu'));
             }}
             onSettingsClick={
               onSettingsClick
                 ? () => {
-                    setMoreMenuOpen(false);
+                    setActiveDropdown(null);
                     onSettingsClick();
                   }
                 : undefined
@@ -183,13 +182,13 @@ export const TerminalHeader = React.memo(function TerminalHeader({
             onOpenInEditor={
               onOpenInEditor
                 ? () => {
-                    setMoreMenuOpen(false);
+                    setActiveDropdown(null);
                     onOpenInEditor();
                   }
                 : undefined
             }
             onClose={() => {
-              setMoreMenuOpen(false);
+              setActiveDropdown(null);
               onClose();
             }}
           />

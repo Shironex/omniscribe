@@ -5,46 +5,32 @@ import { TerminalErrorBoundary } from './TerminalErrorBoundary';
 import { TerminalHeader } from './TerminalHeader';
 import { ReconnectionOverlay } from './ReconnectionOverlay';
 import { BackpressureOverlay } from './BackpressureOverlay';
+import { useTerminalGridContext } from './TerminalGridContext';
 import type { TerminalSession } from './TerminalHeader';
 import type { TerminalDragHandleProps } from './SortableTerminalWrapper';
 
-export interface QuickActionItem {
-  id: string;
-  label: string;
-  icon?: string;
-  category?: string;
-}
-
-export const EMPTY_QUICK_ACTIONS: QuickActionItem[] = [];
+export type { QuickActionItem } from './terminal-types';
+export { EMPTY_QUICK_ACTIONS } from './terminal-types';
 
 interface TerminalCardProps {
   session: TerminalSession;
-  quickActions: QuickActionItem[];
   /** Whether this terminal's project tab is currently active/visible */
   isActive?: boolean;
   isFocused: boolean;
   onFocus: (sessionId: string) => void;
-  onKill: (sessionId: string) => void;
-  onSessionClose?: (sessionId: string, exitCode: number) => void;
-  onQuickAction?: (sessionId: string, actionId: string) => void;
-  onResume?: (sessionId: string) => void;
-  onOpenInEditor?: (sessionId: string) => void;
   dragHandleProps?: TerminalDragHandleProps;
 }
 
 export const TerminalCard = React.memo(function TerminalCard({
   session,
-  quickActions,
   isActive = true,
   isFocused,
   onFocus,
-  onKill,
-  onSessionClose,
-  onQuickAction,
-  onResume,
-  onOpenInEditor,
   dragHandleProps,
 }: TerminalCardProps) {
+  const { onKill, onSessionClose, onQuickAction, onResume, onOpenInEditor, quickActions } =
+    useTerminalGridContext();
+
   const handleFocus = React.useCallback(() => onFocus(session.id), [onFocus, session.id]);
   const handleKill = React.useCallback(() => onKill(session.id), [onKill, session.id]);
   const handleSessionClose = React.useCallback(

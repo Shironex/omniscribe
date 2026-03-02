@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils';
 import { DndContext, DragOverlay, closestCenter } from '@dnd-kit/core';
 import { SortableContext, rectSwappingStrategy } from '@dnd-kit/sortable';
 import { SortableTerminalWrapper } from './SortableTerminalWrapper';
-import { TerminalCard, EMPTY_QUICK_ACTIONS, type QuickActionItem } from './TerminalCard';
+import { TerminalCard } from './TerminalCard';
 import { TerminalHeader } from './TerminalHeader';
 import type { TerminalSession } from './TerminalHeader';
 import { PreLaunchSection } from './PreLaunchSection';
@@ -28,7 +28,6 @@ interface TerminalGridProps {
   claudeAvailable?: boolean;
   /** Worktree mode — hides branch selector when 'never' */
   worktreeMode?: WorktreeMode;
-  quickActions?: QuickActionItem[];
   /** Whether this grid's project tab is currently active/visible */
   isActive?: boolean;
   focusedSessionId: string | null;
@@ -40,12 +39,7 @@ interface TerminalGridProps {
     updates: Partial<Pick<PreLaunchSlot, 'aiMode' | 'branch'>>
   ) => void;
   onLaunch: (slotId: string) => void;
-  onKill: (sessionId: string) => void;
-  onSessionClose?: (sessionId: string, exitCode: number) => void;
-  onQuickAction?: (sessionId: string, actionId: string) => void;
   onOpenLaunchModal?: () => void;
-  onResume?: (sessionId: string) => void;
-  onOpenInEditor?: (sessionId: string) => void;
   onReorderSessions?: (activeId: string, overId: string) => void;
   className?: string;
 }
@@ -57,7 +51,6 @@ export function TerminalGrid({
   branches,
   claudeAvailable,
   worktreeMode,
-  quickActions = EMPTY_QUICK_ACTIONS,
   isActive = true,
   focusedSessionId,
   onFocusSession,
@@ -65,11 +58,6 @@ export function TerminalGrid({
   onRemoveSlot,
   onUpdateSlot,
   onLaunch,
-  onKill,
-  onSessionClose,
-  onQuickAction,
-  onResume,
-  onOpenInEditor,
   onOpenLaunchModal,
   onReorderSessions,
   className,
@@ -95,23 +83,10 @@ export function TerminalGrid({
   const activeSession = activeId ? sessions.find(s => s.id === activeId) : null;
   const { handlePanelResize } = useTerminalPanelResize(dispatchRefitAll);
 
-  // Stable callback refs passed to all TerminalCards (avoids inline arrows per-session)
+  // Stable callback ref passed to all TerminalCards
   const handleFocusSession = useCallback(
     (sessionId: string) => onFocusSession(sessionId),
     [onFocusSession]
-  );
-  const handleKill = useCallback((sessionId: string) => onKill(sessionId), [onKill]);
-  const handleSessionClose = useCallback(
-    (sessionId: string, exitCode: number) => onSessionClose?.(sessionId, exitCode),
-    [onSessionClose]
-  );
-  const handleQuickAction = useCallback(
-    (sessionId: string, actionId: string) => onQuickAction?.(sessionId, actionId),
-    [onQuickAction]
-  );
-  const handleOpenInEditor = useCallback(
-    (sessionId: string) => onOpenInEditor?.(sessionId),
-    [onOpenInEditor]
   );
 
   // Empty state
@@ -127,18 +102,15 @@ export function TerminalGrid({
 
   const renderTerminalCard = (session: TerminalSession) => (
     <SortableTerminalWrapper id={session.id} sessionCount={sessionCount}>
-      <TerminalCard
-        session={session}
-        quickActions={quickActions}
-        isActive={isActive}
-        isFocused={focusedSessionId === session.id}
-        onFocus={handleFocusSession}
-        onKill={handleKill}
-        onSessionClose={onSessionClose ? handleSessionClose : undefined}
-        onQuickAction={onQuickAction ? handleQuickAction : undefined}
-        onResume={onResume}
-        onOpenInEditor={onOpenInEditor ? handleOpenInEditor : undefined}
-      />
+      {dragHandleProps => (
+        <TerminalCard
+          session={session}
+          isActive={isActive}
+          isFocused={focusedSessionId === session.id}
+          onFocus={handleFocusSession}
+          dragHandleProps={dragHandleProps}
+        />
+      )}
     </SortableTerminalWrapper>
   );
 

@@ -1,53 +1,32 @@
-import { type ComponentType } from 'react';
-import { Monitor, AlertTriangle, RotateCcw, FlaskConical, Bot } from 'lucide-react';
+import { useMemo } from 'react';
+import { Monitor, AlertTriangle, RotateCcw, FlaskConical } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useWorkspaceStore } from '@/stores/useWorkspaceStore';
 import { usePluginStore } from '@/stores/usePluginStore';
+import { getModeIcon, buildAiModeOptions } from '@/lib/ai-mode-utils';
 import type { AiMode, SessionSettings } from '@omniscribe/shared';
 import { DEFAULT_SESSION_SETTINGS } from '@omniscribe/shared';
-
-const AI_MODE_OPTIONS: {
-  value: AiMode;
-  label: string;
-  description: string;
-}[] = [
-  {
-    value: 'claude',
-    label: 'Claude Code',
-    description: 'Launch sessions with Claude Code AI assistant',
-  },
-  {
-    value: 'plain',
-    label: 'Plain Terminal',
-    description: 'Launch sessions as plain terminal without AI',
-  },
-];
-
-/**
- * Get the icon component for an AI mode from registered status renderers.
- * Falls back to Bot icon for provider modes and Monitor for plain.
- */
-function getModeIcon(
-  mode: string,
-  statusRenderers: Map<string, { aiMode: string; component: unknown; pluginId: string }>
-): ComponentType<{ className?: string; size?: string | number }> {
-  if (mode === 'plain') return Monitor;
-
-  // Check for a registered status renderer component (e.g., ClaudeStatusRenderer)
-  for (const [, reg] of statusRenderers) {
-    if (reg.aiMode === mode) {
-      return reg.component as ComponentType<{ className?: string; size?: string | number }>;
-    }
-  }
-
-  // Fallback: generic bot icon for unknown provider modes
-  return Bot;
-}
 
 export function SessionsSection() {
   const preferences = useWorkspaceStore(state => state.preferences);
   const updatePreference = useWorkspaceStore(state => state.updatePreference);
+  const providers = usePluginStore(s => s.providers);
   const statusRenderers = usePluginStore(s => s.statusRenderers);
+
+  const aiModeOptions = useMemo(
+    () =>
+      buildAiModeOptions(providers, statusRenderers).map(opt => ({
+        value: opt.value,
+        label: opt.value === 'plain' ? 'Plain Terminal' : opt.label,
+        description:
+          opt.value === 'plain'
+            ? 'Launch sessions as plain terminal without AI'
+            : `Launch sessions with ${opt.label} AI assistant`,
+        disabled: opt.disabled ?? false,
+        disabledReason: opt.disabledReason,
+      })),
+    [providers, statusRenderers]
+  );
 
   const sessionSettings: SessionSettings = preferences.session ?? DEFAULT_SESSION_SETTINGS;
   const skipPermissions = sessionSettings.skipPermissions ?? false;
@@ -105,34 +84,40 @@ export function SessionsSection() {
         <h3 className="text-sm font-medium text-foreground">Default Mode</h3>
 
         <div className="rounded-xl border border-border/50 bg-card/50 p-4 space-y-3">
-          {AI_MODE_OPTIONS.map(option => (
-            <label
-              key={option.value}
-              className={cn(
-                'flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-colors',
-                sessionSettings.defaultMode === option.value
-                  ? 'bg-primary/10 border border-primary/30'
-                  : 'hover:bg-muted/50 border border-transparent'
-              )}
-            >
-              <input
-                type="radio"
-                name="defaultAiMode"
-                value={option.value}
-                checked={sessionSettings.defaultMode === option.value}
-                onChange={() => handleModeChange(option.value)}
-                className="mt-1 w-4 h-4 text-primary accent-primary"
-              />
-              {(() => {
-                const ModeIcon = getModeIcon(option.value, statusRenderers);
-                return <ModeIcon className="w-4 h-4 mt-0.5 text-muted-foreground" size={16} />;
-              })()}
-              <div className="flex-1">
-                <div className="text-sm font-medium text-foreground">{option.label}</div>
-                <div className="text-xs text-muted-foreground mt-0.5">{option.description}</div>
-              </div>
-            </label>
-          ))}
+          {aiModeOptions.map(option => {
+            const ModeIcon = getModeIcon(option.value, statusRenderers, Monitor);
+            return (
+              <label
+                key={option.value}
+                className={cn(
+                  'flex items-start gap-3 p-3 rounded-lg transition-colors',
+                  option.disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
+                  sessionSettings.defaultMode === option.value
+                    ? 'bg-primary/10 border border-primary/30'
+                    : option.disabled
+                      ? 'border border-transparent'
+                      : 'hover:bg-muted/50 border border-transparent'
+                )}
+              >
+                <input
+                  type="radio"
+                  name="defaultAiMode"
+                  value={option.value}
+                  checked={sessionSettings.defaultMode === option.value}
+                  onChange={() => handleModeChange(option.value)}
+                  disabled={option.disabled}
+                  className="mt-1 w-4 h-4 text-primary accent-primary"
+                />
+                <ModeIcon className="w-4 h-4 mt-0.5 text-muted-foreground" size={16} />
+                <div className="flex-1">
+                  <div className="text-sm font-medium text-foreground">{option.label}</div>
+                  <div className="text-xs text-muted-foreground mt-0.5">
+                    {option.disabled ? option.disabledReason : option.description}
+                  </div>
+                </div>
+              </label>
+            );
+          })}
         </div>
       </div>
 

@@ -208,7 +208,16 @@ const mockPluginState: Record<string, unknown> = {
   settingsSections: new Map(),
   settingsCategories: new Map(),
   statusRenderers: new Map(),
-  providers: [],
+  providers: [
+    {
+      id: 'claude',
+      aiMode: 'claude',
+      displayName: 'Claude Code',
+      enabled: true,
+      activated: true,
+      cliStatus: { installed: true },
+    },
+  ],
 };
 
 vi.mock('@/stores/usePluginStore', () => ({
