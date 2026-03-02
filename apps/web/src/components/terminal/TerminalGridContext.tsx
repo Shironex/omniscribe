@@ -1,5 +1,5 @@
 import { createContext, useContext } from 'react';
-import type { QuickActionItem } from './TerminalCard';
+import type { QuickActionItem } from './terminal-types';
 
 /**
  * Context providing session action callbacks and quick actions to

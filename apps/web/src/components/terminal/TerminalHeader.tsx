@@ -39,6 +39,8 @@ export interface TerminalSession {
   customTitle?: string;
 }
 
+type ActiveDropdown = 'quick-actions' | 'more-menu' | null;
+
 interface TerminalHeaderProps {
   quickActions?: QuickActionItem[];
   session: TerminalSession;
@@ -64,7 +66,6 @@ export const TerminalHeader = React.memo(function TerminalHeader({
   dragHandleProps,
   className,
 }: TerminalHeaderProps) {
-  type ActiveDropdown = 'quick-actions' | 'more-menu' | null;
   const [activeDropdown, setActiveDropdown] = useState<ActiveDropdown>(null);
   const quickActionsRef = useRef<HTMLDivElement>(null);
   const moreMenuRef = useRef<HTMLDivElement>(null);

@@ -175,7 +175,6 @@ export function useSessionHistory({
     // Search & filter
     searchText,
     setSearchText,
-    debouncedSearch,
     selectedBranch,
     setSelectedBranch,
     uniqueBranches,

@@ -32,7 +32,6 @@ export function SessionHistoryPanel({
     error,
     searchText,
     setSearchText,
-    debouncedSearch,
     selectedBranch,
     setSelectedBranch,
     uniqueBranches,
@@ -125,7 +124,7 @@ export function SessionHistoryPanel({
 
         {!isLoading && filteredSessions.length === 0 && !error && (
           <div className="text-xs text-muted-foreground py-8 text-center">
-            {debouncedSearch || selectedBranch ? 'No matching sessions' : 'No past sessions'}
+            {searchText || selectedBranch ? 'No matching sessions' : 'No past sessions'}
           </div>
         )}
 

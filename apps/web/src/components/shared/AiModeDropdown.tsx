@@ -1,10 +1,8 @@
-import { useState, useRef, useMemo } from 'react';
-import { ChevronDown } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
+import { useMemo } from 'react';
 import { usePluginStore } from '@/stores/usePluginStore';
-import { useClickOutside } from '@/hooks/useClickOutside';
 import { buildAiModeOptions, type AiModeOption } from '@/lib/ai-mode-utils';
+import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
+import { cn } from '@/lib/utils';
 import type { AiMode } from '@omniscribe/shared';
 
 interface AiModeDropdownProps {
@@ -21,9 +19,6 @@ export function AiModeDropdown({
   direction = 'down',
   className,
 }: AiModeDropdownProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
   const providers = usePluginStore(s => s.providers);
   const statusRenderers = usePluginStore(s => s.statusRenderers);
 
@@ -32,83 +27,39 @@ export function AiModeDropdown({
     [providers, statusRenderers]
   );
 
-  useClickOutside(dropdownRef, () => {
-    if (isOpen) setIsOpen(false);
-  });
-
   const selectedOption = options.find(o => o.value === value) ?? options[0];
+  if (!selectedOption) return null;
+
   const SelectedIcon = selectedOption.icon;
 
   return (
-    <div ref={dropdownRef} className={cn('relative', className)}>
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => setIsOpen(prev => !prev)}
-        className="min-w-[100px] text-xs"
-      >
-        <SelectedIcon size={14} className={selectedOption.color} />
-        <span data-testid="ai-mode-label">{selectedOption.label}</span>
-        <ChevronDown
-          size={12}
-          className={cn(
-            'text-muted-foreground transition-transform ml-auto',
-            isOpen && 'rotate-180'
-          )}
-        />
-      </Button>
-
-      {isOpen && (
-        <div
-          className={cn(
-            'absolute left-0 z-50',
-            'bg-muted border border-border rounded-lg shadow-xl',
-            'overflow-hidden animate-fade-in min-w-[120px]',
-            direction === 'up' ? 'bottom-full mb-1' : 'top-full mt-1'
-          )}
-        >
-          {options.map(option => (
-            <AiModeOptionButton
-              key={option.value}
-              option={option}
-              isSelected={option.value === value}
-              onSelect={() => {
-                if (option.disabled) return;
-                onChange(option.value);
-                setIsOpen(false);
-              }}
-            />
-          ))}
-        </div>
-      )}
-    </div>
+    <Select value={value} onValueChange={v => onChange(v as AiMode)}>
+      <SelectTrigger className={cn('min-w-[100px] h-7 text-xs gap-1.5', className)}>
+        <span className="flex items-center gap-1.5 truncate">
+          <SelectedIcon size={14} className={cn(selectedOption.color, 'shrink-0')} />
+          <span data-testid="ai-mode-label">{selectedOption.label}</span>
+        </span>
+      </SelectTrigger>
+      <SelectContent side={direction === 'up' ? 'top' : 'bottom'}>
+        {options.map(option => (
+          <AiModeSelectItem key={option.value} option={option} />
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
 
-function AiModeOptionButton({
-  option,
-  isSelected,
-  onSelect,
-}: {
-  option: AiModeOption;
-  isSelected: boolean;
-  onSelect: () => void;
-}) {
+function AiModeSelectItem({ option }: { option: AiModeOption }) {
   const Icon = option.icon;
   return (
-    <Button
-      variant="ghost"
-      size="sm"
-      onClick={onSelect}
-      disabled={option.disabled}
-      title={option.disabledReason}
-      className={cn('w-full justify-start text-xs', isSelected && 'bg-primary/10 text-primary')}
-    >
-      <Icon size={14} className={option.color} />
-      <span>{option.label}</span>
-      {option.disabled && (
-        <span className="ml-auto text-[10px] text-muted-foreground">Not installed</span>
-      )}
-    </Button>
+    <SelectItem value={option.value} disabled={option.disabled} className="text-xs">
+      <span className="flex items-center gap-1.5">
+        <Icon size={14} className={cn(option.color, 'shrink-0')} />
+        <span>{option.label}</span>
+        {option.disabled && (
+          <span className="ml-auto text-[10px] text-muted-foreground">Not installed</span>
+        )}
+      </span>
+    </SelectItem>
   );
 }

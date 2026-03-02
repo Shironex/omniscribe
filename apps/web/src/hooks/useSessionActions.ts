@@ -39,7 +39,7 @@ export function useSessionActions(activeProjectPath: string | null) {
   const handleOpenInEditor = useCallback(
     async (sessionId: string) => {
       const session = useSessionStore.getState().sessions.find(s => s.id === sessionId);
-      const folderPath = session?.worktreePath ?? activeProjectPath;
+      const folderPath = session?.worktreePath ?? session?.projectPath ?? activeProjectPath;
       if (!folderPath) {
         toast.error('No project path available');
         return;

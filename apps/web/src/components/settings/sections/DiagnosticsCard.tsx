@@ -30,9 +30,9 @@ export function DiagnosticsCard() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => {
+              onClick={async () => {
                 try {
-                  window.electronAPI?.app?.openLogsFolder();
+                  await window.electronAPI?.app?.openLogsFolder();
                 } catch (err) {
                   logger.error('Failed to open logs folder:', err);
                 }

@@ -24,7 +24,10 @@ import { IS_MAC } from '@/lib/platform';
 function MacDownloadFallback({ message }: { message: string }) {
   return (
     <div className="space-y-2">
-      <Button size="sm" onClick={() => window.open(GITHUB_RELEASES_URL, '_blank')}>
+      <Button
+        size="sm"
+        onClick={() => window.open(GITHUB_RELEASES_URL, '_blank', 'noopener,noreferrer')}
+      >
         <ExternalLink className="w-3.5 h-3.5" />
         Download from GitHub
       </Button>
@@ -49,7 +52,8 @@ export function UpdatesCard() {
     setChannel,
   } = useUpdateStore();
 
-  const openGitHubReleases = () => window.open(GITHUB_RELEASES_URL, '_blank');
+  const openGitHubReleases = () =>
+    window.open(GITHUB_RELEASES_URL, '_blank', 'noopener,noreferrer');
 
   const handleCheckForUpdates = () => {
     setHasChecked(true);

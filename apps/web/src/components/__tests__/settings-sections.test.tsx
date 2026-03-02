@@ -210,7 +210,7 @@ const mockPluginState: Record<string, unknown> = {
   statusRenderers: new Map(),
   providers: [
     {
-      pluginId: 'claude',
+      id: 'claude',
       aiMode: 'claude',
       displayName: 'Claude Code',
       enabled: true,

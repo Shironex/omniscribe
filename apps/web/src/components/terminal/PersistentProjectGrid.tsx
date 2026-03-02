@@ -8,7 +8,7 @@ import { TerminalGrid } from './TerminalGrid';
 import { TerminalGridProvider } from './TerminalGridContext';
 import type { PreLaunchSlot } from './PreLaunchBar';
 import type { Branch } from '@/components/shared/BranchSelector';
-import type { QuickActionItem } from './TerminalCard';
+import type { QuickActionItem } from './terminal-types';
 import type { WorktreeMode } from '@omniscribe/shared';
 
 const EMPTY_PRELAUNCH_SLOTS: PreLaunchSlot[] = [];
@@ -135,9 +135,6 @@ export function PersistentProjectGrid({
     ? (quickActions ?? EMPTY_QUICK_ACTIONS)
     : EMPTY_QUICK_ACTIONS;
 
-  // Don't render if no sessions and no pre-launch slots
-  if (terminalSessions.length === 0 && effectivePreLaunchSlots.length === 0) return null;
-
   // Context value for session action callbacks
   const contextValue = useMemo(
     () => ({
@@ -150,6 +147,9 @@ export function PersistentProjectGrid({
     }),
     [onKill, onSessionClose, onQuickAction, onResume, onOpenInEditor, effectiveQuickActions]
   );
+
+  // Don't render if no sessions and no pre-launch slots
+  if (terminalSessions.length === 0 && effectivePreLaunchSlots.length === 0) return null;
 
   return (
     <div className={cn('absolute inset-0', isActive ? 'z-10' : 'invisible pointer-events-none')}>

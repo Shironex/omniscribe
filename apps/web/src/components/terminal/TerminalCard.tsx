@@ -9,14 +9,8 @@ import { useTerminalGridContext } from './TerminalGridContext';
 import type { TerminalSession } from './TerminalHeader';
 import type { TerminalDragHandleProps } from './SortableTerminalWrapper';
 
-export interface QuickActionItem {
-  id: string;
-  label: string;
-  icon?: string;
-  category?: string;
-}
-
-export const EMPTY_QUICK_ACTIONS: QuickActionItem[] = [];
+export type { QuickActionItem } from './terminal-types';
+export { EMPTY_QUICK_ACTIONS } from './terminal-types';
 
 interface TerminalCardProps {
   session: TerminalSession;

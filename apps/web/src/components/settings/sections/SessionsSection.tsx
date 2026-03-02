@@ -22,6 +22,8 @@ export function SessionsSection() {
           opt.value === 'plain'
             ? 'Launch sessions as plain terminal without AI'
             : `Launch sessions with ${opt.label} AI assistant`,
+        disabled: opt.disabled ?? false,
+        disabledReason: opt.disabledReason,
       })),
     [providers, statusRenderers]
   );
@@ -88,10 +90,13 @@ export function SessionsSection() {
               <label
                 key={option.value}
                 className={cn(
-                  'flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-colors',
+                  'flex items-start gap-3 p-3 rounded-lg transition-colors',
+                  option.disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
                   sessionSettings.defaultMode === option.value
                     ? 'bg-primary/10 border border-primary/30'
-                    : 'hover:bg-muted/50 border border-transparent'
+                    : option.disabled
+                      ? 'border border-transparent'
+                      : 'hover:bg-muted/50 border border-transparent'
                 )}
               >
                 <input
@@ -100,12 +105,15 @@ export function SessionsSection() {
                   value={option.value}
                   checked={sessionSettings.defaultMode === option.value}
                   onChange={() => handleModeChange(option.value)}
+                  disabled={option.disabled}
                   className="mt-1 w-4 h-4 text-primary accent-primary"
                 />
                 <ModeIcon className="w-4 h-4 mt-0.5 text-muted-foreground" size={16} />
                 <div className="flex-1">
                   <div className="text-sm font-medium text-foreground">{option.label}</div>
-                  <div className="text-xs text-muted-foreground mt-0.5">{option.description}</div>
+                  <div className="text-xs text-muted-foreground mt-0.5">
+                    {option.disabled ? option.disabledReason : option.description}
+                  </div>
                 </div>
               </label>
             );
