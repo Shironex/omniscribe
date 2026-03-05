@@ -297,7 +297,7 @@ describe('ClaudeCliCommandService', () => {
       expect(config.command).toBe('C:\\path1\\claude.cmd');
     });
 
-    it('should try .exe then bare command on Windows when .cmd not found', () => {
+    it('should try .cmd then .exe on Windows when .cmd is not found', () => {
       mockPlatform.mockReturnValue('win32');
       mockHomedir.mockReturnValue('C:\\Users\\test');
 
@@ -310,7 +310,18 @@ describe('ClaudeCliCommandService', () => {
       const config = service.buildLaunch({});
 
       expect(config.command).toBe('C:\\npm\\claude.exe');
-      expect(mockedExecFileSync).toHaveBeenCalledWith('where', ['claude.exe'], expect.any(Object));
+      expect(mockedExecFileSync).toHaveBeenNthCalledWith(
+        1,
+        'where',
+        ['claude.cmd'],
+        expect.any(Object)
+      );
+      expect(mockedExecFileSync).toHaveBeenNthCalledWith(
+        2,
+        'where',
+        ['claude.exe'],
+        expect.any(Object)
+      );
     });
 
     it('should fall back to known paths when PATH lookup fails on linux', () => {

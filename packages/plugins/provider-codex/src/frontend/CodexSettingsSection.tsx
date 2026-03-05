@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Loader2, RefreshCw, Terminal, CheckCircle2, XCircle } from 'lucide-react';
 import { cn } from '@omniscribe/ui';
 import { PluginEvents, type ProviderInfo } from '@omniscribe/shared';
@@ -16,17 +17,23 @@ import { CodexAuthCard } from './CodexAuthCard';
 export function CodexSettingsSection() {
   const provider = usePluginStore(state => state.providers.find(p => p.id === 'provider-codex'));
   const cliStatus = provider?.cliStatus;
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const handleRefresh = async () => {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
     // Re-fetch provider list to get fresh CLI status
     try {
       const data = await emitAsync<Record<string, never>, { providers: ProviderInfo[] }>(
         PluginEvents.LIST_PROVIDERS,
         {}
       );
-      usePluginStore.getState().setProviders(data?.providers ?? []);
+      const providers = Array.isArray(data?.providers) ? data.providers : [];
+      usePluginStore.getState().setProviders(providers);
     } catch {
       // Refresh failed silently
+    } finally {
+      setIsRefreshing(false);
     }
   };
 
@@ -51,6 +58,7 @@ export function CodexSettingsSection() {
           type="button"
           aria-label="Refresh Codex CLI status"
           onClick={handleRefresh}
+          disabled={isRefreshing}
           className={cn(
             'p-2 rounded-lg transition-colors',
             'hover:bg-muted text-muted-foreground hover:text-foreground',
@@ -58,7 +66,11 @@ export function CodexSettingsSection() {
           )}
           title="Refresh status"
         >
-          <RefreshCw className="w-4 h-4" />
+          {isRefreshing ? (
+            <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+          ) : (
+            <RefreshCw className="w-4 h-4" />
+          )}
         </button>
       </div>
 

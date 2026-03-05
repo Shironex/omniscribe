@@ -38,7 +38,7 @@ export function LaunchPresetsModal({ projectPath, onCreateSessions }: LaunchPres
   const { defaultAiMode } = useDefaultAiMode();
 
   const existingSessionCountSelector = useCallback(
-    (state: { sessions: { projectPath: string }[] }) =>
+    (state: ReturnType<typeof useSessionStore.getState>) =>
       projectPath ? state.sessions.filter(s => s.projectPath === projectPath).length : 0,
     [projectPath]
   );

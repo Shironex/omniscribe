@@ -35,6 +35,7 @@ export function AiModeDropdown({
   return (
     <Select value={value} onValueChange={v => onChange(v as AiMode)}>
       <SelectTrigger className={cn('min-w-[100px] h-7 text-xs gap-1.5', className)}>
+        {/* flex! overrides line-clamp-1's -webkit-box display from SelectTrigger */}
         <span className="flex! items-center gap-1.5 truncate">
           <SelectedIcon size={14} className={cn(selectedOption.color, 'shrink-0')} />
           <span data-testid="ai-mode-label">{selectedOption.label}</span>

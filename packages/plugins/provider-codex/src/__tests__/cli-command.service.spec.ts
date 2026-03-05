@@ -252,7 +252,7 @@ describe('CodexCliCommandService', () => {
       expect(config.command).toBe('C:\\path1\\codex.cmd');
     });
 
-    it('should try .exe then bare command on Windows when .cmd not found', () => {
+    it('should try .cmd then .exe on Windows when .cmd is not found', () => {
       mockPlatform.mockReturnValue('win32');
       mockHomedir.mockReturnValue('C:\\Users\\test');
 
@@ -265,7 +265,18 @@ describe('CodexCliCommandService', () => {
       const config = service.buildLaunch({});
 
       expect(config.command).toBe('C:\\npm\\codex.exe');
-      expect(mockedExecFileSync).toHaveBeenCalledWith('where', ['codex.exe'], expect.any(Object));
+      expect(mockedExecFileSync).toHaveBeenNthCalledWith(
+        1,
+        'where',
+        ['codex.cmd'],
+        expect.any(Object)
+      );
+      expect(mockedExecFileSync).toHaveBeenNthCalledWith(
+        2,
+        'where',
+        ['codex.exe'],
+        expect.any(Object)
+      );
     });
 
     it('should fall back to known paths when PATH lookup fails on linux', () => {
