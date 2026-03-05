@@ -1,9 +1,10 @@
 import { cn } from '@/lib/utils';
-import { Settings, Play, LayoutGrid, History, Plus, Square } from 'lucide-react';
+import { Settings, Play, LayoutGrid, History, Plus, Square, Network } from 'lucide-react';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
 import { useSettingsStore } from '@/stores/useSettingsStore';
 import { useAppUIStore } from '@/stores/useAppUIStore';
+import { useSwarmStore } from '@/stores/useSwarmStore';
 import { IS_MAC } from '@/lib/platform';
 import { MAX_CONCURRENT_SESSIONS } from '@omniscribe/shared';
 
@@ -38,11 +39,54 @@ export function ActionBar({
   const toggleHistory = useAppUIStore(state => state.toggleHistory);
   const isHistoryOpen = useAppUIStore(state => state.isHistoryOpen);
   const openLaunchModal = useAppUIStore(state => state.openLaunchModal);
+  const toggleSwarmView = useAppUIStore(state => state.toggleSwarmView);
+  const isSwarmViewOpen = useAppUIStore(state => state.isSwarmViewOpen);
+  const openSwarmConfig = useAppUIStore(state => state.openSwarmConfig);
+  const hasActiveSwarm = useSwarmStore(state => state.activeSwarmId !== null);
+  const hasAnySwarm = useSwarmStore(state => state.swarms.length > 0);
   const canAddMore =
     hasActiveProject && sessionCount + preLaunchSlotCount < MAX_CONCURRENT_SESSIONS;
 
   return (
     <>
+      {/* Team Swarm toggle — shown when there's an active swarm */}
+      {hasActiveProject && hasAnySwarm && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={hasActiveSwarm ? toggleSwarmView : openSwarmConfig}
+              className={cn('no-drag w-7 h-7', isSwarmViewOpen && 'bg-primary/10 text-primary')}
+              aria-label="Team Swarm"
+            >
+              <Network size={15} />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">
+            {hasActiveSwarm ? 'Toggle swarm view' : 'Create swarm'}
+          </TooltipContent>
+        </Tooltip>
+      )}
+
+      {/* Create Swarm — shown when no active swarm exists */}
+      {hasActiveProject && !hasAnySwarm && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={openSwarmConfig}
+              className="no-drag w-7 h-7"
+              aria-label="Create Team Swarm"
+            >
+              <Network size={15} />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">Team Swarm</TooltipContent>
+        </Tooltip>
+      )}
+
       {/* Session History toggle */}
       {hasActiveProject && (
         <Tooltip>

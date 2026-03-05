@@ -8,6 +8,7 @@ import { useSessionHistoryStore } from '@/stores/useSessionHistoryStore';
 import { useConnectionStore } from '@/stores/useConnectionStore';
 import { useTerminalStore } from '@/stores/useTerminalStore';
 import { usePluginStore } from '@/stores/usePluginStore';
+import { useSwarmStore } from '@/stores/useSwarmStore';
 
 export interface UseStoreListenersReturn {
   initAllListeners: () => void;
@@ -60,6 +61,10 @@ export function useStoreListeners(): UseStoreListenersReturn {
   const initPluginListeners = usePluginStore(state => state.initListeners);
   const cleanupPluginListeners = usePluginStore(state => state.cleanupListeners);
 
+  // Swarm store (swarm lifecycle, agents, tasks, messages)
+  const initSwarmListeners = useSwarmStore(state => state.initListeners);
+  const cleanupSwarmListeners = useSwarmStore(state => state.cleanupListeners);
+
   const initAllListeners = useCallback(() => {
     initConnectionListeners();
     initSessionListeners();
@@ -70,6 +75,7 @@ export function useStoreListeners(): UseStoreListenersReturn {
     initSessionHistoryListeners();
     initTerminalListeners();
     initPluginListeners();
+    initSwarmListeners();
   }, [
     initConnectionListeners,
     initSessionListeners,
@@ -80,6 +86,7 @@ export function useStoreListeners(): UseStoreListenersReturn {
     initSessionHistoryListeners,
     initTerminalListeners,
     initPluginListeners,
+    initSwarmListeners,
   ]);
 
   const cleanupAllListeners = useCallback(() => {
@@ -92,6 +99,7 @@ export function useStoreListeners(): UseStoreListenersReturn {
     cleanupSessionHistoryListeners();
     cleanupTerminalListeners();
     cleanupPluginListeners();
+    cleanupSwarmListeners();
   }, [
     cleanupConnectionListeners,
     cleanupSessionListeners,
@@ -102,6 +110,7 @@ export function useStoreListeners(): UseStoreListenersReturn {
     cleanupSessionHistoryListeners,
     cleanupTerminalListeners,
     cleanupPluginListeners,
+    cleanupSwarmListeners,
   ]);
 
   return {

@@ -22,6 +22,8 @@ const mockInitTerminal = vi.fn();
 const mockCleanupTerminal = vi.fn();
 const mockInitPlugin = vi.fn();
 const mockCleanupPlugin = vi.fn();
+const mockInitSwarm = vi.fn();
+const mockCleanupSwarm = vi.fn();
 const mockCleanupUpdate = vi.fn();
 const mockInitUpdate = vi.fn().mockReturnValue(mockCleanupUpdate);
 const mockConnectSocket = vi.fn().mockResolvedValue(undefined);
@@ -84,6 +86,11 @@ vi.mock('@/stores/usePluginStore', () => ({
     sel({ initListeners: mockInitPlugin, cleanupListeners: mockCleanupPlugin }),
 }));
 
+vi.mock('@/stores/useSwarmStore', () => ({
+  useSwarmStore: (sel: Selector) =>
+    sel({ initListeners: mockInitSwarm, cleanupListeners: mockCleanupSwarm }),
+}));
+
 vi.mock('@/stores/useSettingsStore', () => ({
   useSettingsStore: { getState: () => ({ setClaudeCliStatus: vi.fn() }) },
 }));
@@ -137,6 +144,7 @@ describe('useAppInitialization', () => {
       mockInitSessionHistory.mockImplementation(() => callOrder.push('initSessionHistory'));
       mockInitTerminal.mockImplementation(() => callOrder.push('initTerminal'));
       mockInitPlugin.mockImplementation(() => callOrder.push('initPlugin'));
+      mockInitSwarm.mockImplementation(() => callOrder.push('initSwarm'));
       mockConnectSocket.mockImplementation(() => {
         callOrder.push('connectSocket');
         return Promise.resolve();
@@ -150,7 +158,7 @@ describe('useAppInitialization', () => {
       const connectIndex = callOrder.indexOf('connectSocket');
       expect(connectIndex).toBeGreaterThan(-1);
 
-      // All 9 store inits must appear before connectSocket
+      // All 10 store inits must appear before connectSocket
       const storeInits = [
         'initConnection',
         'initSession',
@@ -161,6 +169,7 @@ describe('useAppInitialization', () => {
         'initSessionHistory',
         'initTerminal',
         'initPlugin',
+        'initSwarm',
       ];
       for (const init of storeInits) {
         const idx = callOrder.indexOf(init);
@@ -201,6 +210,7 @@ describe('useAppInitialization', () => {
       expect(mockCleanupSessionHistory).toHaveBeenCalledTimes(1);
       expect(mockCleanupTerminal).toHaveBeenCalledTimes(1);
       expect(mockCleanupPlugin).toHaveBeenCalledTimes(1);
+      expect(mockCleanupSwarm).toHaveBeenCalledTimes(1);
       expect(mockCleanupUpdate).toHaveBeenCalledTimes(1);
     });
   });

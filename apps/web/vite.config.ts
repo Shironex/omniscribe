@@ -57,6 +57,7 @@ export default defineConfig({
           if (/node_modules\/(react|react-dom)\//.test(id)) return 'vendor';
           if (id.includes('node_modules/@xterm/')) return 'xterm';
           if (id.includes('node_modules/@dnd-kit/')) return 'dndkit';
+          if (id.includes('node_modules/@xyflow/')) return 'xyflow';
           if (id.includes('node_modules/framer-motion/')) return 'framer-motion';
         },
       },

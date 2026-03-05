@@ -19,6 +19,7 @@ import { useSessionStore } from '@/stores/useSessionStore';
 import { useWorkspaceStore } from '@/stores/useWorkspaceStore';
 import { useSettingsStore } from '@/stores/useSettingsStore';
 import { useAppUIStore } from '@/stores/useAppUIStore';
+import { useSwarmStore } from '@/stores/useSwarmStore';
 import { DEFAULT_WORKTREE_SETTINGS } from '@omniscribe/shared';
 import { IS_ELECTRON } from '@/lib/platform';
 import { cn } from '@/lib/utils';
@@ -37,6 +38,12 @@ const LaunchPresetsModal = lazy(() =>
 const SessionHistoryPanel = lazy(() =>
   import('@/components/shared/SessionHistoryPanel').then(m => ({
     default: m.SessionHistoryPanel,
+  }))
+);
+const SwarmCanvas = lazy(() => import('@/components/swarm/SwarmCanvas'));
+const SwarmConfigModal = lazy(() =>
+  import('@/components/swarm/SwarmConfigModal').then(m => ({
+    default: m.SwarmConfigModal,
   }))
 );
 
@@ -109,6 +116,12 @@ function App() {
   const isHistoryOpen = useAppUIStore(state => state.isHistoryOpen);
   const isLaunchModalOpen = useAppUIStore(state => state.isLaunchModalOpen);
   const openLaunchModal = useAppUIStore(state => state.openLaunchModal);
+
+  // Swarm UI state
+  const isSwarmViewOpen = useAppUIStore(state => state.isSwarmViewOpen);
+  const isSwarmConfigOpen = useAppUIStore(state => state.isSwarmConfigOpen);
+  const closeSwarmConfig = useAppUIStore(state => state.closeSwarmConfig);
+  const activeSwarmId = useSwarmStore(state => state.activeSwarmId);
 
   // Settings modal open state (for lazy-load gating)
   const isSettingsOpen = useSettingsStore(state => state.isOpen);
@@ -241,6 +254,13 @@ function App() {
           ) : (
             <WelcomeView onOpenProject={handleSelectDirectory} onSelectProject={handleSelectTab} />
           )}
+
+          {/* Swarm graph overlay */}
+          {isSwarmViewOpen && activeSwarmId && (
+            <Suspense fallback={null}>
+              <SwarmCanvas swarmId={activeSwarmId} />
+            </Suspense>
+          )}
         </div>
 
         {/* Session History Panel */}
@@ -264,6 +284,17 @@ function App() {
           <LaunchPresetsModal
             projectPath={activeProjectPath}
             onCreateSessions={handleBatchAddSessions}
+          />
+        </Suspense>
+      )}
+
+      {isSwarmConfigOpen && (
+        <Suspense fallback={null}>
+          <SwarmConfigModal
+            open={isSwarmConfigOpen}
+            onOpenChange={open => {
+              if (!open) closeSwarmConfig();
+            }}
           />
         </Suspense>
       )}
