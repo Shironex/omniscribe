@@ -1,6 +1,6 @@
 import { Loader2, RefreshCw, Terminal, CheckCircle2, XCircle } from 'lucide-react';
 import { cn } from '@omniscribe/ui';
-import { PluginEvents } from '@omniscribe/shared';
+import { PluginEvents, type ProviderInfo } from '@omniscribe/shared';
 import { usePluginStore } from '@/stores/usePluginStore';
 import { emitAsync } from '@omniscribe/ui';
 import { CodexIcon } from './CodexIcon';
@@ -20,11 +20,11 @@ export function CodexSettingsSection() {
   const handleRefresh = async () => {
     // Re-fetch provider list to get fresh CLI status
     try {
-      const providers = await emitAsync<Record<string, never>, any[]>(
+      const data = await emitAsync<Record<string, never>, { providers: ProviderInfo[] }>(
         PluginEvents.LIST_PROVIDERS,
         {}
       );
-      usePluginStore.getState().setProviders(providers);
+      usePluginStore.getState().setProviders(data?.providers ?? []);
     } catch {
       // Refresh failed silently
     }

@@ -302,6 +302,10 @@ export const usePluginStore = create<PluginStore>()(
         // ==========================================
 
         setProviders: (providers: ProviderInfo[]) => {
+          if (!Array.isArray(providers)) {
+            logger.warn('setProviders called with non-array value, ignoring');
+            return;
+          }
           logger.debug('setProviders', providers.length, 'providers');
           set({ providers }, undefined, 'plugin/setProviders');
         },

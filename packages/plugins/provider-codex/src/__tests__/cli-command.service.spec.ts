@@ -233,14 +233,14 @@ describe('CodexCliCommandService', () => {
       expect(mockedExecFileSync).toHaveBeenCalledWith('which', ['codex'], expect.any(Object));
     });
 
-    it('should use "where" on Windows to find in PATH', () => {
+    it('should use "where" on Windows to find .cmd first', () => {
       mockPlatform.mockReturnValue('win32');
       mockedExecFileSync.mockReturnValue('C:\\Users\\test\\AppData\\Roaming\\npm\\codex.cmd\n');
 
       const config = service.buildLaunch({});
 
       expect(config.command).toBe('C:\\Users\\test\\AppData\\Roaming\\npm\\codex.cmd');
-      expect(mockedExecFileSync).toHaveBeenCalledWith('where', ['codex'], expect.any(Object));
+      expect(mockedExecFileSync).toHaveBeenCalledWith('where', ['codex.cmd'], expect.any(Object));
     });
 
     it('should pick the first line when where returns multiple results', () => {
@@ -252,20 +252,20 @@ describe('CodexCliCommandService', () => {
       expect(config.command).toBe('C:\\path1\\codex.cmd');
     });
 
-    it('should try .cmd and .exe extensions on Windows when bare command not found', () => {
+    it('should try .exe then bare command on Windows when .cmd not found', () => {
       mockPlatform.mockReturnValue('win32');
       mockHomedir.mockReturnValue('C:\\Users\\test');
 
       mockedExecFileSync
         .mockImplementationOnce(() => {
-          throw new Error('not found');
+          throw new Error('not found'); // codex.cmd not found
         })
-        .mockReturnValueOnce('C:\\npm\\codex.cmd\n');
+        .mockReturnValueOnce('C:\\npm\\codex.exe\n'); // codex.exe found
 
       const config = service.buildLaunch({});
 
-      expect(config.command).toBe('C:\\npm\\codex.cmd');
-      expect(mockedExecFileSync).toHaveBeenCalledWith('where', ['codex.cmd'], expect.any(Object));
+      expect(config.command).toBe('C:\\npm\\codex.exe');
+      expect(mockedExecFileSync).toHaveBeenCalledWith('where', ['codex.exe'], expect.any(Object));
     });
 
     it('should fall back to known paths when PATH lookup fails on linux', () => {

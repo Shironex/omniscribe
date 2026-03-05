@@ -54,7 +54,7 @@ export function IdleLandingView({
       >
         {/* Greeting */}
         <motion.div variants={animationVariants.slideUp} transition={transitions.spring}>
-          <p className="text-sm text-foreground-secondary mb-6">{greeting}</p>
+          <p className="text-sm text-foreground-secondary mb-6 text-center">{greeting}</p>
         </motion.div>
 
         {/* Icon */}
@@ -76,7 +76,9 @@ export function IdleLandingView({
 
         {/* Text */}
         <motion.div variants={animationVariants.slideUp} transition={transitions.spring}>
-          <h2 className="text-lg font-medium text-foreground mb-2">No Active Sessions</h2>
+          <h2 className="text-lg font-medium text-foreground mb-2 text-center">
+            No Active Sessions
+          </h2>
           <p className="text-sm text-foreground-secondary mb-8 text-center max-w-xs">
             Add sessions to start orchestrating your AI coding assistants
           </p>
