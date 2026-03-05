@@ -6,6 +6,8 @@ describe('loadEnvironmentConfig', () => {
     'OMNISCRIBE_PROJECT_HASH',
     'OMNISCRIBE_STATUS_URL',
     'OMNISCRIBE_INSTANCE_ID',
+    'OMNISCRIBE_SWARM_ID',
+    'OMNISCRIBE_SWARM_ROLE',
   ] as const;
 
   beforeEach(() => {
@@ -42,6 +44,8 @@ describe('loadEnvironmentConfig', () => {
       projectHash: 'hash-abc',
       statusUrl: 'http://localhost:3001/status',
       instanceId: 'instance-1',
+      swarmId: undefined,
+      swarmRole: undefined,
     });
   });
 
@@ -64,6 +68,8 @@ describe('isConfigured', () => {
       projectHash: undefined,
       statusUrl: 'http://localhost:3001/status',
       instanceId: 'instance-1',
+      swarmId: undefined,
+      swarmRole: undefined,
     };
 
     expect(isConfigured(config)).toBe(true);
@@ -75,6 +81,8 @@ describe('isConfigured', () => {
       projectHash: 'hash',
       statusUrl: 'http://localhost:3001/status',
       instanceId: 'instance-1',
+      swarmId: undefined,
+      swarmRole: undefined,
     };
 
     expect(isConfigured(config)).toBe(false);
@@ -86,6 +94,8 @@ describe('isConfigured', () => {
       projectHash: 'hash',
       statusUrl: undefined,
       instanceId: 'instance-1',
+      swarmId: undefined,
+      swarmRole: undefined,
     };
 
     expect(isConfigured(config)).toBe(false);
@@ -97,6 +107,8 @@ describe('isConfigured', () => {
       projectHash: 'hash',
       statusUrl: 'http://localhost:3001/status',
       instanceId: undefined,
+      swarmId: undefined,
+      swarmRole: undefined,
     };
 
     expect(isConfigured(config)).toBe(false);
@@ -108,6 +120,8 @@ describe('isConfigured', () => {
       projectHash: undefined,
       statusUrl: undefined,
       instanceId: undefined,
+      swarmId: undefined,
+      swarmRole: undefined,
     };
 
     expect(isConfigured(config)).toBe(false);

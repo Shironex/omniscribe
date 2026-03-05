@@ -46,13 +46,13 @@ describe('registerTools', () => {
   it('should register all tools', () => {
     registerTools(mockServer as any, deps);
 
-    expect(mockServer.registerTool).toHaveBeenCalledTimes(2);
+    expect(mockServer.registerTool).toHaveBeenCalledTimes(11);
   });
 
   it('should log the number of registered tools', () => {
     registerTools(mockServer as any, deps);
 
-    expect(deps.logger.info).toHaveBeenCalledWith('Registered 2 tools');
+    expect(deps.logger.info).toHaveBeenCalledWith('Registered 11 tools');
   });
 
   it('should register a callback that delegates to tool.execute', async () => {

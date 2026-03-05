@@ -7,12 +7,35 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { ToolConstructor, ToolDependencies } from './types.js';
 import { OmniscribeStatusTool } from './status/index.js';
 import { OmniscribeTasksTool } from './tasks/index.js';
+import {
+  SwarmGetAssignmentTool,
+  SwarmReportResultTool,
+  SwarmClaimFilesTool,
+  SwarmReleaseFilesTool,
+  SwarmSendMessageTool,
+  SwarmGetMessagesTool,
+  SwarmGetContextTool,
+  SwarmSpawnTeammateTool,
+  SwarmCreateTaskTool,
+} from './swarm/index.js';
 
 /**
  * All available tool constructors
  * Add new tools here to register them with the server
  */
-const TOOL_CONSTRUCTORS: ToolConstructor[] = [OmniscribeStatusTool, OmniscribeTasksTool];
+const TOOL_CONSTRUCTORS: ToolConstructor[] = [
+  OmniscribeStatusTool,
+  OmniscribeTasksTool,
+  SwarmGetAssignmentTool,
+  SwarmReportResultTool,
+  SwarmClaimFilesTool,
+  SwarmReleaseFilesTool,
+  SwarmSendMessageTool,
+  SwarmGetMessagesTool,
+  SwarmGetContextTool,
+  SwarmSpawnTeammateTool,
+  SwarmCreateTaskTool,
+];
 
 /**
  * Register all tools with the MCP server

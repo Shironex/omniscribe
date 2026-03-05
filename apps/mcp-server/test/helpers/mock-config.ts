@@ -6,6 +6,8 @@ export function createMockConfig(overrides: Partial<EnvironmentConfig> = {}): En
     projectHash: 'test-hash',
     statusUrl: 'http://127.0.0.1:3001/mcp/status',
     instanceId: 'test-instance',
+    swarmId: undefined,
+    swarmRole: undefined,
     ...overrides,
   };
 }

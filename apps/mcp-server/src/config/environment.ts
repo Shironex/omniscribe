@@ -11,6 +11,10 @@ export interface EnvironmentConfig {
   statusUrl: string | undefined;
   /** Omniscribe instance ID for validation */
   instanceId: string | undefined;
+  /** Swarm ID if this session is part of a swarm */
+  swarmId: string | undefined;
+  /** Swarm role assigned to this session */
+  swarmRole: string | undefined;
 }
 
 /**
@@ -22,6 +26,8 @@ export function loadEnvironmentConfig(): EnvironmentConfig {
     projectHash: process.env.OMNISCRIBE_PROJECT_HASH,
     statusUrl: process.env.OMNISCRIBE_STATUS_URL,
     instanceId: process.env.OMNISCRIBE_INSTANCE_ID,
+    swarmId: process.env.OMNISCRIBE_SWARM_ID,
+    swarmRole: process.env.OMNISCRIBE_SWARM_ROLE,
   };
 }
 
