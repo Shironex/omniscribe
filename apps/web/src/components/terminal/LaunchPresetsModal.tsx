@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -10,7 +10,7 @@ import { AiModeDropdown } from '@/components/shared/AiModeDropdown';
 import { GridPresetCard } from './GridPresetCard';
 import { useAppUIStore } from '@/stores/useAppUIStore';
 import { useGitStore, selectBranches, selectCurrentBranch } from '@/stores/useGitStore';
-import { useSessionStore, selectSessionsForProject } from '@/stores/useSessionStore';
+import { useSessionStore } from '@/stores/useSessionStore';
 import { useWorkspaceStore } from '@/stores/useWorkspaceStore';
 import { useDefaultAiMode } from '@/hooks/useDefaultAiMode';
 import { DEFAULT_WORKTREE_SETTINGS } from '@omniscribe/shared';
@@ -37,10 +37,12 @@ export function LaunchPresetsModal({ projectPath, onCreateSessions }: LaunchPres
 
   const { defaultAiMode } = useDefaultAiMode();
 
-  const sessionsForProject = useSessionStore(
-    projectPath ? selectSessionsForProject(projectPath) : () => []
+  const existingSessionCountSelector = useCallback(
+    (state: ReturnType<typeof useSessionStore.getState>) =>
+      projectPath ? state.sessions.filter(s => s.projectPath === projectPath).length : 0,
+    [projectPath]
   );
-  const existingSessionCount = sessionsForProject.length;
+  const existingSessionCount = useSessionStore(existingSessionCountSelector);
 
   const worktreeMode = useWorkspaceStore(
     state => (state.preferences.worktree ?? DEFAULT_WORKTREE_SETTINGS).mode
@@ -80,6 +82,7 @@ export function LaunchPresetsModal({ projectPath, onCreateSessions }: LaunchPres
       <DialogPortal>
         <DialogOverlay className="bg-black/60 backdrop-blur-xs" />
         <DialogPrimitive.Content
+          aria-describedby={undefined}
           className={cn(
             'fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%]',
             'w-full max-w-lg mx-4',

@@ -278,14 +278,14 @@ describe('ClaudeCliCommandService', () => {
       expect(mockedExecFileSync).toHaveBeenCalledWith('which', ['claude'], expect.any(Object));
     });
 
-    it('should use "where" on Windows to find in PATH', () => {
+    it('should use "where" on Windows to find .cmd first', () => {
       mockPlatform.mockReturnValue('win32');
       mockedExecFileSync.mockReturnValue('C:\\Users\\test\\AppData\\Roaming\\npm\\claude.cmd\n');
 
       const config = service.buildLaunch({});
 
       expect(config.command).toBe('C:\\Users\\test\\AppData\\Roaming\\npm\\claude.cmd');
-      expect(mockedExecFileSync).toHaveBeenCalledWith('where', ['claude'], expect.any(Object));
+      expect(mockedExecFileSync).toHaveBeenCalledWith('where', ['claude.cmd'], expect.any(Object));
     });
 
     it('should pick the first line when where returns multiple results', () => {
@@ -297,20 +297,31 @@ describe('ClaudeCliCommandService', () => {
       expect(config.command).toBe('C:\\path1\\claude.cmd');
     });
 
-    it('should try .cmd and .exe extensions on Windows when bare command not found', () => {
+    it('should try .cmd then .exe on Windows when .cmd is not found', () => {
       mockPlatform.mockReturnValue('win32');
       mockHomedir.mockReturnValue('C:\\Users\\test');
 
       mockedExecFileSync
         .mockImplementationOnce(() => {
-          throw new Error('not found');
+          throw new Error('not found'); // claude.cmd not found
         })
-        .mockReturnValueOnce('C:\\npm\\claude.cmd\n');
+        .mockReturnValueOnce('C:\\npm\\claude.exe\n'); // claude.exe found
 
       const config = service.buildLaunch({});
 
-      expect(config.command).toBe('C:\\npm\\claude.cmd');
-      expect(mockedExecFileSync).toHaveBeenCalledWith('where', ['claude.cmd'], expect.any(Object));
+      expect(config.command).toBe('C:\\npm\\claude.exe');
+      expect(mockedExecFileSync).toHaveBeenNthCalledWith(
+        1,
+        'where',
+        ['claude.cmd'],
+        expect.any(Object)
+      );
+      expect(mockedExecFileSync).toHaveBeenNthCalledWith(
+        2,
+        'where',
+        ['claude.exe'],
+        expect.any(Object)
+      );
     });
 
     it('should fall back to known paths when PATH lookup fails on linux', () => {

@@ -71,12 +71,9 @@ export function findCliCommandSync(
   knownPaths: string[],
   logger?: CliLogger
 ): string {
-  const pathResult = findInPathSync(command, logger);
-  if (pathResult) {
-    return pathResult;
-  }
-
-  // On Windows, also try with .cmd and .exe extensions
+  // On Windows, try .cmd and .exe extensions FIRST because `where <name>`
+  // may return an extensionless POSIX shell script (e.g. from npm) that
+  // Windows CreateProcess cannot execute.
   if (isWindows()) {
     const cmdResult = findInPathSync(`${command}.cmd`, logger);
     if (cmdResult) {
@@ -86,6 +83,11 @@ export function findCliCommandSync(
     if (exeResult) {
       return exeResult;
     }
+  }
+
+  const pathResult = findInPathSync(command, logger);
+  if (pathResult) {
+    return pathResult;
   }
 
   // Check known installation paths
@@ -143,8 +145,24 @@ export function findFirstExistingPath(paths: string[], logger?: CliLogger): stri
  * Uses `which` (Unix) or `where` (Windows) via execFile (no shell).
  */
 export async function findCliInPath(toolName: string): Promise<string | undefined> {
+  const whichCmd = isWindows() ? 'where' : 'which';
+
+  // On Windows, try .cmd and .exe first to avoid extensionless POSIX scripts
+  if (isWindows()) {
+    for (const ext of ['.cmd', '.exe']) {
+      try {
+        const { stdout } = await execFilePromise(whichCmd, [`${toolName}${ext}`], {
+          timeout: 5000,
+        });
+        const firstPath = stdout.trim().split(/\r?\n/)[0]?.trim();
+        if (firstPath) return firstPath;
+      } catch {
+        // Not found with this extension, continue
+      }
+    }
+  }
+
   try {
-    const whichCmd = isWindows() ? 'where' : 'which';
     const { stdout } = await execFilePromise(whichCmd, [toolName], { timeout: 5000 });
     const firstPath = stdout.trim().split(/\r?\n/)[0]?.trim();
     return firstPath || undefined;
