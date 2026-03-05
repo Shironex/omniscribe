@@ -2,6 +2,43 @@
 
 All notable changes to this project will be documented in this file.
 
+## 1.1.1 (2026-03-05)
+
+### Features
+
+- **Framer-motion animations** — Added smooth animations to settings modal, splash screen, idle landing, welcome view, and session history panel with improved settings modal loading UX (#237)
+
+### Bug Fixes
+
+- **Multiple UI bugs and Codex provider crash** — Fix Codex provider crash on Windows spawn failure, fix AI mode dropdown not reflecting provider state, and fix various UI spacing issues (#238)
+- **ESLint ignore patterns** — Update ESLint ignore patterns to exclude the release directory (#238)
+- **Vite build warnings** — Move `claude-paths` to node-only entry point in shared package to fix Vite build warnings about Node.js-only imports (#237)
+- **Frontend test failures** — Fix failing frontend tests for LaunchModal and SettingsModal after component refactors (#238)
+
+### Performance
+
+- **Eliminate barrel imports** — Remove barrel re-exports from hooks, stores, and components to enable proper tree-shaking and reduce bundle size (#232)
+- **React.lazy code splitting** — Lazy-load settings modal, launch presets modal, session history panel, and splash screen for faster initial render (#232)
+- **React.memo optimization** — Add `React.memo` to frequently re-rendered components, fix unstable default values, and optimize re-render paths (#233)
+- **Framer-motion vendor chunk** — Split framer-motion into its own vendor chunk for better caching (#237)
+
+### Refactoring
+
+- **Decompose App.tsx** — Extract `AppContent`, `AppShell`, `TerminalGridContext`, `AiModeDropdown`, `SessionActions` hook, and `SessionHistory` hook to eliminate prop drilling and component anti-patterns (#237)
+- **AppUIStore** — New Zustand store for transient UI state (modals, panels, dropdowns) previously managed via prop drilling (#237)
+- **Fix state management anti-patterns** — Replace `useEffect`-derived state with `useMemo`/`useSyncExternalStore`, fix unstable selectors, and standardize store subscription patterns (#236)
+
+### Dependencies
+
+- Upgrade ESLint to v10 (#223)
+- Align `@types/node` to ^25.3.0 across all packages (#222)
+- Combine safe dependency updates from Dependabot PRs (#222)
+
+### Stats
+
+- 7 PRs merged (20 commits)
+- 98 files changed — +3,008 / −2,293 lines
+
 ## 1.1.0 (2026-02-26)
 
 ### Features
