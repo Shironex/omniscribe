@@ -11,22 +11,111 @@ vi.mock('@/hooks/useClickOutside', () => ({
   useClickOutside: vi.fn(),
 }));
 
-// ─── Mock usePluginStore ────────────────────────────────────────────────────
-vi.mock('@/stores/usePluginStore', () => ({
-  usePluginStore: (sel: (s: Record<string, unknown>) => unknown) =>
-    sel({
-      statusRenderers: new Map(),
-      providers: [
-        {
-          id: 'provider-claude',
-          aiMode: 'claude',
-          displayName: 'Claude',
-          enabled: true,
-          activated: true,
-        },
-      ],
-    }),
+// ─── Mock AiModeDropdown (uses Radix Select which triggers jsdom loops) ──────
+vi.mock('@/components/shared/AiModeDropdown', () => ({
+  AiModeDropdown: ({ value }: { value: string }) => {
+    return <div data-testid="ai-mode-dropdown">{value === 'claude' ? 'Claude' : value}</div>;
+  },
 }));
+
+// ─── Mock Radix Dialog to avoid jsdom animation/compose-refs loop ────────────
+vi.mock('@radix-ui/react-dialog', () => {
+  const React = require('react') as typeof import('react');
+  const DialogCtx = React.createContext<{ onOpenChange?: (open: boolean) => void }>({});
+  const fwd = (name: string, el: string, extra?: Record<string, unknown>) => {
+    const C = React.forwardRef(
+      (
+        { children, asChild, ...props }: { children?: React.ReactNode; asChild?: boolean },
+        ref: React.Ref<HTMLElement>
+      ) => {
+        if (asChild && React.isValidElement(children)) {
+          return React.cloneElement(children, { ref, ...props });
+        }
+        return React.createElement(el, { ref, ...extra, ...props }, children);
+      }
+    );
+    C.displayName = name;
+    return C;
+  };
+  const Root = ({
+    open,
+    onOpenChange,
+    children,
+  }: {
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
+    children: React.ReactNode;
+  }) =>
+    open
+      ? React.createElement(
+          DialogCtx.Provider,
+          { value: { onOpenChange } },
+          React.createElement('div', { 'data-testid': 'dialog-root' }, children)
+        )
+      : null;
+  const Portal = ({ children }: { children: React.ReactNode }) =>
+    React.createElement(React.Fragment, null, children);
+  const Close = React.forwardRef(
+    (
+      {
+        children,
+        asChild,
+        ...props
+      }: { children?: React.ReactNode; asChild?: boolean; onClick?: () => void },
+      ref: React.Ref<HTMLElement>
+    ) => {
+      const { onOpenChange } = React.useContext(DialogCtx);
+      const handleClick = () => {
+        props.onClick?.();
+        onOpenChange?.(false);
+      };
+      if (asChild && React.isValidElement(children)) {
+        return React.cloneElement(children, { ref, ...props, onClick: handleClick });
+      }
+      return React.createElement('button', { ref, ...props, onClick: handleClick }, children);
+    }
+  );
+  Close.displayName = 'DialogClose';
+  return {
+    Root,
+    Portal,
+    Overlay: fwd('DialogOverlay', 'div', { 'data-testid': 'dialog-overlay' }),
+    Content: fwd('DialogContent', 'div'),
+    Title: fwd('DialogTitle', 'h2'),
+    Description: fwd('DialogDescription', 'p'),
+    Close,
+    Trigger: fwd('DialogTrigger', 'button'),
+  };
+});
+
+// ─── Mock useSessionStore selector to return stable references ───────────────
+const EMPTY_SESSIONS: never[] = [];
+vi.mock('@/stores/useSessionStore', async importOriginal => {
+  const actual = await importOriginal<typeof import('@/stores/useSessionStore')>();
+  return {
+    ...actual,
+    selectSessionsForProject: () => () => EMPTY_SESSIONS,
+  };
+});
+
+// ─── Mock usePluginStore ────────────────────────────────────────────────────
+vi.mock('@/stores/usePluginStore', async () => {
+  const { create } = await import('zustand');
+  const usePluginStore = create(() => ({
+    statusRenderers: new Map(),
+    themes: new Map(),
+    providers: [
+      {
+        id: 'provider-claude',
+        aiMode: 'claude',
+        displayName: 'Claude',
+        enabled: true,
+        activated: true,
+      },
+    ],
+  }));
+  return { usePluginStore, getPluginTheme: () => undefined };
+});
 
 // ─── Imports (after mocks) ───────────────────────────────────────────────────
 import { LaunchPresetsModal } from '../terminal/LaunchPresetsModal';

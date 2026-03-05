@@ -156,6 +156,7 @@ import { ReconnectionOverlay } from '../terminal/ReconnectionOverlay';
 import { BackpressureOverlay } from '../terminal/BackpressureOverlay';
 import { TaskListPopover } from '../terminal/TaskListPopover';
 import { SettingsModal } from '../settings/SettingsModal';
+import { SettingsModalShell } from '../settings/SettingsModalShell';
 import { UsagePopover } from '../shared/UsagePopover';
 import { TooltipProvider } from '@/components/ui/tooltip';
 
@@ -314,15 +315,22 @@ describe('SettingsModal', () => {
   });
 
   it('renders nothing when modal is closed', () => {
-    const { container } = render(<SettingsModal />);
+    render(
+      <SettingsModalShell>
+        <SettingsModal />
+      </SettingsModalShell>
+    );
     // Dialog should not render content when closed
     expect(screen.queryByText('Settings')).toBeNull();
-    expect(container.innerHTML).toBe('');
   });
 
   it('renders modal with Settings title when open', () => {
     mockSettingsState = { ...mockSettingsState, isOpen: true };
-    render(<SettingsModal />);
+    render(
+      <SettingsModalShell>
+        <SettingsModal />
+      </SettingsModalShell>
+    );
     expect(screen.getByText('Settings')).toBeTruthy();
   });
 
