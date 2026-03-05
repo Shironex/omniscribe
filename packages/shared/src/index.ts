@@ -28,6 +28,9 @@ export * from './types/usage';
 // Updater types
 export * from './types/updater';
 
+// Swarm types
+export * from './types/swarm';
+
 // Utilities
 export * from './utils';
 

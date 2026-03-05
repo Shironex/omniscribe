@@ -168,3 +168,25 @@ export const PluginEvents = {
   PROVIDER_ENABLED: 'plugin:provider-enabled',
   PROVIDER_ERROR: 'plugin:provider-error',
 } as const;
+
+// ============================================
+// Swarm Events
+// ============================================
+export const SwarmEvents = {
+  // Client -> Server (requests)
+  CREATE: 'swarm:create',
+  LIST: 'swarm:list',
+  GET: 'swarm:get',
+  CANCEL: 'swarm:cancel',
+  STOP_AGENT: 'swarm:stop-agent',
+
+  // Server -> Client (broadcasts)
+  CREATED: 'swarm:created',
+  STATUS: 'swarm:status',
+  AGENT_UPDATED: 'swarm:agent-updated',
+  TASK_UPDATED: 'swarm:task-updated',
+  MESSAGE: 'swarm:message',
+  COMPLETED: 'swarm:completed',
+  ERROR: 'swarm:error',
+  REMOVED: 'swarm:removed',
+} as const;

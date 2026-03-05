@@ -424,6 +424,8 @@ export interface SessionStatusUpdate {
   branch?: string;
   /** Worktree path (set after worktree setup) */
   worktreePath?: string;
+  /** Terminal session ID (set after terminal is spawned) */
+  terminalSessionId?: number;
 }
 
 // ============================================

@@ -29,6 +29,9 @@ export interface LaunchContext {
   /** Whether to skip permission prompts (provider-specific flag) */
   skipPermissions?: boolean;
 
+  /** Initial prompt/message to send (auto-starts the session without user input) */
+  initialPrompt?: string;
+
   /** Git branch name for context */
   branch?: string;
 

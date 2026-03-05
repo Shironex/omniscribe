@@ -101,6 +101,8 @@ export interface CreateSessionOptions {
   model?: string;
   systemPrompt?: string;
   mcpServers?: string[];
+  /** Initial prompt to auto-start the session (used by swarm agents) */
+  initialPrompt?: string;
 }
 
 /**
@@ -182,6 +184,8 @@ export interface ExtendedSessionConfig extends SessionConfig {
   claudeSessionId?: string;
   /** Whether this session was resumed from a previous Claude session */
   isResumed?: boolean;
+  /** Initial prompt to auto-start the session (used by swarm agents) */
+  initialPrompt?: string;
 }
 
 /**

@@ -165,3 +165,24 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   worktree: DEFAULT_WORKTREE_SETTINGS,
   session: DEFAULT_SESSION_SETTINGS,
 };
+
+// =============================================================================
+// Swarm
+// =============================================================================
+
+/** Maximum agents per swarm */
+export const MAX_SWARM_AGENTS = 6;
+
+/** Default swarm polling interval instruction (in system prompt) */
+export const SWARM_POLL_HINT_SECONDS = 30;
+
+/** Swarm task statuses */
+export const SWARM_TASK_STATUSES = [
+  'pending',
+  'blocked',
+  'assigned',
+  'in_progress',
+  'review',
+  'completed',
+  'failed',
+] as const;
