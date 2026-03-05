@@ -1,10 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject, forwardRef, Optional } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { AiMode, LaunchSessionResult, createLogger, extractErrorMessage } from '@omniscribe/shared';
 import type { AiProviderPlugin } from '@omniscribe/plugin-api';
 import { TerminalService } from '../terminal';
 import { McpWriterService, McpDiscoveryService } from '../mcp';
 import { PluginRegistryService } from '../plugin';
+import type { SwarmService } from '../swarm/swarm.service';
 import { CliCommandService } from './cli-command.service';
 import { ClaudeSessionTrackerService } from './claude-session-tracker.service';
 import { SessionService } from './session.service';
@@ -18,7 +19,7 @@ function hasSessionTracker(provider: AiProviderPlugin): provider is AiProviderPl
       previousSessionIds: Set<string>,
       maxPolls?: number,
       intervalMs?: number
-    ): Promise<string | null>;
+    ): Promise<{ sessionId: string } | null>;
   };
 } {
   return (
@@ -48,8 +49,32 @@ export class SessionLauncherService {
     private readonly cliCommandService: CliCommandService,
     private readonly claudeSessionTracker: ClaudeSessionTrackerService,
     private readonly pluginRegistry: PluginRegistryService,
-    private readonly eventEmitter: EventEmitter2
+    private readonly eventEmitter: EventEmitter2,
+    @Optional()
+    @Inject(forwardRef(() => require('../swarm/swarm.service').SwarmService))
+    private readonly swarmService: SwarmService | null
   ) {}
+
+  /** Look up swarm membership for a session and return env vars if applicable. */
+  private getSwarmEnvVars(sessionId: string): Record<string, string> {
+    if (!this.swarmService) return {};
+    try {
+      const swarms = this.swarmService.getSwarms();
+      for (const swarm of swarms) {
+        const agents = this.swarmService.getAgentsForSwarm(swarm.id);
+        const agent = agents.find(a => a.sessionId === sessionId);
+        if (agent) {
+          return {
+            OMNISCRIBE_SWARM_ID: swarm.id,
+            OMNISCRIBE_SWARM_ROLE: agent.role,
+          };
+        }
+      }
+    } catch {
+      this.logger.debug(`Could not look up swarm membership for session ${sessionId}`);
+    }
+    return {};
+  }
 
   /**
    * Launch a session by spawning the appropriate AI CLI in a terminal.
@@ -139,11 +164,13 @@ export class SessionLauncherService {
             // For Claude, we use the existing core MCP infrastructure
             const allServers = await this.mcpDiscoveryService.discoverServers(projectPath);
             this.logger.log(`Discovered ${allServers.length} MCP servers for session ${sessionId}`);
+            const swarmEnv = this.getSwarmEnvVars(sessionId);
             await this.mcpWriterService.writeConfig(
               worktreePath,
               sessionId,
               projectPath,
-              allServers
+              allServers,
+              swarmEnv
             );
             this.logger.log(`MCP config written to ${worktreePath}/.mcp.json`);
           }
@@ -208,6 +235,22 @@ export class SessionLauncherService {
 
       this.logger.log(`Session ${sessionId} launched with terminal ${terminalSessionId}`);
 
+      // Auto-submit initial prompt for swarm agents (fire-and-forget).
+      // Write to terminal stdin after a delay so the CLI has time to initialize.
+      // Text and Enter (\r) are sent separately — Claude CLI's TUI may
+      // swallow a trailing \r when it arrives in the same buffer as the text.
+      if (session.initialPrompt) {
+        const prompt = session.initialPrompt;
+        setTimeout(() => {
+          this.logger.log(`Writing initial prompt to session ${sessionId}`);
+          this.terminalService.write(terminalSessionId, prompt);
+          // Send Enter as a separate write after a brief delay
+          setTimeout(() => {
+            this.terminalService.write(terminalSessionId, '\r');
+          }, 500);
+        }, 3000);
+      }
+
       // Post-launch session tracking (fire-and-forget)
       if (shouldTrackSession && previousSessionIds) {
         const provider = this.pluginRegistry.getProvider(aiMode);
@@ -215,15 +258,18 @@ export class SessionLauncherService {
           const tracker = provider.getSessionTracker();
           // Fire-and-forget: polls for new session, emits event when found
           tracker.pollForNewSession(projectPath, previousSessionIds).then(
-            (newSessionId: string | null) => {
-              if (newSessionId) {
-                this.sessionService.setClaudeSessionId(sessionId, newSessionId);
-                this.logger.info(`Captured provider session ID for ${sessionId}: ${newSessionId}`);
+            (entry: { sessionId: string } | null) => {
+              if (entry) {
+                const providerSessionId = entry.sessionId;
+                this.sessionService.setClaudeSessionId(sessionId, providerSessionId);
+                this.logger.info(
+                  `Captured provider session ID for ${sessionId}: ${providerSessionId}`
+                );
 
                 // Emit event so gateway broadcasts to frontend AND tracker persists snapshot
                 this.eventEmitter.emit(InternalSessionEvents.CLAUDE_ID_CAPTURED, {
                   sessionId,
-                  claudeSessionId: newSessionId,
+                  claudeSessionId: providerSessionId,
                 });
 
                 // Eagerly update the active sessions snapshot

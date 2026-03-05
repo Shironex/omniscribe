@@ -1,4 +1,5 @@
-import { Injectable, OnModuleInit, OnModuleDestroy, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import { ModuleRef } from '@nestjs/core';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import * as http from 'http';
 import * as crypto from 'crypto';
@@ -10,10 +11,23 @@ import {
   TasksPayload,
   SessionStatusState,
   SessionTasksUpdate,
+  SwarmGetAssignmentPayload,
+  SwarmReportResultPayload,
+  SwarmClaimFilesPayload,
+  SwarmReleaseFilesPayload,
+  SwarmSendMessagePayload,
+  SwarmGetMessagesPayload,
+  SwarmGetContextPayload,
+  SwarmSpawnTeammatePayload,
+  SwarmCreateTaskPayload,
   createLogger,
+  extractErrorMessage,
 } from '@omniscribe/shared';
 import { InternalSessionEvents } from '../shared/events';
 import { McpSessionRegistryService } from './services/mcp-session-registry.service';
+import type { SwarmService } from '../swarm/swarm.service';
+import type { SwarmTaskService } from '../swarm/swarm-task.service';
+import type { SwarmMessagingService } from '../swarm/swarm-messaging.service';
 
 /**
  * Session status event emitted for UI updates
@@ -48,10 +62,20 @@ export class McpStatusServerService implements OnModuleInit, OnModuleDestroy {
   /** Unique instance ID for this Omniscribe instance */
   private readonly instanceId: string;
 
+  /** Lazily resolved swarm services (avoids circular McpModule ↔ SwarmModule dep) */
+  private swarmService!: SwarmService;
+  private swarmTaskService!: SwarmTaskService;
+  private swarmMessagingService!: SwarmMessagingService;
+
+  /** Sessions whose MCP server has reported in at least once */
+  private mcpReadySessions = new Set<string>();
+  /** Pending waiters for MCP readiness (used to serialize swarm spawning) */
+  private mcpReadyWaiters = new Map<string, Array<() => void>>();
+
   constructor(
     private readonly eventEmitter: EventEmitter2,
-    @Inject(forwardRef(() => McpSessionRegistryService))
-    private readonly sessionRegistry: McpSessionRegistryService
+    private readonly sessionRegistry: McpSessionRegistryService,
+    private readonly moduleRef: ModuleRef
   ) {
     // Generate unique instance ID on startup
     this.instanceId = crypto.randomUUID();
@@ -59,6 +83,17 @@ export class McpStatusServerService implements OnModuleInit, OnModuleDestroy {
 
   async onModuleInit(): Promise<void> {
     this.logger.log('Initializing...');
+
+    // Lazily resolve swarm services to avoid circular module dependency
+    // (McpModule ↔ SwarmModule). By the time onModuleInit runs all
+    // providers are registered, so moduleRef.get() is safe here.
+    const { SwarmService } = await import('../swarm/swarm.service');
+    const { SwarmTaskService } = await import('../swarm/swarm-task.service');
+    const { SwarmMessagingService } = await import('../swarm/swarm-messaging.service');
+    this.swarmService = this.moduleRef.get(SwarmService, { strict: false });
+    this.swarmTaskService = this.moduleRef.get(SwarmTaskService, { strict: false });
+    this.swarmMessagingService = this.moduleRef.get(SwarmMessagingService, { strict: false });
+
     await this.startServer();
     this.logger.log('Initialization complete');
   }
@@ -190,6 +225,33 @@ export class McpStatusServerService implements OnModuleInit, OnModuleDestroy {
           case '/tasks':
             this.handleTasksUpdate(payload as TasksPayload, res);
             break;
+          case '/swarm/get-assignment':
+            this.handleSwarmGetAssignment(payload as SwarmGetAssignmentPayload, res);
+            break;
+          case '/swarm/report-result':
+            this.handleSwarmReportResult(payload as SwarmReportResultPayload, res);
+            break;
+          case '/swarm/claim-files':
+            this.handleSwarmClaimFiles(payload as SwarmClaimFilesPayload, res);
+            break;
+          case '/swarm/release-files':
+            this.handleSwarmReleaseFiles(payload as SwarmReleaseFilesPayload, res);
+            break;
+          case '/swarm/send-message':
+            this.handleSwarmSendMessage(payload as SwarmSendMessagePayload, res);
+            break;
+          case '/swarm/get-messages':
+            this.handleSwarmGetMessages(payload as SwarmGetMessagesPayload, res);
+            break;
+          case '/swarm/get-context':
+            this.handleSwarmGetContext(payload as SwarmGetContextPayload, res);
+            break;
+          case '/swarm/spawn-teammate':
+            this.handleSwarmSpawnTeammate(payload as SwarmSpawnTeammatePayload, res);
+            break;
+          case '/swarm/create-task':
+            this.handleSwarmCreateTask(payload as SwarmCreateTaskPayload, res);
+            break;
           default:
             res.writeHead(404, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ error: 'Not found' }));
@@ -237,6 +299,9 @@ export class McpStatusServerService implements OnModuleInit, OnModuleDestroy {
       res.end(JSON.stringify({ accepted: false, reason: 'unknown_session' }));
       return;
     }
+
+    // Mark session as MCP-ready (used for swarm spawn serialization)
+    this.markSessionMcpReady(payload.sessionId);
 
     this.logger.debug(`EMITTING: session=${payload.sessionId} status=${payload.state}`);
 
@@ -289,6 +354,308 @@ export class McpStatusServerService implements OnModuleInit, OnModuleDestroy {
 
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ accepted: true }));
+  }
+
+  /**
+   * Validate a swarm request: check instanceId, sessionId registration, and swarm membership.
+   * Returns the agentId if valid, or writes an error response and returns null.
+   */
+  private validateSwarmRequest(
+    payload: { sessionId: string; instanceId: string; swarmId: string },
+    res: http.ServerResponse
+  ): { id: string; role: string } | null {
+    // Validate instance ID
+    if (payload.instanceId !== this.instanceId) {
+      this.logger.debug(`REJECTED swarm request - wrong instance`);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ accepted: false, reason: 'instance_mismatch' }));
+      return null;
+    }
+
+    // Check if this session is registered
+    const projectPath = this.sessionRegistry.getProjectPath(payload.sessionId);
+    if (!projectPath) {
+      this.logger.debug(`REJECTED swarm request - unknown session ${payload.sessionId}`);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ accepted: false, reason: 'unknown_session' }));
+      return null;
+    }
+
+    // Validate session belongs to the specified swarm
+    const agents = this.swarmService.getAgentsForSwarm(payload.swarmId);
+    const agent = agents.find(a => a.sessionId === payload.sessionId);
+    if (!agent) {
+      this.logger.debug(
+        `REJECTED swarm request - session ${payload.sessionId} not in swarm ${payload.swarmId}`
+      );
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Session is not a member of the specified swarm' }));
+      return null;
+    }
+
+    return agent;
+  }
+
+  /**
+   * Handle swarm get-assignment request
+   */
+  private handleSwarmGetAssignment(
+    payload: SwarmGetAssignmentPayload,
+    res: http.ServerResponse
+  ): void {
+    const agent = this.validateSwarmRequest(payload, res);
+    if (!agent) return;
+    const agentId = agent.id;
+
+    try {
+      const task = this.swarmTaskService.getAssignment(payload.swarmId, agentId, agent.role);
+      // Update the agent's assignedTaskIds so the frontend reflects the count
+      if (task) {
+        this.swarmService.addTaskToAgent(payload.swarmId, agentId, task.id);
+      }
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ accepted: true, task }));
+    } catch (error) {
+      this.logger.error(`Error in swarm/get-assignment: ${extractErrorMessage(error)}`);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: extractErrorMessage(error) }));
+    }
+  }
+
+  /**
+   * Handle swarm report-result request
+   */
+  private handleSwarmReportResult(
+    payload: SwarmReportResultPayload,
+    res: http.ServerResponse
+  ): void {
+    const agent = this.validateSwarmRequest(payload, res);
+    if (!agent) return;
+
+    try {
+      const task = this.swarmTaskService.reportResult(
+        payload.swarmId,
+        payload.taskId,
+        payload.result,
+        payload.status
+      );
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ accepted: true, task }));
+    } catch (error) {
+      this.logger.error(`Error in swarm/report-result: ${extractErrorMessage(error)}`);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: extractErrorMessage(error) }));
+    }
+  }
+
+  /**
+   * Handle swarm claim-files request
+   */
+  private handleSwarmClaimFiles(payload: SwarmClaimFilesPayload, res: http.ServerResponse): void {
+    const agent = this.validateSwarmRequest(payload, res);
+    if (!agent) return;
+    const agentId = agent.id;
+
+    try {
+      const result = this.swarmTaskService.claimFiles(payload.swarmId, agentId, payload.files);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ accepted: true, ...result }));
+    } catch (error) {
+      this.logger.error(`Error in swarm/claim-files: ${extractErrorMessage(error)}`);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: extractErrorMessage(error) }));
+    }
+  }
+
+  /**
+   * Handle swarm release-files request
+   */
+  private handleSwarmReleaseFiles(
+    payload: SwarmReleaseFilesPayload,
+    res: http.ServerResponse
+  ): void {
+    const agent = this.validateSwarmRequest(payload, res);
+    if (!agent) return;
+    const agentId = agent.id;
+
+    try {
+      this.swarmTaskService.releaseFiles(payload.swarmId, agentId, payload.files);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ accepted: true }));
+    } catch (error) {
+      this.logger.error(`Error in swarm/release-files: ${extractErrorMessage(error)}`);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: extractErrorMessage(error) }));
+    }
+  }
+
+  /**
+   * Handle swarm send-message request
+   */
+  private handleSwarmSendMessage(payload: SwarmSendMessagePayload, res: http.ServerResponse): void {
+    const agent = this.validateSwarmRequest(payload, res);
+    if (!agent) return;
+    const agentId = agent.id;
+
+    try {
+      const message = this.swarmMessagingService.sendMessage(
+        payload.swarmId,
+        agentId,
+        payload.toAgentId,
+        payload.content,
+        payload.type
+      );
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ accepted: true, message }));
+    } catch (error) {
+      this.logger.error(`Error in swarm/send-message: ${extractErrorMessage(error)}`);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: extractErrorMessage(error) }));
+    }
+  }
+
+  /**
+   * Handle swarm get-messages request
+   */
+  private handleSwarmGetMessages(payload: SwarmGetMessagesPayload, res: http.ServerResponse): void {
+    const agent = this.validateSwarmRequest(payload, res);
+    if (!agent) return;
+    const agentId = agent.id;
+
+    try {
+      const messages = this.swarmMessagingService.getMessages(payload.swarmId, agentId);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ accepted: true, messages }));
+    } catch (error) {
+      this.logger.error(`Error in swarm/get-messages: ${extractErrorMessage(error)}`);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: extractErrorMessage(error) }));
+    }
+  }
+
+  /**
+   * Handle swarm get-context request
+   */
+  private handleSwarmGetContext(payload: SwarmGetContextPayload, res: http.ServerResponse): void {
+    const agent = this.validateSwarmRequest(payload, res);
+    if (!agent) return;
+
+    try {
+      const context = this.swarmService.getSwarmContext(payload.swarmId);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ accepted: true, ...context }));
+    } catch (error) {
+      this.logger.error(`Error in swarm/get-context: ${extractErrorMessage(error)}`);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: extractErrorMessage(error) }));
+    }
+  }
+
+  /**
+   * Handle swarm spawn-teammate request
+   */
+  private async handleSwarmSpawnTeammate(
+    payload: SwarmSpawnTeammatePayload,
+    res: http.ServerResponse
+  ): Promise<void> {
+    const agent = this.validateSwarmRequest(payload, res);
+    if (!agent) return;
+
+    // Only the lead agent can spawn teammates
+    if (agent.role !== 'lead') {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Only the lead agent can spawn teammates' }));
+      return;
+    }
+
+    try {
+      const teammate = await this.swarmService.spawnTeammate(
+        payload.swarmId,
+        payload.role,
+        payload.taskDescription
+      );
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ accepted: true, agent: teammate }));
+    } catch (error) {
+      this.logger.error(`Error in swarm/spawn-teammate: ${extractErrorMessage(error)}`);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: extractErrorMessage(error) }));
+    }
+  }
+
+  /**
+   * Handle swarm create-task request
+   */
+  private handleSwarmCreateTask(payload: SwarmCreateTaskPayload, res: http.ServerResponse): void {
+    const agent = this.validateSwarmRequest(payload, res);
+    if (!agent) return;
+
+    // Only the lead agent can create tasks
+    if (agent.role !== 'lead') {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Only the lead agent can create tasks' }));
+      return;
+    }
+
+    try {
+      const task = this.swarmTaskService.createTask(payload.swarmId, {
+        subject: payload.subject,
+        description: payload.description,
+        assignedRole: payload.assignedRole,
+        dependsOn: payload.dependsOn,
+      });
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ accepted: true, task }));
+    } catch (error) {
+      this.logger.error(`Error in swarm/create-task: ${extractErrorMessage(error)}`);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: extractErrorMessage(error) }));
+    }
+  }
+
+  /**
+   * Wait for a session's MCP server to report in for the first time.
+   * Used to serialize swarm agent spawning — ensures .mcp.json has been
+   * read before the next agent can overwrite it.
+   */
+  async waitForSessionMcpReady(sessionId: string, timeoutMs = 15000): Promise<boolean> {
+    if (this.mcpReadySessions.has(sessionId)) return true;
+
+    return new Promise<boolean>(resolve => {
+      const resolveWaiter = () => {
+        clearTimeout(timeout);
+        resolve(true);
+      };
+
+      const timeout = setTimeout(() => {
+        const waiters = this.mcpReadyWaiters.get(sessionId);
+        if (waiters) {
+          const idx = waiters.indexOf(resolveWaiter);
+          if (idx >= 0) waiters.splice(idx, 1);
+          if (waiters.length === 0) this.mcpReadyWaiters.delete(sessionId);
+        }
+        this.logger.warn(`Timed out waiting for MCP ready from session ${sessionId}`);
+        resolve(false);
+      }, timeoutMs);
+
+      const waiters = this.mcpReadyWaiters.get(sessionId) ?? [];
+      waiters.push(resolveWaiter);
+      this.mcpReadyWaiters.set(sessionId, waiters);
+    });
+  }
+
+  /**
+   * Mark a session's MCP server as ready (has reported in at least once).
+   */
+  private markSessionMcpReady(sessionId: string): void {
+    if (this.mcpReadySessions.has(sessionId)) return;
+    this.mcpReadySessions.add(sessionId);
+
+    const waiters = this.mcpReadyWaiters.get(sessionId);
+    if (waiters) {
+      waiters.forEach(resolve => resolve());
+      this.mcpReadyWaiters.delete(sessionId);
+    }
   }
 
   /**

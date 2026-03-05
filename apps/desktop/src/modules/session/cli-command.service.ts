@@ -18,6 +18,8 @@ export interface CliSessionContext {
   forkSessionId?: string;
   /** Whether to continue the most recent session (passes --continue flag) */
   continueLastSession?: boolean;
+  /** Initial prompt to auto-start the session (used by swarm agents) */
+  initialPrompt?: string;
   // --- Added for plugin LaunchContext population ---
   /** Omniscribe session identifier */
   sessionId?: string;
@@ -108,6 +110,7 @@ export class CliCommandService {
       model: session.model,
       systemPrompt: session.systemPrompt,
       skipPermissions: session.skipPermissions,
+      initialPrompt: session.initialPrompt,
     };
 
     let cmdConfig: CliCommandConfig;

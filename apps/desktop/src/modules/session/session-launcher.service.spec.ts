@@ -151,7 +151,8 @@ describe('SessionLauncherService', () => {
         '/worktree',
         session.id,
         '/project',
-        []
+        [],
+        {}
       );
       expect(terminalService.spawnCommand).toHaveBeenCalledWith(
         'claude',
@@ -247,7 +248,8 @@ describe('SessionLauncherService', () => {
         '/worktree',
         session.id,
         '/project',
-        []
+        [],
+        {}
       );
     });
 
@@ -307,7 +309,7 @@ describe('SessionLauncherService', () => {
         { sessionId: 'old-2' },
       ]);
       mockProvider.getSessionTracker.mockReturnValue({
-        pollForNewSession: jest.fn().mockResolvedValue('new-session-id'),
+        pollForNewSession: jest.fn().mockResolvedValue({ sessionId: 'new-session-id' }),
       });
 
       await service.launchSession(session.id, '/project', '/worktree', 'claude');

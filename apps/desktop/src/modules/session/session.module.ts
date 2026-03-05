@@ -3,6 +3,7 @@ import { TerminalModule } from '../terminal';
 import { McpModule } from '../mcp';
 import { GitModule } from '../git';
 import { WorkspaceModule } from '../workspace';
+import { SwarmModule } from '../swarm/swarm.module';
 import { SessionService } from './session.service';
 import { SessionLauncherService } from './session-launcher.service';
 import { ClaudeSessionTrackerService } from './claude-session-tracker.service';
@@ -10,7 +11,13 @@ import { SessionGateway } from './session.gateway';
 import { CliCommandService } from './cli-command.service';
 
 @Module({
-  imports: [TerminalModule, McpModule, GitModule, forwardRef(() => WorkspaceModule)],
+  imports: [
+    TerminalModule,
+    McpModule,
+    GitModule,
+    forwardRef(() => WorkspaceModule),
+    forwardRef(() => SwarmModule),
+  ],
   providers: [
     CliCommandService,
     SessionService,
@@ -18,6 +25,6 @@ import { CliCommandService } from './cli-command.service';
     SessionLauncherService,
     SessionGateway,
   ],
-  exports: [SessionService, CliCommandService],
+  exports: [SessionService, SessionLauncherService, CliCommandService],
 })
 export class SessionModule {}

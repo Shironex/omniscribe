@@ -67,3 +67,16 @@ export const InternalPluginEvents = {
   /** Wildcard for all plugin events */
   ALL: 'plugin.**' as const,
 } as const;
+
+// ============================================
+// Swarm Internal Events
+// ============================================
+export const InternalSwarmEvents = {
+  CREATED: 'swarm.created',
+  STATUS: 'swarm.status',
+  AGENT_UPDATED: 'swarm.agent.updated',
+  TASK_UPDATED: 'swarm.task.updated',
+  MESSAGE: 'swarm.message',
+  COMPLETED: 'swarm.completed',
+  SPAWN_TEAMMATE: 'swarm.spawn-teammate',
+} as const;

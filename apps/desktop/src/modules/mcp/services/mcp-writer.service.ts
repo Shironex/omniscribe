@@ -75,13 +75,15 @@ export class McpWriterService implements OnModuleDestroy {
    * @param sessionId Session identifier
    * @param projectPath Original project path
    * @param servers Array of MCP server configurations to include
+   * @param swarmEnv Optional env vars for swarm sessions (OMNISCRIBE_SWARM_ID, OMNISCRIBE_SWARM_ROLE)
    * @returns Path to the written config file
    */
   async writeConfig(
     workingDir: string,
     sessionId: string,
     projectPath: string,
-    servers: McpServerConfig[]
+    servers: McpServerConfig[],
+    swarmEnv?: Record<string, string>
   ): Promise<string> {
     this.logger.debug(`[writeConfig] workingDir=${workingDir}, sessionId=${sessionId}`);
     const configPath = path.join(workingDir, '.mcp.json');
@@ -110,6 +112,7 @@ export class McpWriterService implements OnModuleDestroy {
             OMNISCRIBE_PROJECT_HASH: projectHash,
             ...(statusUrl ? { OMNISCRIBE_STATUS_URL: statusUrl } : {}),
             ...(instanceId ? { OMNISCRIBE_INSTANCE_ID: instanceId } : {}),
+            ...(swarmEnv ?? {}),
           },
         };
       }

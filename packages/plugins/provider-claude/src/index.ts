@@ -21,7 +21,11 @@ export { ClaudeSessionTrackerService } from './services/session-tracker.service'
 export { ClaudeUsageFetcherService } from './services/usage-fetcher.service';
 export { ClaudeUsageParserService } from './services/usage-parser.service';
 export { ClaudeStatusParserService } from './services/status-parser.service';
-export { OMNISCRIBE_SYSTEM_PROMPT, getSystemPromptAdditions } from './services/system-prompt';
+export {
+  OMNISCRIBE_SYSTEM_PROMPT,
+  getSystemPromptAdditions,
+  getSwarmSystemPrompt,
+} from './services/system-prompt';
 
 // Types
 export * from './types';

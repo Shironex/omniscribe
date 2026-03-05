@@ -1,8 +1,38 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { ModuleRef } from '@nestjs/core';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { McpStatusServerService } from './mcp-status-server.service';
 import { McpSessionRegistryService } from './services/mcp-session-registry.service';
 import * as http from 'http';
+
+// Mock swarm modules to prevent transitive electron-store import chain
+// and provide the class tokens for ModuleRef.get()
+const mockSwarmService = {
+  getAgentsForSwarm: jest.fn().mockReturnValue([]),
+  getSwarmContext: jest.fn(),
+  spawnTeammate: jest.fn(),
+};
+const mockSwarmTaskService = {
+  getAssignment: jest.fn(),
+  reportResult: jest.fn(),
+  claimFiles: jest.fn(),
+  releaseFiles: jest.fn(),
+  createTask: jest.fn(),
+};
+const mockSwarmMessagingService = {
+  sendMessage: jest.fn(),
+  getMessages: jest.fn(),
+};
+
+jest.mock('../swarm/swarm.service', () => ({
+  SwarmService: class MockSwarmService {},
+}));
+jest.mock('../swarm/swarm-task.service', () => ({
+  SwarmTaskService: class MockSwarmTaskService {},
+}));
+jest.mock('../swarm/swarm-messaging.service', () => ({
+  SwarmMessagingService: class MockSwarmMessagingService {},
+}));
 
 // Mock only crypto.randomUUID while keeping the rest of crypto intact
 // (NestJS uses crypto.createHash internally for module tokens)
@@ -37,6 +67,21 @@ const httpModule = http as unknown as {
   };
 };
 
+/** Helper: creates a mock ModuleRef that returns our swarm service mocks */
+function createMockModuleRef() {
+  return {
+    get: jest.fn((token: unknown) => {
+      const { SwarmService } = jest.requireMock('../swarm/swarm.service');
+      const { SwarmTaskService } = jest.requireMock('../swarm/swarm-task.service');
+      const { SwarmMessagingService } = jest.requireMock('../swarm/swarm-messaging.service');
+      if (token === SwarmService) return mockSwarmService;
+      if (token === SwarmTaskService) return mockSwarmTaskService;
+      if (token === SwarmMessagingService) return mockSwarmMessagingService;
+      return undefined;
+    }),
+  } as unknown as jest.Mocked<ModuleRef>;
+}
+
 describe('McpStatusServerService', () => {
   let service: McpStatusServerService;
   let eventEmitter: jest.Mocked<EventEmitter2>;
@@ -52,6 +97,18 @@ describe('McpStatusServerService', () => {
       getRegisteredSessions: jest.fn().mockReturnValue([]),
     } as unknown as jest.Mocked<McpSessionRegistryService>;
 
+    // Reset swarm mocks
+    mockSwarmService.getAgentsForSwarm.mockReturnValue([]);
+    mockSwarmService.getSwarmContext.mockReset();
+    mockSwarmService.spawnTeammate.mockReset();
+    mockSwarmTaskService.getAssignment.mockReset();
+    mockSwarmTaskService.reportResult.mockReset();
+    mockSwarmTaskService.claimFiles.mockReset();
+    mockSwarmTaskService.releaseFiles.mockReset();
+    mockSwarmTaskService.createTask.mockReset();
+    mockSwarmMessagingService.sendMessage.mockReset();
+    mockSwarmMessagingService.getMessages.mockReset();
+
     // Reset mocks
     httpModule.createServer.mockClear();
     httpModule.__mockServer.listen.mockClear();
@@ -64,6 +121,7 @@ describe('McpStatusServerService', () => {
         McpStatusServerService,
         { provide: EventEmitter2, useValue: eventEmitter },
         { provide: McpSessionRegistryService, useValue: sessionRegistry },
+        { provide: ModuleRef, useValue: createMockModuleRef() },
       ],
     }).compile();
 
@@ -139,6 +197,18 @@ describe('McpStatusServerService - Request Handling', () => {
       getRegisteredSessions: jest.fn().mockReturnValue([]),
     } as unknown as jest.Mocked<McpSessionRegistryService>;
 
+    // Reset swarm mocks
+    mockSwarmService.getAgentsForSwarm.mockReturnValue([]);
+    mockSwarmService.getSwarmContext.mockReset();
+    mockSwarmService.spawnTeammate.mockReset();
+    mockSwarmTaskService.getAssignment.mockReset();
+    mockSwarmTaskService.reportResult.mockReset();
+    mockSwarmTaskService.claimFiles.mockReset();
+    mockSwarmTaskService.releaseFiles.mockReset();
+    mockSwarmTaskService.createTask.mockReset();
+    mockSwarmMessagingService.sendMessage.mockReset();
+    mockSwarmMessagingService.getMessages.mockReset();
+
     mainServer = {
       listen: jest.fn(),
       close: jest.fn(),
@@ -195,6 +265,7 @@ describe('McpStatusServerService - Request Handling', () => {
         McpStatusServerService,
         { provide: EventEmitter2, useValue: eventEmitter },
         { provide: McpSessionRegistryService, useValue: sessionRegistry },
+        { provide: ModuleRef, useValue: createMockModuleRef() },
       ],
     }).compile();
 

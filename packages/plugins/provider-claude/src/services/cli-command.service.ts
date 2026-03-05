@@ -49,6 +49,11 @@ export class ClaudeCliCommandService {
 
     args.push('--append-system-prompt', OMNISCRIBE_SYSTEM_PROMPT);
 
+    // NOTE: initialPrompt is NOT passed via -p flag because -p runs in
+    // non-interactive print mode (process prompt → exit). Swarm agents need
+    // to stay alive in interactive mode. Instead, session-launcher writes
+    // the initial prompt to the terminal stdin after spawn.
+
     const command = this.resolveClaudeCommand();
     return { command, args };
   }

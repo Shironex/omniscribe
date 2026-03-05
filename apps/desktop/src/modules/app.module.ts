@@ -8,6 +8,7 @@ import { GitModule } from './git';
 import { McpModule } from './mcp';
 import { UsageModule } from './usage';
 import { HealthModule } from './health';
+import { SwarmModule } from './swarm';
 import { PluginModule } from './plugin';
 import { ClaudeProviderPlugin } from '@omniscribe/provider-claude';
 import { CodexProviderPlugin } from '@omniscribe/provider-codex';
@@ -62,6 +63,7 @@ import { CodexProviderPlugin } from '@omniscribe/provider-codex';
     TerminalModule,
     WorkspaceModule,
     SessionModule,
+    SwarmModule,
     GitModule,
     McpModule,
     UsageModule,

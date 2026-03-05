@@ -220,6 +220,8 @@ export class SessionService {
       forkSessionId: options?.forkSessionId,
       // Continue-last field
       continueLastSession: options?.continueLastSession,
+      // Initial prompt (swarm sessions auto-start)
+      initialPrompt: options?.initialPrompt,
     };
 
     this.sessions.set(id, session);
@@ -254,9 +256,9 @@ export class SessionService {
       return undefined;
     }
 
-    // Validate state transition
+    // Validate state transition (allow same-status updates for metadata changes like terminalSessionId)
     const validTargets = VALID_TRANSITIONS[session.status];
-    if (validTargets && !validTargets.has(status)) {
+    if (validTargets && !validTargets.has(status) && session.status !== status) {
       this.logger.warn(
         `Invalid session status transition for ${sessionId}: ${session.status} -> ${status}`
       );
@@ -560,6 +562,17 @@ export class SessionService {
       this.terminalToSession.set(terminalSessionId, session.id);
       session.worktreePath = worktreePath;
       session.lastActiveAt = new Date();
+
+      // Notify frontend about the terminal ID so it can connect.
+      // This is essential for swarm sessions where the CREATED event fires
+      // before launchSession() runs (so terminalSessionId is initially undefined).
+      this.eventEmitter.emit(InternalSessionEvents.STATUS, {
+        sessionId,
+        status: session.status,
+        message: session.statusMessage,
+        terminalSessionId,
+        worktreePath,
+      });
     }
   }
 
