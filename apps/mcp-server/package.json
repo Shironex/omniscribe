@@ -22,15 +22,15 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.27.1",
     "@omniscribe/shared": "workspace:*",
-    "zod": "^4.0.0"
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/jest": "^30.0.0",
-    "@types/node": "^25.3.0",
-    "esbuild": "^0.27.2",
-    "jest": "^30.0.0",
-    "ts-jest": "^29.4.0",
-    "typescript": "^5.5.0"
+    "@types/node": "^25.3.5",
+    "esbuild": "^0.27.3",
+    "jest": "^30.2.0",
+    "ts-jest": "^29.4.6",
+    "typescript": "^5.9.3"
   },
   "engines": {
     "node": ">=22.0.0"

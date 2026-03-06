@@ -1,5 +1,5 @@
 import { X, RefreshCw, PlayCircle } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/lib/utils';
 import { animationVariants, transitions } from '@/lib/animations';
 import { Button } from '@/components/ui/button';

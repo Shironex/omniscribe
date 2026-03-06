@@ -1,4 +1,4 @@
-import type { Variants, Transition } from 'framer-motion';
+import type { Variants, Transition } from 'motion/react';
 
 export const animationVariants = {
   fadeIn: {
