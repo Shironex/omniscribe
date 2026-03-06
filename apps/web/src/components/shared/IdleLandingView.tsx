@@ -3,7 +3,7 @@ import { BrainCircuit, Plus } from 'lucide-react';
 import { useMemo } from 'react';
 import { getGreeting } from '@/lib/date-utils';
 import { Button } from '@/components/ui/button';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 import { animationVariants, transitions } from '@/lib/animations';
 
 interface IdleLandingViewProps {

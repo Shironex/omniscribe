@@ -1,5 +1,5 @@
 import type { ComponentType } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { transitions } from '@/lib/animations';
 import { useSettingsStore } from '@/stores/useSettingsStore';
 import { usePluginStore } from '@/stores/usePluginStore';

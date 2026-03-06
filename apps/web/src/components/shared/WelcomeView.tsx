@@ -5,7 +5,7 @@ import { APP_NAME } from '@omniscribe/shared';
 import { getGreeting, formatRelativeTime } from '@/lib/date-utils';
 import { truncatePath } from '@/lib/path-utils';
 import { Button } from '@/components/ui/button';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 import { animationVariants, transitions } from '@/lib/animations';
 import { useWorkspaceStore, selectTabs } from '@/stores/useWorkspaceStore';
 
