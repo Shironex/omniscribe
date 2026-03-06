@@ -10,10 +10,12 @@ import type { EnvironmentConfig } from '../../config/index.js';
 import type { Logger } from '../../utils/index.js';
 import type { SwarmRole } from '@omniscribe/shared';
 
+type AssignableSwarmRole = Exclude<SwarmRole, 'lead'>;
+
 interface SwarmCreateTaskInput {
   subject: string;
   description?: string;
-  assignedRole?: SwarmRole;
+  assignedRole?: AssignableSwarmRole;
   dependsOn?: string[];
 }
 
@@ -29,7 +31,7 @@ export class SwarmCreateTaskTool implements Tool<SwarmCreateTaskInput> {
     subject: z.string().describe('Brief task subject or title'),
     description: z.string().optional().describe('Detailed task description'),
     assignedRole: z
-      .enum(['lead', 'builder', 'reviewer', 'architect', 'tester', 'security'])
+      .enum(['builder', 'reviewer', 'architect', 'tester', 'security'])
       .optional()
       .describe('Role to assign this task to'),
     dependsOn: z
@@ -52,6 +54,13 @@ export class SwarmCreateTaskTool implements Tool<SwarmCreateTaskInput> {
     if (!this.config.swarmId) {
       return {
         content: [{ type: 'text' as const, text: 'Error: Not part of a swarm' }],
+        isError: true,
+      };
+    }
+
+    if (this.config.swarmRole !== 'lead') {
+      return {
+        content: [{ type: 'text' as const, text: 'Error: Only the lead agent can create tasks' }],
         isError: true,
       };
     }

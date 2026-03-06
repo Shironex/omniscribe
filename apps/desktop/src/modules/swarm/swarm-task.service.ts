@@ -2,7 +2,13 @@ import { Injectable } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import * as crypto from 'node:crypto';
 import * as path from 'node:path';
-import { SwarmTask, SwarmCreateTaskPayload, createLogger } from '@omniscribe/shared';
+import {
+  MAX_SWARM_TASK_SUBJECT_LENGTH,
+  MAX_SWARM_TASK_TEXT_LENGTH,
+  SwarmTask,
+  SwarmCreateTaskPayload,
+  createLogger,
+} from '@omniscribe/shared';
 import { InternalSwarmEvents } from '../shared/events';
 import { FileLock } from './types';
 
@@ -16,6 +22,67 @@ export class SwarmTaskService {
   private fileLocks = new Map<string, FileLock>();
 
   constructor(private readonly eventEmitter: EventEmitter2) {}
+
+  private validateTaskText(field: string, value: string | undefined, maxLength: number): void {
+    if (value === undefined) return;
+
+    const trimmed = value.trim();
+    if (!trimmed) {
+      throw new Error(`${field} cannot be empty`);
+    }
+    if (trimmed.length > maxLength) {
+      throw new Error(`${field} exceeds maximum length of ${maxLength}`);
+    }
+  }
+
+  private validateTaskInput(
+    swarmId: string,
+    payload: Pick<SwarmCreateTaskPayload, 'subject' | 'description' | 'assignedRole' | 'dependsOn'>
+  ): void {
+    this.validateTaskText('Task subject', payload.subject, MAX_SWARM_TASK_SUBJECT_LENGTH);
+    this.validateTaskText('Task description', payload.description, MAX_SWARM_TASK_TEXT_LENGTH);
+
+    const swarmTasks = this.tasks.get(swarmId) ?? [];
+    const taskIds = new Set(swarmTasks.map(task => task.id));
+    for (const dependencyId of payload.dependsOn ?? []) {
+      if (!taskIds.has(dependencyId)) {
+        throw new Error(`Unknown dependency: ${dependencyId}`);
+      }
+    }
+  }
+
+  private wouldIntroduceDependencyCycle(
+    swarmId: string,
+    taskId: string,
+    dependsOn: string[]
+  ): boolean {
+    if (dependsOn.length === 0) return false;
+
+    const adjacency = new Map<string, string[]>();
+    for (const task of this.tasks.get(swarmId) ?? []) {
+      adjacency.set(task.id, task.dependsOn);
+    }
+    adjacency.set(taskId, dependsOn);
+
+    const visiting = new Set<string>();
+    const visited = new Set<string>();
+
+    const visit = (currentTaskId: string): boolean => {
+      if (visiting.has(currentTaskId)) return true;
+      if (visited.has(currentTaskId)) return false;
+
+      visiting.add(currentTaskId);
+      const deps = adjacency.get(currentTaskId) ?? [];
+      for (const dependencyId of deps) {
+        if (visit(dependencyId)) return true;
+      }
+      visiting.delete(currentTaskId);
+      visited.add(currentTaskId);
+      return false;
+    };
+
+    return visit(taskId);
+  }
 
   /**
    * Normalize a file path for consistent lock keys.
@@ -36,17 +103,25 @@ export class SwarmTaskService {
     swarmId: string,
     payload: Pick<SwarmCreateTaskPayload, 'subject' | 'description' | 'assignedRole' | 'dependsOn'>
   ): SwarmTask {
+    this.validateTaskInput(swarmId, payload);
+
     const now = new Date().toISOString();
+    const taskId = crypto.randomUUID();
+    const dependsOn = payload.dependsOn ?? [];
+    if (this.wouldIntroduceDependencyCycle(swarmId, taskId, dependsOn)) {
+      throw new Error('Task dependencies would create a cycle');
+    }
+
     const hasDependencies = payload.dependsOn && payload.dependsOn.length > 0;
 
     const task: SwarmTask = {
-      id: crypto.randomUUID(),
+      id: taskId,
       swarmId,
-      subject: payload.subject,
-      description: payload.description,
+      subject: payload.subject.trim(),
+      description: payload.description?.trim(),
       status: hasDependencies ? 'blocked' : 'pending',
       assignedRole: payload.assignedRole,
-      dependsOn: payload.dependsOn ?? [],
+      dependsOn,
       createdAt: now,
       updatedAt: now,
     };
@@ -93,6 +168,7 @@ export class SwarmTaskService {
   reportResult(
     swarmId: string,
     taskId: string,
+    reporterAgentId: string,
     result: string,
     status: 'completed' | 'failed'
   ): SwarmTask | null {
@@ -102,8 +178,14 @@ export class SwarmTaskService {
     const task = swarmTasks.find(t => t.id === taskId);
     if (!task) return null;
 
+    this.validateTaskText('Task result', result, MAX_SWARM_TASK_TEXT_LENGTH);
+
+    if (task.assignedTo && task.assignedTo !== reporterAgentId) {
+      throw new Error('Only the assigned agent can report this task result');
+    }
+
     task.status = status;
-    task.result = result;
+    task.result = result.trim();
     task.updatedAt = new Date().toISOString();
 
     this.logger.info(

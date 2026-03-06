@@ -173,6 +173,24 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
 /** Maximum agents per swarm */
 export const MAX_SWARM_AGENTS = 6;
 
+/** Maximum retained messages per swarm */
+export const MAX_SWARM_MESSAGES = 500;
+
+/** Maximum length for swarm name */
+export const MAX_SWARM_NAME_LENGTH = 200;
+
+/** Maximum length for swarm goal */
+export const MAX_SWARM_GOAL_LENGTH = 4000;
+
+/** Maximum length for swarm task subject */
+export const MAX_SWARM_TASK_SUBJECT_LENGTH = 200;
+
+/** Maximum length for swarm task description/result text */
+export const MAX_SWARM_TASK_TEXT_LENGTH = 10000;
+
+/** How long completed/cancelled swarms stay in memory/UI */
+export const SWARM_COMPLETED_RETENTION_MS = 5 * 60 * 1000;
+
 /** Default swarm polling interval instruction (in system prompt) */
 export const SWARM_POLL_HINT_SECONDS = 30;
 
@@ -181,8 +199,6 @@ export const SWARM_TASK_STATUSES = [
   'pending',
   'blocked',
   'assigned',
-  'in_progress',
-  'review',
   'completed',
   'failed',
 ] as const;

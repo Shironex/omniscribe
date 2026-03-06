@@ -4,6 +4,7 @@ import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
 import { Mutex } from 'async-mutex';
 import * as crypto from 'node:crypto';
 import {
+  MAX_SWARM_GOAL_LENGTH,
   SwarmStatus,
   SwarmRole,
   SwarmAgent,
@@ -11,6 +12,8 @@ import {
   SwarmContextResponse,
   SessionStatusUpdate,
   MAX_SWARM_AGENTS,
+  MAX_SWARM_NAME_LENGTH,
+  SWARM_COMPLETED_RETENTION_MS,
   createLogger,
   extractErrorMessage,
 } from '@omniscribe/shared';
@@ -166,6 +169,8 @@ export class SwarmService {
   private agents = new Map<string, BackendSwarmAgent[]>();
   /** Per-swarm spawn lock — serializes agent spawning to prevent .mcp.json race conditions */
   private spawnLocks = new Map<string, Mutex>();
+  /** swarmId -> delayed cleanup timer */
+  private cleanupTimers = new Map<string, NodeJS.Timeout>();
   /** Lazily resolved McpStatusServerService (avoids circular dep) */
   private _statusServer: McpStatusServerService | null = null;
 
@@ -179,6 +184,24 @@ export class SwarmService {
     private readonly swarmMessagingService: SwarmMessagingService,
     private readonly moduleRef: ModuleRef
   ) {}
+
+  private validateCreatePayload(payload: CreateSwarmPayload): void {
+    const name = payload.name.trim();
+    const goal = payload.goal.trim();
+
+    if (!name) {
+      throw new Error('Swarm name is required');
+    }
+    if (!goal) {
+      throw new Error('Swarm goal is required');
+    }
+    if (name.length > MAX_SWARM_NAME_LENGTH) {
+      throw new Error(`Swarm name exceeds maximum length of ${MAX_SWARM_NAME_LENGTH}`);
+    }
+    if (goal.length > MAX_SWARM_GOAL_LENGTH) {
+      throw new Error(`Swarm goal exceeds maximum length of ${MAX_SWARM_GOAL_LENGTH}`);
+    }
+  }
 
   /** Lazily resolve McpStatusServerService to avoid circular module dependency. */
   private get statusServer(): McpStatusServerService {
@@ -201,10 +224,41 @@ export class SwarmService {
     return lock;
   }
 
+  private scheduleCleanup(swarmId: string): void {
+    const existingTimer = this.cleanupTimers.get(swarmId);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+    }
+
+    const timer = setTimeout(() => {
+      this.cleanupTimers.delete(swarmId);
+      this.removeSwarm(swarmId);
+    }, SWARM_COMPLETED_RETENTION_MS);
+    this.cleanupTimers.set(swarmId, timer);
+  }
+
+  private removeSwarm(swarmId: string): void {
+    const swarm = this.swarms.get(swarmId);
+    if (!swarm) return;
+
+    for (const sessionId of swarm.memberSessionIds) {
+      this.statusServer.clearSessionMcpReady(sessionId);
+    }
+
+    this.swarmTaskService.cleanup(swarmId);
+    this.swarmMessagingService.cleanup(swarmId);
+    this.spawnLocks.delete(swarmId);
+    this.agents.delete(swarmId);
+    this.swarms.delete(swarmId);
+    this.eventEmitter.emit(InternalSwarmEvents.REMOVED, { swarmId });
+  }
+
   /**
    * Create a new swarm from a configuration payload.
    */
   async create(payload: CreateSwarmPayload): Promise<BackendSwarmConfig> {
+    this.validateCreatePayload(payload);
+
     // Validate total agent count
     const totalAgents = payload.roles.reduce((sum, r) => sum + r.count, 0);
     if (totalAgents > MAX_SWARM_AGENTS) {
@@ -220,8 +274,8 @@ export class SwarmService {
 
     const swarm: BackendSwarmConfig = {
       id: swarmId,
-      name: payload.name,
-      goal: payload.goal,
+      name: payload.name.trim(),
+      goal: payload.goal.trim(),
       projectPath: payload.projectPath,
       status: 'configuring',
       strategy: 'hierarchical',
@@ -408,6 +462,7 @@ export class SwarmService {
     this.swarmTaskService.cleanup(swarmId);
     this.swarmMessagingService.cleanup(swarmId);
     this.spawnLocks.delete(swarmId);
+    swarm.memberSessionIds.forEach(sessionId => this.statusServer.clearSessionMcpReady(sessionId));
 
     this.updateStatus(swarmId, 'cancelled');
   }
@@ -527,6 +582,7 @@ export class SwarmService {
 
     // Release file locks for the removed agent
     this.swarmTaskService.releaseFiles(swarmId, agent.id);
+    this.statusServer.clearSessionMcpReady(payload.sessionId);
 
     this.updateAgent(swarmId, agent.id, { status: 'stopped' });
 
@@ -565,6 +621,7 @@ export class SwarmService {
         swarmId,
         status: newStatus,
       });
+      this.scheduleCleanup(swarmId);
     }
   }
 

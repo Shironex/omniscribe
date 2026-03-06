@@ -11,6 +11,7 @@ const mockSwarmService = {
   getAgentsForSwarm: jest.fn().mockReturnValue([]),
   getSwarmContext: jest.fn(),
   spawnTeammate: jest.fn(),
+  addTaskToAgent: jest.fn(),
 };
 const mockSwarmTaskService = {
   getAssignment: jest.fn(),
@@ -22,6 +23,7 @@ const mockSwarmTaskService = {
 const mockSwarmMessagingService = {
   sendMessage: jest.fn(),
   getMessages: jest.fn(),
+  markRead: jest.fn(),
 };
 
 jest.mock('../swarm/swarm.service', () => ({
@@ -101,6 +103,7 @@ describe('McpStatusServerService', () => {
     mockSwarmService.getAgentsForSwarm.mockReturnValue([]);
     mockSwarmService.getSwarmContext.mockReset();
     mockSwarmService.spawnTeammate.mockReset();
+    mockSwarmService.addTaskToAgent.mockReset();
     mockSwarmTaskService.getAssignment.mockReset();
     mockSwarmTaskService.reportResult.mockReset();
     mockSwarmTaskService.claimFiles.mockReset();
@@ -108,6 +111,7 @@ describe('McpStatusServerService', () => {
     mockSwarmTaskService.createTask.mockReset();
     mockSwarmMessagingService.sendMessage.mockReset();
     mockSwarmMessagingService.getMessages.mockReset();
+    mockSwarmMessagingService.markRead.mockReset();
 
     // Reset mocks
     httpModule.createServer.mockClear();
@@ -201,6 +205,7 @@ describe('McpStatusServerService - Request Handling', () => {
     mockSwarmService.getAgentsForSwarm.mockReturnValue([]);
     mockSwarmService.getSwarmContext.mockReset();
     mockSwarmService.spawnTeammate.mockReset();
+    mockSwarmService.addTaskToAgent.mockReset();
     mockSwarmTaskService.getAssignment.mockReset();
     mockSwarmTaskService.reportResult.mockReset();
     mockSwarmTaskService.claimFiles.mockReset();
@@ -208,6 +213,7 @@ describe('McpStatusServerService - Request Handling', () => {
     mockSwarmTaskService.createTask.mockReset();
     mockSwarmMessagingService.sendMessage.mockReset();
     mockSwarmMessagingService.getMessages.mockReset();
+    mockSwarmMessagingService.markRead.mockReset();
 
     mainServer = {
       listen: jest.fn(),
@@ -639,6 +645,263 @@ describe('McpStatusServerService - Request Handling', () => {
       expect(eventEmitter.emit).toHaveBeenCalledWith('session.tasks', {
         sessionId: 'session-1',
         tasks: [],
+      });
+    });
+  });
+
+  describe('POST /swarm/*', () => {
+    const memberAgent = { id: 'agent-1', role: 'builder', sessionId: 'session-1' };
+    const leadAgent = { id: 'agent-lead', role: 'lead', sessionId: 'session-1' };
+
+    function initSwarmSession(agent: typeof memberAgent | typeof leadAgent = memberAgent) {
+      sessionRegistry.getProjectPath.mockReturnValue('/project');
+      mockSwarmService.getAgentsForSwarm.mockReturnValue([agent as any]);
+    }
+
+    function swarmPayload(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+      return {
+        sessionId: 'session-1',
+        instanceId: 'test-uuid-1234',
+        swarmId: 'swarm-1',
+        ...overrides,
+      };
+    }
+
+    it('gets assignments and updates the agent task count', async () => {
+      initSwarmSession();
+      mockSwarmTaskService.getAssignment.mockReturnValue({
+        id: 'task-1',
+        swarmId: 'swarm-1',
+      } as any);
+      await initService();
+
+      const { res } = simulateRequest(
+        'POST',
+        '/swarm/get-assignment',
+        JSON.stringify(swarmPayload())
+      );
+
+      const responseBody = JSON.parse((res.end as jest.Mock).mock.calls[0][0]);
+      expect(responseBody.accepted).toBe(true);
+      expect(responseBody.task.id).toBe('task-1');
+      expect(mockSwarmTaskService.getAssignment).toHaveBeenCalledWith(
+        'swarm-1',
+        'agent-1',
+        'builder'
+      );
+      expect(mockSwarmService.addTaskToAgent).toHaveBeenCalledWith('swarm-1', 'agent-1', 'task-1');
+    });
+
+    it('reports task results with the reporting agent id', async () => {
+      initSwarmSession();
+      mockSwarmTaskService.reportResult.mockReturnValue({
+        id: 'task-1',
+        status: 'completed',
+      } as any);
+      await initService();
+
+      const { res } = simulateRequest(
+        'POST',
+        '/swarm/report-result',
+        JSON.stringify(
+          swarmPayload({
+            taskId: 'task-1',
+            result: 'done',
+            status: 'completed',
+          })
+        )
+      );
+
+      const responseBody = JSON.parse((res.end as jest.Mock).mock.calls[0][0]);
+      expect(responseBody.accepted).toBe(true);
+      expect(mockSwarmTaskService.reportResult).toHaveBeenCalledWith(
+        'swarm-1',
+        'task-1',
+        'agent-1',
+        'done',
+        'completed'
+      );
+    });
+
+    it('claims and releases files for the validated agent', async () => {
+      initSwarmSession();
+      mockSwarmTaskService.claimFiles.mockReturnValue({ claimed: ['src/app.ts'], denied: [] });
+      await initService();
+
+      const claimRes = simulateRequest(
+        'POST',
+        '/swarm/claim-files',
+        JSON.stringify(swarmPayload({ files: ['src/app.ts'] }))
+      ).res;
+      expect(JSON.parse((claimRes.end as jest.Mock).mock.calls[0][0])).toEqual({
+        accepted: true,
+        claimed: ['src/app.ts'],
+        denied: [],
+      });
+      expect(mockSwarmTaskService.claimFiles).toHaveBeenCalledWith('swarm-1', 'agent-1', [
+        'src/app.ts',
+      ]);
+
+      const releaseRes = simulateRequest(
+        'POST',
+        '/swarm/release-files',
+        JSON.stringify(swarmPayload({ files: ['src/app.ts'] }))
+      ).res;
+      expect(JSON.parse((releaseRes.end as jest.Mock).mock.calls[0][0])).toEqual({
+        accepted: true,
+      });
+      expect(mockSwarmTaskService.releaseFiles).toHaveBeenCalledWith('swarm-1', 'agent-1', [
+        'src/app.ts',
+      ]);
+    });
+
+    it('sends and fetches swarm messages, marking fetched messages as read', async () => {
+      initSwarmSession();
+      mockSwarmMessagingService.sendMessage.mockReturnValue({ id: 'msg-1' } as any);
+      mockSwarmMessagingService.getMessages.mockReturnValue([
+        { id: 'msg-1', content: 'hello' },
+        { id: 'msg-2', content: 'world' },
+      ] as any);
+      await initService();
+
+      const sendRes = simulateRequest(
+        'POST',
+        '/swarm/send-message',
+        JSON.stringify(
+          swarmPayload({
+            toAgentId: 'agent-2',
+            content: 'hello',
+            type: 'info',
+          })
+        )
+      ).res;
+      expect(JSON.parse((sendRes.end as jest.Mock).mock.calls[0][0])).toEqual({
+        accepted: true,
+        message: { id: 'msg-1' },
+      });
+      expect(mockSwarmMessagingService.sendMessage).toHaveBeenCalledWith(
+        'swarm-1',
+        'agent-1',
+        'agent-2',
+        'hello',
+        'info'
+      );
+
+      const getRes = simulateRequest(
+        'POST',
+        '/swarm/get-messages',
+        JSON.stringify(swarmPayload())
+      ).res;
+      expect(JSON.parse((getRes.end as jest.Mock).mock.calls[0][0])).toEqual({
+        accepted: true,
+        messages: [
+          { id: 'msg-1', content: 'hello' },
+          { id: 'msg-2', content: 'world' },
+        ],
+      });
+      expect(mockSwarmMessagingService.markRead).toHaveBeenCalledWith('swarm-1', [
+        'msg-1',
+        'msg-2',
+      ]);
+    });
+
+    it('returns swarm context for members', async () => {
+      initSwarmSession();
+      mockSwarmService.getSwarmContext.mockReturnValue({
+        swarm: { id: 'swarm-1' },
+        agents: [],
+        tasks: [],
+        recentMessages: [],
+      } as any);
+      await initService();
+
+      const { res } = simulateRequest('POST', '/swarm/get-context', JSON.stringify(swarmPayload()));
+
+      expect(JSON.parse((res.end as jest.Mock).mock.calls[0][0])).toEqual({
+        accepted: true,
+        swarm: { id: 'swarm-1' },
+        agents: [],
+        tasks: [],
+        recentMessages: [],
+      });
+    });
+
+    it('allows only the lead agent to spawn teammates and create tasks', async () => {
+      initSwarmSession();
+      await initService();
+
+      const spawnRes = simulateRequest(
+        'POST',
+        '/swarm/spawn-teammate',
+        JSON.stringify(swarmPayload({ role: 'builder' }))
+      ).res;
+      expect(spawnRes.writeHead as jest.Mock).toHaveBeenCalledWith(403, {
+        'Content-Type': 'application/json',
+      });
+
+      const taskRes = simulateRequest(
+        'POST',
+        '/swarm/create-task',
+        JSON.stringify(swarmPayload({ subject: 'Create task' }))
+      ).res;
+      expect(taskRes.writeHead as jest.Mock).toHaveBeenCalledWith(403, {
+        'Content-Type': 'application/json',
+      });
+    });
+
+    it('spawns teammates and creates tasks for the lead agent', async () => {
+      initSwarmSession(leadAgent);
+      mockSwarmService.spawnTeammate.mockResolvedValue({ id: 'agent-2', role: 'builder' } as any);
+      mockSwarmTaskService.createTask.mockReturnValue({ id: 'task-2', subject: 'Build it' } as any);
+      await initService();
+
+      const spawnRes = simulateRequest(
+        'POST',
+        '/swarm/spawn-teammate',
+        JSON.stringify(swarmPayload({ role: 'builder', taskDescription: 'Build it' }))
+      ).res;
+      await Promise.resolve();
+      expect(JSON.parse((spawnRes.end as jest.Mock).mock.calls[0][0])).toEqual({
+        accepted: true,
+        agent: { id: 'agent-2', role: 'builder' },
+      });
+
+      const taskRes = simulateRequest(
+        'POST',
+        '/swarm/create-task',
+        JSON.stringify(
+          swarmPayload({
+            subject: 'Build it',
+            description: 'Implement the feature',
+            assignedRole: 'builder',
+            dependsOn: ['task-1'],
+          })
+        )
+      ).res;
+      expect(JSON.parse((taskRes.end as jest.Mock).mock.calls[0][0])).toEqual({
+        accepted: true,
+        task: { id: 'task-2', subject: 'Build it' },
+      });
+      expect(mockSwarmTaskService.createTask).toHaveBeenCalledWith('swarm-1', {
+        subject: 'Build it',
+        description: 'Implement the feature',
+        assignedRole: 'builder',
+        dependsOn: ['task-1'],
+      });
+    });
+
+    it('rejects swarm requests for sessions outside the swarm', async () => {
+      sessionRegistry.getProjectPath.mockReturnValue('/project');
+      mockSwarmService.getAgentsForSwarm.mockReturnValue([]);
+      await initService();
+
+      const { res } = simulateRequest('POST', '/swarm/get-context', JSON.stringify(swarmPayload()));
+
+      expect(res.writeHead as jest.Mock).toHaveBeenCalledWith(400, {
+        'Content-Type': 'application/json',
+      });
+      expect(JSON.parse((res.end as jest.Mock).mock.calls[0][0])).toEqual({
+        error: 'Session is not a member of the specified swarm',
       });
     });
   });

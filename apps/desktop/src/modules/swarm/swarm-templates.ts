@@ -26,8 +26,9 @@ export const BUILT_IN_TEMPLATES: SwarmTemplate[] = [
   {
     id: 'refactoring',
     name: 'Refactoring Squad',
-    description: '1 Architect + 2 Builders + 1 Tester',
+    description: '1 Lead + 1 Architect + 2 Builders + 1 Tester',
     roles: [
+      { role: 'lead', count: 1 },
       { role: 'architect', count: 1 },
       { role: 'builder', count: 2 },
       { role: 'tester', count: 1 },

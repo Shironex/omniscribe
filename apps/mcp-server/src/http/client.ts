@@ -415,11 +415,14 @@ export function createHttpClient(config: EnvironmentConfig, logger: Logger): Omn
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
-        signal: AbortSignal.timeout(10000),
+        signal: AbortSignal.timeout(20000),
       });
 
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      return (await response.json()) as { agentId: string };
+      const data = (await response.json()) as { agentId?: string; agent?: { id?: string } };
+      const agentId = data.agentId ?? data.agent?.id;
+      if (!agentId) throw new Error('Missing agentId in swarm spawn response');
+      return { agentId };
     } catch (error) {
       logger.error('Swarm spawn-teammate error:', error);
       throw error;
@@ -457,7 +460,10 @@ export function createHttpClient(config: EnvironmentConfig, logger: Logger): Omn
       });
 
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      return (await response.json()) as { taskId: string };
+      const data = (await response.json()) as { taskId?: string; task?: { id?: string } };
+      const taskId = data.taskId ?? data.task?.id;
+      if (!taskId) throw new Error('Missing taskId in swarm create-task response');
+      return { taskId };
     } catch (error) {
       logger.error('Swarm create-task error:', error);
       throw error;

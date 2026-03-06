@@ -436,6 +436,7 @@ export class McpStatusServerService implements OnModuleInit, OnModuleDestroy {
       const task = this.swarmTaskService.reportResult(
         payload.swarmId,
         payload.taskId,
+        agent.id,
         payload.result,
         payload.status
       );
@@ -524,6 +525,12 @@ export class McpStatusServerService implements OnModuleInit, OnModuleDestroy {
 
     try {
       const messages = this.swarmMessagingService.getMessages(payload.swarmId, agentId);
+      if (messages.length > 0) {
+        this.swarmMessagingService.markRead(
+          payload.swarmId,
+          messages.map(message => message.id)
+        );
+      }
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ accepted: true, messages }));
     } catch (error) {
@@ -656,6 +663,11 @@ export class McpStatusServerService implements OnModuleInit, OnModuleDestroy {
       waiters.forEach(resolve => resolve());
       this.mcpReadyWaiters.delete(sessionId);
     }
+  }
+
+  clearSessionMcpReady(sessionId: string): void {
+    this.mcpReadySessions.delete(sessionId);
+    this.mcpReadyWaiters.delete(sessionId);
   }
 
   /**

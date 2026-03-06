@@ -14,7 +14,7 @@ import { PluginRegistryService } from '../plugin';
 import { CliCommandService } from './cli-command.service';
 import { ClaudeSessionTrackerService } from './claude-session-tracker.service';
 import type { BackendSessionConfig } from './types';
-import { InternalSessionEvents } from '../shared/events';
+import { InternalSessionEvents, InternalTerminalEvents } from '../shared/events';
 
 function createMockSession(overrides?: Partial<BackendSessionConfig>): BackendSessionConfig {
   return {
@@ -79,6 +79,7 @@ describe('SessionLauncherService', () => {
     terminalService = {
       spawnCommand: jest.fn().mockReturnValue(1),
       hasSession: jest.fn().mockReturnValue(false),
+      write: jest.fn(),
     } as unknown as jest.Mocked<TerminalService>;
 
     mcpWriterService = {
@@ -102,8 +103,22 @@ describe('SessionLauncherService', () => {
       refreshActiveSessionsSnapshot: jest.fn(),
     } as unknown as jest.Mocked<ClaudeSessionTrackerService>;
 
+    const listeners = new Map<string, Set<(payload: unknown) => void>>();
     eventEmitter = {
-      emit: jest.fn(),
+      emit: jest.fn((event: string, payload: unknown) => {
+        listeners.get(event)?.forEach(listener => listener(payload));
+        return true;
+      }),
+      on: jest.fn((event: string, listener: (payload: unknown) => void) => {
+        const current = listeners.get(event) ?? new Set();
+        current.add(listener);
+        listeners.set(event, current);
+        return eventEmitter;
+      }),
+      off: jest.fn((event: string, listener: (payload: unknown) => void) => {
+        listeners.get(event)?.delete(listener);
+        return eventEmitter;
+      }),
     } as unknown as jest.Mocked<EventEmitter2>;
 
     // Reset plugin registry mock
@@ -135,6 +150,10 @@ describe('SessionLauncherService', () => {
     }).compile();
 
     service = module.get<SessionLauncherService>(SessionLauncherService);
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   describe('launchSession', () => {
@@ -202,6 +221,29 @@ describe('SessionLauncherService', () => {
         'error',
         'Launch failed: PTY spawn failed'
       );
+    });
+
+    it('waits for terminal output before submitting the initial prompt', async () => {
+      jest.useFakeTimers();
+      const session = createMockSession({ initialPrompt: 'Start working' });
+      sessionService.get.mockReturnValue(session);
+
+      const launchPromise = service.launchSession(session.id, '/project', '/worktree', 'claude');
+      await Promise.resolve();
+      await launchPromise;
+
+      expect(terminalService.write).not.toHaveBeenCalled();
+
+      eventEmitter.emit(InternalTerminalEvents.OUTPUT, {
+        sessionId: 1,
+        data: 'Claude is ready\n',
+      });
+      await jest.advanceTimersByTimeAsync(250);
+
+      expect(terminalService.write).toHaveBeenCalledWith(1, 'Start working');
+
+      await jest.advanceTimersByTimeAsync(100);
+      expect(terminalService.write).toHaveBeenCalledWith(1, '\r');
     });
   });
 

@@ -9,7 +9,14 @@ import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogOverlay, DialogPortal, DialogTitle } from '@/components/ui/dialog';
 import { useSwarmStore } from '@/stores/useSwarmStore';
 import { useWorkspaceStore } from '@/stores/useWorkspaceStore';
-import type { SwarmRole, SwarmRoleConfig, SwarmTemplate } from '@omniscribe/shared';
+import {
+  MAX_SWARM_AGENTS,
+  MAX_SWARM_GOAL_LENGTH,
+  MAX_SWARM_NAME_LENGTH,
+  type SwarmRole,
+  type SwarmRoleConfig,
+  type SwarmTemplate,
+} from '@omniscribe/shared';
 
 /** Built-in templates for v1 */
 const BUILT_IN_TEMPLATES: SwarmTemplate[] = [
@@ -104,6 +111,7 @@ export function SwarmConfigModal({ open, onOpenChange }: SwarmConfigModalProps) 
 
   const handleRoleCountChange = useCallback((role: SwarmRole, delta: number) => {
     setRoles(prev => {
+      const currentTotal = prev.reduce((sum, entry) => sum + entry.count, 0);
       const existing = prev.find(r => r.role === role);
       if (existing) {
         const newCount = Math.max(0, existing.count + delta);
@@ -114,8 +122,10 @@ export function SwarmConfigModal({ open, onOpenChange }: SwarmConfigModalProps) 
         }
         // Lead can only have count 1
         if (role === 'lead') return prev;
+        if (delta > 0 && currentTotal >= MAX_SWARM_AGENTS) return prev;
         return prev.map(r => (r.role === role ? { ...r, count: Math.min(newCount, 6) } : r));
       } else if (delta > 0) {
+        if (currentTotal >= MAX_SWARM_AGENTS) return prev;
         return [...prev, { role, count: 1 }];
       }
       return prev;
@@ -126,7 +136,13 @@ export function SwarmConfigModal({ open, onOpenChange }: SwarmConfigModalProps) 
 
   const totalAgents = roles.reduce((sum, r) => sum + r.count, 0);
   const hasLead = roles.some(r => r.role === 'lead' && r.count > 0);
-  const canStart = name.trim().length > 0 && goal.trim().length > 0 && hasLead && activeProjectPath;
+  const exceedsAgentLimit = totalAgents > MAX_SWARM_AGENTS;
+  const canStart =
+    name.trim().length > 0 &&
+    goal.trim().length > 0 &&
+    hasLead &&
+    !exceedsAgentLimit &&
+    activeProjectPath;
 
   const handleStart = useCallback(() => {
     if (!canStart || !activeProjectPath) return;
@@ -188,6 +204,7 @@ export function SwarmConfigModal({ open, onOpenChange }: SwarmConfigModalProps) 
                 onChange={e => setName(e.target.value)}
                 placeholder="e.g. Auth Feature Sprint"
                 className="h-9"
+                maxLength={MAX_SWARM_NAME_LENGTH}
               />
             </div>
 
@@ -199,6 +216,7 @@ export function SwarmConfigModal({ open, onOpenChange }: SwarmConfigModalProps) 
                 onChange={e => setGoal(e.target.value)}
                 placeholder="Describe what the swarm should accomplish..."
                 rows={3}
+                maxLength={MAX_SWARM_GOAL_LENGTH}
                 className={cn(
                   'flex w-full rounded-md border border-input bg-transparent px-3 py-2',
                   'text-sm shadow-sm placeholder:text-muted-foreground',
@@ -241,8 +259,20 @@ export function SwarmConfigModal({ open, onOpenChange }: SwarmConfigModalProps) 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <label className="text-sm font-medium text-foreground">Roles</label>
-                <span className="text-xs text-muted-foreground">{totalAgents} agents total</span>
+                <span
+                  className={cn(
+                    'text-xs',
+                    exceedsAgentLimit ? 'text-destructive' : 'text-muted-foreground'
+                  )}
+                >
+                  {totalAgents}/{MAX_SWARM_AGENTS} agents
+                </span>
               </div>
+              {totalAgents >= MAX_SWARM_AGENTS && (
+                <p className="text-[10px] text-muted-foreground">
+                  Swarms are limited to {MAX_SWARM_AGENTS} total agents.
+                </p>
+              )}
               <div className="space-y-1.5">
                 {ALL_ROLES.map(({ role, label, color }) => {
                   const config = roles.find(r => r.role === role);
@@ -285,7 +315,9 @@ export function SwarmConfigModal({ open, onOpenChange }: SwarmConfigModalProps) 
                           size="icon"
                           className="w-6 h-6"
                           onClick={() => handleRoleCountChange(role, 1)}
-                          disabled={isLead && count >= 1}
+                          disabled={
+                            (isLead && count >= 1) || (!isLead && totalAgents >= MAX_SWARM_AGENTS)
+                          }
                           aria-label={`Increase ${label} count`}
                         >
                           <Plus size={12} />
@@ -301,7 +333,11 @@ export function SwarmConfigModal({ open, onOpenChange }: SwarmConfigModalProps) 
           {/* Footer */}
           <div className="flex items-center justify-between px-6 pb-6 pt-2">
             <p className="text-xs text-muted-foreground">
-              {!activeProjectPath && 'Open a project first'}
+              {!activeProjectPath
+                ? 'Open a project first'
+                : exceedsAgentLimit
+                  ? `Reduce the swarm to ${MAX_SWARM_AGENTS} agents or fewer`
+                  : null}
             </p>
             <div className="flex gap-2">
               <DialogPrimitive.Close asChild>

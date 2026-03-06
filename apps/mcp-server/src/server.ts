@@ -31,6 +31,51 @@ function getVersion(): string {
 
 const VERSION = getVersion();
 
+export function buildInstructions(config: ReturnType<typeof loadEnvironmentConfig>): string {
+  const lines = [
+    'Omniscribe is the desktop app hosting your terminal session.',
+    '',
+    'You MUST use these tools proactively throughout your work:',
+    '',
+    '1. **omniscribe_status** — Call whenever your state changes:',
+    '   - "working" when you start processing a request',
+    '   - "needs_input" when you need user clarification (include a prompt)',
+    '   - "finished" when you complete a task',
+    '   - "error" if something goes wrong',
+    '',
+    '2. **omniscribe_tasks** — Call whenever your task list changes:',
+    '   - When you create a plan with multiple steps, report all tasks immediately',
+    '   - Update the full task list as you start, complete, or modify tasks',
+    '   - Always send the complete current snapshot (it replaces the previous list)',
+    '   - Each task needs: id (unique string), subject (brief title), status (pending/in_progress/completed)',
+    '',
+    'These tools keep the Omniscribe UI in sync with your progress.',
+    'Call them frequently — at minimum at the start and end of every user request.',
+  ];
+
+  if (config.swarmId) {
+    lines.push(
+      '',
+      '## Swarm Coordination Tools',
+      '',
+      'If you are part of a swarm team, use these tools to coordinate:',
+      '- **omniscribe_swarm_get_assignment** — Poll for your next task (check every ~30s)',
+      '- **omniscribe_swarm_report_result** — Report when you finish or fail a task',
+      '- **omniscribe_swarm_claim_files** — Claim files before editing (prevents conflicts)',
+      '- **omniscribe_swarm_release_files** — Release file locks when done',
+      '- **omniscribe_swarm_send_message** — Message other agents or broadcast',
+      '- **omniscribe_swarm_get_messages** — Check for messages from teammates',
+      '- **omniscribe_swarm_get_context** — View full swarm state and progress',
+      '',
+      'Lead-only tools:',
+      '- **omniscribe_swarm_spawn_teammate** — Add a new agent to the team',
+      '- **omniscribe_swarm_create_task** — Create and assign tasks'
+    );
+  }
+
+  return lines.join('\n');
+}
+
 /**
  * Create and configure the MCP server
  */
@@ -47,41 +92,7 @@ export function createServer(): {
       version: VERSION,
     },
     {
-      instructions: [
-        'Omniscribe is the desktop app hosting your terminal session.',
-        '',
-        'You MUST use these tools proactively throughout your work:',
-        '',
-        '1. **omniscribe_status** — Call whenever your state changes:',
-        '   - "working" when you start processing a request',
-        '   - "needs_input" when you need user clarification (include a prompt)',
-        '   - "finished" when you complete a task',
-        '   - "error" if something goes wrong',
-        '',
-        '2. **omniscribe_tasks** — Call whenever your task list changes:',
-        '   - When you create a plan with multiple steps, report all tasks immediately',
-        '   - Update the full task list as you start, complete, or modify tasks',
-        '   - Always send the complete current snapshot (it replaces the previous list)',
-        '   - Each task needs: id (unique string), subject (brief title), status (pending/in_progress/completed)',
-        '',
-        'These tools keep the Omniscribe UI in sync with your progress.',
-        'Call them frequently — at minimum at the start and end of every user request.',
-        '',
-        '## Swarm Coordination Tools',
-        '',
-        'If you are part of a swarm team, use these tools to coordinate:',
-        '- **omniscribe_swarm_get_assignment** — Poll for your next task (check every ~30s)',
-        '- **omniscribe_swarm_report_result** — Report when you finish or fail a task',
-        '- **omniscribe_swarm_claim_files** — Claim files before editing (prevents conflicts)',
-        '- **omniscribe_swarm_release_files** — Release file locks when done',
-        '- **omniscribe_swarm_send_message** — Message other agents or broadcast',
-        '- **omniscribe_swarm_get_messages** — Check for messages from teammates',
-        '- **omniscribe_swarm_get_context** — View full swarm state and progress',
-        '',
-        'Lead-only tools:',
-        '- **omniscribe_swarm_spawn_teammate** — Add a new agent to the team',
-        '- **omniscribe_swarm_create_task** — Create and assign tasks',
-      ].join('\n'),
+      instructions: buildInstructions(config),
     }
   );
 

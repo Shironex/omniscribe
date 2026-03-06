@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useCallback } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { cn } from '@/lib/utils';
 import { useSessionStore } from '@/stores/useSessionStore';
@@ -85,12 +85,15 @@ export function PersistentProjectGrid({
   );
   const sessionOrder = useTerminalStore(state => state.sessionOrder);
   const setSessionOrder = useTerminalStore(state => state.setSessionOrder);
+  const focusedSessionId = useTerminalStore(state => state.focusedSessionId);
+  const setFocusedSessionId = useTerminalStore(state => state.setFocusedSessionId);
 
-  // Per-project focused session state
-  const [focusedSessionId, setFocusedSessionId] = useState<string | null>(null);
-  const handleFocusSession = useCallback((sessionId: string) => {
-    setFocusedSessionId(sessionId);
-  }, []);
+  const handleFocusSession = useCallback(
+    (sessionId: string) => {
+      setFocusedSessionId(sessionId);
+    },
+    [setFocusedSessionId]
+  );
 
   // Map sessions to TerminalSession format using shared utility
   const terminalSessions = useMemo(() => {

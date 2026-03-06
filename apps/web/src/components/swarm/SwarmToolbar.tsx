@@ -4,12 +4,13 @@ import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
-import { X, Square, Users } from 'lucide-react';
+import { RotateCcw, X, Square, Users } from 'lucide-react';
 
 interface SwarmToolbarProps {
   swarm: SwarmConfig;
   agentCount: number;
   onCancel: () => void;
+  onRetry?: () => void;
   onClose: () => void;
 }
 
@@ -40,7 +41,7 @@ const STATUS_BADGE: Record<
   cancelled: { label: 'Cancelled', variant: 'outline', className: 'text-muted-foreground' },
 };
 
-function SwarmToolbarInner({ swarm, agentCount, onCancel, onClose }: SwarmToolbarProps) {
+function SwarmToolbarInner({ swarm, agentCount, onCancel, onRetry, onClose }: SwarmToolbarProps) {
   const badgeConfig = STATUS_BADGE[swarm.status] ?? STATUS_BADGE.configuring;
   const isTerminal =
     swarm.status === 'done' || swarm.status === 'cancelled' || swarm.status === 'error';
@@ -91,6 +92,23 @@ function SwarmToolbarInner({ swarm, agentCount, onCancel, onClose }: SwarmToolba
             </Button>
           </TooltipTrigger>
           <TooltipContent side="bottom">Stop all agents</TooltipContent>
+        </Tooltip>
+      )}
+
+      {swarm.status === 'error' && onRetry && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onRetry}
+              className="w-7 h-7"
+              aria-label="Retry swarm"
+            >
+              <RotateCcw size={14} />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">Retry swarm</TooltipContent>
         </Tooltip>
       )}
 

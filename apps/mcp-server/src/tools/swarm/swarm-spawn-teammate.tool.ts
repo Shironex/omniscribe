@@ -10,8 +10,10 @@ import type { EnvironmentConfig } from '../../config/index.js';
 import type { Logger } from '../../utils/index.js';
 import type { SwarmRole } from '@omniscribe/shared';
 
+type SpawnableSwarmRole = Exclude<SwarmRole, 'lead'>;
+
 interface SwarmSpawnTeammateInput {
-  role: SwarmRole;
+  role: SpawnableSwarmRole;
   taskDescription?: string;
 }
 
@@ -24,7 +26,7 @@ export class SwarmSpawnTeammateTool implements Tool<SwarmSpawnTeammateInput> {
 
   readonly inputSchema = {
     role: z
-      .enum(['lead', 'builder', 'reviewer', 'architect', 'tester', 'security'])
+      .enum(['builder', 'reviewer', 'architect', 'tester', 'security'])
       .describe('Role for the new teammate: builder, reviewer, architect, tester, or security'),
     taskDescription: z
       .string()
@@ -46,6 +48,15 @@ export class SwarmSpawnTeammateTool implements Tool<SwarmSpawnTeammateInput> {
     if (!this.config.swarmId) {
       return {
         content: [{ type: 'text' as const, text: 'Error: Not part of a swarm' }],
+        isError: true,
+      };
+    }
+
+    if (this.config.swarmRole !== 'lead') {
+      return {
+        content: [
+          { type: 'text' as const, text: 'Error: Only the lead agent can spawn teammates' },
+        ],
         isError: true,
       };
     }

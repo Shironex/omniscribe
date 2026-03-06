@@ -49,6 +49,16 @@ describe('loadEnvironmentConfig', () => {
     });
   });
 
+  it('loads swarm-specific environment fields when present', () => {
+    process.env.OMNISCRIBE_SWARM_ID = 'swarm-1';
+    process.env.OMNISCRIBE_SWARM_ROLE = 'lead';
+
+    const config = loadEnvironmentConfig();
+
+    expect(config.swarmId).toBe('swarm-1');
+    expect(config.swarmRole).toBe('lead');
+  });
+
   it('should handle partial env var configuration', () => {
     process.env.OMNISCRIBE_SESSION_ID = 'session-1';
 

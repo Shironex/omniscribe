@@ -9,7 +9,11 @@ import type { SwarmService } from '../swarm/swarm.service';
 import { CliCommandService } from './cli-command.service';
 import { ClaudeSessionTrackerService } from './claude-session-tracker.service';
 import { SessionService } from './session.service';
-import { InternalSessionEvents } from '../shared/events';
+import { InternalSessionEvents, InternalTerminalEvents } from '../shared/events';
+
+const INITIAL_PROMPT_READY_TIMEOUT_MS = 15000;
+const INITIAL_PROMPT_SETTLE_MS = 250;
+const INITIAL_PROMPT_SUBMIT_DELAY_MS = 100;
 
 // Type guard for providers that support session tracking
 function hasSessionTracker(provider: AiProviderPlugin): provider is AiProviderPlugin & {
@@ -54,6 +58,59 @@ export class SessionLauncherService {
     @Inject(forwardRef(() => require('../swarm/swarm.service').SwarmService))
     private readonly swarmService: SwarmService | null
   ) {}
+
+  private async waitForTerminalReady(
+    terminalSessionId: number,
+    timeoutMs = INITIAL_PROMPT_READY_TIMEOUT_MS
+  ): Promise<void> {
+    await new Promise<void>(resolve => {
+      let settleTimer: NodeJS.Timeout | null = null;
+      let resolved = false;
+
+      const finish = () => {
+        if (resolved) return;
+        resolved = true;
+        if (settleTimer) {
+          clearTimeout(settleTimer);
+        }
+        clearTimeout(timeout);
+        this.eventEmitter.off(InternalTerminalEvents.OUTPUT, handleOutput);
+        resolve();
+      };
+
+      const handleOutput = (event: { sessionId: number; data: string }) => {
+        if (event.sessionId !== terminalSessionId) return;
+        if (!event.data.trim()) return;
+
+        if (settleTimer) {
+          clearTimeout(settleTimer);
+        }
+        settleTimer = setTimeout(finish, INITIAL_PROMPT_SETTLE_MS);
+      };
+
+      const timeout = setTimeout(() => {
+        this.logger.warn(
+          `Timed out waiting for terminal readiness for ${terminalSessionId}; sending initial prompt anyway`
+        );
+        finish();
+      }, timeoutMs);
+
+      this.eventEmitter.on(InternalTerminalEvents.OUTPUT, handleOutput);
+    });
+  }
+
+  private async submitInitialPrompt(
+    sessionId: string,
+    terminalSessionId: number,
+    prompt: string
+  ): Promise<void> {
+    await this.waitForTerminalReady(terminalSessionId);
+    this.logger.log(`Writing initial prompt to session ${sessionId}`);
+    this.terminalService.write(terminalSessionId, prompt);
+    setTimeout(() => {
+      this.terminalService.write(terminalSessionId, '\r');
+    }, INITIAL_PROMPT_SUBMIT_DELAY_MS);
+  }
 
   /** Look up swarm membership for a session and return env vars if applicable. */
   private getSwarmEnvVars(sessionId: string): Record<string, string> {
@@ -235,20 +292,16 @@ export class SessionLauncherService {
 
       this.logger.log(`Session ${sessionId} launched with terminal ${terminalSessionId}`);
 
-      // Auto-submit initial prompt for swarm agents (fire-and-forget).
-      // Write to terminal stdin after a delay so the CLI has time to initialize.
+      // Auto-submit initial prompt for swarm agents once the terminal starts producing output.
       // Text and Enter (\r) are sent separately — Claude CLI's TUI may
       // swallow a trailing \r when it arrives in the same buffer as the text.
       if (session.initialPrompt) {
         const prompt = session.initialPrompt;
-        setTimeout(() => {
-          this.logger.log(`Writing initial prompt to session ${sessionId}`);
-          this.terminalService.write(terminalSessionId, prompt);
-          // Send Enter as a separate write after a brief delay
-          setTimeout(() => {
-            this.terminalService.write(terminalSessionId, '\r');
-          }, 500);
-        }, 3000);
+        this.submitInitialPrompt(sessionId, terminalSessionId, prompt).catch((error: Error) => {
+          this.logger.warn(
+            `Failed to auto-submit initial prompt for ${sessionId}: ${error.message}`
+          );
+        });
       }
 
       // Post-launch session tracking (fire-and-forget)

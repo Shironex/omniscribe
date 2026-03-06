@@ -5,12 +5,17 @@ import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { ExternalLink } from 'lucide-react';
 import { useAppUIStore } from '@/stores/useAppUIStore';
+import { useTerminalStore } from '@/stores/useTerminalStore';
+import { useWorkspaceStore } from '@/stores/useWorkspaceStore';
+import { useSessionStore } from '@/stores/useSessionStore';
 
 /** Data carried by each agent node */
 export interface SwarmAgentNodeData extends Record<string, unknown> {
   agent: SwarmAgent;
   label: string;
   isLead: boolean;
+  taskCount?: number;
+  messageCount?: number;
 }
 
 export type SwarmAgentNodeType = Node<SwarmAgentNodeData, 'swarmAgent'>;
@@ -46,10 +51,22 @@ const ROLE_LABELS: Record<SwarmRole, string> = {
 };
 
 function SwarmAgentNodeInner({ data }: NodeProps<SwarmAgentNodeType>) {
-  const { agent, label, isLead } = data;
+  const { agent, label, isLead, taskCount = agent.assignedTaskIds.length, messageCount = 0 } = data;
   const statusColor = STATUS_COLORS[agent.status];
   const roleColor = ROLE_COLORS[agent.role] ?? 'bg-muted text-muted-foreground border-border';
   const closeSwarmView = useAppUIStore(state => state.closeSwarmView);
+  const setFocusedSessionId = useTerminalStore(state => state.setFocusedSessionId);
+  const selectTab = useWorkspaceStore(state => state.selectTab);
+  const tabs = useWorkspaceStore(state => state.tabs);
+  const activeTabId = useWorkspaceStore(state => state.activeTabId);
+  const sessionProjectPath = useSessionStore(
+    state => state.sessions.find(session => session.id === agent.sessionId)?.projectPath ?? null
+  );
+
+  const targetTabId =
+    tabs.find(tab => tab.sessionIds.includes(agent.sessionId))?.id ??
+    tabs.find(tab => sessionProjectPath && tab.projectPath === sessionProjectPath)?.id ??
+    activeTabId;
 
   return (
     <div
@@ -65,7 +82,7 @@ function SwarmAgentNodeInner({ data }: NodeProps<SwarmAgentNodeType>) {
         <Handle
           type="target"
           position={Position.Top}
-          className="!w-2 !h-2 !bg-muted-foreground !border-background"
+          className="w-2! h-2! bg-muted-foreground! border-background!"
         />
       )}
 
@@ -99,14 +116,18 @@ function SwarmAgentNodeInner({ data }: NodeProps<SwarmAgentNodeType>) {
       {/* Tasks count + session link */}
       <div className="flex items-center justify-between mt-1.5">
         <span className="text-[10px] text-muted-foreground">
-          {agent.assignedTaskIds.length} task{agent.assignedTaskIds.length !== 1 ? 's' : ''}
+          {taskCount} task{taskCount !== 1 ? 's' : ''}
+          {messageCount > 0 ? ` • ${messageCount} msg${messageCount !== 1 ? 's' : ''}` : ''}
         </span>
         {agent.sessionId && (
           <button
             className="flex items-center gap-0.5 text-[10px] text-primary hover:underline cursor-pointer"
             title="Focus terminal session"
             onClick={() => {
-              // Close the swarm overlay to reveal the terminal grid underneath
+              if (targetTabId) {
+                selectTab(targetTabId);
+              }
+              setFocusedSessionId(agent.sessionId);
               closeSwarmView();
             }}
           >
@@ -121,7 +142,7 @@ function SwarmAgentNodeInner({ data }: NodeProps<SwarmAgentNodeType>) {
         <Handle
           type="source"
           position={Position.Bottom}
-          className="!w-2 !h-2 !bg-primary !border-background"
+          className="w-2! h-2! bg-primary! border-background!"
         />
       )}
     </div>

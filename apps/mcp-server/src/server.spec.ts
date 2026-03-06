@@ -1,4 +1,4 @@
-import { createServer } from './server';
+import { buildInstructions, createServer } from './server';
 
 jest.mock('./utils/index', () => ({
   logger: {
@@ -16,6 +16,8 @@ describe('createServer', () => {
     'OMNISCRIBE_PROJECT_HASH',
     'OMNISCRIBE_STATUS_URL',
     'OMNISCRIBE_INSTANCE_ID',
+    'OMNISCRIBE_SWARM_ID',
+    'OMNISCRIBE_SWARM_ROLE',
   ] as const;
 
   afterEach(() => {
@@ -43,5 +45,33 @@ describe('createServer', () => {
     const { server } = createServer();
 
     expect(typeof server.connect).toBe('function');
+  });
+
+  it('omits swarm instructions for non-swarm sessions', () => {
+    const instructions = buildInstructions({
+      sessionId: 'test-session',
+      projectHash: 'hash',
+      statusUrl: 'http://127.0.0.1:3001/status',
+      instanceId: 'instance',
+      swarmId: undefined,
+      swarmRole: undefined,
+    });
+
+    expect(instructions).not.toContain('## Swarm Coordination Tools');
+    expect(instructions).not.toContain('omniscribe_swarm_spawn_teammate');
+  });
+
+  it('includes swarm instructions for swarm sessions', () => {
+    const instructions = buildInstructions({
+      sessionId: 'test-session',
+      projectHash: 'hash',
+      statusUrl: 'http://127.0.0.1:3001/status',
+      instanceId: 'instance',
+      swarmId: 'swarm-1',
+      swarmRole: 'builder',
+    });
+
+    expect(instructions).toContain('## Swarm Coordination Tools');
+    expect(instructions).toContain('omniscribe_swarm_spawn_teammate');
   });
 });

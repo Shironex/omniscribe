@@ -210,4 +210,10 @@ export class SwarmGateway implements OnGatewayInit {
     this.logger.debug(`[swarm:completed] broadcasting for ${payload.swarmId}`);
     this.server.emit(SwarmEvents.COMPLETED, payload);
   }
+
+  @OnEvent(InternalSwarmEvents.REMOVED)
+  onRemoved(payload: { swarmId: string }): void {
+    this.logger.debug(`[swarm:removed] broadcasting for ${payload.swarmId}`);
+    this.server.emit(SwarmEvents.REMOVED, payload);
+  }
 }

@@ -8,13 +8,22 @@ import {
   useEdgesState,
   type NodeTypes,
   type Edge,
+  type Node,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
 import { cn } from '@/lib/utils';
-import type { SwarmAgent } from '@omniscribe/shared';
-import { useSwarmStore, selectAgentsForSwarm, selectTasksForSwarm } from '@/stores/useSwarmStore';
+import type { SwarmAgent, SwarmMessage, SwarmTask } from '@omniscribe/shared';
+import {
+  useSwarmStore,
+  selectAgentsForSwarm,
+  selectMessagesForSwarm,
+  selectTasksForSwarm,
+} from '@/stores/useSwarmStore';
 import { useAppUIStore } from '@/stores/useAppUIStore';
+import { useSettingsStore } from '@/stores/useSettingsStore';
+import { getPluginTheme } from '@/stores/usePluginStore';
+import { themeOptions } from '@/lib/theme';
 import { SwarmAgentNode, type SwarmAgentNodeType } from './SwarmAgentNode';
 import { SwarmToolbar } from './SwarmToolbar';
 import { SwarmSummaryPanel } from './SwarmSummaryPanel';
@@ -35,65 +44,126 @@ interface SwarmCanvasProps {
   swarmId: string;
 }
 
-/**
- * Converts swarm agents to React Flow nodes with automatic layout.
- * Lead agent is positioned at top center, workers in a row below.
- */
-function buildNodesAndEdges(agents: SwarmAgent[]) {
+function getDefaultPosition(agent: SwarmAgent, agents: SwarmAgent[]) {
   const lead = agents.find(a => a.role === 'lead');
   const workers = agents.filter(a => a.role !== 'lead');
-
-  const nodes: SwarmAgentNodeType[] = [];
-  const edges: Edge[] = [];
-
-  // Calculate total width of worker row for centering
   const workersWidth =
     workers.length * NODE_WIDTH + Math.max(0, workers.length - 1) * HORIZONTAL_GAP;
 
-  // Lead node: top center
+  if (agent.id === lead?.id) {
+    return {
+      x: Math.max(workersWidth / 2 - NODE_WIDTH / 2, 0),
+      y: 0,
+    };
+  }
+
+  const workerIndex = workers.findIndex(worker => worker.id === agent.id);
+  return {
+    x: Math.max(workerIndex, 0) * (NODE_WIDTH + HORIZONTAL_GAP),
+    y: NODE_HEIGHT + VERTICAL_GAP,
+  };
+}
+
+export function buildGraphElements(
+  agents: SwarmAgent[],
+  tasks: SwarmTask[],
+  messages: SwarmMessage[],
+  previousNodes: Node[] = []
+) {
+  const nodes: SwarmAgentNodeType[] = [];
+  const edges: Edge[] = [];
+  const previousNodePositions = new Map(previousNodes.map(node => [node.id, node.position]));
+  const taskCounts = new Map<string, number>();
+  const messageCounts = new Map<string, number>();
+  const communicationPairs = new Map<string, { count: number; source: string; target: string }>();
+
+  for (const task of tasks) {
+    if (!task.assignedTo) continue;
+    taskCounts.set(task.assignedTo, (taskCounts.get(task.assignedTo) ?? 0) + 1);
+  }
+
+  for (const message of messages) {
+    messageCounts.set(message.fromAgentId, (messageCounts.get(message.fromAgentId) ?? 0) + 1);
+    if (message.toAgentId !== 'all') {
+      messageCounts.set(message.toAgentId, (messageCounts.get(message.toAgentId) ?? 0) + 1);
+      const pairKey = [message.fromAgentId, message.toAgentId].sort().join(':');
+      const existing = communicationPairs.get(pairKey);
+      communicationPairs.set(pairKey, {
+        count: (existing?.count ?? 0) + 1,
+        source: existing?.source ?? message.fromAgentId,
+        target: existing?.target ?? message.toAgentId,
+      });
+    }
+  }
+
+  const lead = agents.find(agent => agent.role === 'lead');
+  const workers = agents.filter(agent => agent.role !== 'lead');
   if (lead) {
     nodes.push({
       id: lead.id,
       type: 'swarmAgent',
-      position: {
-        x: Math.max(workersWidth / 2 - NODE_WIDTH / 2, 0),
-        y: 0,
-      },
+      position: previousNodePositions.get(lead.id) ?? getDefaultPosition(lead, agents),
       data: {
         agent: lead,
         label: `Lead (${lead.sessionId.slice(0, 6)})`,
         isLead: true,
+        taskCount: taskCounts.get(lead.id) ?? lead.assignedTaskIds.length,
+        messageCount: messageCounts.get(lead.id) ?? 0,
       },
     });
   }
 
-  // Worker nodes: row below lead
-  workers.forEach((worker, index) => {
-    const x = index * (NODE_WIDTH + HORIZONTAL_GAP);
-    const y = NODE_HEIGHT + VERTICAL_GAP;
-
+  workers.forEach(worker => {
     nodes.push({
       id: worker.id,
       type: 'swarmAgent',
-      position: { x, y },
+      position: previousNodePositions.get(worker.id) ?? getDefaultPosition(worker, agents),
       data: {
         agent: worker,
         label: `${worker.role.charAt(0).toUpperCase() + worker.role.slice(1)} (${worker.sessionId.slice(0, 6)})`,
         isLead: false,
+        taskCount: taskCounts.get(worker.id) ?? worker.assignedTaskIds.length,
+        messageCount: messageCounts.get(worker.id) ?? 0,
       },
     });
 
-    // Edge from lead to worker
     if (lead) {
+      const pairKey = [lead.id, worker.id].sort().join(':');
+      const communication = communicationPairs.get(pairKey);
       edges.push({
         id: `${lead.id}-${worker.id}`,
         source: lead.id,
         target: worker.id,
-        animated: worker.status === 'active',
+        animated: worker.status === 'active' || Boolean(communication),
         style: { stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1.5 },
+        ...(communication && {
+          label: `${communication.count} msg${communication.count === 1 ? '' : 's'}`,
+        }),
       });
+      communicationPairs.delete(pairKey);
     }
   });
+
+  for (const [pairKey, communication] of communicationPairs) {
+    if (
+      !agents.some(agent => agent.id === communication.source || agent.id === communication.target)
+    ) {
+      continue;
+    }
+
+    edges.push({
+      id: `message-${pairKey}`,
+      source: communication.source,
+      target: communication.target,
+      animated: true,
+      label: `${communication.count} msg${communication.count === 1 ? '' : 's'}`,
+      style: {
+        stroke: 'hsl(var(--primary))',
+        strokeWidth: 1.5,
+        strokeDasharray: '6 4',
+      },
+    });
+  }
 
   return { nodes, edges };
 }
@@ -104,26 +174,40 @@ function SwarmCanvasInner({ swarmId }: SwarmCanvasProps) {
   const agents = useSwarmStore(agentSelector);
   const taskSelector = useMemo(() => selectTasksForSwarm(swarmId), [swarmId]);
   const tasks = useSwarmStore(taskSelector);
+  const messageSelector = useMemo(() => selectMessagesForSwarm(swarmId), [swarmId]);
+  const messages = useSwarmStore(messageSelector);
   const cancelSwarm = useSwarmStore(state => state.cancelSwarm);
+  const retrySwarm = useSwarmStore(state => state.retrySwarm);
   const closeSwarmView = useAppUIStore(state => state.closeSwarmView);
+  const theme = useSettingsStore(state => state.theme);
 
-  const { nodes: initialNodes, edges: initialEdges } = useMemo(
-    () => buildNodesAndEdges(agents),
-    [agents]
+  const colorMode = useMemo(
+    () =>
+      (themeOptions.find(option => option.value === theme)?.isDark ??
+      getPluginTheme(theme)?.isDark ??
+      true)
+        ? 'dark'
+        : 'light',
+    [theme]
   );
+  const [nodes, setNodes, onNodesChange] = useNodesState<SwarmAgentNodeType>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
 
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
-
-  // Sync React Flow internal state when agents change
   useEffect(() => {
-    setNodes(initialNodes);
-    setEdges(initialEdges);
-  }, [initialNodes, initialEdges, setNodes, setEdges]);
+    setNodes(currentNodes => {
+      const graph = buildGraphElements(agents, tasks, messages, currentNodes);
+      setEdges(graph.edges);
+      return graph.nodes;
+    });
+  }, [agents, tasks, messages, setNodes, setEdges]);
 
   const handleCancel = useCallback(() => {
     cancelSwarm(swarmId);
   }, [cancelSwarm, swarmId]);
+
+  const handleRetry = useCallback(() => {
+    retrySwarm(swarmId);
+  }, [retrySwarm, swarmId]);
 
   // Empty state
   if (!swarm) {
@@ -141,6 +225,7 @@ function SwarmCanvasInner({ swarmId }: SwarmCanvasProps) {
         swarm={swarm}
         agentCount={agents.length}
         onCancel={handleCancel}
+        onRetry={swarm.status === 'error' ? handleRetry : undefined}
         onClose={closeSwarmView}
       />
 
@@ -163,7 +248,7 @@ function SwarmCanvasInner({ swarmId }: SwarmCanvasProps) {
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           nodeTypes={nodeTypes}
-          colorMode="dark"
+          colorMode={colorMode}
           fitView
           fitViewOptions={{ padding: 0.3 }}
           proOptions={{ hideAttribution: true }}

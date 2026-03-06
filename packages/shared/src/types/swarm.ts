@@ -16,8 +16,6 @@ export type SwarmTaskStatus =
   | 'pending' // Not yet assigned
   | 'blocked' // Waiting on dependencies
   | 'assigned' // Given to an agent
-  | 'in_progress' // Agent actively working
-  | 'review' // Submitted for review
   | 'completed' // Approved and done
   | 'failed'; // Failed, may need reassignment
 

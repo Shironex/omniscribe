@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import {
+  MAX_SWARM_MESSAGES,
   createLogger,
   SwarmEvents,
   type SwarmConfig,
@@ -49,6 +50,8 @@ interface SwarmActions extends SocketStoreActions {
   createSwarm: (payload: CreateSwarmPayload) => void;
   /** Cancel a running swarm */
   cancelSwarm: (swarmId: string) => void;
+  /** Retry an errored swarm by creating a new swarm from the same config */
+  retrySwarm: (swarmId: string) => void;
   /** Stop a specific agent in a swarm */
   stopAgent: (swarmId: string, agentId: string) => void;
   /** Set the active/selected swarm */
@@ -204,6 +207,18 @@ export const useSwarmStore = create<SwarmStore>()(
           getSocket().emit(SwarmEvents.CANCEL, { swarmId });
         },
 
+        retrySwarm: (swarmId: string) => {
+          const swarm = get().swarms.find(entry => entry.id === swarmId);
+          if (!swarm) return;
+          logger.debug('retrySwarm', swarmId);
+          get().createSwarm({
+            name: swarm.name,
+            goal: swarm.goal,
+            projectPath: swarm.projectPath,
+            roles: swarm.roles,
+          });
+        },
+
         stopAgent: (swarmId: string, agentId: string) => {
           logger.debug('stopAgent', swarmId, agentId);
           getSocket().emit(SwarmEvents.STOP_AGENT, { swarmId, agentId });
@@ -296,10 +311,11 @@ export const useSwarmStore = create<SwarmStore>()(
           set(
             state => {
               const currentMessages = state.messages[update.swarmId] ?? [];
+              const nextMessages = [...currentMessages, update.message].slice(-MAX_SWARM_MESSAGES);
               return {
                 messages: {
                   ...state.messages,
-                  [update.swarmId]: [...currentMessages, update.message],
+                  [update.swarmId]: nextMessages,
                 },
               };
             },

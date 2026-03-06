@@ -78,5 +78,6 @@ export const InternalSwarmEvents = {
   TASK_UPDATED: 'swarm.task.updated',
   MESSAGE: 'swarm.message',
   COMPLETED: 'swarm.completed',
+  REMOVED: 'swarm.removed',
   SPAWN_TEAMMATE: 'swarm.spawn-teammate',
 } as const;

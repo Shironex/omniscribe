@@ -11,12 +11,13 @@ interface SwarmSummaryPanelProps {
 
 function SwarmSummaryPanelInner({ swarm, agents, tasks }: SwarmSummaryPanelProps) {
   const completedTasks = tasks.filter(t => t.status === 'completed').length;
-  const inProgressTasks = tasks.filter(
-    t => t.status === 'assigned' || t.status === 'in_progress'
-  ).length;
+  const inProgressTasks = tasks.filter(t => t.status === 'assigned').length;
   const pendingTasks = tasks.filter(t => t.status === 'pending' || t.status === 'blocked').length;
   const failedTasks = tasks.filter(t => t.status === 'failed').length;
   const activeAgents = agents.filter(a => a.status === 'active').length;
+  const completedResults = tasks.filter(task => task.status === 'completed' && task.result?.trim());
+  const showResults =
+    (swarm.status === 'completing' || swarm.status === 'done') && completedResults.length > 0;
 
   return (
     <div
@@ -88,6 +89,25 @@ function SwarmSummaryPanelInner({ swarm, agents, tasks }: SwarmSummaryPanelProps
       <div className="text-muted-foreground">
         {activeAgents}/{agents.length} agents active
       </div>
+
+      {showResults && (
+        <>
+          <div className="border-t border-border" />
+          <div className="space-y-1">
+            <div className="font-medium text-foreground">Results</div>
+            <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+              {completedResults.map(task => (
+                <div key={task.id} className="rounded-md border border-border/60 bg-muted/30 p-2">
+                  <div className="font-medium text-foreground line-clamp-1">{task.subject}</div>
+                  <p className="mt-1 text-muted-foreground whitespace-pre-wrap wrap-break-word line-clamp-4">
+                    {task.result}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

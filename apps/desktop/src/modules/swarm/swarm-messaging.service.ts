@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import * as crypto from 'node:crypto';
-import { SwarmMessage, createLogger } from '@omniscribe/shared';
+import { MAX_SWARM_MESSAGES, SwarmMessage, createLogger } from '@omniscribe/shared';
 import { InternalSwarmEvents } from '../shared/events';
 
 @Injectable()
@@ -36,6 +36,9 @@ export class SwarmMessagingService {
 
     const swarmMessages = this.messages.get(swarmId) ?? [];
     swarmMessages.push(message);
+    if (swarmMessages.length > MAX_SWARM_MESSAGES) {
+      swarmMessages.splice(0, swarmMessages.length - MAX_SWARM_MESSAGES);
+    }
     this.messages.set(swarmId, swarmMessages);
 
     this.logger.debug(
