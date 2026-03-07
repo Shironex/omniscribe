@@ -15,7 +15,7 @@ const VALID_TYPES = ['provider', 'frontend', 'both'] as const;
 const ID_PATTERN = /^[a-z0-9-]+$/;
 
 /** Pattern for valid semver strings (e.g., '1.0.0', '2.3.1-beta.1') */
-const SEMVER_PATTERN = /^\d+\.\d+\.\d+/;
+const SEMVER_PATTERN = /^\d+\.\d+\.\d+(-[a-zA-Z0-9.]+)?(\+[a-zA-Z0-9.]+)?$/;
 
 /**
  * Validate a plugin manifest object.

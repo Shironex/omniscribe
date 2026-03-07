@@ -169,7 +169,7 @@ describe('PluginLoaderService', () => {
   describe('loadPlugin (via onModuleInit)', () => {
     it('should skip plugin with invalid manifest and not throw', async () => {
       const def: PluginDefinition = {
-        manifest: { id: '', type: 'provider', displayName: '', description: '' },
+        manifest: { id: '', type: 'provider', displayName: '', description: '' } as PluginManifest,
         createPlugin: jest.fn(),
       };
       const module = await buildModule([def]);

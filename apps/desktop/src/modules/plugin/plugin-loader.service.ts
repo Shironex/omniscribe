@@ -152,11 +152,17 @@ export class PluginLoaderService implements OnModuleInit, OnModuleDestroy {
 
     // Check API version compatibility
     if (manifest.apiVersion) {
-      const pluginMajor = semver.major(manifest.apiVersion);
-      const coreMajor = semver.major(PLUGIN_API_VERSION);
-      if (pluginMajor !== coreMajor) {
+      const parsedPlugin = semver.parse(manifest.apiVersion);
+      const parsedCore = semver.parse(PLUGIN_API_VERSION);
+      if (!parsedPlugin) {
         this.logger.error(
-          `Plugin '${manifest.id}' requires API version ${manifest.apiVersion} (major ${pluginMajor}), but core provides ${PLUGIN_API_VERSION} (major ${coreMajor}). Skipping.`
+          `Plugin '${manifest.id}' has invalid apiVersion '${manifest.apiVersion}'. Skipping.`
+        );
+        return;
+      }
+      if (parsedPlugin.major !== parsedCore!.major) {
+        this.logger.error(
+          `Plugin '${manifest.id}' requires API version ${manifest.apiVersion} (major ${parsedPlugin.major}), but core provides ${PLUGIN_API_VERSION} (major ${parsedCore!.major}). Skipping.`
         );
         return;
       }
