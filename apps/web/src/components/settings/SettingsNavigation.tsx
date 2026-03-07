@@ -116,9 +116,9 @@ export function SettingsNavigation({ activeSection, onNavigate }: SettingsNaviga
       }
 
       // Sort sections by order
-      catSections.sort((a, b) => (a.order ?? 100) - (b.order ?? 100));
+      const sortedSections = catSections.toSorted((a, b) => (a.order ?? 100) - (b.order ?? 100));
 
-      const items: NavigationItem[] = catSections.map(s => ({
+      const items: NavigationItem[] = sortedSections.map(s => ({
         id: s.sectionId,
         label: s.label,
         icon: s.icon,
@@ -135,10 +135,10 @@ export function SettingsNavigation({ activeSection, onNavigate }: SettingsNaviga
     }
 
     // Sort plugin groups by order
-    pluginGroups.sort((a, b) => a.order - b.order);
+    const sortedGroups = pluginGroups.toSorted((a, b) => a.order - b.order);
 
     // Plugin categories appear above core groups
-    return [...pluginGroups, ...CORE_NAV_GROUPS];
+    return [...sortedGroups, ...CORE_NAV_GROUPS];
   }, [settingsCategories, settingsSections]);
 
   // Build a set of plugin-contributed section IDs for error boundary wrapping

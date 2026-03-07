@@ -72,8 +72,7 @@ function resolveShowForSlot(map: Map<string, any>, aiMode?: string): SlotRegistr
       });
     }
   }
-  matches.sort((a, b) => (a.order ?? 100) - (b.order ?? 100));
-  return matches;
+  return matches.toSorted((a, b) => (a.order ?? 100) - (b.order ?? 100));
 }
 
 /** Collect registrations filtered by exact aiMode match, returning only highest priority (used by status-display, usage-panel) */
@@ -91,8 +90,8 @@ function resolveAiModeSlot(map: Map<string, any>, aiMode?: string): SlotRegistra
       });
     }
   }
-  matches.sort((a, b) => (a.order ?? 100) - (b.order ?? 100));
-  return matches.length > 0 ? [matches[0]] : [];
+  if (matches.length === 0) return [];
+  return [matches.reduce((a, b) => ((a.order ?? 100) <= (b.order ?? 100) ? a : b))];
 }
 
 /**

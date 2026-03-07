@@ -60,16 +60,17 @@ export function BranchAutocomplete({
     }
   }, []);
 
-  // Filter branches based on search
-  const filteredBranches = React.useMemo(() => {
-    if (!search) return branches;
+  // Filter branches by search query and partition into local/remote in a single pass
+  const { localBranches, remoteBranches } = React.useMemo(() => {
     const lower = search.toLowerCase();
-    return branches.filter(b => b.name.toLowerCase().includes(lower));
+    const local: Branch[] = [];
+    const remote: Branch[] = [];
+    for (const b of branches) {
+      if (lower && !b.name.toLowerCase().includes(lower)) continue;
+      (b.isRemote ? remote : local).push(b);
+    }
+    return { localBranches: local, remoteBranches: remote };
   }, [branches, search]);
-
-  // Separate local and remote branches
-  const localBranches = filteredBranches.filter(b => !b.isRemote);
-  const remoteBranches = filteredBranches.filter(b => b.isRemote);
 
   // Check if search matches an existing branch
   const searchMatchesExisting = React.useMemo(() => {

@@ -52,14 +52,14 @@ export function BranchSelector({
 
   // Filter and group branches
   const { localBranches, remoteBranches } = useMemo(() => {
-    const filtered = branches.filter(branch =>
-      branch.name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-
-    return {
-      localBranches: filtered.filter(b => !b.isRemote),
-      remoteBranches: filtered.filter(b => b.isRemote),
-    };
+    const lower = searchQuery.toLowerCase();
+    const local: Branch[] = [];
+    const remote: Branch[] = [];
+    for (const b of branches) {
+      if (!b.name.toLowerCase().includes(lower)) continue;
+      (b.isRemote ? remote : local).push(b);
+    }
+    return { localBranches: local, remoteBranches: remote };
   }, [branches, searchQuery]);
 
   const handleSelect = (branchName: string) => {

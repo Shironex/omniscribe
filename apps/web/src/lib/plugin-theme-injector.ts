@@ -11,8 +11,6 @@
  * All inputs are validated/sanitized to prevent CSS injection attacks.
  */
 
-import { ALL_THEMES } from '@omniscribe/shared';
-
 /** Attribute used to identify plugin theme style elements in the DOM */
 const THEME_ATTR = 'data-plugin-theme';
 
@@ -121,17 +119,4 @@ export function removeThemeStyles(themeId: string): void {
   if (existing) {
     existing.remove();
   }
-}
-
-/**
- * Check whether a theme ID matches a built-in theme.
- *
- * Used to prevent plugin themes from colliding with core theme IDs.
- * Plugin themes should use prefixed IDs like `plugin-{pluginId}-{themeName}`.
- *
- * @param themeId - The theme identifier to check
- * @returns `true` if the ID matches a built-in theme
- */
-export function isBuiltinThemeId(themeId: string): boolean {
-  return (ALL_THEMES as string[]).includes(themeId);
 }
