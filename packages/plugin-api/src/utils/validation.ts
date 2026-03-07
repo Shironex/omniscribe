@@ -93,17 +93,14 @@ export function validateManifest(manifest: unknown): ManifestValidationResult {
       'version is required and must be a non-empty string, got: ' + JSON.stringify(obj.version)
     );
   } else if (!SEMVER_PATTERN.test(obj.version)) {
-    errors.push(
-      `version must be a valid semver string (e.g., '1.0.0'), got: "${obj.version}"`
-    );
+    errors.push(`version must be a valid semver string (e.g., '1.0.0'), got: "${obj.version}"`);
   }
 
   // apiVersion: optional, but if provided must be a valid semver string
   if (obj.apiVersion !== undefined) {
     if (typeof obj.apiVersion !== 'string' || obj.apiVersion.length === 0) {
       errors.push(
-        'apiVersion must be a non-empty string if provided, got: ' +
-          JSON.stringify(obj.apiVersion)
+        'apiVersion must be a non-empty string if provided, got: ' + JSON.stringify(obj.apiVersion)
       );
     } else if (!SEMVER_PATTERN.test(obj.apiVersion)) {
       errors.push(

@@ -37,11 +37,7 @@ import type { ProviderCapabilities, SessionOperation } from '../types/capabiliti
 import type { CliCommandConfig, CliDetectionResult } from '../types/cli';
 import type { PluginContext } from '../types/plugin';
 import type { AiProviderPlugin } from '../types/provider';
-import type {
-  LaunchContext,
-  McpConfigContribution,
-  ProviderSessionEntry,
-} from '../types/session';
+import type { LaunchContext, McpConfigContribution, ProviderSessionEntry } from '../types/session';
 import type { ProviderSessionStatus } from '../types/status';
 import type { ProviderUsageData } from '../types/usage';
 import type { PluginActivation } from '../types/activation';
