@@ -90,8 +90,8 @@ function resolveAiModeSlot(map: Map<string, any>, aiMode?: string): SlotRegistra
       });
     }
   }
-  const sorted = matches.toSorted((a, b) => (a.order ?? 100) - (b.order ?? 100));
-  return sorted.length > 0 ? [sorted[0]] : [];
+  if (matches.length === 0) return [];
+  return [matches.reduce((a, b) => ((a.order ?? 100) <= (b.order ?? 100) ? a : b))];
 }
 
 /**

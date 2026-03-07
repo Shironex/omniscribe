@@ -60,8 +60,9 @@ export function BranchAutocomplete({
     }
   }, []);
 
+  // Filter branches by search query and partition into local/remote in a single pass
   const { localBranches, remoteBranches } = React.useMemo(() => {
-    const lower = search?.toLowerCase();
+    const lower = search.toLowerCase();
     const local: Branch[] = [];
     const remote: Branch[] = [];
     for (const b of branches) {
