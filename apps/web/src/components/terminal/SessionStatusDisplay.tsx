@@ -28,9 +28,6 @@ function getModeConfig(
   providers: ProviderInfo[],
   statusRenderers: Map<string, WithPluginId<SessionStatusRendererRegistration>>
 ) {
-  const renderer = [...statusRenderers.values()].find(r => r.aiMode === aiMode);
-  const provider = providers.find(p => p.aiMode === aiMode);
-
   if (aiMode === 'plain') {
     return {
       icon: Terminal,
@@ -39,6 +36,9 @@ function getModeConfig(
       rendererComponent: null,
     };
   }
+
+  const renderer = [...statusRenderers.values()].find(r => r.aiMode === aiMode);
+  const provider = providers.find(p => p.aiMode === aiMode);
 
   return {
     icon: Terminal,

@@ -140,7 +140,8 @@ export function UsagePopover() {
     if (!activeTab) return [];
 
     // Get all sessions belonging to this tab
-    const tabSessions = sessions.filter(s => activeTab.sessionIds.includes(s.id));
+    const sessionIdSet = new Set(activeTab.sessionIds);
+    const tabSessions = sessions.filter(s => sessionIdSet.has(s.id));
 
     // Backward compat: if no sessionIds match, fall back to projectPath lookup
     const relevantSessions =
@@ -166,7 +167,7 @@ export function UsagePopover() {
       }
     }
 
-    return panels.sort((a, b) => (a.registration.order ?? 100) - (b.registration.order ?? 100));
+    return panels.toSorted((a, b) => (a.registration.order ?? 100) - (b.registration.order ?? 100));
   }, [activeTab, sessions, usagePanels, providers]);
 
   // No panels registered for any active provider
