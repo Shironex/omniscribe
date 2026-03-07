@@ -5,7 +5,7 @@ export { PluginStorageService } from './plugin-storage.service';
 export { PluginGateway } from './plugin.gateway';
 export { createPluginContext, disposePluginContext } from './plugin-context.factory';
 export type { BackendPluginContext } from './plugin-context.factory';
-export { emitPluginEvent, createPluginEventInterface } from './plugin-events';
+export { createPluginEventInterface } from './plugin-events';
 export type {
   PluginDefinition,
   RegisteredProvider,

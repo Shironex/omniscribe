@@ -14,6 +14,9 @@ const VALID_TYPES = ['provider', 'frontend', 'both'] as const;
 /** Pattern for valid plugin IDs: lowercase alphanumeric with hyphens */
 const ID_PATTERN = /^[a-z0-9-]+$/;
 
+/** Pattern for valid semver strings (e.g., '1.0.0', '2.3.1-beta.1') */
+const SEMVER_PATTERN = /^\d+\.\d+\.\d+(-[a-zA-Z0-9.]+)?(\+[a-zA-Z0-9.]+)?$/;
+
 /**
  * Validate a plugin manifest object.
  *
@@ -82,6 +85,28 @@ export function validateManifest(manifest: unknown): ManifestValidationResult {
   // icon: optional, but if provided must be string
   if (obj.icon !== undefined && typeof obj.icon !== 'string') {
     errors.push('icon must be a string if provided, got: ' + typeof obj.icon);
+  }
+
+  // version: required, non-empty, valid semver
+  if (typeof obj.version !== 'string' || obj.version.length === 0) {
+    errors.push(
+      'version is required and must be a non-empty string, got: ' + JSON.stringify(obj.version)
+    );
+  } else if (!SEMVER_PATTERN.test(obj.version)) {
+    errors.push(`version must be a valid semver string (e.g., '1.0.0'), got: "${obj.version}"`);
+  }
+
+  // apiVersion: optional, but if provided must be a valid semver string
+  if (obj.apiVersion !== undefined) {
+    if (typeof obj.apiVersion !== 'string' || obj.apiVersion.length === 0) {
+      errors.push(
+        'apiVersion must be a non-empty string if provided, got: ' + JSON.stringify(obj.apiVersion)
+      );
+    } else if (!SEMVER_PATTERN.test(obj.apiVersion)) {
+      errors.push(
+        `apiVersion must be a valid semver string (e.g., '1.0.0'), got: "${obj.apiVersion}"`
+      );
+    }
   }
 
   return {

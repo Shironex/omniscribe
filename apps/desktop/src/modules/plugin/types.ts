@@ -23,6 +23,8 @@ export interface PluginDefinition {
   autoEnable?: boolean;
   /** If true, plugin is activated immediately after loading (default: false). Requires autoEnable. */
   autoActivate?: boolean;
+  /** If true, this is a built-in plugin and may register with reserved AI modes (default: false) */
+  builtIn?: boolean;
 }
 
 /** A registered provider in the registry with runtime metadata */

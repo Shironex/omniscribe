@@ -20,8 +20,20 @@ export class PluginRegistryService {
   /**
    * Register a provider plugin entry in the registry.
    * If a provider for the same aiMode already exists, it is overwritten with a warning.
+   * Third-party plugins (builtIn = false) are rejected if they try to register with a built-in aiMode.
+   *
+   * @param entry - The provider entry to register
+   * @param builtIn - INTERNAL: Only PluginLoaderService should set this to true.
+   *                  Controls access to reserved AI modes (claude, plain).
    */
-  registerProvider(entry: RegisteredProvider): void {
+  registerProvider(entry: RegisteredProvider, builtIn = false): void {
+    const normalizedMode = entry.plugin.aiMode.trim().toLowerCase();
+    if (!builtIn && (VALID_AI_MODES as readonly string[]).some(m => m === normalizedMode)) {
+      this.logger.error(
+        `Cannot register plugin '${entry.manifest.id}' with built-in aiMode '${entry.plugin.aiMode}'. Registration rejected.`
+      );
+      return;
+    }
     if (this.providers.has(entry.plugin.aiMode)) {
       this.logger.warn(
         `Provider already registered for aiMode '${entry.plugin.aiMode}', overwriting`
