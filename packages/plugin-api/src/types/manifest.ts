@@ -51,6 +51,12 @@ export interface PluginManifest {
 
   /** Path to icon asset relative to the package root, or an icon name */
   icon?: string;
+
+  /** The plugin's own semantic version (e.g., '1.0.0') */
+  version: string;
+
+  /** The plugin API version this plugin targets (e.g., '1.0.0'). Omit to accept any API version. */
+  apiVersion?: string;
 }
 
 /**

@@ -13,6 +13,7 @@ function createMockManifest(overrides?: Partial<PluginManifest>): PluginManifest
     type: 'provider',
     displayName: 'Test Provider',
     description: 'A test provider plugin',
+    version: '1.0.0',
     ...overrides,
   };
 }
@@ -78,6 +79,51 @@ describe('PluginRegistryService', () => {
 
       const result = service.getProvider('my-ai');
       expect(result).toBe(entry.plugin);
+    });
+
+    it('should reject non-built-in provider registering with plain aiMode', () => {
+      const entry = createMockProvider('plain');
+
+      service.registerProvider(entry);
+
+      expect(service.getProviderEntry('plain')).toBeUndefined();
+      expect(service.listProviders()).toHaveLength(0);
+    });
+
+    it('should reject non-built-in provider registering with claude aiMode', () => {
+      const entry = createMockProvider('claude');
+
+      service.registerProvider(entry);
+
+      expect(service.getProviderEntry('claude')).toBeUndefined();
+      expect(service.listProviders()).toHaveLength(0);
+    });
+
+    it('should allow built-in provider to register with claude aiMode', () => {
+      const entry = createMockProvider('claude');
+
+      service.registerProvider(entry, true);
+
+      expect(service.getProviderEntry('claude')).toBe(entry);
+      expect(service.listProviders()).toHaveLength(1);
+    });
+
+    it('should allow built-in provider to register with plain aiMode', () => {
+      const entry = createMockProvider('plain');
+
+      service.registerProvider(entry, true);
+
+      expect(service.getProviderEntry('plain')).toBe(entry);
+      expect(service.listProviders()).toHaveLength(1);
+    });
+
+    it('should allow non-built-in provider to register with custom aiMode', () => {
+      const entry = createMockProvider('custom-ai');
+
+      service.registerProvider(entry);
+
+      expect(service.getProviderEntry('custom-ai')).toBe(entry);
+      expect(service.listProviders()).toHaveLength(1);
     });
 
     it('should overwrite existing provider for same aiMode with warning', () => {

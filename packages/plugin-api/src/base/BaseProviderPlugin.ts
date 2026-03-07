@@ -37,8 +37,13 @@ import type { ProviderCapabilities, SessionOperation } from '../types/capabiliti
 import type { CliCommandConfig, CliDetectionResult } from '../types/cli';
 import type { PluginContext } from '../types/plugin';
 import type { AiProviderPlugin } from '../types/provider';
-import type { LaunchContext } from '../types/session';
+import type {
+  LaunchContext,
+  McpConfigContribution,
+  ProviderSessionEntry,
+} from '../types/session';
 import type { ProviderSessionStatus } from '../types/status';
+import type { ProviderUsageData } from '../types/usage';
 import type { PluginActivation } from '../types/activation';
 
 export abstract class BaseProviderPlugin implements AiProviderPlugin {
@@ -135,5 +140,48 @@ export abstract class BaseProviderPlugin implements AiProviderPlugin {
    */
   async deactivate(): Promise<void> {
     // No-op default -- override in subclass if needed
+  }
+
+  // ==========================================
+  // Optional: No-op defaults
+  // ==========================================
+
+  /**
+   * Read past session history for the given project. No-op by default.
+   * Override to return session entries if the provider supports session history.
+   */
+  async readSessionHistory(_projectPath: string): Promise<ProviderSessionEntry[]> {
+    // No-op default -- override in subclass if needed
+    return [];
+  }
+
+  /**
+   * Get MCP configuration this provider needs written before session launch. No-op by default.
+   * Override to contribute MCP config if the provider supports MCP.
+   */
+  async getMcpConfig(
+    _sessionId: string,
+    _projectPath: string
+  ): Promise<McpConfigContribution | null> {
+    // No-op default -- override in subclass if needed
+    return null;
+  }
+
+  /**
+   * Fetch usage data for display in the usage panel. No-op by default.
+   * Override to return usage metrics if the provider supports usage tracking.
+   */
+  async parseUsage(_workingDir: string): Promise<ProviderUsageData | null> {
+    // No-op default -- override in subclass if needed
+    return null;
+  }
+
+  /**
+   * Get additional system prompt text to append for this provider. No-op by default.
+   * Override to inject provider-specific instructions.
+   */
+  getSystemPromptAdditions(_context: LaunchContext): string[] {
+    // No-op default -- override in subclass if needed
+    return [];
   }
 }

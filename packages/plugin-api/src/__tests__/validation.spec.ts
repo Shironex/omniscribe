@@ -6,6 +6,7 @@ describe('validateManifest', () => {
     type: 'provider',
     displayName: 'My Plugin',
     description: 'A test plugin',
+    version: '1.0.0',
   };
 
   it('returns valid for a correct manifest', () => {
@@ -130,12 +131,57 @@ describe('validateManifest', () => {
     expect(result.errors.some(e => e.includes('icon must be a string'))).toBe(true);
   });
 
+  // Missing version
+  it('rejects missing version', () => {
+    const { version: _, ...noVersion } = validManifest;
+    const result = validateManifest(noVersion);
+    expect(result.valid).toBe(false);
+    expect(result.errors.some(e => e.includes('version is required'))).toBe(true);
+  });
+
+  // Empty version
+  it('rejects empty version', () => {
+    const result = validateManifest({ ...validManifest, version: '' });
+    expect(result.valid).toBe(false);
+    expect(result.errors.some(e => e.includes('version is required'))).toBe(true);
+  });
+
+  // Invalid semver version
+  it('rejects invalid semver version', () => {
+    const result = validateManifest({ ...validManifest, version: 'abc' });
+    expect(result.valid).toBe(false);
+    expect(result.errors.some(e => e.includes('version must be a valid semver string'))).toBe(true);
+  });
+
+  // Valid apiVersion passes
+  it('returns valid with optional apiVersion as valid semver', () => {
+    const result = validateManifest({ ...validManifest, apiVersion: '2.1.0' });
+    expect(result.valid).toBe(true);
+    expect(result.errors).toEqual([]);
+  });
+
+  // Invalid apiVersion
+  it('rejects invalid apiVersion', () => {
+    const result = validateManifest({ ...validManifest, apiVersion: 'not-semver' });
+    expect(result.valid).toBe(false);
+    expect(result.errors.some(e => e.includes('apiVersion must be a valid semver string'))).toBe(
+      true
+    );
+  });
+
+  // Missing apiVersion (optional) still passes
+  it('returns valid when apiVersion is omitted (optional field)', () => {
+    const result = validateManifest(validManifest);
+    expect(result.valid).toBe(true);
+    expect(result.errors).toEqual([]);
+  });
+
   // Multiple errors at once
   it('reports multiple errors at once', () => {
     const result = validateManifest({});
     expect(result.valid).toBe(false);
-    // Should have errors for id, type, displayName, description
-    expect(result.errors.length).toBeGreaterThanOrEqual(4);
+    // Should have errors for id, type, displayName, description, version
+    expect(result.errors.length).toBeGreaterThanOrEqual(5);
   });
 
   it('includes bad values in error messages for debugging', () => {

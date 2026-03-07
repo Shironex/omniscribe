@@ -66,6 +66,7 @@ function createValidManifest(overrides?: Partial<PluginManifest>): PluginManifes
     type: 'provider',
     displayName: 'Test Provider',
     description: 'A test provider plugin',
+    version: '1.0.0',
     ...overrides,
   };
 }
@@ -242,6 +243,60 @@ describe('PluginLoaderService', () => {
       const providers = reg.listProviders();
       expect(providers[0].enabled).toBe(false);
       expect(providers[0].activated).toBe(false);
+    });
+
+    it('should load plugin with matching major API version', async () => {
+      const def = createValidDefinition({
+        manifest: { apiVersion: '1.0.0' },
+      });
+      const module = await buildModule([def]);
+      const loader = module.get<PluginLoaderService>(PluginLoaderService);
+      const reg = module.get<PluginRegistryService>(PluginRegistryService);
+
+      await loader.onModuleInit();
+
+      expect(reg.listProviders()).toHaveLength(1);
+    });
+
+    it('should reject plugin with incompatible major API version', async () => {
+      const def = createValidDefinition({
+        manifest: { apiVersion: '2.0.0' },
+      });
+      const module = await buildModule([def]);
+      const loader = module.get<PluginLoaderService>(PluginLoaderService);
+      const reg = module.get<PluginRegistryService>(PluginRegistryService);
+
+      await loader.onModuleInit();
+
+      expect(reg.listProviders()).toHaveLength(0);
+      expect(def.createPlugin).not.toHaveBeenCalled();
+    });
+
+    it('should load plugin with higher minor API version but log a warning', async () => {
+      const def = createValidDefinition({
+        manifest: { apiVersion: '1.1.0' },
+      });
+      const module = await buildModule([def]);
+      const loader = module.get<PluginLoaderService>(PluginLoaderService);
+      const reg = module.get<PluginRegistryService>(PluginRegistryService);
+
+      await loader.onModuleInit();
+
+      // Plugin should still be loaded despite the warning
+      expect(reg.listProviders()).toHaveLength(1);
+    });
+
+    it('should skip API version check when apiVersion is not set', async () => {
+      const def = createValidDefinition({
+        manifest: { apiVersion: undefined },
+      });
+      const module = await buildModule([def]);
+      const loader = module.get<PluginLoaderService>(PluginLoaderService);
+      const reg = module.get<PluginRegistryService>(PluginRegistryService);
+
+      await loader.onModuleInit();
+
+      expect(reg.listProviders()).toHaveLength(1);
     });
 
     it('should emit CLI_DETECTED event after registration', async () => {

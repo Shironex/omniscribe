@@ -3,7 +3,9 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { isProviderPlugin, validateManifest } from '@omniscribe/plugin-api';
 import type { OmniscribePlugin, CliDetectionResult } from '@omniscribe/plugin-api';
 import { createLogger, extractErrorMessage } from '@omniscribe/shared';
+import * as semver from 'semver';
 import type { PluginDefinition } from './types';
+import { PLUGIN_API_VERSION } from './types';
 import { PluginRegistryService } from './plugin-registry.service';
 import { PluginStorageService } from './plugin-storage.service';
 import { createPluginContext, disposePluginContext } from './plugin-context.factory';
@@ -148,6 +150,23 @@ export class PluginLoaderService implements OnModuleInit, OnModuleDestroy {
       return;
     }
 
+    // Check API version compatibility
+    if (manifest.apiVersion) {
+      const pluginMajor = semver.major(manifest.apiVersion);
+      const coreMajor = semver.major(PLUGIN_API_VERSION);
+      if (pluginMajor !== coreMajor) {
+        this.logger.error(
+          `Plugin '${manifest.id}' requires API version ${manifest.apiVersion} (major ${pluginMajor}), but core provides ${PLUGIN_API_VERSION} (major ${coreMajor}). Skipping.`
+        );
+        return;
+      }
+      if (semver.gt(manifest.apiVersion, PLUGIN_API_VERSION)) {
+        this.logger.warn(
+          `Plugin '${manifest.id}' targets API version ${manifest.apiVersion} which is newer than core ${PLUGIN_API_VERSION}. Some features may be unavailable.`
+        );
+      }
+    }
+
     // Instantiate plugin
     let plugin: OmniscribePlugin;
     try {
@@ -176,13 +195,16 @@ export class PluginLoaderService implements OnModuleInit, OnModuleDestroy {
 
     // Register the provider (honor autoEnable flag, default disabled)
     const enabled = definition.autoEnable ?? false;
-    this.registry.registerProvider({
-      manifest,
-      plugin,
-      cliStatus,
-      enabled,
-      activated: false,
-    });
+    this.registry.registerProvider(
+      {
+        manifest,
+        plugin,
+        cliStatus,
+        enabled,
+        activated: false,
+      },
+      definition.builtIn
+    );
 
     // Emit CLI detection event for observers
     this.eventEmitter.emit(InternalPluginEvents.CLI_DETECTED(manifest.id), {
