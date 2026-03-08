@@ -443,6 +443,8 @@ export interface SessionStatusUpdate {
   branch?: string;
   /** Worktree path (set after worktree setup) */
   worktreePath?: string;
+  /** Git HEAD commit hash captured at session launch for diff baseline */
+  baselineCommitHash?: string;
 }
 
 // ============================================

@@ -192,6 +192,13 @@ export class SessionLauncherService {
           if (hash) {
             session.baselineCommitHash = hash;
             this.logger.debug(`Captured baseline commit for ${sessionId}: ${hash}`);
+            // Broadcast to frontend so DiffPanel can use the baseline
+            this.eventEmitter.emit(InternalSessionEvents.STATUS, {
+              sessionId,
+              status: session.status,
+              message: session.statusMessage,
+              baselineCommitHash: hash,
+            });
           }
         })
         .catch(() => {
