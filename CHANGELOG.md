@@ -2,6 +2,36 @@
 
 All notable changes to this project will be documented in this file.
 
+## 1.2.0 (2026-03-08)
+
+### Features
+
+- **Plugin API version checking** — Add API version validation, registry guards for incompatible plugins, and default method implementations in `BaseProviderPlugin` (#246)
+
+### UI
+
+- **Polish terminal cards and backgrounds** — Refined terminal card styling, background visual depth, and overall layout polish (#247)
+
+### Performance
+
+- **Array and iteration optimizations** — Replace `Array.includes()` with `Set` lookups, use `toSorted()` over mutable `.sort()`, and optimize hot iteration paths (#245)
+
+### CI
+
+- **Path-based job filtering** — Skip unnecessary CI jobs based on changed file paths; treat cancelled jobs as failures in CI result gate (#244)
+- **Bump GitHub Actions artifacts** — Upgrade actions/upload-artifact and actions/download-artifact to latest major versions
+
+### Dependencies
+
+- Migrate `framer-motion` to `motion` package (#241)
+- Bump `eslint` to 10.0.3 and `lucide-react` to 0.577.0
+- Upgrade safe dependencies across all packages (#241)
+
+### Stats
+
+- 5 PRs merged (14 commits)
+- 55 files changed — +2,121 / −1,724 lines
+
 ## 1.1.1 (2026-03-05)
 
 ### Features
