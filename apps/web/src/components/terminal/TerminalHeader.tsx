@@ -94,7 +94,7 @@ export const TerminalHeader = React.memo(function TerminalHeader({
   return (
     <div
       className={cn(
-        'h-8 bg-muted border-b border-border',
+        'h-8 bg-gradient-to-b from-muted to-muted/80 border-b border-border',
         'flex items-center justify-between px-2 gap-2',
         'select-none',
         className

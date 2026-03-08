@@ -67,7 +67,7 @@ const SortableTab = React.memo(function SortableTab({
       aria-selected={isActive}
       className={cn(
         'no-drag group flex items-center gap-2 px-3 h-7 min-w-0',
-        'cursor-pointer transition-colors rounded-lg',
+        'cursor-pointer transition-all duration-150 rounded-lg relative',
         isActive
           ? 'bg-card text-foreground shadow-sm'
           : 'text-foreground-secondary hover:bg-muted-foreground/10 hover:text-foreground'
@@ -82,6 +82,9 @@ const SortableTab = React.memo(function SortableTab({
     >
       {tab.status && <StatusDot status={tab.status} />}
       <span className="text-sm truncate max-w-32">{tab.label}</span>
+      {isActive && (
+        <div className="absolute bottom-0 left-2 right-2 h-0.5 bg-primary/60 rounded-full" />
+      )}
       <Tooltip>
         <TooltipTrigger asChild>
           <Button

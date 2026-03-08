@@ -54,10 +54,12 @@ export const TerminalCard = React.memo(function TerminalCard({
       data-testid={`session-card-${session.id}`}
       className={cn(
         'flex flex-col h-full min-h-0 min-w-0 rounded-lg overflow-hidden',
-        'border border-border',
         'bg-card',
-        isFocused && 'ring-2 ring-primary',
-        'transition-shadow transition-colors duration-150'
+        'shadow-sm shadow-black/20',
+        'border',
+        isFocused ? 'border-primary/50' : 'border-border',
+        isFocused && 'shadow-[0_0_0_1px_var(--color-primary),0_0_12px_-2px_var(--color-primary)]',
+        'transition-[border-color,box-shadow] duration-200'
       )}
       animate={isFocused ? { scale: 1 } : { scale: 0.995 }}
       transition={transitions.fast}

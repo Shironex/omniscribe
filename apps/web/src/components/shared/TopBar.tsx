@@ -60,7 +60,7 @@ export function TopBar({
     <div
       data-testid="project-tabs"
       className={cn(
-        'h-11 bg-muted border-b border-border',
+        'h-11 bg-gradient-to-b from-muted/90 to-muted border-b border-border/80',
         'flex items-center select-none drag',
         IS_ELECTRON && IS_MAC && 'pl-[78px]',
         className
@@ -85,7 +85,7 @@ export function TopBar({
         <StatusBar currentBranch={currentBranch} statusCounts={statusCounts} />
 
         {/* Divider */}
-        <div className="w-px h-5 bg-border mx-1" />
+        <div className="w-px h-4 bg-border/50 mx-1.5" />
 
         <ActionBar
           hasActiveProject={hasActiveProject}

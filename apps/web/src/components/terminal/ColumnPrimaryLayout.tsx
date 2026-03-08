@@ -25,7 +25,7 @@ export function ColumnPrimaryLayout({
         <React.Fragment key={`column-${columnIndex}`}>
           {columnIndex > 0 && (
             <Separator className="w-1.5 flex items-center justify-center group">
-              <div className="h-8 w-0.5 bg-border rounded-full group-hover:bg-primary transition-colors" />
+              <div className="h-10 w-0.5 bg-border/60 rounded-full group-hover:bg-primary/60 group-hover:h-12 transition-all duration-200" />
             </Separator>
           )}
           <Panel
@@ -46,7 +46,7 @@ export function ColumnPrimaryLayout({
                   <React.Fragment key={session.id}>
                     {rowIndex > 0 && (
                       <Separator className="h-1.5 flex items-center justify-center group">
-                        <div className="w-8 h-0.5 bg-border rounded-full group-hover:bg-primary transition-colors" />
+                        <div className="w-10 h-0.5 bg-border/60 rounded-full group-hover:bg-primary/60 group-hover:w-12 transition-all duration-200" />
                       </Separator>
                     )}
                     <Panel
