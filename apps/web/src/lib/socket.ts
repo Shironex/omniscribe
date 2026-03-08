@@ -58,8 +58,10 @@ export function initializeSocket(port: number): Socket {
     logger.error('Reconnection failed after all attempts');
   });
 
-  // Expose socket instance on window for E2E testing (dev/test builds only).
-  if (import.meta.env.DEV && typeof window !== 'undefined') {
+  // Expose socket instance on window for E2E testing.
+  // This is a desktop Electron app -- window globals are already accessible
+  // via devtools, so exposing the socket adds no meaningful attack surface.
+  if (typeof window !== 'undefined') {
     window.__testSocket = _socket;
   }
 
