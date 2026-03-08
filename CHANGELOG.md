@@ -2,6 +2,35 @@
 
 All notable changes to this project will be documented in this file.
 
+## 1.3.0 (2026-03-08)
+
+### Features
+
+- **Code diff panel** — View file changes made during AI sessions with a slide-in panel showing hunk-level diffs, collapsible file list, and color-coded additions/deletions; "View Changes" button in terminal header (#248, closes #61)
+
+### Bug Fixes
+
+- **Git merge state check** — Fix `checkMergeState()` using `git cat-file` instead of filesystem check (#248)
+- **E2E test socket** — Expose `__testSocket` unconditionally for E2E tests (#249)
+- **Git branch tests** — Update git-branch tests to use null byte delimiter (#249)
+
+### Refactoring
+
+- **Gateway request handling** — Create `handleGatewayRequest()` utility consolidating 15 gateway handlers (#249)
+- **Shared CLI executor** — Create `execCliCommand()` consolidating git/gh exec patterns (#249)
+- **Error boundary factory** — Create `createErrorBoundary()` consolidating 3 error boundaries (#249)
+- **Dead code removal** — Remove 2 dead files, 25+ unused types, unused constants, and 2 unused deps (#249)
+- **Type safety** — Fix 9 `any` type issues with type guards, `Record<string, unknown>`, and tighter generics (#249)
+
+### Testing
+
+- **New test coverage** — Add 101 tests for `terminal.service` (42), `git-diff.service` (26), and `git-status.service` (33) (#249)
+
+### Stats
+
+- 2 PRs merged (11 commits)
+- 66 files changed — +2,559 / −2,026 lines
+
 ## 1.2.0 (2026-03-08)
 
 ### Features
