@@ -128,14 +128,14 @@ describe('createHttpClient', () => {
     });
   });
 
-  describe('swarm HTTP helpers', () => {
+  describe('swarmSpawnTeammate', () => {
     let fetchSpy: jest.SpiedFunction<typeof global.fetch>;
 
     beforeEach(() => {
       fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue({
         ok: true,
         status: 200,
-        json: async () => ({ agent: { id: 'agent-1' }, task: { id: 'task-1' } }),
+        json: async () => ({ agent: { id: 'agent-1' } }),
       } as Response);
     });
 
@@ -155,15 +155,6 @@ describe('createHttpClient', () => {
           method: 'POST',
         })
       );
-    });
-
-    it('extracts taskId from the desktop swarm create-task response shape', async () => {
-      const config = createMockConfig({ swarmId: 'swarm-1', swarmRole: 'lead' });
-      const client = createHttpClient(config, mockLogger);
-
-      const result = await client.swarmCreateTask('Build it', 'Implement feature', 'builder');
-
-      expect(result).toEqual({ taskId: 'task-1' });
     });
 
     it('uses a 20 second timeout when spawning teammates', async () => {

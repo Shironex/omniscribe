@@ -56,20 +56,18 @@ export function buildInstructions(config: ReturnType<typeof loadEnvironmentConfi
   if (config.swarmId) {
     lines.push(
       '',
-      '## Swarm Coordination Tools',
+      '## Swarm Coordination',
       '',
-      'If you are part of a swarm team, use these tools to coordinate:',
-      '- **omniscribe_swarm_get_assignment** — Poll for your next task (check every ~30s)',
-      '- **omniscribe_swarm_report_result** — Report when you finish or fail a task',
-      '- **omniscribe_swarm_claim_files** — Claim files before editing (prevents conflicts)',
-      '- **omniscribe_swarm_release_files** — Release file locks when done',
-      '- **omniscribe_swarm_send_message** — Message other agents or broadcast',
-      '- **omniscribe_swarm_get_messages** — Check for messages from teammates',
-      '- **omniscribe_swarm_get_context** — View full swarm state and progress',
+      'You are part of a swarm team. Coordination happens via files in `.omniscribe/swarm/{swarmId}/`:',
+      '- `config.json` — Swarm configuration (read-only)',
+      '- `state.json` — Current swarm status',
+      '- `tasks.json` — Task list (read/update your assignments)',
+      '- `messages.json` — Message log (append to communicate)',
+      '- `file-locks.json` — File claim registry',
+      '- `agents/{agentId}.json` — Per-agent state files',
       '',
-      'Lead-only tools:',
-      '- **omniscribe_swarm_spawn_teammate** — Add a new agent to the team',
-      '- **omniscribe_swarm_create_task** — Create and assign tasks'
+      'Lead-only tool:',
+      '- **omniscribe_swarm_spawn_teammate** — Spawn a new agent (the only operation that requires an MCP tool)'
     );
   }
 

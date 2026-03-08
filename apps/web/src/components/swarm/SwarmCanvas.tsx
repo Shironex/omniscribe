@@ -1,11 +1,13 @@
-import { useMemo, useCallback, useEffect } from 'react';
+import { useMemo, useCallback, useEffect, useRef } from 'react';
 import {
   ReactFlow,
+  ReactFlowProvider,
   Background,
   Controls,
   BackgroundVariant,
   useNodesState,
   useEdgesState,
+  useReactFlow,
   type NodeTypes,
   type Edge,
   type Node,
@@ -24,8 +26,14 @@ import { useAppUIStore } from '@/stores/useAppUIStore';
 import { useSettingsStore } from '@/stores/useSettingsStore';
 import { getPluginTheme } from '@/stores/usePluginStore';
 import { themeOptions } from '@/lib/theme';
-import { SwarmAgentNode, type SwarmAgentNodeType } from './SwarmAgentNode';
+import {
+  SwarmAgentNode,
+  SWARM_LEAD_SOURCE_HANDLE_ID,
+  SWARM_WORKER_TARGET_HANDLE_ID,
+  type SwarmAgentNodeType,
+} from './SwarmAgentNode';
 import { SwarmToolbar } from './SwarmToolbar';
+import { SwarmChatPanel } from './SwarmChatPanel';
 import { SwarmSummaryPanel } from './SwarmSummaryPanel';
 import { Network } from 'lucide-react';
 
@@ -35,9 +43,9 @@ const nodeTypes: NodeTypes = {
 };
 
 /** Layout constants */
-const NODE_WIDTH = 200;
-const NODE_HEIGHT = 120;
-const HORIZONTAL_GAP = 40;
+const NODE_WIDTH = 160;
+const NODE_HEIGHT = 80;
+const HORIZONTAL_GAP = 50;
 const VERTICAL_GAP = 100;
 
 interface SwarmCanvasProps {
@@ -66,109 +74,57 @@ function getDefaultPosition(agent: SwarmAgent, agents: SwarmAgent[]) {
 
 export function buildGraphElements(
   agents: SwarmAgent[],
-  tasks: SwarmTask[],
-  messages: SwarmMessage[],
+  _tasks: SwarmTask[],
+  _messages: SwarmMessage[],
   previousNodes: Node[] = []
 ) {
   const nodes: SwarmAgentNodeType[] = [];
   const edges: Edge[] = [];
   const previousNodePositions = new Map(previousNodes.map(node => [node.id, node.position]));
-  const taskCounts = new Map<string, number>();
-  const messageCounts = new Map<string, number>();
-  const communicationPairs = new Map<string, { count: number; source: string; target: string }>();
-
-  for (const task of tasks) {
-    if (!task.assignedTo) continue;
-    taskCounts.set(task.assignedTo, (taskCounts.get(task.assignedTo) ?? 0) + 1);
-  }
-
-  for (const message of messages) {
-    messageCounts.set(message.fromAgentId, (messageCounts.get(message.fromAgentId) ?? 0) + 1);
-    if (message.toAgentId !== 'all') {
-      messageCounts.set(message.toAgentId, (messageCounts.get(message.toAgentId) ?? 0) + 1);
-      const pairKey = [message.fromAgentId, message.toAgentId].sort().join(':');
-      const existing = communicationPairs.get(pairKey);
-      communicationPairs.set(pairKey, {
-        count: (existing?.count ?? 0) + 1,
-        source: existing?.source ?? message.fromAgentId,
-        target: existing?.target ?? message.toAgentId,
-      });
-    }
-  }
 
   const lead = agents.find(agent => agent.role === 'lead');
   const workers = agents.filter(agent => agent.role !== 'lead');
+
   if (lead) {
     nodes.push({
       id: lead.id,
       type: 'swarmAgent',
       position: previousNodePositions.get(lead.id) ?? getDefaultPosition(lead, agents),
-      data: {
-        agent: lead,
-        label: `Lead (${lead.sessionId.slice(0, 6)})`,
-        isLead: true,
-        taskCount: taskCounts.get(lead.id) ?? lead.assignedTaskIds.length,
-        messageCount: messageCounts.get(lead.id) ?? 0,
-      },
+      data: { agent: lead, isLead: true },
     });
   }
 
-  workers.forEach(worker => {
+  for (const worker of workers) {
     nodes.push({
       id: worker.id,
       type: 'swarmAgent',
       position: previousNodePositions.get(worker.id) ?? getDefaultPosition(worker, agents),
-      data: {
-        agent: worker,
-        label: `${worker.role.charAt(0).toUpperCase() + worker.role.slice(1)} (${worker.sessionId.slice(0, 6)})`,
-        isLead: false,
-        taskCount: taskCounts.get(worker.id) ?? worker.assignedTaskIds.length,
-        messageCount: messageCounts.get(worker.id) ?? 0,
-      },
+      data: { agent: worker, isLead: false },
     });
 
+    // Edge from lead to each worker
     if (lead) {
-      const pairKey = [lead.id, worker.id].sort().join(':');
-      const communication = communicationPairs.get(pairKey);
+      const isActive = worker.status === 'active' || worker.status === 'spawning';
       edges.push({
         id: `${lead.id}-${worker.id}`,
         source: lead.id,
+        sourceHandle: SWARM_LEAD_SOURCE_HANDLE_ID,
         target: worker.id,
-        animated: worker.status === 'active' || Boolean(communication),
-        style: { stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1.5 },
-        ...(communication && {
-          label: `${communication.count} msg${communication.count === 1 ? '' : 's'}`,
-        }),
+        targetHandle: SWARM_WORKER_TARGET_HANDLE_ID,
+        type: 'smoothstep',
+        animated: isActive,
+        style: {
+          stroke: isActive ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground) / 0.4)',
+          strokeWidth: isActive ? 2 : 1.5,
+        },
       });
-      communicationPairs.delete(pairKey);
     }
-  });
-
-  for (const [pairKey, communication] of communicationPairs) {
-    if (
-      !agents.some(agent => agent.id === communication.source || agent.id === communication.target)
-    ) {
-      continue;
-    }
-
-    edges.push({
-      id: `message-${pairKey}`,
-      source: communication.source,
-      target: communication.target,
-      animated: true,
-      label: `${communication.count} msg${communication.count === 1 ? '' : 's'}`,
-      style: {
-        stroke: 'hsl(var(--primary))',
-        strokeWidth: 1.5,
-        strokeDasharray: '6 4',
-      },
-    });
   }
 
   return { nodes, edges };
 }
 
-function SwarmCanvasInner({ swarmId }: SwarmCanvasProps) {
+function SwarmCanvasGraph({ swarmId }: SwarmCanvasProps) {
   const swarm = useSwarmStore(state => state.swarms.find(s => s.id === swarmId) ?? null);
   const agentSelector = useMemo(() => selectAgentsForSwarm(swarmId), [swarmId]);
   const agents = useSwarmStore(agentSelector);
@@ -177,7 +133,9 @@ function SwarmCanvasInner({ swarmId }: SwarmCanvasProps) {
   const messageSelector = useMemo(() => selectMessagesForSwarm(swarmId), [swarmId]);
   const messages = useSwarmStore(messageSelector);
   const cancelSwarm = useSwarmStore(state => state.cancelSwarm);
+  const closeSwarm = useSwarmStore(state => state.closeSwarm);
   const retrySwarm = useSwarmStore(state => state.retrySwarm);
+  const sendMessage = useSwarmStore(state => state.sendMessage);
   const closeSwarmView = useAppUIStore(state => state.closeSwarmView);
   const theme = useSettingsStore(state => state.theme);
 
@@ -193,21 +151,63 @@ function SwarmCanvasInner({ swarmId }: SwarmCanvasProps) {
   const [nodes, setNodes, onNodesChange] = useNodesState<SwarmAgentNodeType>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
 
+  const { fitView } = useReactFlow();
+
+  /** Ref to track current nodes for position preservation (avoids stale closure) */
+  const nodesRef = useRef<Node[]>([]);
+
+  // Keep nodesRef in sync with the latest React Flow node state
+  // so buildGraphElements always has up-to-date dragged positions.
   useEffect(() => {
-    setNodes(currentNodes => {
-      const graph = buildGraphElements(agents, tasks, messages, currentNodes);
-      setEdges(graph.edges);
-      return graph.nodes;
-    });
-  }, [agents, tasks, messages, setNodes, setEdges]);
+    nodesRef.current = nodes;
+  }, [nodes]);
+  /** Track previous node count so we can re-fit when new nodes appear */
+  const prevNodeCountRef = useRef(0);
+
+  useEffect(() => {
+    // Build the graph using the ref-stored nodes so dragged positions are
+    // preserved even though `nodes` is excluded from deps (to prevent loops).
+    const graph = buildGraphElements(agents, tasks, messages, nodesRef.current);
+
+    // Keep the ref in sync with the latest computed nodes
+    nodesRef.current = graph.nodes;
+
+    // Set nodes and edges as separate calls (not nested) to avoid
+    // React batching issues where setEdges inside setNodes callback
+    // could be skipped or deferred.
+    setNodes(graph.nodes);
+    setEdges(graph.edges);
+
+    // Re-fit the view when new nodes are added (e.g. workers spawning)
+    if (graph.nodes.length > prevNodeCountRef.current) {
+      // Small delay to let React Flow measure the new nodes before fitting
+      const timer = setTimeout(() => {
+        fitView({ padding: 0.3, duration: 300 });
+      }, 50);
+      prevNodeCountRef.current = graph.nodes.length;
+      return () => clearTimeout(timer);
+    }
+    prevNodeCountRef.current = graph.nodes.length;
+  }, [agents, tasks, messages, setNodes, setEdges, fitView]);
 
   const handleCancel = useCallback(() => {
     cancelSwarm(swarmId);
   }, [cancelSwarm, swarmId]);
 
+  const handleCloseSwarm = useCallback(() => {
+    closeSwarm(swarmId);
+  }, [closeSwarm, swarmId]);
+
   const handleRetry = useCallback(() => {
     retrySwarm(swarmId);
   }, [retrySwarm, swarmId]);
+
+  const handleSendMessage = useCallback(
+    (content: string, toAgentId?: string) => {
+      sendMessage(swarmId, content, toAgentId);
+    },
+    [sendMessage, swarmId]
+  );
 
   // Empty state
   if (!swarm) {
@@ -227,10 +227,24 @@ function SwarmCanvasInner({ swarmId }: SwarmCanvasProps) {
         onCancel={handleCancel}
         onRetry={swarm.status === 'error' ? handleRetry : undefined}
         onClose={closeSwarmView}
+        onCloseSwarm={handleCloseSwarm}
       />
 
-      {/* Summary panel */}
-      {swarm && <SwarmSummaryPanel swarm={swarm} agents={agents} tasks={tasks} />}
+      {/* Summary panel — shown when swarm is done or cancelled */}
+      {(swarm.status === 'done' || swarm.status === 'cancelled') && (
+        <SwarmSummaryPanel swarm={swarm} agents={agents} tasks={tasks} />
+      )}
+
+      {/* Chat / Activity panel */}
+      {swarm && (
+        <SwarmChatPanel
+          swarm={swarm}
+          agents={agents}
+          messages={messages}
+          tasks={tasks}
+          onSendMessage={handleSendMessage}
+        />
+      )}
 
       {/* Graph canvas */}
       {agents.length === 0 ? (
@@ -272,4 +286,16 @@ function SwarmCanvasInner({ swarmId }: SwarmCanvasProps) {
   );
 }
 
-export default SwarmCanvasInner;
+/**
+ * SwarmCanvas wrapped with ReactFlowProvider so child components
+ * can use useReactFlow() for programmatic fitView, zoom, etc.
+ */
+function SwarmCanvas({ swarmId }: SwarmCanvasProps) {
+  return (
+    <ReactFlowProvider>
+      <SwarmCanvasGraph swarmId={swarmId} />
+    </ReactFlowProvider>
+  );
+}
+
+export default SwarmCanvas;

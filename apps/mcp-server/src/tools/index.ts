@@ -7,34 +7,22 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { ToolConstructor, ToolDependencies } from './types.js';
 import { OmniscribeStatusTool } from './status/index.js';
 import { OmniscribeTasksTool } from './tasks/index.js';
-import {
-  SwarmGetAssignmentTool,
-  SwarmReportResultTool,
-  SwarmClaimFilesTool,
-  SwarmReleaseFilesTool,
-  SwarmSendMessageTool,
-  SwarmGetMessagesTool,
-  SwarmGetContextTool,
-  SwarmSpawnTeammateTool,
-  SwarmCreateTaskTool,
-} from './swarm/index.js';
+import { SwarmSpawnTeammateTool } from './swarm/index.js';
 
 /**
  * All available tool constructors
  * Add new tools here to register them with the server
+ *
+ * NOTE: Most swarm coordination tools (get-assignment, report-result, claim-files,
+ * release-files, send-message, get-messages, get-context, create-task) were removed
+ * after migrating to file-based coordination (.omniscribe/swarm/).
+ * Agents now read/write coordination files directly.
+ * Only spawn-teammate remains as it requires backend session creation via HTTP.
  */
 const TOOL_CONSTRUCTORS: ToolConstructor[] = [
   OmniscribeStatusTool,
   OmniscribeTasksTool,
-  SwarmGetAssignmentTool,
-  SwarmReportResultTool,
-  SwarmClaimFilesTool,
-  SwarmReleaseFilesTool,
-  SwarmSendMessageTool,
-  SwarmGetMessagesTool,
-  SwarmGetContextTool,
   SwarmSpawnTeammateTool,
-  SwarmCreateTaskTool,
 ];
 
 /**

@@ -1,40 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ModuleRef } from '@nestjs/core';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { McpStatusServerService } from './mcp-status-server.service';
 import { McpSessionRegistryService } from './services/mcp-session-registry.service';
 import * as http from 'http';
-
-// Mock swarm modules to prevent transitive electron-store import chain
-// and provide the class tokens for ModuleRef.get()
-const mockSwarmService = {
-  getAgentsForSwarm: jest.fn().mockReturnValue([]),
-  getSwarmContext: jest.fn(),
-  spawnTeammate: jest.fn(),
-  addTaskToAgent: jest.fn(),
-};
-const mockSwarmTaskService = {
-  getAssignment: jest.fn(),
-  reportResult: jest.fn(),
-  claimFiles: jest.fn(),
-  releaseFiles: jest.fn(),
-  createTask: jest.fn(),
-};
-const mockSwarmMessagingService = {
-  sendMessage: jest.fn(),
-  getMessages: jest.fn(),
-  markRead: jest.fn(),
-};
-
-jest.mock('../swarm/swarm.service', () => ({
-  SwarmService: class MockSwarmService {},
-}));
-jest.mock('../swarm/swarm-task.service', () => ({
-  SwarmTaskService: class MockSwarmTaskService {},
-}));
-jest.mock('../swarm/swarm-messaging.service', () => ({
-  SwarmMessagingService: class MockSwarmMessagingService {},
-}));
 
 // Mock only crypto.randomUUID while keeping the rest of crypto intact
 // (NestJS uses crypto.createHash internally for module tokens)
@@ -69,21 +37,6 @@ const httpModule = http as unknown as {
   };
 };
 
-/** Helper: creates a mock ModuleRef that returns our swarm service mocks */
-function createMockModuleRef() {
-  return {
-    get: jest.fn((token: unknown) => {
-      const { SwarmService } = jest.requireMock('../swarm/swarm.service');
-      const { SwarmTaskService } = jest.requireMock('../swarm/swarm-task.service');
-      const { SwarmMessagingService } = jest.requireMock('../swarm/swarm-messaging.service');
-      if (token === SwarmService) return mockSwarmService;
-      if (token === SwarmTaskService) return mockSwarmTaskService;
-      if (token === SwarmMessagingService) return mockSwarmMessagingService;
-      return undefined;
-    }),
-  } as unknown as jest.Mocked<ModuleRef>;
-}
-
 describe('McpStatusServerService', () => {
   let service: McpStatusServerService;
   let eventEmitter: jest.Mocked<EventEmitter2>;
@@ -99,20 +52,6 @@ describe('McpStatusServerService', () => {
       getRegisteredSessions: jest.fn().mockReturnValue([]),
     } as unknown as jest.Mocked<McpSessionRegistryService>;
 
-    // Reset swarm mocks
-    mockSwarmService.getAgentsForSwarm.mockReturnValue([]);
-    mockSwarmService.getSwarmContext.mockReset();
-    mockSwarmService.spawnTeammate.mockReset();
-    mockSwarmService.addTaskToAgent.mockReset();
-    mockSwarmTaskService.getAssignment.mockReset();
-    mockSwarmTaskService.reportResult.mockReset();
-    mockSwarmTaskService.claimFiles.mockReset();
-    mockSwarmTaskService.releaseFiles.mockReset();
-    mockSwarmTaskService.createTask.mockReset();
-    mockSwarmMessagingService.sendMessage.mockReset();
-    mockSwarmMessagingService.getMessages.mockReset();
-    mockSwarmMessagingService.markRead.mockReset();
-
     // Reset mocks
     httpModule.createServer.mockClear();
     httpModule.__mockServer.listen.mockClear();
@@ -125,7 +64,6 @@ describe('McpStatusServerService', () => {
         McpStatusServerService,
         { provide: EventEmitter2, useValue: eventEmitter },
         { provide: McpSessionRegistryService, useValue: sessionRegistry },
-        { provide: ModuleRef, useValue: createMockModuleRef() },
       ],
     }).compile();
 
@@ -201,20 +139,6 @@ describe('McpStatusServerService - Request Handling', () => {
       getRegisteredSessions: jest.fn().mockReturnValue([]),
     } as unknown as jest.Mocked<McpSessionRegistryService>;
 
-    // Reset swarm mocks
-    mockSwarmService.getAgentsForSwarm.mockReturnValue([]);
-    mockSwarmService.getSwarmContext.mockReset();
-    mockSwarmService.spawnTeammate.mockReset();
-    mockSwarmService.addTaskToAgent.mockReset();
-    mockSwarmTaskService.getAssignment.mockReset();
-    mockSwarmTaskService.reportResult.mockReset();
-    mockSwarmTaskService.claimFiles.mockReset();
-    mockSwarmTaskService.releaseFiles.mockReset();
-    mockSwarmTaskService.createTask.mockReset();
-    mockSwarmMessagingService.sendMessage.mockReset();
-    mockSwarmMessagingService.getMessages.mockReset();
-    mockSwarmMessagingService.markRead.mockReset();
-
     mainServer = {
       listen: jest.fn(),
       close: jest.fn(),
@@ -271,7 +195,6 @@ describe('McpStatusServerService - Request Handling', () => {
         McpStatusServerService,
         { provide: EventEmitter2, useValue: eventEmitter },
         { provide: McpSessionRegistryService, useValue: sessionRegistry },
-        { provide: ModuleRef, useValue: createMockModuleRef() },
       ],
     }).compile();
 
@@ -649,15 +572,7 @@ describe('McpStatusServerService - Request Handling', () => {
     });
   });
 
-  describe('POST /swarm/*', () => {
-    const memberAgent = { id: 'agent-1', role: 'builder', sessionId: 'session-1' };
-    const leadAgent = { id: 'agent-lead', role: 'lead', sessionId: 'session-1' };
-
-    function initSwarmSession(agent: typeof memberAgent | typeof leadAgent = memberAgent) {
-      sessionRegistry.getProjectPath.mockReturnValue('/project');
-      mockSwarmService.getAgentsForSwarm.mockReturnValue([agent as any]);
-    }
-
+  describe('POST /swarm/spawn-teammate', () => {
     function swarmPayload(overrides: Record<string, unknown> = {}): Record<string, unknown> {
       return {
         sessionId: 'session-1',
@@ -667,242 +582,54 @@ describe('McpStatusServerService - Request Handling', () => {
       };
     }
 
-    it('gets assignments and updates the agent task count', async () => {
-      initSwarmSession();
-      mockSwarmTaskService.getAssignment.mockReturnValue({
-        id: 'task-1',
-        swarmId: 'swarm-1',
-      } as any);
+    it('emits spawn-teammate event for valid requests', async () => {
+      sessionRegistry.getProjectPath.mockReturnValue('/project');
       await initService();
 
-      const { res } = simulateRequest(
-        'POST',
-        '/swarm/get-assignment',
-        JSON.stringify(swarmPayload())
-      );
-
-      const responseBody = JSON.parse((res.end as jest.Mock).mock.calls[0][0]);
-      expect(responseBody.accepted).toBe(true);
-      expect(responseBody.task.id).toBe('task-1');
-      expect(mockSwarmTaskService.getAssignment).toHaveBeenCalledWith(
-        'swarm-1',
-        'agent-1',
-        'builder'
-      );
-      expect(mockSwarmService.addTaskToAgent).toHaveBeenCalledWith('swarm-1', 'agent-1', 'task-1');
-    });
-
-    it('reports task results with the reporting agent id', async () => {
-      initSwarmSession();
-      mockSwarmTaskService.reportResult.mockReturnValue({
-        id: 'task-1',
-        status: 'completed',
-      } as any);
-      await initService();
-
-      const { res } = simulateRequest(
-        'POST',
-        '/swarm/report-result',
-        JSON.stringify(
-          swarmPayload({
-            taskId: 'task-1',
-            result: 'done',
-            status: 'completed',
-          })
-        )
-      );
-
-      const responseBody = JSON.parse((res.end as jest.Mock).mock.calls[0][0]);
-      expect(responseBody.accepted).toBe(true);
-      expect(mockSwarmTaskService.reportResult).toHaveBeenCalledWith(
-        'swarm-1',
-        'task-1',
-        'agent-1',
-        'done',
-        'completed'
-      );
-    });
-
-    it('claims and releases files for the validated agent', async () => {
-      initSwarmSession();
-      mockSwarmTaskService.claimFiles.mockReturnValue({ claimed: ['src/app.ts'], denied: [] });
-      await initService();
-
-      const claimRes = simulateRequest(
-        'POST',
-        '/swarm/claim-files',
-        JSON.stringify(swarmPayload({ files: ['src/app.ts'] }))
-      ).res;
-      expect(JSON.parse((claimRes.end as jest.Mock).mock.calls[0][0])).toEqual({
-        accepted: true,
-        claimed: ['src/app.ts'],
-        denied: [],
-      });
-      expect(mockSwarmTaskService.claimFiles).toHaveBeenCalledWith('swarm-1', 'agent-1', [
-        'src/app.ts',
-      ]);
-
-      const releaseRes = simulateRequest(
-        'POST',
-        '/swarm/release-files',
-        JSON.stringify(swarmPayload({ files: ['src/app.ts'] }))
-      ).res;
-      expect(JSON.parse((releaseRes.end as jest.Mock).mock.calls[0][0])).toEqual({
-        accepted: true,
-      });
-      expect(mockSwarmTaskService.releaseFiles).toHaveBeenCalledWith('swarm-1', 'agent-1', [
-        'src/app.ts',
-      ]);
-    });
-
-    it('sends and fetches swarm messages, marking fetched messages as read', async () => {
-      initSwarmSession();
-      mockSwarmMessagingService.sendMessage.mockReturnValue({ id: 'msg-1' } as any);
-      mockSwarmMessagingService.getMessages.mockReturnValue([
-        { id: 'msg-1', content: 'hello' },
-        { id: 'msg-2', content: 'world' },
-      ] as any);
-      await initService();
-
-      const sendRes = simulateRequest(
-        'POST',
-        '/swarm/send-message',
-        JSON.stringify(
-          swarmPayload({
-            toAgentId: 'agent-2',
-            content: 'hello',
-            type: 'info',
-          })
-        )
-      ).res;
-      expect(JSON.parse((sendRes.end as jest.Mock).mock.calls[0][0])).toEqual({
-        accepted: true,
-        message: { id: 'msg-1' },
-      });
-      expect(mockSwarmMessagingService.sendMessage).toHaveBeenCalledWith(
-        'swarm-1',
-        'agent-1',
-        'agent-2',
-        'hello',
-        'info'
-      );
-
-      const getRes = simulateRequest(
-        'POST',
-        '/swarm/get-messages',
-        JSON.stringify(swarmPayload())
-      ).res;
-      expect(JSON.parse((getRes.end as jest.Mock).mock.calls[0][0])).toEqual({
-        accepted: true,
-        messages: [
-          { id: 'msg-1', content: 'hello' },
-          { id: 'msg-2', content: 'world' },
-        ],
-      });
-      expect(mockSwarmMessagingService.markRead).toHaveBeenCalledWith('swarm-1', [
-        'msg-1',
-        'msg-2',
-      ]);
-    });
-
-    it('returns swarm context for members', async () => {
-      initSwarmSession();
-      mockSwarmService.getSwarmContext.mockReturnValue({
-        swarm: { id: 'swarm-1' },
-        agents: [],
-        tasks: [],
-        recentMessages: [],
-      } as any);
-      await initService();
-
-      const { res } = simulateRequest('POST', '/swarm/get-context', JSON.stringify(swarmPayload()));
-
-      expect(JSON.parse((res.end as jest.Mock).mock.calls[0][0])).toEqual({
-        accepted: true,
-        swarm: { id: 'swarm-1' },
-        agents: [],
-        tasks: [],
-        recentMessages: [],
-      });
-    });
-
-    it('allows only the lead agent to spawn teammates and create tasks', async () => {
-      initSwarmSession();
-      await initService();
-
-      const spawnRes = simulateRequest(
-        'POST',
-        '/swarm/spawn-teammate',
-        JSON.stringify(swarmPayload({ role: 'builder' }))
-      ).res;
-      expect(spawnRes.writeHead as jest.Mock).toHaveBeenCalledWith(403, {
-        'Content-Type': 'application/json',
-      });
-
-      const taskRes = simulateRequest(
-        'POST',
-        '/swarm/create-task',
-        JSON.stringify(swarmPayload({ subject: 'Create task' }))
-      ).res;
-      expect(taskRes.writeHead as jest.Mock).toHaveBeenCalledWith(403, {
-        'Content-Type': 'application/json',
-      });
-    });
-
-    it('spawns teammates and creates tasks for the lead agent', async () => {
-      initSwarmSession(leadAgent);
-      mockSwarmService.spawnTeammate.mockResolvedValue({ id: 'agent-2', role: 'builder' } as any);
-      mockSwarmTaskService.createTask.mockReturnValue({ id: 'task-2', subject: 'Build it' } as any);
-      await initService();
-
-      const spawnRes = simulateRequest(
+      simulateRequest(
         'POST',
         '/swarm/spawn-teammate',
         JSON.stringify(swarmPayload({ role: 'builder', taskDescription: 'Build it' }))
-      ).res;
-      await Promise.resolve();
-      expect(JSON.parse((spawnRes.end as jest.Mock).mock.calls[0][0])).toEqual({
-        accepted: true,
-        agent: { id: 'agent-2', role: 'builder' },
-      });
+      );
 
-      const taskRes = simulateRequest(
-        'POST',
-        '/swarm/create-task',
-        JSON.stringify(
-          swarmPayload({
-            subject: 'Build it',
-            description: 'Implement the feature',
-            assignedRole: 'builder',
-            dependsOn: ['task-1'],
-          })
-        )
-      ).res;
-      expect(JSON.parse((taskRes.end as jest.Mock).mock.calls[0][0])).toEqual({
-        accepted: true,
-        task: { id: 'task-2', subject: 'Build it' },
-      });
-      expect(mockSwarmTaskService.createTask).toHaveBeenCalledWith('swarm-1', {
-        subject: 'Build it',
-        description: 'Implement the feature',
-        assignedRole: 'builder',
-        dependsOn: ['task-1'],
-      });
+      expect(eventEmitter.emit).toHaveBeenCalledWith(
+        'swarm.spawn-teammate',
+        expect.objectContaining({
+          swarmId: 'swarm-1',
+          sessionId: 'session-1',
+          role: 'builder',
+          taskDescription: 'Build it',
+        })
+      );
     });
 
-    it('rejects swarm requests for sessions outside the swarm', async () => {
-      sessionRegistry.getProjectPath.mockReturnValue('/project');
-      mockSwarmService.getAgentsForSwarm.mockReturnValue([]);
+    it('rejects spawn-teammate with wrong instance ID', async () => {
       await initService();
 
-      const { res } = simulateRequest('POST', '/swarm/get-context', JSON.stringify(swarmPayload()));
+      const { res } = simulateRequest(
+        'POST',
+        '/swarm/spawn-teammate',
+        JSON.stringify(swarmPayload({ instanceId: 'wrong-instance', role: 'builder' }))
+      );
 
-      expect(res.writeHead as jest.Mock).toHaveBeenCalledWith(400, {
-        'Content-Type': 'application/json',
-      });
-      expect(JSON.parse((res.end as jest.Mock).mock.calls[0][0])).toEqual({
-        error: 'Session is not a member of the specified swarm',
-      });
+      const responseBody = JSON.parse((res.end as jest.Mock).mock.calls[0][0]);
+      expect(responseBody.accepted).toBe(false);
+      expect(responseBody.reason).toBe('instance_mismatch');
+    });
+
+    it('rejects spawn-teammate for unknown session', async () => {
+      sessionRegistry.getProjectPath.mockReturnValue(undefined);
+      await initService();
+
+      const { res } = simulateRequest(
+        'POST',
+        '/swarm/spawn-teammate',
+        JSON.stringify(swarmPayload({ role: 'builder' }))
+      );
+
+      const responseBody = JSON.parse((res.end as jest.Mock).mock.calls[0][0]);
+      expect(responseBody.accepted).toBe(false);
+      expect(responseBody.reason).toBe('unknown_session');
     });
   });
 });

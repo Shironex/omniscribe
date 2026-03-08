@@ -178,7 +178,9 @@ export const SwarmEvents = {
   LIST: 'swarm:list',
   GET: 'swarm:get',
   CANCEL: 'swarm:cancel',
+  CLOSE: 'swarm:close',
   STOP_AGENT: 'swarm:stop-agent',
+  SEND_MESSAGE: 'swarm:send-message',
 
   // Server -> Client (broadcasts)
   CREATED: 'swarm:created',

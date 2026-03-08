@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
-import { RotateCcw, X, Square, Users } from 'lucide-react';
+import { RotateCcw, X, Square, Users, Trash2 } from 'lucide-react';
 
 interface SwarmToolbarProps {
   swarm: SwarmConfig;
@@ -12,6 +12,7 @@ interface SwarmToolbarProps {
   onCancel: () => void;
   onRetry?: () => void;
   onClose: () => void;
+  onCloseSwarm?: () => void;
 }
 
 /** Status display configuration */
@@ -41,7 +42,14 @@ const STATUS_BADGE: Record<
   cancelled: { label: 'Cancelled', variant: 'outline', className: 'text-muted-foreground' },
 };
 
-function SwarmToolbarInner({ swarm, agentCount, onCancel, onRetry, onClose }: SwarmToolbarProps) {
+function SwarmToolbarInner({
+  swarm,
+  agentCount,
+  onCancel,
+  onRetry,
+  onClose,
+  onCloseSwarm,
+}: SwarmToolbarProps) {
   const badgeConfig = STATUS_BADGE[swarm.status] ?? STATUS_BADGE.configuring;
   const isTerminal =
     swarm.status === 'done' || swarm.status === 'cancelled' || swarm.status === 'error';
@@ -112,7 +120,25 @@ function SwarmToolbarInner({ swarm, agentCount, onCancel, onRetry, onClose }: Sw
         </Tooltip>
       )}
 
-      {/* Close */}
+      {/* Close Swarm — fully removes swarm, shown only in terminal states */}
+      {isTerminal && onCloseSwarm && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onCloseSwarm}
+              className="w-7 h-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+              aria-label="Close swarm"
+            >
+              <Trash2 size={14} />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">Close swarm</TooltipContent>
+        </Tooltip>
+      )}
+
+      {/* Close view */}
       <Tooltip>
         <TooltipTrigger asChild>
           <Button

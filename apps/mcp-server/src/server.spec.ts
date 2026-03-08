@@ -71,7 +71,7 @@ describe('createServer', () => {
       swarmRole: 'builder',
     });
 
-    expect(instructions).toContain('## Swarm Coordination Tools');
+    expect(instructions).toContain('## Swarm Coordination');
     expect(instructions).toContain('omniscribe_swarm_spawn_teammate');
   });
 });

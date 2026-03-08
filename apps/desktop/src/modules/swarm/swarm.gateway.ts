@@ -20,12 +20,14 @@ import {
   SwarmMessageUpdate,
   SwarmContextResponse,
   CreateSwarmPayload,
+  SwarmOperatorMessagePayload,
   createLogger,
   extractErrorMessage,
 } from '@omniscribe/shared';
 import { InternalSwarmEvents } from '../shared/events';
 import { CORS_CONFIG } from '../shared/cors.config';
 import { SwarmService } from './swarm.service';
+import { SwarmMessagingService } from './swarm-messaging.service';
 
 interface SwarmResponse {
   swarm?: SwarmConfig;
@@ -56,7 +58,10 @@ export class SwarmGateway implements OnGatewayInit {
   @WebSocketServer()
   server!: Server;
 
-  constructor(private readonly swarmService: SwarmService) {}
+  constructor(
+    private readonly swarmService: SwarmService,
+    private readonly swarmMessagingService: SwarmMessagingService
+  ) {}
 
   afterInit(): void {
     this.logger.log('Initialized');
@@ -137,6 +142,27 @@ export class SwarmGateway implements OnGatewayInit {
   }
 
   /**
+   * Handle swarm close request — fully removes a terminal swarm from state.
+   */
+  @SkipThrottle()
+  @SubscribeMessage(SwarmEvents.CLOSE)
+  async handleClose(
+    @MessageBody() payload: { swarmId: string },
+    @ConnectedSocket() _client: Socket
+  ): Promise<SwarmCancelResponse> {
+    this.logger.debug(`[swarm:close] swarmId=${payload.swarmId}`);
+
+    try {
+      await this.swarmService.close(payload.swarmId);
+      return { success: true };
+    } catch (error) {
+      const errorMessage = extractErrorMessage(error);
+      this.logger.error(`Failed to close swarm: ${errorMessage}`);
+      return { success: false, error: errorMessage };
+    }
+  }
+
+  /**
    * Handle stop single agent request.
    */
   @SkipThrottle()
@@ -153,6 +179,33 @@ export class SwarmGateway implements OnGatewayInit {
     } catch (error) {
       const errorMessage = extractErrorMessage(error);
       this.logger.error(`Failed to stop agent: ${errorMessage}`);
+      return { success: false, error: errorMessage };
+    }
+  }
+
+  /**
+   * Handle operator sending a message into the swarm.
+   */
+  @SkipThrottle()
+  @SubscribeMessage(SwarmEvents.SEND_MESSAGE)
+  handleSendMessage(
+    @MessageBody() payload: SwarmOperatorMessagePayload,
+    @ConnectedSocket() _client: Socket
+  ): SwarmCancelResponse {
+    this.logger.debug(`[swarm:send-message] swarmId=${payload.swarmId}, to=${payload.toAgentId}`);
+
+    try {
+      this.swarmMessagingService.sendMessage(
+        payload.swarmId,
+        'operator',
+        payload.toAgentId,
+        payload.content,
+        'info'
+      );
+      return { success: true };
+    } catch (error) {
+      const errorMessage = extractErrorMessage(error);
+      this.logger.error(`Failed to send message: ${errorMessage}`);
       return { success: false, error: errorMessage };
     }
   }
@@ -174,7 +227,8 @@ export class SwarmGateway implements OnGatewayInit {
    * Broadcast swarm status update event.
    */
   @OnEvent(InternalSwarmEvents.STATUS)
-  onSwarmStatus(update: SwarmStatusUpdate): void {
+  onSwarmStatus(update: SwarmStatusUpdate & { fromFile?: boolean }): void {
+    if (update.fromFile) return;
     this.server.emit(SwarmEvents.STATUS, update);
   }
 

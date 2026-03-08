@@ -1,5 +1,4 @@
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { ModuleRef } from '@nestjs/core';
 import { SwarmService } from './swarm.service';
 import { SwarmTaskService } from './swarm-task.service';
 import { SwarmMessagingService } from './swarm-messaging.service';
@@ -25,13 +24,20 @@ describe('Swarm flow smoke test', () => {
     const sessionLauncherService = {
       launchSession: jest.fn().mockResolvedValue({ success: true, terminalSessionId: 1 }),
     };
-    const statusServer = {
-      waitForSessionMcpReady: jest.fn().mockResolvedValue(true),
-      clearSessionMcpReady: jest.fn(),
+    const swarmFileService = {
+      initSwarmDirectory: jest.fn().mockResolvedValue(undefined),
+      cleanupSwarmDirectory: jest.fn().mockResolvedValue(undefined),
+      writeState: jest.fn().mockResolvedValue(undefined),
+      writeAgent: jest.fn().mockResolvedValue(undefined),
+      writeTasks: jest.fn().mockResolvedValue(undefined),
+      writeMessages: jest.fn().mockResolvedValue(undefined),
+      writeFileLocks: jest.fn().mockResolvedValue(undefined),
     };
-    const moduleRef = {
-      get: jest.fn().mockReturnValue(statusServer),
-    } as unknown as ModuleRef;
+    const swarmFileWatcherService = {
+      startWatching: jest.fn(),
+      stopWatching: jest.fn(),
+      ensureAgentsWatcher: jest.fn(),
+    };
 
     const swarmService = new SwarmService(
       eventEmitter,
@@ -39,7 +45,8 @@ describe('Swarm flow smoke test', () => {
       sessionLauncherService as any,
       taskService,
       messagingService,
-      moduleRef
+      swarmFileService as any,
+      swarmFileWatcherService as any
     );
 
     const swarm = await swarmService.create({

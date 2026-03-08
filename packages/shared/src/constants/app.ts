@@ -170,6 +170,9 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
 // Swarm
 // =============================================================================
 
+/** Subdirectory inside project for swarm file-based communication */
+export const SWARM_DATA_DIR = '.omniscribe/swarm';
+
 /** Maximum agents per swarm */
 export const MAX_SWARM_AGENTS = 6;
 

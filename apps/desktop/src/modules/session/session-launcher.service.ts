@@ -12,8 +12,16 @@ import { SessionService } from './session.service';
 import { InternalSessionEvents, InternalTerminalEvents } from '../shared/events';
 
 const INITIAL_PROMPT_READY_TIMEOUT_MS = 15000;
-const INITIAL_PROMPT_SETTLE_MS = 250;
-const INITIAL_PROMPT_SUBMIT_DELAY_MS = 100;
+const INITIAL_PROMPT_SETTLE_MS = 500;
+const INITIAL_PROMPT_SUBMIT_DELAY_MS = 200;
+/** Minimum time to wait after spawn before sending prompt, regardless of output settle.
+ *  Claude CLI's TUI needs time to initialize its input handler after initial output.
+ *  Swarm agents have extra MCP servers which increase TUI init time. */
+const INITIAL_PROMPT_MIN_WAIT_MS = 5000;
+/** How long to wait for a response after submitting the initial prompt before retrying. */
+const INITIAL_PROMPT_VERIFY_TIMEOUT_MS = 5000;
+/** Maximum number of times to retry submitting the initial prompt. */
+const INITIAL_PROMPT_MAX_RETRIES = 2;
 
 // Type guard for providers that support session tracking
 function hasSessionTracker(provider: AiProviderPlugin): provider is AiProviderPlugin & {
@@ -63,6 +71,9 @@ export class SessionLauncherService {
     terminalSessionId: number,
     timeoutMs = INITIAL_PROMPT_READY_TIMEOUT_MS
   ): Promise<void> {
+    const startTime = Date.now();
+
+    // Phase 1: Wait for terminal output to settle (TUI has rendered)
     await new Promise<void>(resolve => {
       let settleTimer: NodeJS.Timeout | null = null;
       let resolved = false;
@@ -97,6 +108,46 @@ export class SessionLauncherService {
 
       this.eventEmitter.on(InternalTerminalEvents.OUTPUT, handleOutput);
     });
+
+    // Phase 2: Ensure minimum wait time has elapsed.
+    // Claude CLI's TUI may output initial text then pause while loading MCP servers.
+    // The settle timer can resolve during this pause, but the TUI input handler
+    // isn't ready yet. Enforce a minimum wait to let the TUI fully initialize.
+    const elapsed = Date.now() - startTime;
+    if (elapsed < INITIAL_PROMPT_MIN_WAIT_MS) {
+      const remaining = INITIAL_PROMPT_MIN_WAIT_MS - elapsed;
+      this.logger.debug(
+        `Terminal output settled after ${elapsed}ms, waiting ${remaining}ms more for TUI readiness`
+      );
+      await new Promise<void>(resolve => setTimeout(resolve, remaining));
+    }
+  }
+
+  /**
+   * Wait for terminal output activity after submitting a prompt.
+   * Returns true if activity was detected (meaning the TUI received the input).
+   */
+  private waitForPromptResponse(terminalSessionId: number, timeoutMs: number): Promise<boolean> {
+    return new Promise<boolean>(resolve => {
+      let resolved = false;
+
+      const finish = (detected: boolean) => {
+        if (resolved) return;
+        resolved = true;
+        clearTimeout(timeout);
+        this.eventEmitter.off(InternalTerminalEvents.OUTPUT, handleOutput);
+        resolve(detected);
+      };
+
+      const handleOutput = (event: { sessionId: number; data: string }) => {
+        if (event.sessionId !== terminalSessionId) return;
+        if (!event.data.trim()) return;
+        finish(true);
+      };
+
+      const timeout = setTimeout(() => finish(false), timeoutMs);
+      this.eventEmitter.on(InternalTerminalEvents.OUTPUT, handleOutput);
+    });
   }
 
   private async submitInitialPrompt(
@@ -105,11 +156,38 @@ export class SessionLauncherService {
     prompt: string
   ): Promise<void> {
     await this.waitForTerminalReady(terminalSessionId);
-    this.logger.log(`Writing initial prompt to session ${sessionId}`);
-    this.terminalService.write(terminalSessionId, prompt);
-    setTimeout(() => {
+
+    for (let attempt = 0; attempt <= INITIAL_PROMPT_MAX_RETRIES; attempt++) {
+      if (attempt > 0) {
+        this.logger.warn(
+          `Retrying initial prompt for session ${sessionId} (attempt ${attempt + 1}/${INITIAL_PROMPT_MAX_RETRIES + 1})`
+        );
+        // Wait a bit before retrying
+        await new Promise<void>(r => setTimeout(r, INITIAL_PROMPT_MIN_WAIT_MS));
+      }
+
+      this.logger.log(`Writing initial prompt to session ${sessionId} (attempt ${attempt + 1})`);
+      this.terminalService.write(terminalSessionId, prompt);
+      await new Promise<void>(r => setTimeout(r, INITIAL_PROMPT_SUBMIT_DELAY_MS));
       this.terminalService.write(terminalSessionId, '\r');
-    }, INITIAL_PROMPT_SUBMIT_DELAY_MS);
+
+      // Verify the TUI responded (any output after we sent the prompt)
+      const gotResponse = await this.waitForPromptResponse(
+        terminalSessionId,
+        INITIAL_PROMPT_VERIFY_TIMEOUT_MS
+      );
+
+      if (gotResponse) {
+        this.logger.log(`Initial prompt accepted by session ${sessionId}`);
+        return;
+      }
+
+      this.logger.warn(`No response after initial prompt for session ${sessionId}`);
+    }
+
+    this.logger.error(
+      `Initial prompt may not have been received by session ${sessionId} after ${INITIAL_PROMPT_MAX_RETRIES + 1} attempts`
+    );
   }
 
   /** Look up swarm membership for a session and return env vars if applicable. */

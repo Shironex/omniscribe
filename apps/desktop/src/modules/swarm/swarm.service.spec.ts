@@ -1,5 +1,4 @@
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { ModuleRef } from '@nestjs/core';
 import {
   MAX_SWARM_AGENTS,
   MAX_SWARM_GOAL_LENGTH,
@@ -9,6 +8,8 @@ import {
 import { SwarmService } from './swarm.service';
 import { SwarmTaskService } from './swarm-task.service';
 import { SwarmMessagingService } from './swarm-messaging.service';
+import { SwarmFileService } from './swarm-file.service';
+import { SwarmFileWatcherService } from './swarm-file-watcher.service';
 
 describe('SwarmService', () => {
   let service: SwarmService;
@@ -26,11 +27,20 @@ describe('SwarmService', () => {
   let swarmMessagingService: jest.Mocked<
     Pick<SwarmMessagingService, 'cleanup' | 'getRecentMessages'>
   >;
-  let moduleRef: jest.Mocked<ModuleRef>;
-  let statusServer: {
-    waitForSessionMcpReady: jest.Mock;
-    clearSessionMcpReady: jest.Mock;
-  };
+  let swarmFileService: jest.Mocked<
+    Pick<
+      SwarmFileService,
+      | 'initSwarmDirectory'
+      | 'cleanupSwarmDirectory'
+      | 'writeState'
+      | 'writeAgent'
+      | 'writeTasks'
+      | 'writeMessages'
+    >
+  >;
+  let swarmFileWatcherService: jest.Mocked<
+    Pick<SwarmFileWatcherService, 'startWatching' | 'stopWatching' | 'ensureAgentsWatcher'>
+  >;
 
   beforeEach(() => {
     eventEmitter = {
@@ -59,14 +69,32 @@ describe('SwarmService', () => {
       getRecentMessages: jest.fn().mockReturnValue([]),
     } as unknown as jest.Mocked<Pick<SwarmMessagingService, 'cleanup' | 'getRecentMessages'>>;
 
-    statusServer = {
-      waitForSessionMcpReady: jest.fn().mockResolvedValue(true),
-      clearSessionMcpReady: jest.fn(),
-    };
+    swarmFileService = {
+      initSwarmDirectory: jest.fn().mockResolvedValue(undefined),
+      cleanupSwarmDirectory: jest.fn().mockResolvedValue(undefined),
+      writeState: jest.fn().mockResolvedValue(undefined),
+      writeAgent: jest.fn().mockResolvedValue(undefined),
+      writeTasks: jest.fn().mockResolvedValue(undefined),
+      writeMessages: jest.fn().mockResolvedValue(undefined),
+    } as unknown as jest.Mocked<
+      Pick<
+        SwarmFileService,
+        | 'initSwarmDirectory'
+        | 'cleanupSwarmDirectory'
+        | 'writeState'
+        | 'writeAgent'
+        | 'writeTasks'
+        | 'writeMessages'
+      >
+    >;
 
-    moduleRef = {
-      get: jest.fn().mockReturnValue(statusServer),
-    } as unknown as jest.Mocked<ModuleRef>;
+    swarmFileWatcherService = {
+      startWatching: jest.fn(),
+      stopWatching: jest.fn(),
+      ensureAgentsWatcher: jest.fn(),
+    } as unknown as jest.Mocked<
+      Pick<SwarmFileWatcherService, 'startWatching' | 'stopWatching' | 'ensureAgentsWatcher'>
+    >;
 
     let sessionCounter = 0;
     sessionService.create.mockImplementation((_mode: string, projectPath: string, options: any) => {
@@ -84,7 +112,8 @@ describe('SwarmService', () => {
       sessionLauncherService as any,
       swarmTaskService as any,
       swarmMessagingService as any,
-      moduleRef
+      swarmFileService as any,
+      swarmFileWatcherService as any
     );
   });
 
@@ -134,7 +163,7 @@ describe('SwarmService', () => {
     );
   });
 
-  it('spawns teammates and waits for MCP readiness', async () => {
+  it('spawns teammates and transitions to active', async () => {
     const swarm = await service.create(
       createPayload({
         roles: [
@@ -148,7 +177,7 @@ describe('SwarmService', () => {
 
     expect(teammate.role).toBe('builder');
     expect(service.getAgentsForSwarm(swarm.id)).toHaveLength(2);
-    expect(statusServer.waitForSessionMcpReady).toHaveBeenCalledWith('session-2', 20000);
+    expect(swarmFileService.writeAgent).toHaveBeenCalled();
     expect(service.getSwarm(swarm.id)?.status).toBe('active');
   });
 
@@ -196,5 +225,122 @@ describe('SwarmService', () => {
     expect(swarmTaskService.cleanup).toHaveBeenCalledWith(swarm.id);
     expect(swarmMessagingService.cleanup).toHaveBeenCalledWith(swarm.id);
     expect(service.getSwarm(swarm.id)?.status).toBe('cancelled');
+  });
+
+  // ============================================
+  // Close (fully remove) swarm tests
+  // ============================================
+
+  describe('close (fully remove swarm)', () => {
+    it('closes a done swarm and removes it from the store', async () => {
+      const swarm = await service.create(createPayload());
+
+      // Move to done state by removing the only agent session
+      service.handleSessionRemoved({ sessionId: 'session-1' });
+      expect(service.getSwarm(swarm.id)?.status).toBe('done');
+
+      // Close the swarm fully
+      await service.close(swarm.id);
+
+      // Swarm should be completely removed from the store
+      expect(service.getSwarm(swarm.id)).toBeUndefined();
+      expect(service.getAgentsForSwarm(swarm.id)).toHaveLength(0);
+    });
+
+    it('closes a cancelled swarm and removes it from the store', async () => {
+      const swarm = await service.create(createPayload());
+      await service.cancel(swarm.id);
+      expect(service.getSwarm(swarm.id)?.status).toBe('cancelled');
+
+      await service.close(swarm.id);
+
+      expect(service.getSwarm(swarm.id)).toBeUndefined();
+    });
+
+    it('closes an errored swarm and removes it from the store', async () => {
+      // Simulate error by making session launch fail
+      sessionLauncherService.launchSession.mockResolvedValueOnce({
+        success: false,
+        error: 'Launch failed',
+      });
+      const swarm = await service.create(createPayload());
+      expect(service.getSwarm(swarm.id)?.status).toBe('error');
+
+      await service.close(swarm.id);
+
+      expect(service.getSwarm(swarm.id)).toBeUndefined();
+    });
+
+    it('rejects closing a swarm that is still active', async () => {
+      const swarm = await service.create(
+        createPayload({
+          roles: [
+            { role: 'lead', count: 1 },
+            { role: 'builder', count: 1 },
+          ],
+        })
+      );
+      await service.spawnTeammate(swarm.id, 'builder', 'Build feature');
+      expect(service.getAgentsForSwarm(swarm.id)).toHaveLength(2);
+      expect(service.getSwarm(swarm.id)?.status).toBe('active');
+
+      // close() should reject non-terminal swarms
+      await expect(service.close(swarm.id)).rejects.toThrow(/Cannot close swarm/);
+
+      // Swarm should still exist
+      expect(service.getSwarm(swarm.id)).toBeDefined();
+      expect(service.getAgentsForSwarm(swarm.id)).toHaveLength(2);
+    });
+
+    it('cleans up watchers, tasks, messages, and disk directory on close', async () => {
+      const swarm = await service.create(createPayload());
+      service.handleSessionRemoved({ sessionId: 'session-1' });
+
+      await service.close(swarm.id);
+
+      expect(swarmFileWatcherService.stopWatching).toHaveBeenCalledWith(swarm.id);
+      expect(swarmTaskService.cleanup).toHaveBeenCalledWith(swarm.id);
+      expect(swarmMessagingService.cleanup).toHaveBeenCalledWith(swarm.id);
+      expect(swarmFileService.cleanupSwarmDirectory).toHaveBeenCalledWith('/project', swarm.id);
+    });
+
+    it('emits REMOVED internal event on close', async () => {
+      const swarm = await service.create(createPayload());
+      service.handleSessionRemoved({ sessionId: 'session-1' });
+
+      // Clear previous emit calls
+      eventEmitter.emit.mockClear();
+
+      await service.close(swarm.id);
+
+      const removedCall = eventEmitter.emit.mock.calls.find(([event]) => event === 'swarm.removed');
+      expect(removedCall).toBeTruthy();
+      expect(removedCall?.[1]).toEqual({ swarmId: swarm.id });
+    });
+
+    it('throws when closing a non-existent swarm', async () => {
+      await expect(service.close('non-existent')).rejects.toThrow();
+    });
+
+    it('does not appear in getSwarms() after close', async () => {
+      const swarm = await service.create(createPayload());
+      service.handleSessionRemoved({ sessionId: 'session-1' });
+
+      await service.close(swarm.id);
+
+      expect(service.getSwarms()).toHaveLength(0);
+    });
+
+    it('cancels any pending cleanup timer when close is called explicitly', async () => {
+      const swarm = await service.create(createPayload());
+      // Move to done which schedules a delayed cleanup
+      service.handleSessionRemoved({ sessionId: 'session-1' });
+      expect(service.getSwarm(swarm.id)?.status).toBe('done');
+
+      // Close immediately - should cancel the scheduled cleanup timer
+      await service.close(swarm.id);
+
+      expect(service.getSwarm(swarm.id)).toBeUndefined();
+    });
   });
 });

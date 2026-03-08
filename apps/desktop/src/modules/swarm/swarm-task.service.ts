@@ -272,6 +272,25 @@ export class SwarmTaskService {
   }
 
   /**
+   * Sync tasks from a file-watcher read.
+   * Replaces in-memory tasks and emits events with `fromFile` flag
+   * so auto-persist handlers skip re-writing.
+   */
+  syncFromFile(swarmId: string, fileTasks: SwarmTask[]): void {
+    this.tasks.set(swarmId, fileTasks);
+
+    for (const task of fileTasks) {
+      this.eventEmitter.emit(InternalSwarmEvents.TASK_UPDATED, {
+        swarmId,
+        task,
+        fromFile: true,
+      });
+    }
+
+    this.logger.debug(`Synced ${fileTasks.length} tasks from file for swarm ${swarmId}`);
+  }
+
+  /**
    * Get all tasks for a swarm.
    */
   getTasksForSwarm(swarmId: string): SwarmTask[] {
@@ -300,6 +319,26 @@ export class SwarmTaskService {
         this.eventEmitter.emit(InternalSwarmEvents.TASK_UPDATED, { swarmId, task });
       }
     }
+  }
+
+  /**
+   * Get all file locks for a swarm as a serializable record.
+   */
+  getFileLocksForSwarm(swarmId: string): Record<string, { agentId: string; claimedAt: string }> {
+    const prefix = `${swarmId}:`;
+    const result: Record<string, { agentId: string; claimedAt: string }> = {};
+
+    for (const [key, lock] of this.fileLocks.entries()) {
+      if (key.startsWith(prefix)) {
+        const filePath = key.slice(prefix.length);
+        result[filePath] = {
+          agentId: lock.agentId,
+          claimedAt: lock.claimedAt.toISOString(),
+        };
+      }
+    }
+
+    return result;
   }
 
   /**

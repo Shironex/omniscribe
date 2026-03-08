@@ -1,5 +1,4 @@
 import { Injectable, Inject, forwardRef } from '@nestjs/common';
-import { ModuleRef } from '@nestjs/core';
 import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
 import { Mutex } from 'async-mutex';
 import * as crypto from 'node:crypto';
@@ -22,7 +21,13 @@ import { SessionService } from '../session/session.service';
 import { SessionLauncherService } from '../session/session-launcher.service';
 import { SwarmTaskService } from './swarm-task.service';
 import { SwarmMessagingService } from './swarm-messaging.service';
-import type { McpStatusServerService } from '../mcp/mcp-status-server.service';
+import { SwarmFileService } from './swarm-file.service';
+import { SwarmFileWatcherService } from './swarm-file-watcher.service';
+import {
+  buildAgentPrompt,
+  buildLeadInitialPrompt,
+  buildWorkerInitialPrompt,
+} from './swarm-prompts';
 import { BackendSwarmConfig, BackendSwarmAgent } from './types';
 
 /**
@@ -40,125 +45,6 @@ const VALID_SWARM_TRANSITIONS: Record<SwarmStatus, SwarmStatus[]> = {
   cancelled: [],
 };
 
-/**
- * Default system prompts for each swarm role.
- */
-const ROLE_PROMPTS: Record<SwarmRole, string> = {
-  lead: `You are the Lead ORCHESTRATOR agent in a multi-agent swarm. You are STRICTLY a coordinator — you do NOT do any actual work (no code review, no coding, no testing, no security audits).
-
-Your ONLY responsibilities:
-- Analyze the goal and decompose it into discrete tasks
-- Create tasks using omniscribe_swarm_create_task with appropriate assignedRole values
-- Spawn teammates using omniscribe_swarm_spawn_teammate for each role needed
-- Monitor progress by polling omniscribe_swarm_get_context
-- Wait for teammates to complete their work, then collect and synthesize their results
-- Communicate with agents through omniscribe_swarm_send_message
-
-DO NOT:
-- Read or review code yourself — delegate that to reviewer/security agents
-- Write code yourself — delegate that to builder agents
-- Perform testing — delegate that to tester agents
-- Do anything that should be done by a teammate
-
-Your workflow: create tasks → spawn teammates → wait for results → synthesize final report.
-
-## CRITICAL: Status Reporting
-You MUST call omniscribe_status and omniscribe_tasks MCP tools throughout your work:
-- Call omniscribe_status with state "working" when you START any work
-- Call omniscribe_tasks to report your task plan and update progress
-- Call omniscribe_status with state "finished" when ALL your work is DONE
-- NEVER end your session without calling omniscribe_status with state "finished"
-This is mandatory — the UI relies on your status to track swarm progress.`,
-
-  builder: `You are a Builder agent in a multi-agent swarm. Your responsibilities:
-- Check for task assignments using omniscribe_swarm_get_assignment
-- Implement the assigned tasks by writing code
-- Claim files before editing them to prevent conflicts
-- Report results using omniscribe_swarm_report_result when tasks are complete
-- Communicate with the Lead agent for clarification
-
-Poll for new assignments regularly using the swarm tools.
-
-## CRITICAL: Status Reporting
-You MUST call omniscribe_status and omniscribe_tasks MCP tools throughout your work:
-- Call omniscribe_status with state "working" when you START any work
-- Call omniscribe_tasks to report your task plan and update progress
-- Call omniscribe_swarm_report_result for each completed task
-- Call omniscribe_status with state "finished" when ALL your work is DONE
-- NEVER end your session without calling omniscribe_status with state "finished"
-This is mandatory — the UI relies on your status to track swarm progress.`,
-
-  reviewer: `You are a Reviewer agent in a multi-agent swarm. Your responsibilities:
-- Check for review task assignments using omniscribe_swarm_get_assignment
-- Review code changes for correctness, style, and best practices
-- Provide detailed feedback through omniscribe_swarm_send_message
-- Report review results using omniscribe_swarm_report_result
-
-Poll for review tasks regularly using the swarm tools.
-
-## CRITICAL: Status Reporting
-You MUST call omniscribe_status and omniscribe_tasks MCP tools throughout your work:
-- Call omniscribe_status with state "working" when you START any work
-- Call omniscribe_tasks to report your task plan and update progress
-- Call omniscribe_swarm_report_result for each completed review
-- Call omniscribe_status with state "finished" when ALL your work is DONE
-- NEVER end your session without calling omniscribe_status with state "finished"
-This is mandatory — the UI relies on your status to track swarm progress.`,
-
-  architect: `You are an Architect agent in a multi-agent swarm. Your responsibilities:
-- Design the high-level architecture and approach
-- Create tasks for builders with clear specifications
-- Review architectural decisions and patterns
-- Ensure consistency across the codebase
-
-Use swarm tools to communicate design decisions and report results.
-
-## CRITICAL: Status Reporting
-You MUST call omniscribe_status and omniscribe_tasks MCP tools throughout your work:
-- Call omniscribe_status with state "working" when you START any work
-- Call omniscribe_tasks to report your task plan and update progress
-- Call omniscribe_swarm_report_result for each completed task
-- Call omniscribe_status with state "finished" when ALL your work is DONE
-- NEVER end your session without calling omniscribe_status with state "finished"
-This is mandatory — the UI relies on your status to track swarm progress.`,
-
-  tester: `You are a Tester agent in a multi-agent swarm. Your responsibilities:
-- Check for test task assignments using omniscribe_swarm_get_assignment
-- Write and run tests for completed features
-- Verify that implementations match requirements
-- Report bugs through omniscribe_swarm_send_message
-- Report test results using omniscribe_swarm_report_result
-
-Poll for testing tasks regularly using the swarm tools.
-
-## CRITICAL: Status Reporting
-You MUST call omniscribe_status and omniscribe_tasks MCP tools throughout your work:
-- Call omniscribe_status with state "working" when you START any work
-- Call omniscribe_tasks to report your task plan and update progress
-- Call omniscribe_swarm_report_result for each completed task
-- Call omniscribe_status with state "finished" when ALL your work is DONE
-- NEVER end your session without calling omniscribe_status with state "finished"
-This is mandatory — the UI relies on your status to track swarm progress.`,
-
-  security: `You are a Security Auditor agent in a multi-agent swarm. Your responsibilities:
-- Check for security review task assignments using omniscribe_swarm_get_assignment
-- Review code for security vulnerabilities and anti-patterns
-- Verify input validation, authentication, and authorization
-- Report security findings through omniscribe_swarm_send_message
-- Report audit results using omniscribe_swarm_report_result
-
-Poll for security review tasks regularly using the swarm tools.
-
-## CRITICAL: Status Reporting
-You MUST call omniscribe_status and omniscribe_tasks MCP tools throughout your work:
-- Call omniscribe_status with state "working" when you START any work
-- Call omniscribe_tasks to report your task plan and update progress
-- Call omniscribe_swarm_report_result for each completed task
-- Call omniscribe_status with state "finished" when ALL your work is DONE
-- NEVER end your session without calling omniscribe_status with state "finished"
-This is mandatory — the UI relies on your status to track swarm progress.`,
-};
-
 @Injectable()
 export class SwarmService {
   private readonly logger = createLogger('SwarmService');
@@ -167,12 +53,10 @@ export class SwarmService {
   private swarms = new Map<string, BackendSwarmConfig>();
   /** swarmId -> agents */
   private agents = new Map<string, BackendSwarmAgent[]>();
-  /** Per-swarm spawn lock — serializes agent spawning to prevent .mcp.json race conditions */
+  /** Per-swarm spawn lock — serializes agent spawning to prevent race conditions */
   private spawnLocks = new Map<string, Mutex>();
   /** swarmId -> delayed cleanup timer */
   private cleanupTimers = new Map<string, NodeJS.Timeout>();
-  /** Lazily resolved McpStatusServerService (avoids circular dep) */
-  private _statusServer: McpStatusServerService | null = null;
 
   constructor(
     private readonly eventEmitter: EventEmitter2,
@@ -182,7 +66,8 @@ export class SwarmService {
     private readonly sessionLauncherService: SessionLauncherService,
     private readonly swarmTaskService: SwarmTaskService,
     private readonly swarmMessagingService: SwarmMessagingService,
-    private readonly moduleRef: ModuleRef
+    private readonly swarmFileService: SwarmFileService,
+    private readonly swarmFileWatcherService: SwarmFileWatcherService
   ) {}
 
   private validateCreatePayload(payload: CreateSwarmPayload): void {
@@ -201,17 +86,6 @@ export class SwarmService {
     if (goal.length > MAX_SWARM_GOAL_LENGTH) {
       throw new Error(`Swarm goal exceeds maximum length of ${MAX_SWARM_GOAL_LENGTH}`);
     }
-  }
-
-  /** Lazily resolve McpStatusServerService to avoid circular module dependency. */
-  private get statusServer(): McpStatusServerService {
-    if (!this._statusServer) {
-      // Dynamic import to avoid circular dependency at load time
-      const { McpStatusServerService } =
-        require('../mcp/mcp-status-server.service') as typeof import('../mcp/mcp-status-server.service');
-      this._statusServer = this.moduleRef.get(McpStatusServerService, { strict: false });
-    }
-    return this._statusServer!;
   }
 
   /** Get or create a per-swarm spawn lock. */
@@ -241,14 +115,19 @@ export class SwarmService {
     const swarm = this.swarms.get(swarmId);
     if (!swarm) return;
 
-    for (const sessionId of swarm.memberSessionIds) {
-      this.statusServer.clearSessionMcpReady(sessionId);
-    }
-
+    this.swarmFileWatcherService.stopWatching(swarmId);
     this.swarmTaskService.cleanup(swarmId);
     this.swarmMessagingService.cleanup(swarmId);
     this.spawnLocks.delete(swarmId);
     this.agents.delete(swarmId);
+
+    // Clean up disk directory
+    this.swarmFileService
+      .cleanupSwarmDirectory(swarm.projectPath, swarmId)
+      .catch(err =>
+        this.logger.warn(`Failed to clean up swarm directory: ${extractErrorMessage(err)}`)
+      );
+
     this.swarms.delete(swarmId);
     this.eventEmitter.emit(InternalSwarmEvents.REMOVED, { swarmId });
   }
@@ -288,6 +167,10 @@ export class SwarmService {
     this.swarms.set(swarmId, swarm);
     this.agents.set(swarmId, []);
 
+    // Persist swarm directory to disk and start watching for agent file changes
+    await this.swarmFileService.initSwarmDirectory(payload.projectPath, swarm);
+    this.swarmFileWatcherService.startWatching(swarmId, payload.projectPath);
+
     this.logger.info(`Created swarm ${swarmId}: ${payload.name} (${totalAgents} agents)`);
 
     this.eventEmitter.emit(InternalSwarmEvents.CREATED, swarm);
@@ -317,14 +200,14 @@ export class SwarmService {
     // Find the lead role (or first role if no explicit lead)
     const leadRole = swarm.roles.find(r => r.role === 'lead') ?? swarm.roles[0];
 
-    const systemPrompt = this.buildAgentPrompt(swarm, leadRole.role, true);
+    const systemPrompt = buildAgentPrompt(swarm, leadRole.role, true);
 
     // Create session using SessionService
     const session = this.sessionService.create('claude', swarm.projectPath, {
       name: `[Swarm] ${swarm.name} - Lead`,
       systemPrompt,
       skipPermissions: true,
-      initialPrompt: `You are the Lead ORCHESTRATOR of the "${swarm.name}" swarm. Your goal:\n\n${swarm.goal}\n\nStart by calling omniscribe_status with state "working". Then decompose this goal into tasks using omniscribe_swarm_create_task and spawn the right teammates using omniscribe_swarm_spawn_teammate. DO NOT do any actual work yourself (no code review, no coding) — only delegate, monitor via omniscribe_swarm_get_context, and synthesize the final report from teammate results. When all work is complete, call omniscribe_status with state "finished".`,
+      initialPrompt: buildLeadInitialPrompt(swarm),
     });
 
     swarm.leadSessionId = session.id;
@@ -357,8 +240,7 @@ export class SwarmService {
 
   /**
    * Spawn a teammate agent for the swarm.
-   * Serialized per-swarm via mutex to prevent .mcp.json race conditions —
-   * each agent must read its .mcp.json before the next spawn overwrites it.
+   * Serialized per-swarm via mutex to prevent concurrent spawn race conditions.
    */
   async spawnTeammate(
     swarmId: string,
@@ -380,18 +262,13 @@ export class SwarmService {
         throw new Error(`Swarm has reached maximum agent count (${MAX_SWARM_AGENTS})`);
       }
 
-      const systemPrompt = this.buildAgentPrompt(swarm, role, false, taskDescription);
-
-      // Create session using SessionService
-      const initialPrompt = taskDescription
-        ? `You are a ${role} agent in the "${swarm.name}" swarm. Your task:\n\n${taskDescription}\n\nStart by calling omniscribe_status with state "working". Use swarm MCP tools to check your assignment, claim files, and report results. When done, call omniscribe_status with state "finished".`
-        : `You are a ${role} agent in the "${swarm.name}" swarm. Start by calling omniscribe_status with state "working". Use omniscribe_swarm_get_assignment to poll for your task, then work on it. Use swarm MCP tools to claim files, report results, and communicate with teammates. When done, call omniscribe_status with state "finished".`;
+      const systemPrompt = buildAgentPrompt(swarm, role, false, taskDescription);
 
       const session = this.sessionService.create('claude', swarm.projectPath, {
         name: `[Swarm] ${swarm.name} - ${role}`,
         systemPrompt,
         skipPermissions: true,
-        initialPrompt,
+        initialPrompt: buildWorkerInitialPrompt(swarm, role, taskDescription),
       });
 
       swarm.memberSessionIds.push(session.id);
@@ -417,22 +294,56 @@ export class SwarmService {
 
       this.updateAgent(swarmId, agent.id, { status: 'active' });
 
+      // Ensure the agents/ subdirectory watcher is running (may not have existed at initial watch)
+      this.swarmFileWatcherService.ensureAgentsWatcher(swarmId, swarm.projectPath);
+
       // Transition to active if still in planning
       if (swarm.status === 'planning') {
         this.updateStatus(swarmId, 'active');
       }
 
-      // Wait for the agent's MCP server to come online before releasing the lock.
-      // This ensures .mcp.json has been read before the next agent can overwrite it.
-      const mcpReady = await this.statusServer.waitForSessionMcpReady(session.id, 20000);
-      if (!mcpReady) {
-        this.logger.warn(
-          `Agent ${session.id} (${role}) MCP server did not report in within timeout — proceeding`
-        );
-      }
-
       return agent;
     });
+  }
+
+  /**
+   * Close and fully remove a swarm from state.
+   * Unlike cancel (which transitions to 'cancelled'), this removes the swarm entirely
+   * so the user can start a new one. Only allowed when swarm is in a terminal state.
+   */
+  async close(swarmId: string): Promise<void> {
+    const swarm = this.swarms.get(swarmId);
+    if (!swarm) throw new Error(`Swarm not found: ${swarmId}`);
+
+    const terminalStates: SwarmStatus[] = ['done', 'cancelled', 'error'];
+    if (!terminalStates.includes(swarm.status)) {
+      throw new Error(`Cannot close swarm in '${swarm.status}' state. Stop the swarm first.`);
+    }
+
+    this.logger.info(`Closing swarm ${swarmId} (status: ${swarm.status})`);
+
+    // Cancel any pending delayed cleanup timer since we're removing now
+    const existingTimer = this.cleanupTimers.get(swarmId);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+      this.cleanupTimers.delete(swarmId);
+    }
+
+    // Stop any sessions that might still be running (e.g. error state)
+    const swarmAgents = this.agents.get(swarmId) ?? [];
+    for (const agent of swarmAgents) {
+      if (agent.status !== 'stopped' && agent.status !== 'error') {
+        try {
+          await this.sessionService.remove(agent.sessionId);
+        } catch (error) {
+          const msg = extractErrorMessage(error);
+          this.logger.warn(`Failed to stop agent ${agent.id} during close: ${msg}`);
+        }
+      }
+    }
+
+    // Fully remove the swarm
+    this.removeSwarm(swarmId);
   }
 
   /**
@@ -458,11 +369,11 @@ export class SwarmService {
       }
     }
 
-    // Cleanup tasks, messages, and spawn lock
+    // Cleanup watchers, tasks, messages, and spawn lock
+    this.swarmFileWatcherService.stopWatching(swarmId);
     this.swarmTaskService.cleanup(swarmId);
     this.swarmMessagingService.cleanup(swarmId);
     this.spawnLocks.delete(swarmId);
-    swarm.memberSessionIds.forEach(sessionId => this.statusServer.clearSessionMcpReady(sessionId));
 
     this.updateStatus(swarmId, 'cancelled');
   }
@@ -530,6 +441,89 @@ export class SwarmService {
   }
 
   /**
+   * Persist current tasks to disk. Called after task mutations.
+   */
+  persistTasks(swarmId: string): void {
+    const swarm = this.swarms.get(swarmId);
+    if (!swarm) return;
+
+    const tasks = this.swarmTaskService.getTasksForSwarm(swarmId);
+    this.swarmFileService
+      .writeTasks(swarm.projectPath, swarmId, tasks)
+      .catch(err => this.logger.warn(`Failed to persist tasks: ${extractErrorMessage(err)}`));
+  }
+
+  /**
+   * Persist current messages to disk. Called after message mutations.
+   */
+  persistMessages(swarmId: string): void {
+    const swarm = this.swarms.get(swarmId);
+    if (!swarm) return;
+
+    const messages = this.swarmMessagingService.getRecentMessages(swarmId);
+    this.swarmFileService
+      .writeMessages(swarm.projectPath, swarmId, messages)
+      .catch(err => this.logger.warn(`Failed to persist messages: ${extractErrorMessage(err)}`));
+  }
+
+  /**
+   * Auto-persist tasks to disk when any task is updated.
+   * Skips when the update originated from the file watcher to prevent infinite loops.
+   */
+  @OnEvent(InternalSwarmEvents.TASK_UPDATED)
+  handleTaskUpdatedPersistence(update: { swarmId: string; fromFile?: boolean }): void {
+    if (update.fromFile) return;
+    this.persistTasks(update.swarmId);
+  }
+
+  /**
+   * Auto-persist messages to disk when a message is sent.
+   * Skips when the update originated from the file watcher to prevent infinite loops.
+   */
+  @OnEvent(InternalSwarmEvents.MESSAGE)
+  handleMessagePersistence(update: { swarmId: string; fromFile?: boolean }): void {
+    if (update.fromFile) return;
+    this.persistMessages(update.swarmId);
+  }
+
+  /**
+   * Handle spawn-teammate requests from the MCP status server.
+   * Decoupled via events to avoid circular McpModule <-> SwarmModule dependency.
+   */
+  @OnEvent(InternalSwarmEvents.SPAWN_TEAMMATE)
+  async handleSpawnTeammateRequest(request: {
+    swarmId: string;
+    sessionId: string;
+    role: SwarmRole;
+    taskDescription?: string;
+    resolve: (result: { agentId: string }) => void;
+    reject: (error: string) => void;
+  }): Promise<void> {
+    try {
+      // Validate the requesting session belongs to the swarm
+      const agents = this.getAgentsForSwarm(request.swarmId);
+      const requestingAgent = agents.find(a => a.sessionId === request.sessionId);
+      if (!requestingAgent) {
+        request.reject('Session is not a member of the specified swarm');
+        return;
+      }
+      if (requestingAgent.role !== 'lead') {
+        request.reject('Only the lead agent can spawn teammates');
+        return;
+      }
+
+      const agent = await this.spawnTeammate(
+        request.swarmId,
+        request.role,
+        request.taskDescription
+      );
+      request.resolve({ agentId: agent.id });
+    } catch (error) {
+      request.reject(extractErrorMessage(error));
+    }
+  }
+
+  /**
    * Handle session status changes to update agent status.
    */
   @OnEvent(InternalSessionEvents.STATUS)
@@ -582,7 +576,6 @@ export class SwarmService {
 
     // Release file locks for the removed agent
     this.swarmTaskService.releaseFiles(swarmId, agent.id);
-    this.statusServer.clearSessionMcpReady(payload.sessionId);
 
     this.updateAgent(swarmId, agent.id, { status: 'stopped' });
 
@@ -609,6 +602,11 @@ export class SwarmService {
 
     swarm.status = newStatus;
     swarm.updatedAt = new Date().toISOString();
+
+    // Persist status change to disk
+    this.swarmFileService
+      .writeState(swarm.projectPath, swarmId, newStatus, swarm.error)
+      .catch(err => this.logger.warn(`Failed to persist swarm state: ${extractErrorMessage(err)}`));
 
     this.eventEmitter.emit(InternalSwarmEvents.STATUS, {
       swarmId,
@@ -638,6 +636,17 @@ export class SwarmService {
 
     if (!agent.assignedTaskIds.includes(taskId)) {
       agent.assignedTaskIds.push(taskId);
+
+      // Persist agent state to disk
+      const swarm = this.swarms.get(swarmId);
+      if (swarm) {
+        this.swarmFileService
+          .writeAgent(swarm.projectPath, swarmId, agent)
+          .catch(err =>
+            this.logger.warn(`Failed to persist agent task assignment: ${extractErrorMessage(err)}`)
+          );
+      }
+
       this.eventEmitter.emit(InternalSwarmEvents.AGENT_UPDATED, { swarmId, agent });
     }
   }
@@ -659,6 +668,16 @@ export class SwarmService {
     if (!agent) return;
 
     Object.assign(agent, updates);
+
+    // Persist agent state to disk
+    const swarm = this.swarms.get(swarmId);
+    if (swarm) {
+      this.swarmFileService
+        .writeAgent(swarm.projectPath, swarmId, agent)
+        .catch(err =>
+          this.logger.warn(`Failed to persist agent update: ${extractErrorMessage(err)}`)
+        );
+    }
 
     this.eventEmitter.emit(InternalSwarmEvents.AGENT_UPDATED, { swarmId, agent });
   }
@@ -698,6 +717,16 @@ export class SwarmService {
     swarmAgents.push(agent);
     this.agents.set(swarmId, swarmAgents);
 
+    // Persist agent state to disk
+    const swarm = this.swarms.get(swarmId);
+    if (swarm) {
+      this.swarmFileService
+        .writeAgent(swarm.projectPath, swarmId, agent)
+        .catch(err =>
+          this.logger.warn(`Failed to persist agent state: ${extractErrorMessage(err)}`)
+        );
+    }
+
     this.eventEmitter.emit(InternalSwarmEvents.AGENT_UPDATED, { swarmId, agent });
 
     return agent;
@@ -727,49 +756,5 @@ export class SwarmService {
       this.updateStatus(swarmId, 'done');
       this.spawnLocks.delete(swarmId);
     }
-  }
-
-  /**
-   * Build a system prompt for an agent including swarm context.
-   */
-  private buildAgentPrompt(
-    swarm: BackendSwarmConfig,
-    role: SwarmRole,
-    isLead: boolean,
-    taskDescription?: string
-  ): string {
-    const rolePrompt = ROLE_PROMPTS[role] ?? `You are a ${role} agent in a multi-agent swarm.`;
-
-    const parts = [
-      rolePrompt,
-      '',
-      `## Swarm Context`,
-      `- Swarm ID: ${swarm.id}`,
-      `- Swarm Name: ${swarm.name}`,
-      `- Goal: ${swarm.goal}`,
-      `- Your Role: ${role}${isLead ? ' (Lead)' : ''}`,
-      `- Strategy: ${swarm.strategy}`,
-    ];
-
-    if (taskDescription) {
-      parts.push('', `## Your Current Task`, taskDescription);
-    }
-
-    parts.push(
-      '',
-      `## Important`,
-      `Use the omniscribe swarm MCP tools to coordinate with other agents.`,
-      `Always claim files before editing them to prevent conflicts.`,
-      `Report your results when tasks are complete using omniscribe_swarm_report_result.`,
-      '',
-      `## MANDATORY: Before You Finish`,
-      `When your work is complete, you MUST do these steps IN ORDER:`,
-      `1. Call omniscribe_swarm_report_result to report each task result`,
-      `2. Call omniscribe_tasks with all tasks marked "completed"`,
-      `3. Call omniscribe_status with state "finished" and a summary message`,
-      `If any of these MCP calls fail, RETRY them. Do not end without completing all three steps.`
-    );
-
-    return parts.join('\n');
   }
 }

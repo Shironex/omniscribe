@@ -3,6 +3,8 @@ export type { SwarmAgentNodeData, SwarmAgentNodeType } from './SwarmAgentNode';
 
 export { SwarmToolbar } from './SwarmToolbar';
 
-export { SwarmSummaryPanel } from './SwarmSummaryPanel';
-
 export { SwarmConfigModal } from './SwarmConfigModal';
+
+export { SwarmChatPanel } from './SwarmChatPanel';
+
+export { SwarmSummaryPanel } from './SwarmSummaryPanel';

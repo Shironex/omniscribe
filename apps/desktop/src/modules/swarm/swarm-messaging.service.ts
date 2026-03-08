@@ -51,6 +51,32 @@ export class SwarmMessagingService {
   }
 
   /**
+   * Sync messages from a file-watcher read.
+   * Merges new messages (by ID) into in-memory store and emits events
+   * with `fromFile` flag so auto-persist handlers skip re-writing.
+   */
+  syncFromFile(swarmId: string, fileMessages: SwarmMessage[]): void {
+    const existing = this.messages.get(swarmId) ?? [];
+    const existingIds = new Set(existing.map(m => m.id));
+
+    const newMessages = fileMessages.filter(m => !existingIds.has(m.id));
+    if (newMessages.length === 0) return;
+
+    const merged = [...existing, ...newMessages].slice(-MAX_SWARM_MESSAGES);
+    this.messages.set(swarmId, merged);
+
+    for (const message of newMessages) {
+      this.eventEmitter.emit(InternalSwarmEvents.MESSAGE, {
+        swarmId,
+        message,
+        fromFile: true,
+      });
+    }
+
+    this.logger.debug(`Synced ${newMessages.length} new messages from file for swarm ${swarmId}`);
+  }
+
+  /**
    * Get unread messages for an agent.
    * Returns messages where toAgentId matches the agent or is 'all'.
    */

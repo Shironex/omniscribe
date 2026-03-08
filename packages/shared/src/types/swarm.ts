@@ -87,56 +87,6 @@ export interface SwarmTemplate {
 }
 
 // MCP payloads for swarm tools
-export interface SwarmGetAssignmentPayload {
-  sessionId: string;
-  instanceId: string;
-  swarmId: string;
-}
-
-export interface SwarmReportResultPayload {
-  sessionId: string;
-  instanceId: string;
-  swarmId: string;
-  taskId: string;
-  result: string;
-  status: 'completed' | 'failed';
-}
-
-export interface SwarmClaimFilesPayload {
-  sessionId: string;
-  instanceId: string;
-  swarmId: string;
-  files: string[];
-}
-
-export interface SwarmReleaseFilesPayload {
-  sessionId: string;
-  instanceId: string;
-  swarmId: string;
-  files?: string[];
-}
-
-export interface SwarmSendMessagePayload {
-  sessionId: string;
-  instanceId: string;
-  swarmId: string;
-  toAgentId: string | 'all';
-  content: string;
-  type: SwarmMessage['type'];
-}
-
-export interface SwarmGetMessagesPayload {
-  sessionId: string;
-  instanceId: string;
-  swarmId: string;
-}
-
-export interface SwarmGetContextPayload {
-  sessionId: string;
-  instanceId: string;
-  swarmId: string;
-}
-
 export interface SwarmSpawnTeammatePayload {
   sessionId: string;
   instanceId: string;
@@ -155,17 +105,12 @@ export interface SwarmCreateTaskPayload {
   dependsOn?: string[];
 }
 
-// Response types for MCP tools
+// Response types
 export interface SwarmContextResponse {
   swarm: SwarmConfig;
   agents: SwarmAgent[];
   tasks: SwarmTask[];
   recentMessages: SwarmMessage[];
-}
-
-export interface SwarmClaimFilesResponse {
-  claimed: string[];
-  denied: string[];
 }
 
 // WebSocket payloads
@@ -195,4 +140,10 @@ export interface SwarmTaskUpdate {
 export interface SwarmMessageUpdate {
   swarmId: string;
   message: SwarmMessage;
+}
+
+export interface SwarmOperatorMessagePayload {
+  swarmId: string;
+  content: string;
+  toAgentId: string | 'all';
 }

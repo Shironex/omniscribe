@@ -13,6 +13,8 @@ import {
   type SwarmAgentUpdate,
   type SwarmTaskUpdate,
   type SwarmMessageUpdate,
+  type SwarmOperatorMessagePayload,
+  type SwarmContextResponse,
 } from '@omniscribe/shared';
 import { getSocket } from '@/lib/socket';
 import { useAppUIStore } from './useAppUIStore';
@@ -50,10 +52,14 @@ interface SwarmActions extends SocketStoreActions {
   createSwarm: (payload: CreateSwarmPayload) => void;
   /** Cancel a running swarm */
   cancelSwarm: (swarmId: string) => void;
+  /** Close a terminal swarm — fully removes it from state so a new one can be started */
+  closeSwarm: (swarmId: string) => void;
   /** Retry an errored swarm by creating a new swarm from the same config */
   retrySwarm: (swarmId: string) => void;
   /** Stop a specific agent in a swarm */
   stopAgent: (swarmId: string, agentId: string) => void;
+  /** Send an operator message into a swarm */
+  sendMessage: (swarmId: string, content: string, toAgentId?: string) => void;
   /** Set the active/selected swarm */
   setActiveSwarm: (swarmId: string | null) => void;
   /** Add a new swarm (used by listeners) */
@@ -173,6 +179,32 @@ export const useSwarmStore = create<SwarmStore>()(
                 const swarms = Array.isArray(response) ? response : response?.swarms;
                 if (Array.isArray(swarms)) {
                   set({ swarms }, undefined, 'swarm/setSwarmsOnReconnect');
+
+                  // Fetch full context for the active swarm (or first non-terminal swarm)
+                  const activeId =
+                    get().activeSwarmId ??
+                    swarms.find(s => s.status !== 'done' && s.status !== 'cancelled')?.id;
+                  if (activeId) {
+                    getSocket().emit(
+                      SwarmEvents.GET,
+                      { swarmId: activeId },
+                      (ctxResp: { context?: SwarmContextResponse; error?: string }) => {
+                        if (ctxResp?.context) {
+                          const ctx = ctxResp.context;
+                          set(
+                            {
+                              activeSwarmId: activeId,
+                              agents: { ...get().agents, [activeId]: ctx.agents },
+                              tasks: { ...get().tasks, [activeId]: ctx.tasks },
+                              messages: { ...get().messages, [activeId]: ctx.recentMessages },
+                            },
+                            undefined,
+                            'swarm/setContextOnReconnect'
+                          );
+                        }
+                      }
+                    );
+                  }
                 }
               }
             );
@@ -207,6 +239,15 @@ export const useSwarmStore = create<SwarmStore>()(
           getSocket().emit(SwarmEvents.CANCEL, { swarmId });
         },
 
+        closeSwarm: (swarmId: string) => {
+          logger.debug('closeSwarm', swarmId);
+          getSocket().emit(SwarmEvents.CLOSE, { swarmId });
+          // Optimistically clear local state immediately
+          get().removeSwarm(swarmId);
+          // Close the swarm view panel
+          useAppUIStore.getState().closeSwarmView();
+        },
+
         retrySwarm: (swarmId: string) => {
           const swarm = get().swarms.find(entry => entry.id === swarmId);
           if (!swarm) return;
@@ -222,6 +263,12 @@ export const useSwarmStore = create<SwarmStore>()(
         stopAgent: (swarmId: string, agentId: string) => {
           logger.debug('stopAgent', swarmId, agentId);
           getSocket().emit(SwarmEvents.STOP_AGENT, { swarmId, agentId });
+        },
+
+        sendMessage: (swarmId: string, content: string, toAgentId = 'all') => {
+          logger.debug('sendMessage', swarmId, toAgentId);
+          const payload: SwarmOperatorMessagePayload = { swarmId, content, toAgentId };
+          getSocket().emit(SwarmEvents.SEND_MESSAGE, payload);
         },
 
         // State actions
