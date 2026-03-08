@@ -223,14 +223,14 @@ describe('GitBranchService', () => {
       gitBase.execGit.mockResolvedValueOnce({ stdout: 'main\n', stderr: '' });
       // git branch -a returns empty
       gitBase.execGit.mockResolvedValueOnce({ stdout: '\n', stderr: '' });
-      // for-each-ref local
+      // for-each-ref local (null byte delimited)
       gitBase.execGit.mockResolvedValueOnce({
-        stdout: 'main|abc1234|initial commit|origin/main|[ahead 1]\n',
+        stdout: 'main\x00abc1234\x00initial commit\x00origin/main\x00[ahead 1]\n',
         stderr: '',
       });
-      // for-each-ref remote
+      // for-each-ref remote (null byte delimited)
       gitBase.execGit.mockResolvedValueOnce({
-        stdout: 'origin/main|abc1234|initial commit\n',
+        stdout: 'origin/main\x00abc1234\x00initial commit\n',
         stderr: '',
       });
 
@@ -277,14 +277,14 @@ describe('GitBranchService', () => {
         { name: 'origin/main', isCurrent: false, isRemote: true, remote: 'origin' },
       ];
 
-      // for-each-ref local
+      // for-each-ref local (null byte delimited)
       gitBase.execGit.mockResolvedValueOnce({
-        stdout: 'main|abc1234|fix something|origin/main|[ahead 2, behind 1]\n',
+        stdout: 'main\x00abc1234\x00fix something\x00origin/main\x00[ahead 2, behind 1]\n',
         stderr: '',
       });
-      // for-each-ref remote
+      // for-each-ref remote (null byte delimited)
       gitBase.execGit.mockResolvedValueOnce({
-        stdout: 'origin/main|def5678|remote commit\n',
+        stdout: 'origin/main\x00def5678\x00remote commit\n',
         stderr: '',
       });
 
@@ -305,7 +305,7 @@ describe('GitBranchService', () => {
       const branches: BranchInfo[] = [{ name: 'feature', isCurrent: false, isRemote: false }];
 
       gitBase.execGit.mockResolvedValueOnce({
-        stdout: 'feature|abc1234|wip||\n',
+        stdout: 'feature\x00abc1234\x00wip\x00\x00\n',
         stderr: '',
       });
       gitBase.execGit.mockResolvedValueOnce({ stdout: '', stderr: '' });
@@ -330,17 +330,17 @@ describe('GitBranchService', () => {
 
   describe('getBranchesWithForEachRef', () => {
     it('should parse local and remote branches from for-each-ref', async () => {
-      // for-each-ref local
+      // for-each-ref local (null byte delimited)
       gitBase.execGit.mockResolvedValueOnce({
         stdout: [
-          'main|abc1234|initial commit|origin/main|[ahead 1]',
-          'feature|def5678|add feature||',
+          'main\x00abc1234\x00initial commit\x00origin/main\x00[ahead 1]',
+          'feature\x00def5678\x00add feature\x00\x00',
         ].join('\n'),
         stderr: '',
       });
-      // for-each-ref remote
+      // for-each-ref remote (null byte delimited)
       gitBase.execGit.mockResolvedValueOnce({
-        stdout: 'origin/main|abc1234|initial commit\n',
+        stdout: 'origin/main\x00abc1234\x00initial commit\n',
         stderr: '',
       });
 
@@ -367,9 +367,10 @@ describe('GitBranchService', () => {
     it('should skip remote HEAD entries', async () => {
       gitBase.execGit.mockResolvedValueOnce({ stdout: '', stderr: '' });
       gitBase.execGit.mockResolvedValueOnce({
-        stdout: ['origin/HEAD|abc1234|head pointer', 'origin/main|abc1234|initial commit'].join(
-          '\n'
-        ),
+        stdout: [
+          'origin/HEAD\x00abc1234\x00head pointer',
+          'origin/main\x00abc1234\x00initial commit',
+        ].join('\n'),
         stderr: '',
       });
 
@@ -381,7 +382,7 @@ describe('GitBranchService', () => {
 
     it('should parse behind tracking info', async () => {
       gitBase.execGit.mockResolvedValueOnce({
-        stdout: 'main|abc1234|commit|origin/main|[behind 3]\n',
+        stdout: 'main\x00abc1234\x00commit\x00origin/main\x00[behind 3]\n',
         stderr: '',
       });
       gitBase.execGit.mockResolvedValueOnce({ stdout: '', stderr: '' });
