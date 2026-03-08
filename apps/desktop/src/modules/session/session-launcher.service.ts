@@ -4,6 +4,7 @@ import { AiMode, LaunchSessionResult, createLogger, extractErrorMessage } from '
 import type { AiProviderPlugin } from '@omniscribe/plugin-api';
 import { TerminalService } from '../terminal';
 import { McpWriterService, McpDiscoveryService } from '../mcp';
+import { GitBaseService } from '../git';
 import { PluginRegistryService } from '../plugin';
 import { CliCommandService } from './cli-command.service';
 import { ClaudeSessionTrackerService } from './claude-session-tracker.service';
@@ -45,6 +46,7 @@ export class SessionLauncherService {
     private readonly terminalService: TerminalService,
     private readonly mcpWriterService: McpWriterService,
     private readonly mcpDiscoveryService: McpDiscoveryService,
+    private readonly gitBase: GitBaseService,
     private readonly cliCommandService: CliCommandService,
     private readonly claudeSessionTracker: ClaudeSessionTrackerService,
     private readonly pluginRegistry: PluginRegistryService,
@@ -181,6 +183,21 @@ export class SessionLauncherService {
       if (session.model) {
         env.OMNISCRIBE_MODEL = session.model;
       }
+
+      // Capture git HEAD as baseline for diff tracking (fire-and-forget, non-blocking)
+      this.gitBase
+        .execGit(worktreePath, ['rev-parse', 'HEAD'])
+        .then(({ stdout }) => {
+          const hash = stdout.trim();
+          if (hash) {
+            session.baselineCommitHash = hash;
+            this.logger.debug(`Captured baseline commit for ${sessionId}: ${hash}`);
+          }
+        })
+        .catch(() => {
+          // Not a git repo or no commits — baseline stays undefined
+          this.logger.debug(`No baseline commit captured for ${sessionId} (not a git repo?)`);
+        });
 
       this.logger.log(
         `Launching session ${sessionId}: ${cliConfig.command} ${cliConfig.args.join(' ')} in ${worktreePath}`

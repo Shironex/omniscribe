@@ -30,8 +30,15 @@ export const TerminalCard = React.memo(function TerminalCard({
   onFocus,
   dragHandleProps,
 }: TerminalCardProps) {
-  const { onKill, onSessionClose, onQuickAction, onResume, onOpenInEditor, quickActions } =
-    useTerminalGridContext();
+  const {
+    onKill,
+    onSessionClose,
+    onQuickAction,
+    onResume,
+    onOpenInEditor,
+    onViewChanges,
+    quickActions,
+  } = useTerminalGridContext();
 
   const handleFocus = React.useCallback(() => onFocus(session.id), [onFocus, session.id]);
   const handleKill = React.useCallback(() => onKill(session.id), [onKill, session.id]);
@@ -47,6 +54,10 @@ export const TerminalCard = React.memo(function TerminalCard({
   const handleOpenInEditor = React.useCallback(
     () => onOpenInEditor?.(session.id),
     [onOpenInEditor, session.id]
+  );
+  const handleViewChanges = React.useCallback(
+    () => onViewChanges?.(session.id),
+    [onViewChanges, session.id]
   );
 
   return (
@@ -72,6 +83,7 @@ export const TerminalCard = React.memo(function TerminalCard({
         onQuickAction={onQuickAction ? handleQuickAction : undefined}
         onResume={onResume ? handleResume : undefined}
         onOpenInEditor={onOpenInEditor ? handleOpenInEditor : undefined}
+        onViewChanges={onViewChanges ? handleViewChanges : undefined}
         dragHandleProps={dragHandleProps}
       />
       <div className="relative flex-1 min-h-0">

@@ -1,11 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { BranchInfo, CommitInfo, RemoteInfo, GitUserConfig } from '@omniscribe/shared';
-import type { GitRepoStatus } from '@omniscribe/shared';
+import type { GitRepoStatus, GitFileDiff } from '@omniscribe/shared';
 import { GitBranchService } from './git-branch.service';
 import { GitStatusService } from './git-status.service';
 import { GitCommitService } from './git-commit.service';
 import { GitRemoteService } from './git-remote.service';
 import { GitRepoService } from './git-repo.service';
+import { GitDiffService } from './git-diff.service';
 
 /**
  * GitService acts as a facade that delegates to specialized domain services.
@@ -18,7 +19,8 @@ export class GitService {
     private readonly gitStatus: GitStatusService,
     private readonly gitCommit: GitCommitService,
     private readonly gitRemote: GitRemoteService,
-    private readonly gitRepo: GitRepoService
+    private readonly gitRepo: GitRepoService,
+    private readonly gitDiff: GitDiffService
   ) {}
 
   // ==================== Branch Operations ====================
@@ -107,6 +109,17 @@ export class GitService {
    */
   async diff(projectPath: string, file?: string): Promise<string> {
     return this.gitCommit.diff(projectPath, file);
+  }
+
+  /**
+   * Get structured diff showing all changes relative to a base commit
+   */
+  async getStructuredDiff(
+    projectPath: string,
+    baseCommit?: string,
+    includeUntracked?: boolean
+  ): Promise<{ files: GitFileDiff[]; totalAdditions: number; totalDeletions: number }> {
+    return this.gitDiff.getDiff(projectPath, baseCommit, includeUntracked);
   }
 
   // ==================== Remote Operations ====================

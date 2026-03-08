@@ -4,6 +4,8 @@ import { devtools } from 'zustand/middleware';
 interface AppUIState {
   isHistoryOpen: boolean;
   isLaunchModalOpen: boolean;
+  isDiffPanelOpen: boolean;
+  diffPanelSessionId: string | null;
 }
 
 interface AppUIActions {
@@ -12,6 +14,9 @@ interface AppUIActions {
   closeHistory: () => void;
   openLaunchModal: () => void;
   closeLaunchModal: () => void;
+  openDiffPanel: (sessionId: string) => void;
+  closeDiffPanel: () => void;
+  toggleDiffPanel: (sessionId: string) => void;
 }
 
 type AppUIStore = AppUIState & AppUIActions;
@@ -21,6 +26,8 @@ export const useAppUIStore = create<AppUIStore>()(
     set => ({
       isHistoryOpen: false,
       isLaunchModalOpen: false,
+      isDiffPanelOpen: false,
+      diffPanelSessionId: null,
 
       toggleHistory: () => {
         set(state => ({ isHistoryOpen: !state.isHistoryOpen }), undefined, 'appUI/toggleHistory');
@@ -41,6 +48,36 @@ export const useAppUIStore = create<AppUIStore>()(
       closeLaunchModal: () => {
         set({ isLaunchModalOpen: false }, undefined, 'appUI/closeLaunchModal');
       },
+
+      openDiffPanel: (sessionId: string) => {
+        set(
+          { isDiffPanelOpen: true, diffPanelSessionId: sessionId },
+          undefined,
+          'appUI/openDiffPanel'
+        );
+      },
+
+      closeDiffPanel: () => {
+        set(
+          { isDiffPanelOpen: false, diffPanelSessionId: null },
+          undefined,
+          'appUI/closeDiffPanel'
+        );
+      },
+
+      toggleDiffPanel: (sessionId: string) => {
+        set(
+          state => {
+            const isOpen = state.isDiffPanelOpen && state.diffPanelSessionId === sessionId;
+            return {
+              isDiffPanelOpen: !isOpen,
+              diffPanelSessionId: isOpen ? null : sessionId,
+            };
+          },
+          undefined,
+          'appUI/toggleDiffPanel'
+        );
+      },
     }),
     { name: 'appUI' }
   )
@@ -48,3 +85,5 @@ export const useAppUIStore = create<AppUIStore>()(
 
 export const selectIsHistoryOpen = (state: AppUIStore) => state.isHistoryOpen;
 export const selectIsLaunchModalOpen = (state: AppUIStore) => state.isLaunchModalOpen;
+export const selectIsDiffPanelOpen = (state: AppUIStore) => state.isDiffPanelOpen;
+export const selectDiffPanelSessionId = (state: AppUIStore) => state.diffPanelSessionId;

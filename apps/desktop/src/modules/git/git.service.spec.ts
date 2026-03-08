@@ -3,6 +3,7 @@ import { GitService } from './git.service';
 import { GitBranchService } from './git-branch.service';
 import { GitStatusService } from './git-status.service';
 import { GitCommitService } from './git-commit.service';
+import { GitDiffService } from './git-diff.service';
 import { GitRemoteService } from './git-remote.service';
 import { GitRepoService } from './git-repo.service';
 
@@ -33,6 +34,10 @@ const mockGitRemote = {
   fetch: jest.fn(),
 };
 
+const mockGitDiff = {
+  getDiff: jest.fn(),
+};
+
 const mockGitRepo = {
   isGitRepository: jest.fn(),
   getRepositoryRoot: jest.fn(),
@@ -50,6 +55,7 @@ describe('GitService', () => {
         { provide: GitBranchService, useValue: mockGitBranch },
         { provide: GitStatusService, useValue: mockGitStatus },
         { provide: GitCommitService, useValue: mockGitCommit },
+        { provide: GitDiffService, useValue: mockGitDiff },
         { provide: GitRemoteService, useValue: mockGitRemote },
         { provide: GitRepoService, useValue: mockGitRepo },
       ],

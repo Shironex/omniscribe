@@ -226,22 +226,26 @@ export class GitStatusService {
   }
 
   /**
-   * Check if merge is in progress
+   * Check if merge is in progress by testing if MERGE_HEAD file exists on disk.
    */
   async checkMergeState(projectPath: string): Promise<boolean> {
     try {
+      // rev-parse --git-path resolves the actual filesystem path for MERGE_HEAD
+      // (works correctly in worktrees where .git is a file pointing elsewhere)
       const { stdout } = await this.gitBase.execGit(projectPath, [
         'rev-parse',
         '--git-path',
         'MERGE_HEAD',
       ]);
       const mergePath = stdout.trim();
+      if (!mergePath) return false;
 
-      // Try to read MERGE_HEAD - if it exists, merge is in progress
-      await this.gitBase.execGit(projectPath, ['cat-file', '-e', `HEAD:${mergePath}`]);
-      return true;
-    } catch (error) {
-      this.logger.warn('Failed to check merge state:', error);
+      // Check if the file exists on disk (not inside a commit)
+      const { existsSync } = await import('fs');
+      const { resolve } = await import('path');
+      const fullPath = resolve(projectPath, mergePath);
+      return existsSync(fullPath);
+    } catch {
       return false;
     }
   }

@@ -47,6 +47,7 @@ interface TerminalHeaderProps {
   gitBranch?: GitBranchInfo;
   onSettingsClick?: () => void;
   onOpenInEditor?: () => void;
+  onViewChanges?: () => void;
   onClose: () => void;
   onQuickAction?: (actionId: string) => void;
   onResume?: () => void;
@@ -60,6 +61,7 @@ export const TerminalHeader = React.memo(function TerminalHeader({
   quickActions = EMPTY_QUICK_ACTIONS,
   onSettingsClick,
   onOpenInEditor,
+  onViewChanges,
   onClose,
   onQuickAction,
   onResume,
@@ -184,6 +186,14 @@ export const TerminalHeader = React.memo(function TerminalHeader({
                 ? () => {
                     setActiveDropdown(null);
                     onOpenInEditor();
+                  }
+                : undefined
+            }
+            onViewChanges={
+              onViewChanges
+                ? () => {
+                    setActiveDropdown(null);
+                    onViewChanges();
                   }
                 : undefined
             }

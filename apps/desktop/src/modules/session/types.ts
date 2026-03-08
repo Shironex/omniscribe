@@ -20,4 +20,6 @@ export interface BackendSessionConfig extends ExtendedSessionConfig {
   forkSessionId?: string;
   /** Whether this session continues the most recent Claude session */
   continueLastSession?: boolean;
+  /** Git HEAD commit hash captured at session launch for diff baseline */
+  baselineCommitHash?: string;
 }

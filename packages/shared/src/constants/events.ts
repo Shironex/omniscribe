@@ -61,6 +61,7 @@ export const GitEvents = {
   CURRENT_BRANCH: 'git:current-branch',
   WORKTREES: 'git:worktrees',
   WORKTREE_CLEANUP: 'git:worktree:cleanup',
+  DIFF: 'git:diff',
 } as const;
 
 // ============================================
