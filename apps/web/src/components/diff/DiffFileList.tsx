@@ -9,7 +9,7 @@ interface DiffFileListProps {
 }
 
 function getFileIcon(file: GitFileDiff) {
-  if (file.deletions > 0 && file.additions === 0 && file.hunks.length === 0) {
+  if (file.deletions > 0 && file.additions === 0) {
     return <FileX size={12} className="text-red-400" />;
   }
   if (file.additions > 0 && file.deletions === 0) {
@@ -41,6 +41,7 @@ function FileDiffItem({ file }: { file: GitFileDiff }) {
       <button
         type="button"
         onClick={toggle}
+        aria-expanded={isExpanded}
         className="w-full flex items-center gap-1.5 px-2 py-1.5 text-left hover:bg-accent/50 transition-colors"
       >
         <ChevronRight

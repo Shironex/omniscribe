@@ -6,7 +6,7 @@ interface DiffViewerProps {
   hunks: GitDiffHunk[];
 }
 
-function DiffLineRow({ line }: { line: GitDiffLine }) {
+const DiffLineRow = memo(function DiffLineRow({ line }: { line: GitDiffLine }) {
   const bgClass =
     line.type === 'addition' ? 'bg-green-500/10' : line.type === 'deletion' ? 'bg-red-500/10' : '';
 
@@ -33,7 +33,7 @@ function DiffLineRow({ line }: { line: GitDiffLine }) {
       </td>
     </tr>
   );
-}
+});
 
 function HunkHeader({ hunk }: { hunk: GitDiffHunk }) {
   return (

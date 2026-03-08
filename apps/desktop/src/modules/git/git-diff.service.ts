@@ -1,8 +1,11 @@
 import { Injectable } from '@nestjs/common';
+import { platform } from 'os';
 import { createLogger } from '@omniscribe/shared';
 import type { GitFileDiff, GitDiffHunk, GitDiffLine } from '@omniscribe/shared';
 import { GitBaseService } from './git-base.service';
 import { GitStatusService } from './git-status.service';
+
+const NULL_DEVICE = platform() === 'win32' ? 'NUL' : '/dev/null';
 
 const BINARY_EXTENSIONS = new Set([
   '.png',
@@ -72,11 +75,13 @@ export class GitDiffService {
 
     const files = this.parseUnifiedDiff(rawDiff);
 
-    // Add synthetic diffs for untracked files
+    // Add synthetic diffs for untracked files (parallelized)
     if (includeUntracked) {
       const untrackedFiles = await this.getUntrackedFiles(projectPath);
-      for (const filePath of untrackedFiles) {
-        const syntheticDiff = await this.generateSyntheticDiff(projectPath, filePath);
+      const results = await Promise.all(
+        untrackedFiles.map(filePath => this.generateSyntheticDiff(projectPath, filePath))
+      );
+      for (const syntheticDiff of results) {
         if (syntheticDiff) {
           files.push(syntheticDiff);
         }
@@ -134,11 +139,12 @@ export class GitDiffService {
       if (lines.length === 0) continue;
 
       // Parse file paths from first line: "a/path b/path"
-      const headerMatch = lines[0].match(/^a\/(.+?) b\/(.+?)$/);
+      // Handles quoted paths for files with spaces (e.g. "a/foo bar" -> quoted by git)
+      const headerMatch = lines[0].match(/^a\/((?:"[^"]+"|.+?)) b\/((?:"[^"]+"|.+?))$/);
       if (!headerMatch) continue;
 
-      const oldPath = headerMatch[1];
-      const newPath = headerMatch[2];
+      const oldPath = headerMatch[1].startsWith('"') ? headerMatch[1].slice(1, -1) : headerMatch[1];
+      const newPath = headerMatch[2].startsWith('"') ? headerMatch[2].slice(1, -1) : headerMatch[2];
 
       // Check for binary
       const isBinary = lines.some(
@@ -244,8 +250,9 @@ export class GitDiffService {
     projectPath: string,
     filePath: string
   ): Promise<GitFileDiff | null> {
-    const ext = filePath.substring(filePath.lastIndexOf('.'));
-    if (BINARY_EXTENSIONS.has(ext.toLowerCase())) {
+    const dotIndex = filePath.lastIndexOf('.');
+    const ext = dotIndex !== -1 ? filePath.substring(dotIndex) : '';
+    if (ext && BINARY_EXTENSIONS.has(ext.toLowerCase())) {
       return {
         path: filePath,
         isBinary: true,
@@ -262,7 +269,8 @@ export class GitDiffService {
         '--no-index',
         '--no-color',
         '--unified=3',
-        '/dev/null',
+        '--',
+        NULL_DEVICE,
         filePath,
       ]);
 

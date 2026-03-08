@@ -1,4 +1,6 @@
 import { Injectable } from '@nestjs/common';
+import { existsSync } from 'fs';
+import { resolve } from 'path';
 import { BranchInfo, createLogger } from '@omniscribe/shared';
 import type { GitRepoStatus, GitFileChange, GitFileStatus } from '@omniscribe/shared';
 import { GitBaseService } from './git-base.service';
@@ -240,9 +242,6 @@ export class GitStatusService {
       const mergePath = stdout.trim();
       if (!mergePath) return false;
 
-      // Check if the file exists on disk (not inside a commit)
-      const { existsSync } = await import('fs');
-      const { resolve } = await import('path');
       const fullPath = resolve(projectPath, mergePath);
       return existsSync(fullPath);
     } catch {

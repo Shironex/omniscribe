@@ -7,12 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { DiffFileList } from './DiffFileList';
 import { useAppUIStore } from '@/stores/useAppUIStore';
-import {
-  useDiffStore,
-  selectDiff,
-  selectDiffLoading,
-  selectDiffError,
-} from '@/stores/useDiffStore';
+import { useDiffStore, type DiffStore } from '@/stores/useDiffStore';
 import { useSessionStore } from '@/stores/useSessionStore';
 
 interface DiffPanelProps {
@@ -33,24 +28,40 @@ export function DiffPanel({ className }: DiffPanelProps) {
   );
 
   const projectPath = session?.worktreePath ?? session?.projectPath ?? null;
+  const baselineCommitHash = session?.baselineCommitHash;
 
-  const diffData = useDiffStore(selectDiff(projectPath));
-  const isLoading = useDiffStore(selectDiffLoading(projectPath));
-  const error = useDiffStore(selectDiffError(projectPath));
+  const diffData = useDiffStore(
+    useCallback(
+      (state: DiffStore) => (projectPath ? state.diffs[projectPath] : undefined),
+      [projectPath]
+    )
+  );
+  const isLoading = useDiffStore(
+    useCallback(
+      (state: DiffStore) => (projectPath ? (state.loading[projectPath] ?? false) : false),
+      [projectPath]
+    )
+  );
+  const error = useDiffStore(
+    useCallback(
+      (state: DiffStore) => (projectPath ? (state.errors[projectPath] ?? null) : null),
+      [projectPath]
+    )
+  );
   const fetchDiff = useDiffStore(state => state.fetchDiff);
 
   // Fetch diff when panel opens or session changes
   useEffect(() => {
     if (isOpen && projectPath) {
-      fetchDiff(projectPath);
+      fetchDiff(projectPath, baselineCommitHash);
     }
-  }, [isOpen, projectPath, fetchDiff]);
+  }, [isOpen, projectPath, baselineCommitHash, fetchDiff]);
 
   const handleRefresh = useCallback(() => {
     if (projectPath) {
-      fetchDiff(projectPath);
+      fetchDiff(projectPath, baselineCommitHash);
     }
-  }, [projectPath, fetchDiff]);
+  }, [projectPath, baselineCommitHash, fetchDiff]);
 
   const fileCount = diffData?.files.length ?? 0;
   const totalAdditions = diffData?.totalAdditions ?? 0;
@@ -131,12 +142,6 @@ export function DiffPanel({ className }: DiffPanelProps) {
               {error && <div className="text-xs text-red-400 py-2 px-3">{error}</div>}
 
               {diffData && <DiffFileList files={diffData.files} />}
-
-              {!isLoading && !error && diffData && diffData.files.length === 0 && (
-                <div className="text-xs text-muted-foreground py-8 text-center">
-                  No changes detected
-                </div>
-              )}
             </div>
           </motion.div>
         )}

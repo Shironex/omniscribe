@@ -228,6 +228,22 @@ describe('GitService', () => {
     });
   });
 
+  describe('getStructuredDiff', () => {
+    it('should delegate to GitDiffService.getDiff', async () => {
+      const diffResult = {
+        files: [{ path: 'file.ts', isBinary: false, hunks: [], additions: 3, deletions: 1 }],
+        totalAdditions: 3,
+        totalDeletions: 1,
+      };
+      mockGitDiff.getDiff.mockResolvedValue(diffResult);
+
+      const result = await service.getStructuredDiff('/project', 'abc123', true);
+
+      expect(mockGitDiff.getDiff).toHaveBeenCalledWith('/project', 'abc123', true);
+      expect(result).toEqual(diffResult);
+    });
+  });
+
   // ==================== Remote Operations ====================
 
   describe('getRemotes', () => {

@@ -326,6 +326,16 @@ export class GitGateway implements OnGatewayInit {
         };
       }
 
+      // Validate baseCommit to prevent argument injection (e.g. --output=/path)
+      if (baseCommit && (/^-/.test(baseCommit) || /[\n\r]/.test(baseCommit))) {
+        return {
+          files: [],
+          totalAdditions: 0,
+          totalDeletions: 0,
+          error: 'Invalid base commit reference',
+        };
+      }
+
       const result = await this.gitService.getStructuredDiff(
         projectPath,
         baseCommit,

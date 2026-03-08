@@ -27,7 +27,7 @@ interface DiffActions {
   clear: () => void;
 }
 
-type DiffStore = DiffState & DiffActions;
+export type DiffStore = DiffState & DiffActions;
 
 export const useDiffStore = create<DiffStore>()(
   devtools(

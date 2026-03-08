@@ -182,6 +182,8 @@ export interface ExtendedSessionConfig extends SessionConfig {
   claudeSessionId?: string;
   /** Whether this session was resumed from a previous Claude session */
   isResumed?: boolean;
+  /** Git HEAD commit hash captured at session launch for diff baseline */
+  baselineCommitHash?: string;
 }
 
 /**
