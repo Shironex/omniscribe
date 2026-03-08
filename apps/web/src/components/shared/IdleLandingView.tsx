@@ -1,6 +1,7 @@
 import { cn } from '@/lib/utils';
-import { BrainCircuit, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { useMemo } from 'react';
+import { OmniscribeAnimation } from './OmniscribeAnimation';
 import { getGreeting } from '@/lib/date-utils';
 import { Button } from '@/components/ui/button';
 import { motion, useReducedMotion } from 'motion/react';
@@ -73,21 +74,13 @@ export function IdleLandingView({
           <p className="text-sm text-foreground-secondary mb-6 text-center">{greeting}</p>
         </motion.div>
 
-        {/* Icon */}
+        {/* Animated orchestration icon */}
         <motion.div
           className="mb-6"
           variants={animationVariants.slideUp}
           transition={transitions.spring}
         >
-          <div
-            className={cn(
-              'w-24 h-24 rounded-full',
-              'bg-linear-to-br from-primary/20 to-brand-600/20',
-              'flex items-center justify-center'
-            )}
-          >
-            <BrainCircuit size={48} className="text-primary" strokeWidth={1.5} />
-          </div>
+          <OmniscribeAnimation size={96} reduceMotion={!!reduceMotion} />
         </motion.div>
 
         {/* Text */}
