@@ -124,6 +124,9 @@
   --animate-slide-up: slideUp 0.2s ease-out;
   --animate-slide-down: slideDown 0.2s ease-out;
   --animate-pulse-subtle: pulseSubtle 2s ease-in-out infinite;
+  --animate-blob-drift-1: blob-drift 20s ease-in-out infinite;
+  --animate-blob-drift-2: blob-drift 25s ease-in-out infinite reverse;
+  --animate-blob-drift-3: blob-drift 30s ease-in-out 5s infinite;
 
   @keyframes fadeIn {
     0% {
@@ -221,6 +224,11 @@
   --sidebar-border: oklch(0.9 0 0);
   --sidebar-ring: oklch(0.55 0.25 265);
 
+  /* Vignette + shadow tokens — light mode */
+  --vignette-color: oklch(0 0 0 / 0.06);
+  --shadow-card-focused:
+    0 4px 16px -4px oklch(0.55 0.25 265 / 0.1), 0 0 0 1px oklch(0.55 0.25 265 / 0.2);
+
   /* Status colors */
   --status-success: oklch(0.65 0.2 140);
   --status-success-bg: oklch(0.65 0.2 140 / 0.15);
@@ -279,6 +287,11 @@
     --sidebar-accent-foreground: oklch(1 0 0);
     --sidebar-border: oklch(1 0 0 / 0.1);
     --sidebar-ring: oklch(0.55 0.25 265);
+
+    /* Vignette + shadow tokens — dark mode */
+    --vignette-color: oklch(0 0 0 / 0.15);
+    --shadow-card-focused:
+      0 4px 16px -4px oklch(0.55 0.25 265 / 0.15), 0 0 0 1px oklch(0.55 0.25 265 / 0.3);
 
     /* Status colors - Dark mode */
     --status-success: oklch(0.65 0.2 140);
@@ -386,7 +399,20 @@
 }
 @utility terminal-grid-bg {
   background:
-    radial-gradient(ellipse at center, transparent 60%, oklch(0 0 0 / 0.15) 100%), var(--background);
+    radial-gradient(ellipse at center, transparent 60%, var(--vignette-color) 100%),
+    var(--background);
+}
+@utility shadow-primary-glow {
+  box-shadow: var(--shadow-card-focused);
+}
+@utility animate-blob-drift-1 {
+  animation: var(--animate-blob-drift-1);
+}
+@utility animate-blob-drift-2 {
+  animation: var(--animate-blob-drift-2);
+}
+@utility animate-blob-drift-3 {
+  animation: var(--animate-blob-drift-3);
 }
 @utility noise {
   position: relative;

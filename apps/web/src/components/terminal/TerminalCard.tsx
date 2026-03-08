@@ -58,7 +58,7 @@ export const TerminalCard = React.memo(function TerminalCard({
         'shadow-sm shadow-black/20',
         'border',
         isFocused ? 'border-primary/50' : 'border-border',
-        isFocused && 'shadow-[0_0_0_1px_var(--color-primary),0_0_12px_-2px_var(--color-primary)]',
+        isFocused && 'shadow-primary-glow',
         'transition-[border-color,box-shadow] duration-200'
       )}
       animate={isFocused ? { scale: 1 } : { scale: 0.995 }}

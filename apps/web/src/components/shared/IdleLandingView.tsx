@@ -3,7 +3,7 @@ import { BrainCircuit, Plus } from 'lucide-react';
 import { useMemo } from 'react';
 import { getGreeting } from '@/lib/date-utils';
 import { Button } from '@/components/ui/button';
-import { motion } from 'motion/react';
+import { motion, useReducedMotion } from 'motion/react';
 import { animationVariants, transitions } from '@/lib/animations';
 
 interface IdleLandingViewProps {
@@ -18,6 +18,7 @@ export function IdleLandingView({
   className,
 }: IdleLandingViewProps) {
   const greeting = useMemo(() => getGreeting(), []);
+  const reduceMotion = useReducedMotion();
 
   // Keyboard shortcuts (N, Shift+N) are handled globally by useAppKeyboardShortcuts
 
@@ -35,16 +36,22 @@ export function IdleLandingView({
       {/* Background gradient blobs for glassmorphism effect - uses theme colors */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div
-          className="absolute top-1/4 -left-20 w-72 h-72 bg-primary/30 rounded-full blur-[100px]"
-          style={{ animation: 'blob-drift 20s ease-in-out infinite' }}
+          className={cn(
+            'absolute top-1/4 -left-20 w-72 h-72 bg-primary/30 rounded-full blur-[100px]',
+            !reduceMotion && 'animate-blob-drift-1'
+          )}
         />
         <div
-          className="absolute bottom-1/4 -right-20 w-80 h-80 bg-brand-600/25 rounded-full blur-[120px]"
-          style={{ animation: 'blob-drift 25s ease-in-out infinite reverse' }}
+          className={cn(
+            'absolute bottom-1/4 -right-20 w-80 h-80 bg-brand-600/25 rounded-full blur-[120px]',
+            !reduceMotion && 'animate-blob-drift-2'
+          )}
         />
         <div
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-brand-400/15 rounded-full blur-[100px]"
-          style={{ animation: 'blob-drift 30s ease-in-out infinite 5s' }}
+          className={cn(
+            'absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-brand-400/15 rounded-full blur-[100px]',
+            !reduceMotion && 'animate-blob-drift-3'
+          )}
         />
       </div>
 
