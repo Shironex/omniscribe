@@ -1,9 +1,4 @@
 /**
- * MCP server transport type
- */
-export type McpTransportType = 'stdio' | 'sse' | 'websocket';
-
-/**
  * MCP server status
  */
 export type McpServerStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
@@ -22,7 +17,7 @@ export interface McpServerConfig {
   description?: string;
 
   /** Transport type */
-  transport: McpTransportType;
+  transport: 'stdio' | 'sse' | 'websocket';
 
   /** Server command (for stdio transport) */
   command?: string;
@@ -101,24 +96,10 @@ export interface McpPrompt {
   description?: string;
 
   /** Prompt arguments */
-  arguments?: McpPromptArgument[];
+  arguments?: { name: string; description?: string; required?: boolean }[];
 
   /** Server ID this prompt belongs to */
   serverId: string;
-}
-
-/**
- * MCP prompt argument
- */
-export interface McpPromptArgument {
-  /** Argument name */
-  name: string;
-
-  /** Argument description */
-  description?: string;
-
-  /** Whether argument is required */
-  required?: boolean;
 }
 
 /**
@@ -154,65 +135,6 @@ export interface McpServerState {
     name: string;
     version: string;
   };
-}
-
-/**
- * MCP tool call request
- */
-export interface McpToolCallRequest {
-  /** Tool name */
-  name: string;
-
-  /** Tool arguments */
-  arguments: Record<string, unknown>;
-
-  /** Server ID */
-  serverId: string;
-}
-
-/**
- * MCP tool call result
- */
-export interface McpToolCallResult {
-  /** Whether call succeeded */
-  success: boolean;
-
-  /** Result content */
-  content?: unknown;
-
-  /** Error message if failed */
-  error?: string;
-
-  /** Execution time in milliseconds */
-  executionTimeMs: number;
-}
-
-/**
- * MCP resource read request
- */
-export interface McpResourceReadRequest {
-  /** Resource URI */
-  uri: string;
-
-  /** Server ID */
-  serverId: string;
-}
-
-/**
- * MCP resource read result
- */
-export interface McpResourceReadResult {
-  /** Resource URI */
-  uri: string;
-
-  /** MIME type */
-  mimeType?: string;
-
-  /** Resource content (text or base64) */
-  content: string;
-
-  /** Whether content is base64 encoded */
-  isBase64?: boolean;
 }
 
 /**

@@ -18,9 +18,6 @@ export const APP_NAME = 'Omniscribe';
 /** Application name (lowercase, for paths/IDs) */
 export const APP_NAME_LOWER = 'omniscribe';
 
-/** Application ID for Electron/OS registration */
-export const APP_ID = 'com.omniscribe.desktop';
-
 /** MCP server name used in .mcp.json */
 export const MCP_SERVER_NAME = 'omniscribe';
 
@@ -49,9 +46,6 @@ export const GIT_TIMEOUT_MS = 30000;
 
 /** Default timeout for GitHub CLI commands */
 export const GH_TIMEOUT_MS = 30000;
-
-/** Cache TTL for status checks */
-export const STATUS_CACHE_TTL_MS = 5 * 60 * 1000;
 
 // =============================================================================
 // Network

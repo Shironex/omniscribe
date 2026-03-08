@@ -13,7 +13,7 @@ import type { UsageError } from '@omniscribe/shared';
 export interface UsageFetchResult {
   /** Provider-agnostic usage data */
   providerUsage?: ProviderUsageData;
-  /** Raw ClaudeUsage for backward compat with frontend (Phase 13 only) */
+  /** Raw ClaudeUsage for backward compat with frontend */
   rawUsage?: ClaudeUsage;
   /** Error if fetch failed */
   error?: UsageError;

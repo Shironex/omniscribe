@@ -108,9 +108,10 @@ export interface ClaudeInstallCommand {
 }
 
 /**
- * Core settings section IDs (built-in sections)
+ * Settings section IDs for navigation.
+ * Accepts core IDs and dynamic plugin-registered section IDs.
  */
-export type CoreSettingsSectionId =
+export type SettingsSectionId =
   | 'appearance'
   | 'integrations'
   | 'github'
@@ -120,13 +121,8 @@ export type CoreSettingsSectionId =
   | 'sessions'
   | 'terminal'
   | 'quickActions'
-  | 'marketplace';
-
-/**
- * Settings section IDs for navigation.
- * Accepts core IDs and dynamic plugin-registered section IDs.
- */
-export type SettingsSectionId = CoreSettingsSectionId | (string & {});
+  | 'marketplace'
+  | (string & {});
 
 /**
  * Worktree creation mode
@@ -252,13 +248,6 @@ export const LIGHT_THEMES: Theme[] = [
  * All themes list
  */
 export const ALL_THEMES: Theme[] = [...DARK_THEMES, ...LIGHT_THEMES];
-
-/**
- * Check if a theme is dark
- */
-export function isDarkTheme(theme: Theme): boolean {
-  return DARK_THEMES.includes(theme);
-}
 
 /**
  * Editor protocol identifier for file path links

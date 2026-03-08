@@ -14,7 +14,6 @@ import type { PluginDefinition } from './types';
  *
  * @example
  * ```typescript
- * // In AppModule (Phase 12: empty, Phase 13: with Claude)
  * PluginModule.forRoot([])
  *
  * // With plugins:

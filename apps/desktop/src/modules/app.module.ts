@@ -34,7 +34,6 @@ import { CodexProviderPlugin } from '@omniscribe/provider-codex';
     ]),
     // PluginModule must be after ThrottlerModule but before domain modules
     // so PluginRegistryService is available for injection everywhere.
-    // Phase 13: Claude provider plugin registered with auto-enable and auto-activate.
     PluginModule.forRoot([
       {
         manifest: {
