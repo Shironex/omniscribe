@@ -414,7 +414,7 @@
 @utility animate-blob-drift-3 {
   animation: var(--animate-blob-drift-3);
 }
-@utility noise {
+@utility viewport-noise {
   position: relative;
   &::before {
     content: '';
