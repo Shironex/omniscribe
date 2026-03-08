@@ -14,8 +14,6 @@ const logger = createLogger('IPC:Plugin');
  *
  * Note: The actual plugin resolution happens on the backend via NestJS.
  * This IPC bridge forwards the invoke request to the backend socket.
- * For Phase 12, this is a placeholder that returns an error since
- * the backend socket connection is not available in the main process.
  * The actual invoke flow goes through WebSocket (PluginGateway).
  */
 export function registerPluginIpc(): void {
@@ -27,7 +25,6 @@ export function registerPluginIpc(): void {
         // Plugin invocation is primarily handled via WebSocket (PluginGateway).
         // This IPC bridge exists for cases where the renderer needs a direct
         // main-process plugin call (e.g., before WebSocket connection is established).
-        // Phase 13+ may add direct NestJS service access here via app reference.
         return {
           error: 'Plugin invoke via IPC is not yet implemented. Use WebSocket plugin:invoke event.',
         };

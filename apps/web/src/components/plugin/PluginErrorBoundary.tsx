@@ -1,7 +1,13 @@
-import { Component, type ErrorInfo, type ReactNode } from 'react';
+import { type ReactNode, useRef } from 'react';
 import { AlertTriangle, RotateCcw } from 'lucide-react';
+import { createLogger } from '@omniscribe/shared';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import {
+  createErrorBoundary,
+  type BaseErrorBoundaryProps,
+} from '@/components/shared/BaseErrorBoundary';
 
+const logger = createLogger('PluginErrorBoundary');
 const MAX_RETRIES = 3;
 
 interface PluginErrorBoundaryProps {
@@ -10,47 +16,24 @@ interface PluginErrorBoundaryProps {
   children: ReactNode;
 }
 
-interface PluginErrorBoundaryState {
-  hasError: boolean;
-  error: Error | null;
-  retryCount: number;
+interface InnerProps extends BaseErrorBoundaryProps {
+  pluginId: string;
+  retryCountRef: React.MutableRefObject<number>;
 }
 
-/**
- * Error boundary for plugin-contributed React components.
- *
- * Catches render errors from plugin components and displays a subtle
- * warning icon with tooltip details and a retry button. This prevents
- * a broken plugin from crashing the entire application UI.
- *
- * Retries are limited to MAX_RETRIES to prevent infinite crash-retry loops.
- * Following the existing TerminalErrorBoundary pattern.
- */
-export class PluginErrorBoundary extends Component<
-  PluginErrorBoundaryProps,
-  PluginErrorBoundaryState
-> {
-  constructor(props: PluginErrorBoundaryProps) {
-    super(props);
-    this.state = { hasError: false, error: null, retryCount: 0 };
-  }
+const InnerBoundary = createErrorBoundary<InnerProps>(
+  props => ({
+    onCatch(error, info) {
+      logger.error(`[Plugin:${props.pluginId}] Component error:`, error, info);
+    },
+    renderFallback(error, reset) {
+      const canRetry = (props.retryCountRef.current ?? 0) < MAX_RETRIES;
 
-  static getDerivedStateFromError(error: Error): Partial<PluginErrorBoundaryState> {
-    return { hasError: true, error };
-  }
-
-  componentDidCatch(error: Error, info: ErrorInfo) {
-    console.error(`[Plugin:${this.props.pluginId}] Component error:`, error, info);
-  }
-
-  handleRetry = () => {
-    if (this.state.retryCount >= MAX_RETRIES) return;
-    this.setState(prev => ({ hasError: false, error: null, retryCount: prev.retryCount + 1 }));
-  };
-
-  render() {
-    if (this.state.hasError) {
-      const canRetry = this.state.retryCount < MAX_RETRIES;
+      const handleRetry = () => {
+        if (!canRetry) return;
+        props.retryCountRef.current += 1;
+        reset();
+      };
 
       return (
         <Tooltip>
@@ -60,9 +43,9 @@ export class PluginErrorBoundary extends Component<
               {canRetry && (
                 <button
                   type="button"
-                  onClick={this.handleRetry}
+                  onClick={handleRetry}
                   className="inline-flex items-center text-muted-foreground hover:text-foreground transition-colors"
-                  aria-label={`Retry plugin ${this.props.pluginId}`}
+                  aria-label={`Retry plugin ${props.pluginId}`}
                 >
                   <RotateCcw className="w-3 h-3" />
                 </button>
@@ -70,12 +53,30 @@ export class PluginErrorBoundary extends Component<
             </span>
           </TooltipTrigger>
           <TooltipContent>
-            <p className="text-xs">Plugin error: {this.state.error?.message ?? 'Unknown error'}</p>
+            <p className="text-xs">Plugin error: {error?.message ?? 'Unknown error'}</p>
           </TooltipContent>
         </Tooltip>
       );
-    }
+    },
+  }),
+  undefined,
+  'PluginErrorBoundary'
+);
 
-    return this.props.children;
-  }
+/**
+ * Error boundary for plugin-contributed React components.
+ *
+ * Catches render errors from plugin components and displays a subtle
+ * warning icon with tooltip details and a retry button. This prevents
+ * a broken plugin from crashing the entire application UI.
+ *
+ * Retries are limited to MAX_RETRIES to prevent infinite crash-retry loops.
+ */
+export function PluginErrorBoundary({ pluginId, children }: PluginErrorBoundaryProps) {
+  const retryCountRef = useRef(0);
+  return (
+    <InnerBoundary pluginId={pluginId} retryCountRef={retryCountRef}>
+      {children}
+    </InnerBoundary>
+  );
 }

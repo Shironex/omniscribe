@@ -52,29 +52,6 @@ export interface GhCliStatus {
 }
 
 // ============================================
-// GitHub Error Types
-// ============================================
-
-/**
- * GitHub CLI error codes
- */
-export type GhCliErrorCode =
-  | 'GH_CLI_NOT_INSTALLED'
-  | 'GH_CLI_NOT_AUTHENTICATED'
-  | 'GH_CLI_COMMAND_FAILED'
-  | 'GH_CLI_TIMEOUT'
-  | 'GH_CLI_NO_REMOTE';
-
-/**
- * GitHub CLI error structure
- */
-export interface GhCliError {
-  code: GhCliErrorCode;
-  message: string;
-  details?: string;
-}
-
-// ============================================
 // Pull Request Types
 // ============================================
 

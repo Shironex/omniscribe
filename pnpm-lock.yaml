@@ -105,9 +105,6 @@ importers:
         specifier: ^4.8.3
         version: 4.8.3
     devDependencies:
-      '@golevelup/ts-jest':
-        specifier: ^1.2.1
-        version: 1.2.1
       '@nestjs/testing':
         specifier: ^10.4.22
         version: 10.4.22(@nestjs/common@10.4.22(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@10.4.22)(@nestjs/platform-express@10.4.22)
@@ -144,9 +141,6 @@ importers:
       ts-jest:
         specifier: ^29.4.6
         version: 29.4.6(@babel/core@7.29.0)(@jest/transform@30.2.0)(@jest/types@30.2.0)(babel-jest@30.2.0(@babel/core@7.29.0))(esbuild@0.27.3)(jest-util@30.2.0)(jest@30.2.0(@types/node@25.3.5))(typescript@5.9.3)
-      xvfb-maybe:
-        specifier: ^0.2.1
-        version: 0.2.1
 
   apps/docs:
     dependencies:
@@ -2114,9 +2108,6 @@ packages:
 
   '@gerrit0/mini-shiki@3.23.0':
     resolution: {integrity: sha512-bEMORlG0cqdjVyCEuU0cDQbORWX+kYCeo0kV1lbxF5bt4r7SID2l9bqsxJEM0zndaxpOUT7riCyIVEuqq/Ynxg==}
-
-  '@golevelup/ts-jest@1.2.1':
-    resolution: {integrity: sha512-1LQ6iDkKJve1AifgVNN0C27hUfd6zZ2qiAbK8x9Mvur+sB1YGc8Z70uEJPtyHL/akA8e4IEKZWC8lkKe/WuTlw==}
 
   '@hapi/address@5.1.1':
     resolution: {integrity: sha512-A+po2d/dVoY7cYajycYI43ZbYMXukuopIsqCjh5QzsBCipDtdofHntljDlpccMjIfTy6UOkg+5KPriwYch2bXA==}
@@ -9569,10 +9560,6 @@ packages:
   whatwg-url@5.0.0:
     resolution: {integrity: sha512-saE57nupxk6v3HY35+jzBwYa0rKSy0XR8JSxZPwgLr7ys0IBzhGviA1/TUGJLmSVqs8pb9AnvICXEuOHLprYTw==}
 
-  which@1.3.1:
-    resolution: {integrity: sha512-HxJdYWq1MTIQbJ3nw0cqssHoTNU267KlrDuGZ1WYlxDStUtKUhOaJmh112/TZmHxxUfuJqPXSOm7tDyas0OSIQ==}
-    hasBin: true
-
   which@2.0.2:
     resolution: {integrity: sha512-BLI3Tl1TW3Pvl70l3yq3Y64i+awpwXqsGBYWkkqMtnbXgrMD+yj7rhW0kuEDxzJaYXGjEW5ogapKNMEKNMjibA==}
     engines: {node: '>= 8'}
@@ -9690,10 +9677,6 @@ packages:
   xtend@4.0.2:
     resolution: {integrity: sha512-LKYU1iAXJXUgAXn9URjiu+MWhyUXHsvfp7mcuYm9dSUKK0/CjtrUwFAxD82/mCWbtLsGjFIad0wIsod4zrTAEQ==}
     engines: {node: '>=0.4'}
-
-  xvfb-maybe@0.2.1:
-    resolution: {integrity: sha512-9IyRz3l6Qyhl6LvnGRF5jMPB4oBEepQnuzvVAFTynP6ACLLSevqigICJ9d/+ofl29m2daeaVBChnPYUnaeJ7yA==}
-    hasBin: true
 
   y18n@5.0.8:
     resolution: {integrity: sha512-0pfFzegeDWJHJIAmTLRP2DwHjdF5s7jo9tuztdQxAhINCdvS+3nGINqPd00AphqJR/0LhANUS6/+7SCb98YOfA==}
@@ -11673,7 +11656,7 @@ snapshots:
 
   '@docusaurus/react-loadable@6.0.0(react@18.3.1)':
     dependencies:
-      '@types/react': 19.2.14
+      '@types/react': 18.3.28
       react: 18.3.1
 
   '@docusaurus/theme-classic@3.9.2(@types/react@19.2.14)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(typescript@5.9.3)':
@@ -12198,8 +12181,6 @@ snapshots:
       '@shikijs/themes': 3.23.0
       '@shikijs/types': 3.23.0
       '@shikijs/vscode-textmate': 10.0.2
-
-  '@golevelup/ts-jest@1.2.1': {}
 
   '@hapi/address@5.1.1':
     dependencies:
@@ -21122,10 +21103,6 @@ snapshots:
       tr46: 0.0.3
       webidl-conversions: 3.0.1
 
-  which@1.3.1:
-    dependencies:
-      isexe: 2.0.0
-
   which@2.0.2:
     dependencies:
       isexe: 2.0.0
@@ -21206,13 +21183,6 @@ snapshots:
   xmlhttprequest-ssl@2.1.2: {}
 
   xtend@4.0.2: {}
-
-  xvfb-maybe@0.2.1:
-    dependencies:
-      debug: 2.6.9
-      which: 1.3.1
-    transitivePeerDependencies:
-      - supports-color
 
   y18n@5.0.8: {}
 

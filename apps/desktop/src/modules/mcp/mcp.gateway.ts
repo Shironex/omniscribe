@@ -12,6 +12,7 @@ import { Server, Socket } from 'socket.io';
 import { OnEvent } from '@nestjs/event-emitter';
 import { WsThrottlerGuard } from '../shared/ws-throttler.guard';
 import { validatePath } from '../shared/validation';
+import { handleGatewayRequest } from '../shared/gateway-handler';
 import {
   McpDiscoverPayload,
   McpSetEnabledPayload,
@@ -85,34 +86,24 @@ export class McpGateway implements OnGatewayInit {
     @MessageBody() payload: McpDiscoverPayload,
     @ConnectedSocket() _client: Socket
   ): Promise<McpDiscoverResponse> {
-    this.logger.debug(`[mcp:discover] projectPath=${payload?.projectPath}`);
-    try {
-      // Validate payload has required projectPath
-      const projectPath = payload?.projectPath;
-      const pathError = validatePath(projectPath);
-      if (pathError) {
-        this.logger.warn('mcp:discover called with invalid projectPath');
-        return { servers: [], error: pathError };
-      }
+    // Normalize payload with possibly-undefined projectPath to a string for validation
+    const normalizedPayload = { projectPath: payload?.projectPath ?? '' };
+    return handleGatewayRequest({
+      logger: this.logger,
+      action: '[mcp:discover]',
+      payload: normalizedPayload,
+      defaultResult: { servers: [] as McpDiscoverResponse['servers'] },
+      handler: async projectPath => {
+        const servers = await this.discoveryService.discoverServers(projectPath);
 
-      // validatePath ensures projectPath is a non-empty string here
-      const validProjectPath = projectPath as string;
+        // Cache the discovered servers
+        this.projectCache.setServers(projectPath, servers);
 
-      const servers = await this.discoveryService.discoverServers(validProjectPath);
+        this.logger.log(`Discovered ${servers.length} MCP servers for ${projectPath}`);
 
-      // Cache the discovered servers
-      this.projectCache.setServers(validProjectPath, servers);
-
-      this.logger.log(`Discovered ${servers.length} MCP servers for ${validProjectPath}`);
-
-      return { servers };
-    } catch (error) {
-      this.logger.error('Error discovering servers:', error);
-      return {
-        servers: [],
-        error: extractErrorMessage(error, 'Unknown error'),
-      };
-    }
+        return { servers };
+      },
+    });
   }
 
   /**

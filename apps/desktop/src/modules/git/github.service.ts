@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { execFile, ExecException } from 'child_process';
+import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { existsSync } from 'fs';
 import { homedir } from 'os';
@@ -23,7 +23,7 @@ import type {
   ListIssuesOptions,
   RepoInfo,
 } from '@omniscribe/shared';
-import type { ExecResult } from './git-base.service';
+import { execCliCommand, type ExecCliResult } from '../shared/exec-cli';
 
 const execFileAsync = promisify(execFile);
 
@@ -92,45 +92,16 @@ export class GithubService {
     repoPath: string,
     args: string[],
     timeoutMs: number = GH_TIMEOUT_MS
-  ): Promise<ExecResult> {
-    const command = `gh ${args.join(' ')}`;
-
-    try {
-      const result = await execFileAsync('gh', args, {
-        cwd: repoPath,
-        timeout: timeoutMs,
-        env: {
-          ...process.env,
-          ...GH_ENV,
-        },
-        maxBuffer: 10 * 1024 * 1024, // 10MB buffer
-      });
-
-      return {
-        stdout: result.stdout,
-        stderr: result.stderr,
-      };
-    } catch (error) {
-      const execError = error as ExecException & {
-        stdout?: string;
-        stderr?: string;
-      };
-
-      // Check for timeout
-      if (execError.killed) {
-        throw new Error(`gh command timed out after ${timeoutMs}ms: ${command}`, { cause: error });
-      }
-
-      // Return stdout/stderr even on non-zero exit codes
-      if (execError.stdout !== undefined || execError.stderr !== undefined) {
-        return {
-          stdout: execError.stdout ?? '',
-          stderr: execError.stderr ?? '',
-        };
-      }
-
-      throw new Error(`gh command failed: ${execError.message}`, { cause: error });
-    }
+  ): Promise<ExecCliResult> {
+    return execCliCommand({
+      binary: 'gh',
+      args,
+      cwd: repoPath,
+      timeout: timeoutMs,
+      env: GH_ENV,
+      logger: this.logger,
+      exitCodeStrategy: 'always-return',
+    });
   }
 
   /**

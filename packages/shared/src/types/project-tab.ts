@@ -57,25 +57,3 @@ export interface UserPreferences {
 
 // Re-export for convenience
 export { DEFAULT_WORKTREE_SETTINGS, DEFAULT_SESSION_SETTINGS };
-
-/**
- * Convert a backend ProjectTabDTO to frontend ProjectTab
- */
-export function convertDTOToProjectTab(dto: ProjectTabDTO): ProjectTab {
-  return {
-    ...dto,
-    lastAccessedAt: new Date(dto.lastAccessedAt),
-    theme: dto.theme as Theme | undefined,
-  };
-}
-
-/**
- * Convert a frontend ProjectTab to backend ProjectTabDTO
- */
-export function convertProjectTabToDTO(tab: ProjectTab): ProjectTabDTO {
-  return {
-    ...tab,
-    lastAccessedAt: tab.lastAccessedAt.toISOString(),
-    theme: tab.theme,
-  };
-}

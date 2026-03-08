@@ -9,11 +9,12 @@ import {
 } from '@omniscribe/shared';
 import type { CliDetectionResult, ProviderUsageData } from '@omniscribe/plugin-api';
 import type { UsageError } from '@omniscribe/shared';
+import { hasProviderMethod } from '../shared/provider-guards';
 
 export interface UsageFetchResult {
   /** Provider-agnostic usage data */
   providerUsage?: ProviderUsageData;
-  /** Raw ClaudeUsage for backward compat with frontend (Phase 13 only) */
+  /** Raw ClaudeUsage for backward compat with frontend */
   rawUsage?: ClaudeUsage;
   /** Error if fetch failed */
   error?: UsageError;
@@ -52,11 +53,11 @@ export class UsageService {
       if (!providerUsage) return null;
 
       // For backward compat: access the provider's internal fetcher to get ClaudeUsage
-      // This avoids 'as any' by going through the typed accessor
       let rawUsage: ClaudeUsage | undefined;
-      if ('getUsageFetcher' in provider) {
-        // The ClaudeProviderPlugin exposes getUsageFetcher() which has lastFetchedUsage
-        const fetcher = (provider as any).getUsageFetcher();
+      if (hasProviderMethod(provider, 'getUsageFetcher')) {
+        const fetcher = provider.getUsageFetcher() as
+          | { lastFetchedUsage?: ClaudeUsage }
+          | undefined;
         if (fetcher?.lastFetchedUsage) {
           rawUsage = fetcher.lastFetchedUsage;
         }
@@ -99,8 +100,10 @@ export class UsageService {
     try {
       const provider = this.pluginRegistry.getProvider(aiMode);
       // For Claude, use the richer getFullStatus() for backward compat with frontend
-      if ('getCliDetectionService' in provider) {
-        const detectionService = (provider as any).getCliDetectionService();
+      if (hasProviderMethod(provider, 'getCliDetectionService')) {
+        const detectionService = provider.getCliDetectionService() as
+          | { getFullStatus?: () => Promise<ClaudeCliStatus> }
+          | undefined;
         if (detectionService?.getFullStatus) {
           return await detectionService.getFullStatus();
         }

@@ -29,21 +29,6 @@ export interface SuccessResponse {
   error?: string;
 }
 
-/**
- * Generic data response for queries (check error field for failure)
- */
-export interface DataResponse<T> {
-  data: T;
-  error?: string;
-}
-
-/**
- * Response with project path
- */
-export interface ProjectPathPayload {
-  projectPath: string;
-}
-
 // ============================================
 // Git Payloads
 // ============================================
@@ -455,15 +440,6 @@ export interface SessionStatusUpdate {
  * Response for session removal
  */
 export interface SessionRemoveResponse extends SuccessResponse {}
-
-/**
- * Response when session creation is rejected due to concurrency limit.
- * Includes names of idle sessions the user could close to free slots.
- */
-export interface SessionLimitResponse {
-  error: string;
-  idleSessions: string[];
-}
 
 // ============================================
 // Tab Payloads

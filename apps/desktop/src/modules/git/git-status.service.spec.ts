@@ -283,6 +283,8 @@ describe('GitStatusService', () => {
       // source - it should use index [2] to get the actual upstream ref name.
       // The test documents the current (buggy) behavior.
       expect(result.currentBranch?.upstream).toBe('branch.upstream');
+      // remote is parsed from upstream.split('/')[0]; since 'branch.upstream' has no '/',
+      // split('/') returns ['branch.upstream'] and remoteParts[0] = 'branch.upstream'
       expect(result.currentBranch?.remote).toBe('branch.upstream');
     });
 

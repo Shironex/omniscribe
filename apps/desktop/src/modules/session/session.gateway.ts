@@ -51,6 +51,7 @@ import {
 } from '@omniscribe/shared';
 import { InternalSessionEvents, InternalZombieEvents } from '../shared/events';
 import { CORS_CONFIG } from '../shared/cors.config';
+import { hasProviderMethod } from '../shared/provider-guards';
 
 /**
  * Response for session creation - either the session or an error.
@@ -277,8 +278,12 @@ export class SessionGateway implements OnGatewayInit {
       // Delegate to provider plugin for session history
       if (this.pluginRegistry.isPluginMode('claude')) {
         const provider = this.pluginRegistry.getProvider('claude');
-        if ('getSessionReader' in provider) {
-          const reader = (provider as any).getSessionReader();
+        if (hasProviderMethod(provider, 'getSessionReader')) {
+          const reader = provider.getSessionReader() as {
+            readSessionsIndex(
+              projectPath: string
+            ): Promise<ClaudeSessionHistoryResponse['sessions']>;
+          };
           const sessions = await reader.readSessionsIndex(payload.projectPath);
           return { sessions };
         }

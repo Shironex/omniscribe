@@ -12,8 +12,6 @@ export {
   getHomeDir,
   isWindows,
   findCliCommandSync,
-  findInPathSync,
-  findFirstExistingPath,
   findCliInPath,
   findCliInLocalPaths,
   getNvmBinPaths,

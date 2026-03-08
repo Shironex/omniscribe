@@ -15,7 +15,7 @@ import { useSessionStore } from '@/stores/useSessionStore';
 import { usePluginStore, type ProviderInfo } from '@/stores/usePluginStore';
 import { MAX_SESSION_NAME_LENGTH } from '@omniscribe/shared';
 import type { TerminalSession, GitBranchInfo } from './TerminalHeader';
-import type { SessionStatusRendererRegistration } from '@omniscribe/plugin-api';
+import type { SessionStatusRendererRegistration, SessionStatusProps } from '@omniscribe/plugin-api';
 
 type WithPluginId<T> = T & { pluginId: string };
 
@@ -61,8 +61,8 @@ export const SessionStatusDisplay = React.memo(function SessionStatusDisplay({
   const statusRenderers = usePluginStore(s => s.statusRenderers);
   const modeConfig = getModeConfig(session.aiMode, providers, statusRenderers);
   const ModeIcon = modeConfig.icon;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const RendererComponent = modeConfig.rendererComponent as ComponentType<any> | null;
+  const RendererComponent =
+    modeConfig.rendererComponent as ComponentType<SessionStatusProps> | null;
   const setCustomTitle = useSessionStore(state => state.setCustomTitle);
   const clearCustomTitle = useSessionStore(state => state.clearCustomTitle);
 

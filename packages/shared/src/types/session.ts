@@ -5,10 +5,6 @@ export type BuiltinAiMode = 'claude' | 'plain';
  * AI mode for the session.
  * Built-in modes + any plugin-registered mode string.
  * Runtime validation happens against the plugin registry.
- *
- * NOTE: 'claude' remains a BuiltinAiMode during Phase 12 because Claude-specific
- * services still live in core. Phase 13 will extract Claude into a plugin, at which
- * point 'claude' moves from BuiltinAiMode to a plugin-registered mode.
  */
 export type AiMode = BuiltinAiMode | (string & {});
 
@@ -72,23 +68,6 @@ export interface SessionConfig {
 
   /** MCP server configurations for this session */
   mcpServers?: string[];
-}
-
-/**
- * Session state
- */
-export interface SessionState {
-  /** Current session configuration */
-  config: SessionConfig;
-
-  /** Current status */
-  status: SessionStatus;
-
-  /** Error message if status is 'error' */
-  errorMessage?: string;
-
-  /** Conversation history length */
-  messageCount: number;
 }
 
 /**

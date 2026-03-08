@@ -70,7 +70,7 @@ export interface SocketListenerConfig<T> {
 /**
  * Options for creating socket listeners
  */
-export interface CreateListenersOptions<T extends SocketStoreState> {
+export interface CreateListenersOptions<T extends SocketStoreSlice> {
   /** Socket event listeners specific to this store */
   listeners: SocketListenerConfig<T>[];
   /** Callback on connect (after error is cleared) */
@@ -87,7 +87,7 @@ export interface CreateListenersOptions<T extends SocketStoreState> {
  * @param options - Listener configuration options
  * @returns Object with initListeners and cleanupListeners functions
  */
-export function createSocketListeners<T extends SocketStoreState>(
+export function createSocketListeners<T extends SocketStoreSlice>(
   get: () => T,
   set: NamedSet<T>,
   storeName: string,
@@ -109,8 +109,7 @@ export function createSocketListeners<T extends SocketStoreState>(
       return;
     }
 
-    // Get setError from the store (cast needed since we know it exists)
-    const { setError } = get() as unknown as SocketStoreActions;
+    const { setError } = get();
 
     // Register custom listeners (store refs for cleanup)
     for (const config of listeners) {

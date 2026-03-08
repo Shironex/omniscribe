@@ -85,6 +85,108 @@ function parseBranchTrackingInfo(track: string): { ahead?: number; behind?: numb
   return result;
 }
 
+/**
+ * Null byte delimiter for for-each-ref format strings.
+ * Using %x00 (null byte) instead of pipe to avoid breakage when commit
+ * messages contain '|'.
+ */
+const DELIM = '\x00';
+
+/**
+ * for-each-ref format for local branches with tracking info.
+ * Double quotes for Windows compatibility (prevents % variable expansion).
+ * Uses null byte (%x00) as delimiter to avoid pipe-in-subject breakage.
+ */
+const LOCAL_REF_FORMAT =
+  '"%(refname:short)%x00%(objectname:short)%x00%(subject)%x00%(upstream:short)%x00%(upstream:track)"';
+
+/**
+ * for-each-ref format for remote branches (no tracking info).
+ * Double quotes for Windows compatibility (prevents % variable expansion).
+ * Uses null byte (%x00) as delimiter to avoid pipe-in-subject breakage.
+ */
+const REMOTE_REF_FORMAT = '"%(refname:short)%x00%(objectname:short)%x00%(subject)"';
+
+/** Parsed local ref fields from a for-each-ref line */
+interface LocalRefInfo {
+  hash: string;
+  message: string;
+  upstream: string;
+  track: string;
+}
+
+/** Parsed remote ref fields from a for-each-ref line */
+interface RemoteRefInfo {
+  hash: string;
+  message: string;
+}
+
+/**
+ * Parse local branch refs from for-each-ref output into a Map.
+ */
+function parseLocalRefs(output: string): Map<string, LocalRefInfo> {
+  const refMap = new Map<string, LocalRefInfo>();
+
+  for (const line of output.split('\n')) {
+    if (!line.trim()) continue;
+    const cleanLine = cleanGitOutputLine(line);
+    if (!cleanLine) continue;
+    const [name, hash, message, upstream, track] = cleanLine.split(DELIM);
+    if (name) {
+      refMap.set(name.trim(), {
+        hash: hash || '',
+        message: message || '',
+        upstream: upstream || '',
+        track: cleanTrailingQuote(track || ''),
+      });
+    }
+  }
+
+  return refMap;
+}
+
+/**
+ * Parse remote branch refs from for-each-ref output into a Map.
+ */
+function parseRemoteRefs(output: string): Map<string, RemoteRefInfo> {
+  const refMap = new Map<string, RemoteRefInfo>();
+
+  for (const line of output.split('\n')) {
+    if (!line.trim()) continue;
+    const cleanLine = cleanGitOutputLine(line);
+    if (!cleanLine) continue;
+    const [name, hash, message] = cleanLine.split(DELIM);
+    if (name && !name.includes('/HEAD')) {
+      refMap.set(name.trim(), {
+        hash: hash || '',
+        message: cleanTrailingQuote(message || ''),
+      });
+    }
+  }
+
+  return refMap;
+}
+
+/**
+ * Apply tracking info from a LocalRefInfo to a BranchInfo.
+ */
+function applyTrackingInfo(branch: BranchInfo, refInfo: LocalRefInfo): void {
+  branch.lastCommitHash = refInfo.hash || undefined;
+  branch.lastCommitMessage = refInfo.message || undefined;
+
+  if (refInfo.upstream) {
+    const remoteParts = refInfo.upstream.split('/');
+    branch.remote = remoteParts[0];
+    branch.upstream = refInfo.upstream;
+
+    if (refInfo.track) {
+      const tracking = parseBranchTrackingInfo(refInfo.track);
+      if (tracking.ahead !== undefined) branch.ahead = tracking.ahead;
+      if (tracking.behind !== undefined) branch.behind = tracking.behind;
+    }
+  }
+}
+
 @Injectable()
 export class GitBranchService {
   private readonly logger = createLogger('GitBranchService');
@@ -181,63 +283,19 @@ export class GitBranchService {
     _currentBranch: string
   ): Promise<void> {
     try {
-      // Get local branch details
-      // Note: Double quotes around format string for Windows compatibility (prevents % variable expansion)
       const { stdout: localRefOutput } = await this.gitBase.execGit(repoPath, [
         'for-each-ref',
-        '--format="%(refname:short)|%(objectname:short)|%(subject)|%(upstream:short)|%(upstream:track)"',
+        `--format=${LOCAL_REF_FORMAT}`,
         'refs/heads/',
       ]);
+      const localRefMap = parseLocalRefs(localRefOutput);
 
-      const localRefMap = new Map<
-        string,
-        {
-          hash: string;
-          message: string;
-          upstream: string;
-          track: string;
-        }
-      >();
-
-      for (const line of localRefOutput.split('\n')) {
-        if (!line.trim()) continue;
-        // Remove surrounding quotes that may be present on Windows
-        const cleanLine = cleanGitOutputLine(line);
-        if (!cleanLine) continue;
-        const [name, hash, message, upstream, track] = cleanLine.split('|');
-        if (name) {
-          localRefMap.set(name.trim(), {
-            hash: hash || '',
-            message: message || '',
-            upstream: upstream || '',
-            track: cleanTrailingQuote(track || ''),
-          });
-        }
-      }
-
-      // Get remote branch details
-      // Note: Double quotes around format string for Windows compatibility (prevents % variable expansion)
       const { stdout: remoteRefOutput } = await this.gitBase.execGit(repoPath, [
         'for-each-ref',
-        '--format="%(refname:short)|%(objectname:short)|%(subject)"',
+        `--format=${REMOTE_REF_FORMAT}`,
         'refs/remotes/',
       ]);
-
-      const remoteRefMap = new Map<string, { hash: string; message: string }>();
-
-      for (const line of remoteRefOutput.split('\n')) {
-        if (!line.trim()) continue;
-        // Remove surrounding quotes that may be present on Windows
-        const cleanLine = cleanGitOutputLine(line);
-        if (!cleanLine) continue;
-        const [name, hash, message] = cleanLine.split('|');
-        if (name && !name.includes('/HEAD')) {
-          remoteRefMap.set(name.trim(), {
-            hash: hash || '',
-            message: cleanTrailingQuote(message || ''),
-          });
-        }
-      }
+      const remoteRefMap = parseRemoteRefs(remoteRefOutput);
 
       // Enrich branch info
       for (const branch of branches) {
@@ -250,21 +308,7 @@ export class GitBranchService {
         } else {
           const refInfo = localRefMap.get(branch.name);
           if (refInfo) {
-            branch.lastCommitHash = refInfo.hash;
-            branch.lastCommitMessage = refInfo.message;
-
-            if (refInfo.upstream) {
-              const remoteParts = refInfo.upstream.split('/');
-              branch.remote = remoteParts[0];
-              branch.upstream = refInfo.upstream;
-
-              // Parse tracking info (e.g., "[ahead 2, behind 1]")
-              if (refInfo.track) {
-                const tracking = parseBranchTrackingInfo(refInfo.track);
-                if (tracking.ahead !== undefined) branch.ahead = tracking.ahead;
-                if (tracking.behind !== undefined) branch.behind = tracking.behind;
-              }
-            }
+            applyTrackingInfo(branch, refInfo);
           }
         }
       }
@@ -281,74 +325,44 @@ export class GitBranchService {
     const branches: BranchInfo[] = [];
 
     // Get local branches
-    // Note: Double quotes around format string for Windows compatibility (prevents % variable expansion)
     const { stdout: localOutput } = await this.gitBase.execGit(repoPath, [
       'for-each-ref',
-      '--format="%(refname:short)|%(objectname:short)|%(subject)|%(upstream:short)|%(upstream:track)"',
+      `--format=${LOCAL_REF_FORMAT}`,
       'refs/heads/',
     ]);
+    const localRefMap = parseLocalRefs(localOutput);
 
-    for (const line of localOutput.split('\n')) {
-      if (!line.trim()) continue;
-
-      // Remove surrounding quotes that may be present on Windows
-      const cleanLine = cleanGitOutputLine(line);
-      if (!cleanLine) continue;
-
-      const [name, hash, message, upstream, track] = cleanLine.split('|');
-      if (!name) continue;
-
+    for (const [name, refInfo] of localRefMap) {
       const branch: BranchInfo = {
-        name: name.trim(),
-        isCurrent: name.trim() === currentBranch,
+        name,
+        isCurrent: name === currentBranch,
         isRemote: false,
-        lastCommitHash: hash || undefined,
-        lastCommitMessage: message || undefined,
+        lastCommitHash: refInfo.hash || undefined,
+        lastCommitMessage: refInfo.message || undefined,
       };
 
-      if (upstream) {
-        const remoteParts = upstream.split('/');
-        branch.remote = remoteParts[0];
-        branch.upstream = upstream;
-
-        const cleanTrack = cleanTrailingQuote(track || '');
-        if (cleanTrack) {
-          const tracking = parseBranchTrackingInfo(cleanTrack);
-          if (tracking.ahead !== undefined) branch.ahead = tracking.ahead;
-          if (tracking.behind !== undefined) branch.behind = tracking.behind;
-        }
-      }
-
+      applyTrackingInfo(branch, refInfo);
       branches.push(branch);
     }
 
     // Get remote branches
-    // Note: Double quotes around format string for Windows compatibility (prevents % variable expansion)
     const { stdout: remoteOutput } = await this.gitBase.execGit(repoPath, [
       'for-each-ref',
-      '--format="%(refname:short)|%(objectname:short)|%(subject)"',
+      `--format=${REMOTE_REF_FORMAT}`,
       'refs/remotes/',
     ]);
+    const remoteRefMap = parseRemoteRefs(remoteOutput);
 
-    for (const line of remoteOutput.split('\n')) {
-      if (!line.trim() || line.includes('/HEAD')) continue;
-
-      // Remove surrounding quotes that may be present on Windows
-      const cleanLine = cleanGitOutputLine(line);
-      if (!cleanLine || cleanLine.includes('/HEAD')) continue;
-
-      const [name, hash, message] = cleanLine.split('|');
-      if (!name) continue;
-
+    for (const [name, refInfo] of remoteRefMap) {
       const remoteParts = name.split('/');
 
       branches.push({
-        name: name.trim(),
+        name,
         isCurrent: false,
         isRemote: true,
         remote: remoteParts[0],
-        lastCommitHash: hash || undefined,
-        lastCommitMessage: cleanTrailingQuote(message || '') || undefined,
+        lastCommitHash: refInfo.hash || undefined,
+        lastCommitMessage: refInfo.message || undefined,
       });
     }
 
