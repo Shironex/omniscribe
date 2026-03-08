@@ -12,6 +12,7 @@ interface TerminalGridContextValue {
   onQuickAction?: (sessionId: string, actionId: string) => void;
   onResume?: (sessionId: string) => void;
   onOpenInEditor?: (sessionId: string) => void;
+  onViewChanges?: (sessionId: string) => void;
   quickActions: QuickActionItem[];
 }
 

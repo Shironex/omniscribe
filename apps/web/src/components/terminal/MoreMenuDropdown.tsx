@@ -62,7 +62,6 @@ export function MoreMenuDropdown({
               Open in Editor
             </button>
           )}
-
           {/* Plugin-contributed more menu items */}
           <ExtensionSlot name="more-menu" aiMode={aiMode} context={{ sessionId }} />
 

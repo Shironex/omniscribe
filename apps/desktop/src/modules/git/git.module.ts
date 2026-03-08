@@ -3,6 +3,7 @@ import { GitBaseService } from './git-base.service';
 import { GitBranchService } from './git-branch.service';
 import { GitStatusService } from './git-status.service';
 import { GitCommitService } from './git-commit.service';
+import { GitDiffService } from './git-diff.service';
 import { GitRemoteService } from './git-remote.service';
 import { GitRepoService } from './git-repo.service';
 import { GitService } from './git.service';
@@ -19,6 +20,7 @@ import { GithubGateway } from './github.gateway';
     GitBranchService,
     GitStatusService,
     GitCommitService,
+    GitDiffService,
     GitRemoteService,
     GitRepoService,
     // Facade service
@@ -34,6 +36,7 @@ import { GithubGateway } from './github.gateway';
     GitBranchService,
     GitStatusService,
     GitCommitService,
+    GitDiffService,
     GitRemoteService,
     GitRepoService,
     GitService,

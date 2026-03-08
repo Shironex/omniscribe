@@ -3,6 +3,7 @@ import { GitService } from './git.service';
 import { GitBranchService } from './git-branch.service';
 import { GitStatusService } from './git-status.service';
 import { GitCommitService } from './git-commit.service';
+import { GitDiffService } from './git-diff.service';
 import { GitRemoteService } from './git-remote.service';
 import { GitRepoService } from './git-repo.service';
 
@@ -33,6 +34,10 @@ const mockGitRemote = {
   fetch: jest.fn(),
 };
 
+const mockGitDiff = {
+  getDiff: jest.fn(),
+};
+
 const mockGitRepo = {
   isGitRepository: jest.fn(),
   getRepositoryRoot: jest.fn(),
@@ -50,6 +55,7 @@ describe('GitService', () => {
         { provide: GitBranchService, useValue: mockGitBranch },
         { provide: GitStatusService, useValue: mockGitStatus },
         { provide: GitCommitService, useValue: mockGitCommit },
+        { provide: GitDiffService, useValue: mockGitDiff },
         { provide: GitRemoteService, useValue: mockGitRemote },
         { provide: GitRepoService, useValue: mockGitRepo },
       ],
@@ -219,6 +225,22 @@ describe('GitService', () => {
 
       expect(mockGitCommit.diff).toHaveBeenCalledWith('/project', 'src/app.ts');
       expect(result).toBe('file diff');
+    });
+  });
+
+  describe('getStructuredDiff', () => {
+    it('should delegate to GitDiffService.getDiff', async () => {
+      const diffResult = {
+        files: [{ path: 'file.ts', isBinary: false, hunks: [], additions: 3, deletions: 1 }],
+        totalAdditions: 3,
+        totalDeletions: 1,
+      };
+      mockGitDiff.getDiff.mockResolvedValue(diffResult);
+
+      const result = await service.getStructuredDiff('/project', 'abc123', true);
+
+      expect(mockGitDiff.getDiff).toHaveBeenCalledWith('/project', 'abc123', true);
+      expect(result).toEqual(diffResult);
     });
   });
 

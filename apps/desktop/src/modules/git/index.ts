@@ -3,6 +3,7 @@ export { GitBaseService, GIT_ENV, type ExecResult } from './git-base.service';
 export { GitBranchService } from './git-branch.service';
 export { GitStatusService } from './git-status.service';
 export { GitCommitService } from './git-commit.service';
+export { GitDiffService } from './git-diff.service';
 export { GitRemoteService } from './git-remote.service';
 export { GitRepoService } from './git-repo.service';
 export { GitService } from './git.service';

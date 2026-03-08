@@ -39,6 +39,7 @@ const mockGitService = {
   getCommitLog: jest.fn(),
   checkout: jest.fn(),
   createBranch: jest.fn(),
+  getStructuredDiff: jest.fn(),
 };
 
 const mockWorktreeService = {

@@ -21,12 +21,14 @@ import {
   GitCurrentBranchPayload,
   GitWorktreesPayload,
   GitWorktreeCleanupPayload,
+  GitDiffPayload,
   GitBranchesResponse,
   GitCommitsResponse,
   GitCheckoutResponse,
   GitCreateBranchResponse,
   GitCurrentBranchResponse,
   GitWorktreesResponse,
+  GitDiffResponse,
   SuccessResponse,
   GitEvents,
   createLogger,
@@ -297,6 +299,62 @@ export class GitGateway implements OnGatewayInit {
 
       return {
         worktrees: [],
+        error: message,
+      };
+    }
+  }
+
+  @SkipThrottle()
+  @SubscribeMessage(GitEvents.DIFF)
+  async handleDiff(
+    @ConnectedSocket() _client: Socket,
+    @MessageBody() payload: GitDiffPayload
+  ): Promise<GitDiffResponse> {
+    this.logger.debug(
+      `[git:diff] projectPath=${payload.projectPath}, baseCommit=${payload.baseCommit ?? 'HEAD'}`
+    );
+    try {
+      const { projectPath, baseCommit, includeUntracked } = payload;
+      const pathError = validatePath(projectPath);
+
+      if (pathError) {
+        return {
+          files: [],
+          totalAdditions: 0,
+          totalDeletions: 0,
+          error: pathError,
+        };
+      }
+
+      // Validate baseCommit to prevent argument injection (e.g. --output=/path)
+      if (baseCommit && (/^-/.test(baseCommit) || /[\n\r]/.test(baseCommit))) {
+        return {
+          files: [],
+          totalAdditions: 0,
+          totalDeletions: 0,
+          error: 'Invalid base commit reference',
+        };
+      }
+
+      const result = await this.gitService.getStructuredDiff(
+        projectPath,
+        baseCommit,
+        includeUntracked
+      );
+
+      return {
+        files: result.files,
+        totalAdditions: result.totalAdditions,
+        totalDeletions: result.totalDeletions,
+      };
+    } catch (error) {
+      const message = extractErrorMessage(error, 'Unknown error');
+      this.logger.error('Error getting diff', error);
+
+      return {
+        files: [],
+        totalAdditions: 0,
+        totalDeletions: 0,
         error: message,
       };
     }

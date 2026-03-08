@@ -39,6 +39,11 @@ const SessionHistoryPanel = lazy(() =>
     default: m.SessionHistoryPanel,
   }))
 );
+const DiffPanel = lazy(() =>
+  import('@/components/diff/DiffPanel').then(m => ({
+    default: m.DiffPanel,
+  }))
+);
 
 function App() {
   useAppInitialization();
@@ -107,6 +112,7 @@ function App() {
 
   // UI store state (for lazy-load gating)
   const isHistoryOpen = useAppUIStore(state => state.isHistoryOpen);
+  const isDiffPanelOpen = useAppUIStore(state => state.isDiffPanelOpen);
   const isLaunchModalOpen = useAppUIStore(state => state.isLaunchModalOpen);
   const openLaunchModal = useAppUIStore(state => state.openLaunchModal);
 
@@ -247,6 +253,13 @@ function App() {
         {isHistoryOpen && (
           <Suspense fallback={null}>
             <SessionHistoryPanel projectPath={activeProjectPath} currentBranch={currentBranch} />
+          </Suspense>
+        )}
+
+        {/* Diff Panel */}
+        {isDiffPanelOpen && (
+          <Suspense fallback={null}>
+            <DiffPanel />
           </Suspense>
         )}
       </main>

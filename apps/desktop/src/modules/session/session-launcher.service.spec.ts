@@ -10,6 +10,7 @@ import { SessionLauncherService } from './session-launcher.service';
 import { SessionService } from './session.service';
 import { TerminalService } from '../terminal/terminal.service';
 import { McpWriterService, McpDiscoveryService } from '../mcp';
+import { GitBaseService } from '../git';
 import { PluginRegistryService } from '../plugin';
 import { CliCommandService } from './cli-command.service';
 import { ClaudeSessionTrackerService } from './claude-session-tracker.service';
@@ -127,6 +128,10 @@ describe('SessionLauncherService', () => {
         { provide: TerminalService, useValue: terminalService },
         { provide: McpWriterService, useValue: mcpWriterService },
         { provide: McpDiscoveryService, useValue: mcpDiscoveryService },
+        {
+          provide: GitBaseService,
+          useValue: { execGit: jest.fn().mockResolvedValue({ stdout: 'abc123\n', stderr: '' }) },
+        },
         { provide: CliCommandService, useValue: cliCommandService },
         { provide: ClaudeSessionTrackerService, useValue: claudeSessionTracker },
         { provide: PluginRegistryService, useValue: mockPluginRegistry },

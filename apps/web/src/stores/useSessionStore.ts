@@ -95,7 +95,8 @@ interface SessionActions extends SocketStoreActions {
     message?: string,
     needsInputPrompt?: boolean,
     branch?: string,
-    worktreePath?: string
+    worktreePath?: string,
+    baselineCommitHash?: string
   ) => void;
   /** Set sessions list (bulk update) */
   setSessions: (sessions: FrontendSessionConfig[]) => void;
@@ -153,7 +154,8 @@ export const useSessionStore = create<SessionStore>()(
                   update.message,
                   update.needsInputPrompt,
                   update.branch,
-                  update.worktreePath
+                  update.worktreePath,
+                  update.baselineCommitHash
                 );
               },
             },
@@ -292,7 +294,15 @@ export const useSessionStore = create<SessionStore>()(
           );
         },
 
-        updateStatus: (sessionId, status, message, needsInputPrompt, branch, worktreePath) => {
+        updateStatus: (
+          sessionId,
+          status,
+          message,
+          needsInputPrompt,
+          branch,
+          worktreePath,
+          baselineCommitHash
+        ) => {
           logger.debug('updateStatus', sessionId, status);
           set(
             state => {
@@ -307,7 +317,15 @@ export const useSessionStore = create<SessionStore>()(
                     ...state.pendingStatusUpdates,
                     [sessionId]: [
                       ...pending,
-                      { sessionId, status, message, needsInputPrompt, branch, worktreePath },
+                      {
+                        sessionId,
+                        status,
+                        message,
+                        needsInputPrompt,
+                        branch,
+                        worktreePath,
+                        baselineCommitHash,
+                      },
                     ],
                   },
                 };
@@ -325,6 +343,7 @@ export const useSessionStore = create<SessionStore>()(
                         // Apply branch/worktreePath when present (Bug #4)
                         ...(branch !== undefined && { branch }),
                         ...(worktreePath !== undefined && { worktreePath }),
+                        ...(baselineCommitHash !== undefined && { baselineCommitHash }),
                         lastActiveAt: new Date(),
                       }
                     : session

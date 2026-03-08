@@ -1,8 +1,14 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import * as fs from 'fs';
 import { GitStatusService } from './git-status.service';
 import { GitBaseService } from './git-base.service';
 import { GitRepoService } from './git-repo.service';
 import { GitBranchService } from './git-branch.service';
+
+jest.mock('fs', () => ({
+  ...jest.requireActual('fs'),
+  existsSync: jest.fn(),
+}));
 
 describe('GitStatusService', () => {
   let service: GitStatusService;
@@ -75,8 +81,8 @@ describe('GitStatusService', () => {
       gitBase.execGit.mockRejectedValueOnce(new Error('not found'));
       // checkMergeState: rev-parse --git-path MERGE_HEAD
       gitBase.execGit.mockResolvedValueOnce({ stdout: '.git/MERGE_HEAD\n', stderr: '' });
-      // checkMergeState: cat-file (fails = no merge)
-      gitBase.execGit.mockRejectedValueOnce(new Error('not found'));
+      // checkMergeState: existsSync returns false (no merge)
+      (fs.existsSync as jest.Mock).mockReturnValueOnce(false);
       // getStashCount
       gitBase.execGit.mockResolvedValueOnce({ stdout: '', stderr: '' });
 
@@ -111,7 +117,7 @@ describe('GitStatusService', () => {
       gitBase.execGit.mockRejectedValueOnce(new Error('not found'));
       // checkMergeState calls
       gitBase.execGit.mockResolvedValueOnce({ stdout: '.git/MERGE_HEAD\n', stderr: '' });
-      gitBase.execGit.mockRejectedValueOnce(new Error('not found'));
+      (fs.existsSync as jest.Mock).mockReturnValueOnce(false);
       // stash
       gitBase.execGit.mockResolvedValueOnce({ stdout: '', stderr: '' });
 
@@ -138,7 +144,7 @@ describe('GitStatusService', () => {
       gitBase.execGit.mockRejectedValueOnce(new Error('not found'));
       gitBase.execGit.mockRejectedValueOnce(new Error('not found'));
       gitBase.execGit.mockResolvedValueOnce({ stdout: '.git/MERGE_HEAD\n', stderr: '' });
-      gitBase.execGit.mockRejectedValueOnce(new Error('not found'));
+      (fs.existsSync as jest.Mock).mockReturnValueOnce(false);
       gitBase.execGit.mockResolvedValueOnce({ stdout: '', stderr: '' });
 
       const result = await service.getStatus('/repo');
@@ -164,7 +170,7 @@ describe('GitStatusService', () => {
       gitBase.execGit.mockRejectedValueOnce(new Error('not found'));
       gitBase.execGit.mockRejectedValueOnce(new Error('not found'));
       gitBase.execGit.mockResolvedValueOnce({ stdout: '.git/MERGE_HEAD\n', stderr: '' });
-      gitBase.execGit.mockRejectedValueOnce(new Error('not found'));
+      (fs.existsSync as jest.Mock).mockReturnValueOnce(false);
       gitBase.execGit.mockResolvedValueOnce({ stdout: '', stderr: '' });
 
       const result = await service.getStatus('/repo');
@@ -189,7 +195,7 @@ describe('GitStatusService', () => {
       gitBase.execGit.mockRejectedValueOnce(new Error('not found'));
       gitBase.execGit.mockRejectedValueOnce(new Error('not found'));
       gitBase.execGit.mockResolvedValueOnce({ stdout: '.git/MERGE_HEAD\n', stderr: '' });
-      gitBase.execGit.mockRejectedValueOnce(new Error('not found'));
+      (fs.existsSync as jest.Mock).mockReturnValueOnce(false);
       gitBase.execGit.mockResolvedValueOnce({ stdout: '', stderr: '' });
 
       const result = await service.getStatus('/repo');
@@ -212,7 +218,7 @@ describe('GitStatusService', () => {
       gitBase.execGit.mockRejectedValueOnce(new Error('not found'));
       gitBase.execGit.mockRejectedValueOnce(new Error('not found'));
       gitBase.execGit.mockResolvedValueOnce({ stdout: '.git/MERGE_HEAD\n', stderr: '' });
-      gitBase.execGit.mockRejectedValueOnce(new Error('not found'));
+      (fs.existsSync as jest.Mock).mockReturnValueOnce(false);
       gitBase.execGit.mockResolvedValueOnce({ stdout: '', stderr: '' });
 
       const result = await service.getStatus('/repo');
@@ -237,7 +243,7 @@ describe('GitStatusService', () => {
       gitBase.execGit.mockRejectedValueOnce(new Error('not found'));
       gitBase.execGit.mockRejectedValueOnce(new Error('not found'));
       gitBase.execGit.mockResolvedValueOnce({ stdout: '.git/MERGE_HEAD\n', stderr: '' });
-      gitBase.execGit.mockRejectedValueOnce(new Error('not found'));
+      (fs.existsSync as jest.Mock).mockReturnValueOnce(false);
       gitBase.execGit.mockResolvedValueOnce({ stdout: '', stderr: '' });
 
       const result = await service.getStatus('/repo');
@@ -265,7 +271,7 @@ describe('GitStatusService', () => {
       gitBase.execGit.mockRejectedValueOnce(new Error('not found'));
       gitBase.execGit.mockRejectedValueOnce(new Error('not found'));
       gitBase.execGit.mockResolvedValueOnce({ stdout: '.git/MERGE_HEAD\n', stderr: '' });
-      gitBase.execGit.mockRejectedValueOnce(new Error('not found'));
+      (fs.existsSync as jest.Mock).mockReturnValueOnce(false);
       gitBase.execGit.mockResolvedValueOnce({ stdout: '', stderr: '' });
 
       const result = await service.getStatus('/repo');
@@ -297,7 +303,7 @@ describe('GitStatusService', () => {
       gitBase.execGit.mockRejectedValueOnce(new Error('not found'));
       gitBase.execGit.mockRejectedValueOnce(new Error('not found'));
       gitBase.execGit.mockResolvedValueOnce({ stdout: '.git/MERGE_HEAD\n', stderr: '' });
-      gitBase.execGit.mockRejectedValueOnce(new Error('not found'));
+      (fs.existsSync as jest.Mock).mockReturnValueOnce(false);
       gitBase.execGit.mockResolvedValueOnce({ stdout: '', stderr: '' });
 
       const result = await service.getStatus('/repo');
@@ -418,18 +424,18 @@ describe('GitStatusService', () => {
   });
 
   describe('checkMergeState', () => {
-    it('should return true when MERGE_HEAD exists', async () => {
+    it('should return true when MERGE_HEAD exists on disk', async () => {
       gitBase.execGit.mockResolvedValueOnce({ stdout: '.git/MERGE_HEAD\n', stderr: '' });
-      gitBase.execGit.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      (fs.existsSync as jest.Mock).mockReturnValueOnce(true);
 
       const result = await service.checkMergeState('/repo');
 
       expect(result).toBe(true);
     });
 
-    it('should return false when MERGE_HEAD does not exist', async () => {
+    it('should return false when MERGE_HEAD file does not exist on disk', async () => {
       gitBase.execGit.mockResolvedValueOnce({ stdout: '.git/MERGE_HEAD\n', stderr: '' });
-      gitBase.execGit.mockRejectedValueOnce(new Error('not a valid object'));
+      (fs.existsSync as jest.Mock).mockReturnValueOnce(false);
 
       const result = await service.checkMergeState('/repo');
 

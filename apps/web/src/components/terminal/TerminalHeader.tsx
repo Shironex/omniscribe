@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback, type HTMLAttributes } from 'react';
 import { cn } from '@/lib/utils';
-import { GripVertical, RotateCcw } from 'lucide-react';
+import { GripVertical, RotateCcw, GitCompareArrows } from 'lucide-react';
 import { useClickOutside } from '@/hooks/useClickOutside';
 import { SessionStatusDisplay } from './SessionStatusDisplay';
 import { QuickActionsDropdown } from './QuickActionsDropdown';
@@ -47,6 +47,7 @@ interface TerminalHeaderProps {
   gitBranch?: GitBranchInfo;
   onSettingsClick?: () => void;
   onOpenInEditor?: () => void;
+  onViewChanges?: () => void;
   onClose: () => void;
   onQuickAction?: (actionId: string) => void;
   onResume?: () => void;
@@ -60,6 +61,7 @@ export const TerminalHeader = React.memo(function TerminalHeader({
   quickActions = EMPTY_QUICK_ACTIONS,
   onSettingsClick,
   onOpenInEditor,
+  onViewChanges,
   onClose,
   onQuickAction,
   onResume,
@@ -162,6 +164,22 @@ export const TerminalHeader = React.memo(function TerminalHeader({
         )}
 
         {session.aiMode !== 'plain' && <TaskListPopover sessionId={session.id} />}
+
+        {onViewChanges && (
+          <button
+            type="button"
+            onClick={onViewChanges}
+            className={cn(
+              'p-1 rounded',
+              'text-muted-foreground hover:text-foreground',
+              'hover:bg-card transition-colors'
+            )}
+            title="View Changes"
+            aria-label="View Changes"
+          >
+            <GitCompareArrows size={14} />
+          </button>
+        )}
 
         <div className="relative" ref={moreMenuRef}>
           <MoreMenuDropdown

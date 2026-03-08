@@ -4,7 +4,7 @@
 
 import type { ProjectTabDTO, UserPreferences } from './project-tab';
 import type { QuickAction } from './workspace';
-import type { BranchInfo, CommitInfo, WorktreeInfo } from './git';
+import type { BranchInfo, CommitInfo, WorktreeInfo, GitFileDiff } from './git';
 import type { TaskItem, McpServerConfig, McpServerState, McpServerStatus } from './mcp';
 import type { ClaudeSessionEntry } from './session';
 
@@ -101,6 +101,25 @@ export interface GitWorktreesPayload {
 export interface GitWorktreeCleanupPayload {
   projectPath: string;
   worktreePath: string;
+}
+
+/**
+ * Payload for getting diff
+ */
+export interface GitDiffPayload {
+  projectPath: string;
+  baseCommit?: string;
+  includeUntracked?: boolean;
+}
+
+/**
+ * Response for diff query
+ */
+export interface GitDiffResponse {
+  files: GitFileDiff[];
+  totalAdditions: number;
+  totalDeletions: number;
+  error?: string;
 }
 
 // ============================================
@@ -424,6 +443,8 @@ export interface SessionStatusUpdate {
   branch?: string;
   /** Worktree path (set after worktree setup) */
   worktreePath?: string;
+  /** Git HEAD commit hash captured at session launch for diff baseline */
+  baselineCommitHash?: string;
 }
 
 // ============================================

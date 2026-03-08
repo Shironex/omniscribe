@@ -3,6 +3,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { cn } from '@/lib/utils';
 import { useSessionStore } from '@/stores/useSessionStore';
 import { useTerminalStore } from '@/stores/useTerminalStore';
+import { useAppUIStore } from '@/stores/useAppUIStore';
 import { mapToTerminalSessions } from '@/lib/session-mappers';
 import { TerminalGrid } from './TerminalGrid';
 import { TerminalGridProvider } from './TerminalGridContext';
@@ -86,6 +87,8 @@ export function PersistentProjectGrid({
   const sessionOrder = useTerminalStore(state => state.sessionOrder);
   const setSessionOrder = useTerminalStore(state => state.setSessionOrder);
 
+  const toggleDiffPanel = useAppUIStore(state => state.toggleDiffPanel);
+
   // Per-project focused session state
   const [focusedSessionId, setFocusedSessionId] = useState<string | null>(null);
   const handleFocusSession = useCallback((sessionId: string) => {
@@ -143,9 +146,18 @@ export function PersistentProjectGrid({
       onQuickAction,
       onResume,
       onOpenInEditor,
+      onViewChanges: toggleDiffPanel,
       quickActions: effectiveQuickActions,
     }),
-    [onKill, onSessionClose, onQuickAction, onResume, onOpenInEditor, effectiveQuickActions]
+    [
+      onKill,
+      onSessionClose,
+      onQuickAction,
+      onResume,
+      onOpenInEditor,
+      toggleDiffPanel,
+      effectiveQuickActions,
+    ]
   );
 
   // Don't render if no sessions and no pre-launch slots
