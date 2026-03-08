@@ -58,9 +58,8 @@ const BROWSER_STYLES = {
   },
 };
 
-// Environment detection - use globalThis for cross-platform compatibility
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const isBrowser = typeof (globalThis as any).window !== 'undefined';
+// Environment detection - check for browser window on globalThis
+const isBrowser = typeof (globalThis as Record<string, unknown>).window !== 'undefined';
 
 // Configuration state
 let currentLogLevel: LogLevel = LogLevel.INFO;

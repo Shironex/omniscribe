@@ -16,7 +16,7 @@ const logger = createLogger('PluginInit');
  */
 const BUNDLED_FRONTEND_ACTIVATORS: Record<
   string,
-  () => Promise<{ frontendActivate: (ctx: any) => void }>
+  () => Promise<{ frontendActivate: (ctx: FrontendPluginContext) => void }>
 > = {
   'provider-claude': () => import('@omniscribe/provider-claude/frontend'),
   'provider-codex': () => import('@omniscribe/provider-codex/frontend'),

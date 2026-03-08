@@ -60,7 +60,7 @@ export function initializeSocket(port: number): Socket {
 
   // Expose socket instance on window for E2E testing.
   if (typeof window !== 'undefined') {
-    (window as unknown as Record<string, unknown>).__testSocket = _socket;
+    window.__testSocket = _socket;
   }
 
   return _socket;

@@ -55,7 +55,7 @@ export function createFrontendPluginContext(
   pluginId: string,
   store: typeof UsePluginStoreType
 ): FrontendPluginContext {
-  const logger = createLogger(`Plugin:${pluginId}`) as unknown as PluginLogger;
+  const logger = createLogger(`Plugin:${pluginId}`) as PluginLogger;
   const subscriptions: Disposable[] = [];
 
   return {

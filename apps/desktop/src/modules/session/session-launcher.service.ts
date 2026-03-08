@@ -23,7 +23,8 @@ function hasSessionTracker(provider: AiProviderPlugin): provider is AiProviderPl
   };
 } {
   return (
-    'getSessionTracker' in provider && typeof (provider as any).getSessionTracker === 'function'
+    'getSessionTracker' in provider &&
+    typeof (provider as unknown as Record<string, unknown>).getSessionTracker === 'function'
   );
 }
 
@@ -34,7 +35,10 @@ function hasHookManager(provider: AiProviderPlugin): provider is AiProviderPlugi
     startWatching(): void;
   };
 } {
-  return 'getHookManager' in provider && typeof (provider as any).getHookManager === 'function';
+  return (
+    'getHookManager' in provider &&
+    typeof (provider as unknown as Record<string, unknown>).getHookManager === 'function'
+  );
 }
 
 @Injectable()

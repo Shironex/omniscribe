@@ -51,6 +51,19 @@ import {
 } from '@omniscribe/shared';
 import { InternalSessionEvents, InternalZombieEvents } from '../shared/events';
 import { CORS_CONFIG } from '../shared/cors.config';
+import type { AiProviderPlugin } from '@omniscribe/plugin-api';
+
+// Type guard for providers that expose a session reader
+function hasSessionReader(provider: AiProviderPlugin): provider is AiProviderPlugin & {
+  getSessionReader(): {
+    readSessionsIndex(projectPath: string): Promise<ClaudeSessionHistoryResponse['sessions']>;
+  };
+} {
+  return (
+    'getSessionReader' in provider &&
+    typeof (provider as unknown as Record<string, unknown>).getSessionReader === 'function'
+  );
+}
 
 /**
  * Response for session creation - either the session or an error.
@@ -277,8 +290,8 @@ export class SessionGateway implements OnGatewayInit {
       // Delegate to provider plugin for session history
       if (this.pluginRegistry.isPluginMode('claude')) {
         const provider = this.pluginRegistry.getProvider('claude');
-        if ('getSessionReader' in provider) {
-          const reader = (provider as any).getSessionReader();
+        if (hasSessionReader(provider)) {
+          const reader = provider.getSessionReader();
           const sessions = await reader.readSessionsIndex(payload.projectPath);
           return { sessions };
         }

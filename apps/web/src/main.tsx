@@ -31,7 +31,7 @@ createRoot(rootElement).render(
 // Allows Playwright to open projects, check connection state, etc.
 // This is a desktop Electron app -- window globals are already accessible
 // via devtools, so exposing stores adds no meaningful attack surface.
-(window as unknown as Record<string, unknown>).__testStores = {
+window.__testStores = {
   workspace: useWorkspaceStore,
   connection: useConnectionStore,
 };
