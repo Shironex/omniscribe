@@ -11,6 +11,7 @@ import { SkipThrottle } from '@nestjs/throttler';
 import { Server, Socket } from 'socket.io';
 import { WsThrottlerGuard } from '../shared/ws-throttler.guard';
 import { validatePath } from '../shared/validation';
+import { handleGatewayRequest } from '../shared/gateway-handler';
 import { GitService } from './git.service';
 import { WorktreeService } from './worktree.service';
 import {
@@ -32,7 +33,6 @@ import {
   SuccessResponse,
   GitEvents,
   createLogger,
-  extractErrorMessage,
 } from '@omniscribe/shared';
 import { CORS_CONFIG } from '../shared/cors.config';
 
@@ -61,41 +61,23 @@ export class GitGateway implements OnGatewayInit {
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: GitBranchesPayload
   ): Promise<GitBranchesResponse> {
-    this.logger.debug(`[git:branches] projectPath=${payload.projectPath}`);
-    try {
-      const { projectPath } = payload;
-      const pathError = validatePath(projectPath);
+    return handleGatewayRequest({
+      logger: this.logger,
+      action: '[git:branches]',
+      payload,
+      defaultResult: { branches: [], currentBranch: '' },
+      handler: async projectPath => {
+        const [branches, currentBranch] = await Promise.all([
+          this.gitService.getBranches(projectPath),
+          this.gitService.getCurrentBranch(projectPath),
+        ]);
 
-      if (pathError) {
-        return {
-          branches: [],
-          currentBranch: '',
-          error: pathError,
-        };
-      }
+        // Emit to all clients watching this project
+        client.join(`git:${projectPath}`);
 
-      const [branches, currentBranch] = await Promise.all([
-        this.gitService.getBranches(projectPath),
-        this.gitService.getCurrentBranch(projectPath),
-      ]);
-
-      // Emit to all clients watching this project
-      client.join(`git:${projectPath}`);
-
-      return {
-        branches,
-        currentBranch,
-      };
-    } catch (error) {
-      const message = extractErrorMessage(error, 'Unknown error');
-      this.logger.error('Error fetching branches', error);
-
-      return {
-        branches: [],
-        currentBranch: '',
-        error: message,
-      };
-    }
+        return { branches, currentBranch };
+      },
+    });
   }
 
   @SkipThrottle()
@@ -104,35 +86,21 @@ export class GitGateway implements OnGatewayInit {
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: GitCommitsPayload
   ): Promise<GitCommitsResponse> {
-    this.logger.debug(`[git:commits] projectPath=${payload.projectPath}, limit=${payload.limit}`);
-    try {
-      const { projectPath, limit = 50, allBranches = true } = payload;
-      const pathError = validatePath(projectPath);
+    return handleGatewayRequest({
+      logger: this.logger,
+      action: '[git:commits]',
+      payload,
+      defaultResult: { commits: [] },
+      handler: async projectPath => {
+        const { limit = 50, allBranches = true } = payload;
+        const commits = await this.gitService.getCommitLog(projectPath, limit, allBranches);
 
-      if (pathError) {
-        return {
-          commits: [],
-          error: pathError,
-        };
-      }
+        // Emit to all clients watching this project
+        client.join(`git:${projectPath}`);
 
-      const commits = await this.gitService.getCommitLog(projectPath, limit, allBranches);
-
-      // Emit to all clients watching this project
-      client.join(`git:${projectPath}`);
-
-      return {
-        commits,
-      };
-    } catch (error) {
-      const message = extractErrorMessage(error, 'Unknown error');
-      this.logger.error('Error fetching commits', error);
-
-      return {
-        commits: [],
-        error: message,
-      };
-    }
+        return { commits };
+      },
+    });
   }
 
   @SubscribeMessage(GitEvents.CHECKOUT)
@@ -140,46 +108,30 @@ export class GitGateway implements OnGatewayInit {
     @ConnectedSocket() _client: Socket,
     @MessageBody() payload: GitCheckoutPayload
   ): Promise<GitCheckoutResponse> {
-    this.logger.debug(
-      `[git:checkout] projectPath=${payload.projectPath}, branch=${payload.branch}`
-    );
-    try {
-      const { projectPath, branch } = payload;
-      const pathError = validatePath(projectPath);
+    return handleGatewayRequest({
+      logger: this.logger,
+      action: '[git:checkout]',
+      payload,
+      defaultResult: { success: false },
+      handler: async projectPath => {
+        const { branch } = payload;
 
-      if (pathError) {
-        return { success: false, error: pathError };
-      }
+        if (!branch) {
+          return { success: false, error: 'Branch is required' };
+        }
 
-      if (!branch) {
-        return {
-          success: false,
-          error: 'Branch is required',
-        };
-      }
+        await this.gitService.checkout(projectPath, branch);
+        const currentBranch = await this.gitService.getCurrentBranch(projectPath);
 
-      await this.gitService.checkout(projectPath, branch);
-      const currentBranch = await this.gitService.getCurrentBranch(projectPath);
+        // Notify all clients watching this project
+        this.server.to(`git:${projectPath}`).emit(GitEvents.BRANCHES, {
+          projectPath,
+          currentBranch,
+        });
 
-      // Notify all clients watching this project
-      this.server.to(`git:${projectPath}`).emit(GitEvents.BRANCHES, {
-        projectPath,
-        currentBranch,
-      });
-
-      return {
-        success: true,
-        currentBranch,
-      };
-    } catch (error) {
-      const message = extractErrorMessage(error, 'Unknown error');
-      this.logger.error('Error checking out branch', error);
-
-      return {
-        success: false,
-        error: message,
-      };
-    }
+        return { success: true, currentBranch };
+      },
+    });
   }
 
   @SubscribeMessage(GitEvents.CREATE_BRANCH)
@@ -187,50 +139,34 @@ export class GitGateway implements OnGatewayInit {
     @ConnectedSocket() _client: Socket,
     @MessageBody() payload: GitCreateBranchPayload
   ): Promise<GitCreateBranchResponse> {
-    this.logger.debug(
-      `[git:create-branch] projectPath=${payload.projectPath}, name=${payload.name}`
-    );
-    try {
-      const { projectPath, name, startPoint } = payload;
-      const pathError = validatePath(projectPath);
+    return handleGatewayRequest({
+      logger: this.logger,
+      action: '[git:create-branch]',
+      payload,
+      defaultResult: { success: false },
+      handler: async projectPath => {
+        const { name, startPoint } = payload;
 
-      if (pathError) {
-        return { success: false, error: pathError };
-      }
+        if (!name) {
+          return { success: false, error: 'Branch name is required' };
+        }
 
-      if (!name) {
-        return {
-          success: false,
-          error: 'Branch name is required',
-        };
-      }
+        await this.gitService.createBranch(projectPath, name, startPoint);
 
-      await this.gitService.createBranch(projectPath, name, startPoint);
+        // Get the newly created branch info
+        const branches = await this.gitService.getBranches(projectPath);
+        const newBranch = branches.find(b => b.name === name);
 
-      // Get the newly created branch info
-      const branches = await this.gitService.getBranches(projectPath);
-      const newBranch = branches.find(b => b.name === name);
+        // Notify all clients watching this project
+        this.server.to(`git:${projectPath}`).emit(GitEvents.BRANCHES, {
+          projectPath,
+          branches,
+          currentBranch: name,
+        });
 
-      // Notify all clients watching this project
-      this.server.to(`git:${projectPath}`).emit(GitEvents.BRANCHES, {
-        projectPath,
-        branches,
-        currentBranch: name,
-      });
-
-      return {
-        success: true,
-        branch: newBranch,
-      };
-    } catch (error) {
-      const message = extractErrorMessage(error, 'Unknown error');
-      this.logger.error('Error creating branch', error);
-
-      return {
-        success: false,
-        error: message,
-      };
-    }
+        return { success: true, branch: newBranch };
+      },
+    });
   }
 
   @SkipThrottle()
@@ -239,35 +175,20 @@ export class GitGateway implements OnGatewayInit {
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: GitCurrentBranchPayload
   ): Promise<GitCurrentBranchResponse> {
-    this.logger.debug(`[git:current-branch] projectPath=${payload.projectPath}`);
-    try {
-      const { projectPath } = payload;
-      const pathError = validatePath(projectPath);
+    return handleGatewayRequest({
+      logger: this.logger,
+      action: '[git:current-branch]',
+      payload,
+      defaultResult: { currentBranch: '' },
+      handler: async projectPath => {
+        const currentBranch = await this.gitService.getCurrentBranch(projectPath);
 
-      if (pathError) {
-        return {
-          currentBranch: '',
-          error: pathError,
-        };
-      }
+        // Join the project room for updates
+        client.join(`git:${projectPath}`);
 
-      const currentBranch = await this.gitService.getCurrentBranch(projectPath);
-
-      // Join the project room for updates
-      client.join(`git:${projectPath}`);
-
-      return {
-        currentBranch,
-      };
-    } catch (error) {
-      const message = extractErrorMessage(error, 'Unknown error');
-      this.logger.error('Error getting current branch', error);
-
-      return {
-        currentBranch: '',
-        error: message,
-      };
-    }
+        return { currentBranch };
+      },
+    });
   }
 
   @SkipThrottle()
@@ -276,32 +197,16 @@ export class GitGateway implements OnGatewayInit {
     @ConnectedSocket() _client: Socket,
     @MessageBody() payload: GitWorktreesPayload
   ): Promise<GitWorktreesResponse> {
-    this.logger.debug(`[git:worktrees] projectPath=${payload.projectPath}`);
-    try {
-      const { projectPath } = payload;
-      const pathError = validatePath(projectPath);
-
-      if (pathError) {
-        return {
-          worktrees: [],
-          error: pathError,
-        };
-      }
-
-      const worktrees = await this.worktreeService.list(projectPath);
-
-      return {
-        worktrees,
-      };
-    } catch (error) {
-      const message = extractErrorMessage(error, 'Unknown error');
-      this.logger.error('Error listing worktrees', error);
-
-      return {
-        worktrees: [],
-        error: message,
-      };
-    }
+    return handleGatewayRequest({
+      logger: this.logger,
+      action: '[git:worktrees]',
+      payload,
+      defaultResult: { worktrees: [] },
+      handler: async projectPath => {
+        const worktrees = await this.worktreeService.list(projectPath);
+        return { worktrees };
+      },
+    });
   }
 
   @SkipThrottle()
@@ -310,54 +215,37 @@ export class GitGateway implements OnGatewayInit {
     @ConnectedSocket() _client: Socket,
     @MessageBody() payload: GitDiffPayload
   ): Promise<GitDiffResponse> {
-    this.logger.debug(
-      `[git:diff] projectPath=${payload.projectPath}, baseCommit=${payload.baseCommit ?? 'HEAD'}`
-    );
-    try {
-      const { projectPath, baseCommit, includeUntracked } = payload;
-      const pathError = validatePath(projectPath);
+    return handleGatewayRequest({
+      logger: this.logger,
+      action: '[git:diff]',
+      payload,
+      defaultResult: { files: [], totalAdditions: 0, totalDeletions: 0 },
+      handler: async projectPath => {
+        const { baseCommit, includeUntracked } = payload;
 
-      if (pathError) {
+        // Validate baseCommit to prevent argument injection (e.g. --output=/path)
+        if (baseCommit && (/^-/.test(baseCommit) || /[\n\r]/.test(baseCommit))) {
+          return {
+            files: [],
+            totalAdditions: 0,
+            totalDeletions: 0,
+            error: 'Invalid base commit reference',
+          };
+        }
+
+        const result = await this.gitService.getStructuredDiff(
+          projectPath,
+          baseCommit,
+          includeUntracked
+        );
+
         return {
-          files: [],
-          totalAdditions: 0,
-          totalDeletions: 0,
-          error: pathError,
+          files: result.files,
+          totalAdditions: result.totalAdditions,
+          totalDeletions: result.totalDeletions,
         };
-      }
-
-      // Validate baseCommit to prevent argument injection (e.g. --output=/path)
-      if (baseCommit && (/^-/.test(baseCommit) || /[\n\r]/.test(baseCommit))) {
-        return {
-          files: [],
-          totalAdditions: 0,
-          totalDeletions: 0,
-          error: 'Invalid base commit reference',
-        };
-      }
-
-      const result = await this.gitService.getStructuredDiff(
-        projectPath,
-        baseCommit,
-        includeUntracked
-      );
-
-      return {
-        files: result.files,
-        totalAdditions: result.totalAdditions,
-        totalDeletions: result.totalDeletions,
-      };
-    } catch (error) {
-      const message = extractErrorMessage(error, 'Unknown error');
-      this.logger.error('Error getting diff', error);
-
-      return {
-        files: [],
-        totalAdditions: 0,
-        totalDeletions: 0,
-        error: message,
-      };
-    }
+      },
+    });
   }
 
   @SubscribeMessage(GitEvents.WORKTREE_CLEANUP)
@@ -365,36 +253,23 @@ export class GitGateway implements OnGatewayInit {
     @ConnectedSocket() _client: Socket,
     @MessageBody() payload: GitWorktreeCleanupPayload
   ): Promise<SuccessResponse> {
-    this.logger.debug(
-      `[git:worktree:cleanup] projectPath=${payload.projectPath}, worktreePath=${payload.worktreePath}`
-    );
-    try {
-      const { projectPath, worktreePath } = payload;
-      const projectPathError = validatePath(projectPath);
+    return handleGatewayRequest({
+      logger: this.logger,
+      action: '[git:worktree:cleanup]',
+      payload,
+      defaultResult: { success: false },
+      handler: async projectPath => {
+        const { worktreePath } = payload;
+        const worktreePathError = validatePath(worktreePath, 'worktreePath');
 
-      if (projectPathError) {
-        return { success: false, error: projectPathError };
-      }
+        if (worktreePathError) {
+          return { success: false, error: worktreePathError };
+        }
 
-      const worktreePathError = validatePath(worktreePath, 'worktreePath');
+        await this.worktreeService.cleanup(projectPath, worktreePath);
 
-      if (worktreePathError) {
-        return { success: false, error: worktreePathError };
-      }
-
-      await this.worktreeService.cleanup(projectPath, worktreePath);
-
-      return {
-        success: true,
-      };
-    } catch (error) {
-      const message = extractErrorMessage(error, 'Unknown error');
-      this.logger.error('Error cleaning up worktree', error);
-
-      return {
-        success: false,
-        error: message,
-      };
-    }
+        return { success: true };
+      },
+    });
   }
 }
