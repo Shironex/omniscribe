@@ -124,6 +124,9 @@
   --animate-slide-up: slideUp 0.2s ease-out;
   --animate-slide-down: slideDown 0.2s ease-out;
   --animate-pulse-subtle: pulseSubtle 2s ease-in-out infinite;
+  --animate-blob-drift-1: blob-drift 20s ease-in-out infinite;
+  --animate-blob-drift-2: blob-drift 25s ease-in-out infinite reverse;
+  --animate-blob-drift-3: blob-drift 30s ease-in-out 5s infinite;
 
   @keyframes fadeIn {
     0% {
@@ -160,6 +163,18 @@
     }
     50% {
       opacity: 0.7;
+    }
+  }
+  @keyframes blob-drift {
+    0%,
+    100% {
+      transform: translate(0, 0) scale(1);
+    }
+    33% {
+      transform: translate(10px, -10px) scale(1.02);
+    }
+    66% {
+      transform: translate(-5px, 5px) scale(0.98);
     }
   }
 }
@@ -208,6 +223,11 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.9 0 0);
   --sidebar-ring: oklch(0.55 0.25 265);
+
+  /* Vignette + shadow tokens — light mode */
+  --vignette-color: oklch(0 0 0 / 0.06);
+  --shadow-card-focused:
+    0 4px 16px -4px oklch(0.55 0.25 265 / 0.1), 0 0 0 1px oklch(0.55 0.25 265 / 0.2);
 
   /* Status colors */
   --status-success: oklch(0.65 0.2 140);
@@ -267,6 +287,11 @@
     --sidebar-accent-foreground: oklch(1 0 0);
     --sidebar-border: oklch(1 0 0 / 0.1);
     --sidebar-ring: oklch(0.55 0.25 265);
+
+    /* Vignette + shadow tokens — dark mode */
+    --vignette-color: oklch(0 0 0 / 0.15);
+    --shadow-card-focused:
+      0 4px 16px -4px oklch(0.55 0.25 265 / 0.15), 0 0 0 1px oklch(0.55 0.25 265 / 0.3);
 
     /* Status colors - Dark mode */
     --status-success: oklch(0.65 0.2 140);
@@ -370,6 +395,37 @@
   scrollbar-width: none;
   &::-webkit-scrollbar {
     display: none;
+  }
+}
+@utility terminal-grid-bg {
+  background:
+    radial-gradient(ellipse at center, transparent 60%, var(--vignette-color) 100%),
+    var(--background);
+}
+@utility shadow-primary-glow {
+  box-shadow: var(--shadow-card-focused);
+}
+@utility animate-blob-drift-1 {
+  animation: var(--animate-blob-drift-1);
+}
+@utility animate-blob-drift-2 {
+  animation: var(--animate-blob-drift-2);
+}
+@utility animate-blob-drift-3 {
+  animation: var(--animate-blob-drift-3);
+}
+@utility viewport-noise {
+  position: relative;
+  &::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    pointer-events: none;
+    opacity: 0.015;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-repeat: repeat;
+    background-size: 256px 256px;
   }
 }
 

@@ -186,13 +186,9 @@ export const TerminalView: React.FC<TerminalViewProps> = React.memo(
         width: '100%',
         height: '100%',
         overflow: 'hidden',
-        borderRadius: '4px',
         position: 'relative',
-        borderColor: BORDER_COLORS[status],
-        borderWidth: '2px',
-        borderStyle: 'solid',
       }),
-      [status]
+      []
     );
 
     return (
@@ -201,6 +197,11 @@ export const TerminalView: React.FC<TerminalViewProps> = React.memo(
         className={cn('terminal-view', className)}
         style={containerStyle}
       >
+        {/* Status accent line */}
+        <div
+          className="absolute top-0 left-0 right-0 h-px z-10 transition-colors duration-300"
+          style={{ backgroundColor: BORDER_COLORS[status] }}
+        />
         {showSearch && (
           <TerminalSearchBar
             onSearch={handleSearch}

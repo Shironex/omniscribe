@@ -51,7 +51,7 @@ export const PreLaunchBar = React.memo(function PreLaunchBar({
     <div
       className={cn(
         'flex items-center gap-2 px-3 py-2',
-        'bg-card border border-border rounded-lg',
+        'bg-muted/50 border border-border/60 rounded-lg backdrop-blur-sm',
         className
       )}
     >
