@@ -25,11 +25,14 @@ export interface BaseErrorBoundaryOptions {
  */
 export function createErrorBoundary<TProps extends BaseErrorBoundaryProps>(
   options: BaseErrorBoundaryOptions | ((props: TProps) => BaseErrorBoundaryOptions),
-  initialState?: Partial<BaseErrorBoundaryState>
+  initialState?: Partial<BaseErrorBoundaryState>,
+  displayName?: string
 ) {
   type State = BaseErrorBoundaryState;
 
-  return class extends Component<TProps, State> {
+  const Boundary = class extends Component<TProps, State> {
+    static displayName = displayName ?? 'ErrorBoundary';
+
     constructor(props: TProps) {
       super(props);
       this.state = { hasError: false, error: null, ...initialState };
@@ -56,4 +59,6 @@ export function createErrorBoundary<TProps extends BaseErrorBoundaryProps>(
       return this.props.children;
     }
   };
+
+  return Boundary;
 }

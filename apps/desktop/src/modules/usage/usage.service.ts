@@ -7,32 +7,9 @@ import {
   createLogger,
   extractErrorMessage,
 } from '@omniscribe/shared';
-import type {
-  AiProviderPlugin,
-  CliDetectionResult,
-  ProviderUsageData,
-} from '@omniscribe/plugin-api';
+import type { CliDetectionResult, ProviderUsageData } from '@omniscribe/plugin-api';
 import type { UsageError } from '@omniscribe/shared';
-
-// Type guard for providers that expose a usage fetcher
-function hasUsageFetcher(
-  provider: AiProviderPlugin
-): provider is AiProviderPlugin & { getUsageFetcher(): unknown } {
-  return (
-    'getUsageFetcher' in provider &&
-    typeof (provider as unknown as Record<string, unknown>).getUsageFetcher === 'function'
-  );
-}
-
-// Type guard for providers that expose CLI detection service
-function hasCliDetectionService(
-  provider: AiProviderPlugin
-): provider is AiProviderPlugin & { getCliDetectionService(): unknown } {
-  return (
-    'getCliDetectionService' in provider &&
-    typeof (provider as unknown as Record<string, unknown>).getCliDetectionService === 'function'
-  );
-}
+import { hasProviderMethod } from '../shared/provider-guards';
 
 export interface UsageFetchResult {
   /** Provider-agnostic usage data */
@@ -77,7 +54,7 @@ export class UsageService {
 
       // For backward compat: access the provider's internal fetcher to get ClaudeUsage
       let rawUsage: ClaudeUsage | undefined;
-      if (hasUsageFetcher(provider)) {
+      if (hasProviderMethod(provider, 'getUsageFetcher')) {
         const fetcher = provider.getUsageFetcher() as
           | { lastFetchedUsage?: ClaudeUsage }
           | undefined;
@@ -123,7 +100,7 @@ export class UsageService {
     try {
       const provider = this.pluginRegistry.getProvider(aiMode);
       // For Claude, use the richer getFullStatus() for backward compat with frontend
-      if (hasCliDetectionService(provider)) {
+      if (hasProviderMethod(provider, 'getCliDetectionService')) {
         const detectionService = provider.getCliDetectionService() as
           | { getFullStatus?: () => Promise<ClaudeCliStatus> }
           | undefined;

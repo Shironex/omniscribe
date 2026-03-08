@@ -14,22 +14,22 @@ import { validatePath } from './validation';
  * The handler returns the success result. On path-validation failure or
  * caught exceptions, defaultResult is returned with the error message merged in.
  *
- * Type parameter TResponse should be explicitly provided at the call site
- * (matching the gateway method's return type) to ensure type safety.
+ * Type parameter TResponse must include an optional error field to ensure
+ * the error paths produce well-typed results.
  */
 export async function handleGatewayRequest<
   TPayload extends { projectPath: string },
-  TResponse,
+  TResponse extends { error?: string },
 >(options: {
   logger: Logger;
   action: string;
   payload: TPayload;
   /** Default result merged with error on path-validation failure or caught exception */
-  defaultResult: NoInfer<Partial<TResponse>>;
+  defaultResult: NoInfer<Omit<TResponse, 'error'>>;
   handler: (projectPath: string) => Promise<NoInfer<TResponse>>;
 }): Promise<TResponse> {
   const { logger, action, payload, defaultResult, handler } = options;
-  logger.debug(action, payload.projectPath);
+  logger.debug(`${action} projectPath=${payload.projectPath}`);
   try {
     const pathError = validatePath(payload.projectPath);
     if (pathError) {

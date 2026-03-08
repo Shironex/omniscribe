@@ -133,7 +133,7 @@ export class GithubGateway implements OnGatewayInit {
       handler: async projectPath => {
         const { prNumber } = payload;
 
-        if (!prNumber || prNumber < 0) {
+        if (!prNumber || prNumber <= 0) {
           return { pullRequest: null, error: 'PR number is required' };
         }
 
@@ -210,7 +210,7 @@ export class GithubGateway implements OnGatewayInit {
       handler: async projectPath => {
         const { issueNumber } = payload;
 
-        if (!issueNumber || issueNumber < 0) {
+        if (!issueNumber || issueNumber <= 0) {
           return { issue: null, error: 'Issue number is required' };
         }
 

@@ -37,6 +37,7 @@ function TerminalErrorFallback({
       </p>
 
       <button
+        type="button"
         onClick={handleRestart}
         className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors text-sm"
       >
@@ -45,6 +46,7 @@ function TerminalErrorFallback({
       </button>
 
       <button
+        type="button"
         onClick={() => setShowDetails(prev => !prev)}
         className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
       >
@@ -63,11 +65,15 @@ function TerminalErrorFallback({
   );
 }
 
-export const TerminalErrorBoundary = createErrorBoundary<Props>(props => ({
-  onCatch(error, errorInfo) {
-    logger.error('Terminal crashed', error, errorInfo);
-  },
-  renderFallback(error, reset) {
-    return <TerminalErrorFallback error={error} onReset={reset} onRestart={props.onRestart} />;
-  },
-}));
+export const TerminalErrorBoundary = createErrorBoundary<Props>(
+  props => ({
+    onCatch(error, errorInfo) {
+      logger.error('Terminal crashed', error, errorInfo);
+    },
+    renderFallback(error, reset) {
+      return <TerminalErrorFallback error={error} onReset={reset} onRestart={props.onRestart} />;
+    },
+  }),
+  undefined,
+  'TerminalErrorBoundary'
+);

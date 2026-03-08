@@ -86,17 +86,26 @@ function parseBranchTrackingInfo(track: string): { ahead?: number; behind?: numb
 }
 
 /**
+ * Null byte delimiter for for-each-ref format strings.
+ * Using %x00 (null byte) instead of pipe to avoid breakage when commit
+ * messages contain '|'.
+ */
+const DELIM = '\x00';
+
+/**
  * for-each-ref format for local branches with tracking info.
  * Double quotes for Windows compatibility (prevents % variable expansion).
+ * Uses null byte (%x00) as delimiter to avoid pipe-in-subject breakage.
  */
 const LOCAL_REF_FORMAT =
-  '"%(refname:short)|%(objectname:short)|%(subject)|%(upstream:short)|%(upstream:track)"';
+  '"%(refname:short)%x00%(objectname:short)%x00%(subject)%x00%(upstream:short)%x00%(upstream:track)"';
 
 /**
  * for-each-ref format for remote branches (no tracking info).
  * Double quotes for Windows compatibility (prevents % variable expansion).
+ * Uses null byte (%x00) as delimiter to avoid pipe-in-subject breakage.
  */
-const REMOTE_REF_FORMAT = '"%(refname:short)|%(objectname:short)|%(subject)"';
+const REMOTE_REF_FORMAT = '"%(refname:short)%x00%(objectname:short)%x00%(subject)"';
 
 /** Parsed local ref fields from a for-each-ref line */
 interface LocalRefInfo {
@@ -122,7 +131,7 @@ function parseLocalRefs(output: string): Map<string, LocalRefInfo> {
     if (!line.trim()) continue;
     const cleanLine = cleanGitOutputLine(line);
     if (!cleanLine) continue;
-    const [name, hash, message, upstream, track] = cleanLine.split('|');
+    const [name, hash, message, upstream, track] = cleanLine.split(DELIM);
     if (name) {
       refMap.set(name.trim(), {
         hash: hash || '',
@@ -146,7 +155,7 @@ function parseRemoteRefs(output: string): Map<string, RemoteRefInfo> {
     if (!line.trim()) continue;
     const cleanLine = cleanGitOutputLine(line);
     if (!cleanLine) continue;
-    const [name, hash, message] = cleanLine.split('|');
+    const [name, hash, message] = cleanLine.split(DELIM);
     if (name && !name.includes('/HEAD')) {
       refMap.set(name.trim(), {
         hash: hash || '',
@@ -162,8 +171,8 @@ function parseRemoteRefs(output: string): Map<string, RemoteRefInfo> {
  * Apply tracking info from a LocalRefInfo to a BranchInfo.
  */
 function applyTrackingInfo(branch: BranchInfo, refInfo: LocalRefInfo): void {
-  branch.lastCommitHash = refInfo.hash;
-  branch.lastCommitMessage = refInfo.message;
+  branch.lastCommitHash = refInfo.hash || undefined;
+  branch.lastCommitMessage = refInfo.message || undefined;
 
   if (refInfo.upstream) {
     const remoteParts = refInfo.upstream.split('/');

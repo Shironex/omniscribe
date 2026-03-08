@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { AiMode, LaunchSessionResult, createLogger, extractErrorMessage } from '@omniscribe/shared';
-import type { AiProviderPlugin } from '@omniscribe/plugin-api';
 import { TerminalService } from '../terminal';
 import { McpWriterService, McpDiscoveryService } from '../mcp';
 import { GitBaseService } from '../git';
@@ -10,36 +9,7 @@ import { CliCommandService } from './cli-command.service';
 import { ClaudeSessionTrackerService } from './claude-session-tracker.service';
 import { SessionService } from './session.service';
 import { InternalSessionEvents } from '../shared/events';
-
-// Type guard for providers that support session tracking
-function hasSessionTracker(provider: AiProviderPlugin): provider is AiProviderPlugin & {
-  getSessionTracker(): {
-    pollForNewSession(
-      projectPath: string,
-      previousSessionIds: Set<string>,
-      maxPolls?: number,
-      intervalMs?: number
-    ): Promise<string | null>;
-  };
-} {
-  return (
-    'getSessionTracker' in provider &&
-    typeof (provider as unknown as Record<string, unknown>).getSessionTracker === 'function'
-  );
-}
-
-// Type guard for providers that expose hook management
-function hasHookManager(provider: AiProviderPlugin): provider is AiProviderPlugin & {
-  getHookManager(): {
-    registerHooks(projectPath: string): Promise<void>;
-    startWatching(): void;
-  };
-} {
-  return (
-    'getHookManager' in provider &&
-    typeof (provider as unknown as Record<string, unknown>).getHookManager === 'function'
-  );
-}
+import { hasProviderMethod } from '../shared/provider-guards';
 
 @Injectable()
 export class SessionLauncherService {
@@ -123,8 +93,11 @@ export class SessionLauncherService {
       if (aiMode !== 'plain' && this.pluginRegistry.isPluginMode(aiMode)) {
         try {
           const provider = this.pluginRegistry.getProvider(aiMode);
-          if (hasHookManager(provider)) {
-            const hookMgr = provider.getHookManager();
+          if (hasProviderMethod(provider, 'getHookManager')) {
+            const hookMgr = provider.getHookManager() as {
+              registerHooks(p: string): Promise<void>;
+              startWatching(): void;
+            };
             hookMgr.registerHooks(projectPath).catch((err: Error) => {
               this.logger.warn(`Failed to register hooks for ${sessionId}: ${err.message}`);
             });
@@ -239,8 +212,15 @@ export class SessionLauncherService {
       // Post-launch session tracking (fire-and-forget)
       if (shouldTrackSession && previousSessionIds) {
         const provider = this.pluginRegistry.getProvider(aiMode);
-        if (hasSessionTracker(provider)) {
-          const tracker = provider.getSessionTracker();
+        if (hasProviderMethod(provider, 'getSessionTracker')) {
+          const tracker = provider.getSessionTracker() as {
+            pollForNewSession(
+              projectPath: string,
+              previousSessionIds: Set<string>,
+              maxPolls?: number,
+              intervalMs?: number
+            ): Promise<string | null>;
+          };
           // Fire-and-forget: polls for new session, emits event when found
           tracker.pollForNewSession(projectPath, previousSessionIds).then(
             (newSessionId: string | null) => {
