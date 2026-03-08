@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils';
-import { MoreVertical, Settings, X, SquareArrowOutUpRight, GitCompareArrows } from 'lucide-react';
+import { MoreVertical, Settings, X, SquareArrowOutUpRight } from 'lucide-react';
 import { ExtensionSlot } from '@/components/plugin/ExtensionSlot';
 
 interface MoreMenuDropdownProps {
@@ -9,7 +9,6 @@ interface MoreMenuDropdownProps {
   onToggle: () => void;
   onSettingsClick?: () => void;
   onOpenInEditor?: () => void;
-  onViewChanges?: () => void;
   onClose: () => void;
 }
 
@@ -20,7 +19,6 @@ export function MoreMenuDropdown({
   onToggle,
   onSettingsClick,
   onOpenInEditor,
-  onViewChanges,
   onClose,
 }: MoreMenuDropdownProps) {
   return (
@@ -64,19 +62,6 @@ export function MoreMenuDropdown({
               Open in Editor
             </button>
           )}
-          {onViewChanges && (
-            <button
-              type="button"
-              onClick={() => {
-                onViewChanges();
-              }}
-              className="w-full text-left px-3 py-1.5 text-xs text-foreground hover:bg-accent transition-colors flex items-center gap-2"
-            >
-              <GitCompareArrows size={11} />
-              View Changes
-            </button>
-          )}
-
           {/* Plugin-contributed more menu items */}
           <ExtensionSlot name="more-menu" aiMode={aiMode} context={{ sessionId }} />
 
