@@ -59,7 +59,7 @@ export function ActionBar({
           </TooltipTrigger>
           <TooltipContent side="bottom">
             Session history
-            <kbd className="ml-1.5 px-1 py-0.5 text-[10px] bg-white/10 rounded">
+            <kbd className="ml-1.5 px-1 py-0.5 text-[10px] bg-foreground/10 rounded">
               {HISTORY_SHORTCUT}
             </kbd>
           </TooltipContent>
@@ -81,7 +81,7 @@ export function ActionBar({
         </TooltipTrigger>
         <TooltipContent side="bottom">
           Settings
-          <kbd className="ml-1.5 px-1 py-0.5 text-[10px] bg-white/10 rounded">
+          <kbd className="ml-1.5 px-1 py-0.5 text-[10px] bg-foreground/10 rounded">
             {SETTINGS_SHORTCUT}
           </kbd>
         </TooltipContent>
@@ -104,7 +104,7 @@ export function ActionBar({
           </TooltipTrigger>
           <TooltipContent side="bottom">
             Set up sessions
-            <kbd className="ml-1.5 px-1 py-0.5 text-[10px] bg-white/10 rounded">Shift+N</kbd>
+            <kbd className="ml-1.5 px-1 py-0.5 text-[10px] bg-foreground/10 rounded">Shift+N</kbd>
           </TooltipContent>
         </Tooltip>
       )}
@@ -126,7 +126,7 @@ export function ActionBar({
           </TooltipTrigger>
           <TooltipContent side="bottom">
             Add session
-            <kbd className="ml-1.5 px-1 py-0.5 text-[10px] bg-white/10 rounded">N</kbd>
+            <kbd className="ml-1.5 px-1 py-0.5 text-[10px] bg-foreground/10 rounded">N</kbd>
           </TooltipContent>
         </Tooltip>
       )}
@@ -148,7 +148,7 @@ export function ActionBar({
           </TooltipTrigger>
           <TooltipContent side="bottom">
             Stop all sessions
-            <kbd className="ml-1.5 px-1 py-0.5 text-[10px] bg-white/10 rounded">
+            <kbd className="ml-1.5 px-1 py-0.5 text-[10px] bg-foreground/10 rounded">
               {STOP_SHORTCUT}
             </kbd>
           </TooltipContent>
@@ -176,7 +176,7 @@ export function ActionBar({
         <TooltipContent side="bottom">
           {isLaunching ? 'Launching...' : 'Launch all sessions'}
           {canLaunch && !isLaunching && (
-            <kbd className="ml-1.5 px-1 py-0.5 text-[10px] bg-white/10 rounded">L</kbd>
+            <kbd className="ml-1.5 px-1 py-0.5 text-[10px] bg-foreground/10 rounded">L</kbd>
           )}
         </TooltipContent>
       </Tooltip>

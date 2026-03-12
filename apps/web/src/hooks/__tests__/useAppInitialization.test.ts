@@ -31,38 +31,56 @@ const mockGetSocket = vi.fn().mockReturnValue({ emit: vi.fn() });
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Selector = (state: any) => any;
 
+// Helper to create a mock store that supports both selector calls and getState().
+// Uses a lazy state getter so that mock function references are resolved at call
+// time rather than at vi.mock hoist time (when they are not yet initialized).
+function createMockStore(getState: () => Record<string, unknown>) {
+  const store = (sel: Selector) => sel(getState());
+  store.getState = getState;
+  return store;
+}
+
 vi.mock('@/stores/useSessionStore', () => ({
-  useSessionStore: (sel: Selector) =>
-    sel({ initListeners: mockInitSession, cleanupListeners: mockCleanupSession }),
+  useSessionStore: createMockStore(() => ({
+    initListeners: mockInitSession,
+    cleanupListeners: mockCleanupSession,
+  })),
 }));
 
 vi.mock('@/stores/useWorkspaceStore', () => ({
-  useWorkspaceStore: (sel: Selector) =>
-    sel({ initListeners: mockInitWorkspace, cleanupListeners: mockCleanupWorkspace }),
+  useWorkspaceStore: createMockStore(() => ({
+    initListeners: mockInitWorkspace,
+    cleanupListeners: mockCleanupWorkspace,
+  })),
 }));
 
 vi.mock('@/stores/useGitStore', () => ({
-  useGitStore: (sel: Selector) =>
-    sel({ initListeners: mockInitGit, cleanupListeners: mockCleanupGit }),
+  useGitStore: createMockStore(() => ({
+    initListeners: mockInitGit,
+    cleanupListeners: mockCleanupGit,
+  })),
 }));
 
 vi.mock('@/stores/useMcpStore', () => ({
-  useMcpStore: (sel: Selector) =>
-    sel({
-      initListeners: mockInitMcp,
-      cleanupListeners: mockCleanupMcp,
-      fetchInternalMcpStatus: mockFetchInternalMcpStatus,
-    }),
+  useMcpStore: createMockStore(() => ({
+    initListeners: mockInitMcp,
+    cleanupListeners: mockCleanupMcp,
+    fetchInternalMcpStatus: mockFetchInternalMcpStatus,
+  })),
 }));
 
 vi.mock('@/stores/useTaskStore', () => ({
-  useTaskStore: (sel: Selector) =>
-    sel({ initListeners: mockInitTask, cleanupListeners: mockCleanupTask }),
+  useTaskStore: createMockStore(() => ({
+    initListeners: mockInitTask,
+    cleanupListeners: mockCleanupTask,
+  })),
 }));
 
 vi.mock('@/stores/useSessionHistoryStore', () => ({
-  useSessionHistoryStore: (sel: Selector) =>
-    sel({ initListeners: mockInitSessionHistory, cleanupListeners: mockCleanupSessionHistory }),
+  useSessionHistoryStore: createMockStore(() => ({
+    initListeners: mockInitSessionHistory,
+    cleanupListeners: mockCleanupSessionHistory,
+  })),
 }));
 
 vi.mock('@/stores/useUpdateStore', () => ({
@@ -70,18 +88,24 @@ vi.mock('@/stores/useUpdateStore', () => ({
 }));
 
 vi.mock('@/stores/useConnectionStore', () => ({
-  useConnectionStore: (sel: Selector) =>
-    sel({ initListeners: mockInitConnection, cleanupListeners: mockCleanupConnection }),
+  useConnectionStore: createMockStore(() => ({
+    initListeners: mockInitConnection,
+    cleanupListeners: mockCleanupConnection,
+  })),
 }));
 
 vi.mock('@/stores/useTerminalStore', () => ({
-  useTerminalStore: (sel: Selector) =>
-    sel({ initListeners: mockInitTerminal, cleanupListeners: mockCleanupTerminal }),
+  useTerminalStore: createMockStore(() => ({
+    initListeners: mockInitTerminal,
+    cleanupListeners: mockCleanupTerminal,
+  })),
 }));
 
 vi.mock('@/stores/usePluginStore', () => ({
-  usePluginStore: (sel: Selector) =>
-    sel({ initListeners: mockInitPlugin, cleanupListeners: mockCleanupPlugin }),
+  usePluginStore: createMockStore(() => ({
+    initListeners: mockInitPlugin,
+    cleanupListeners: mockCleanupPlugin,
+  })),
 }));
 
 vi.mock('@/stores/useSettingsStore', () => ({

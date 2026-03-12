@@ -11,6 +11,7 @@ import {
   resizeTerminal,
   killTerminal,
   joinTerminal,
+  __resetTerminalDispatcher,
 } from '../terminal';
 import { TerminalEvents } from '@omniscribe/shared';
 import { PASTE_CHUNK_SIZE, PASTE_CHUNK_DELAY_MS } from '../terminal-constants';
@@ -76,6 +77,7 @@ describe('spawnTerminal', () => {
 describe('connectTerminal', () => {
   beforeEach(() => {
     mockSocket.__reset();
+    __resetTerminalDispatcher();
   });
 
   it('returns TerminalConnection with correct properties', () => {
@@ -89,9 +91,10 @@ describe('connectTerminal', () => {
     expect(typeof connection.cleanup).toBe('function');
   });
 
-  it('registers listeners for output and closed events', () => {
+  it('registers global listeners for output and closed events on first connect', () => {
     connectTerminal(1, vi.fn(), vi.fn());
 
+    // Global dispatcher registers exactly one listener per event type
     expect(mockSocket.on).toHaveBeenCalledWith(TerminalEvents.OUTPUT, expect.any(Function));
     expect(mockSocket.on).toHaveBeenCalledWith(TerminalEvents.CLOSED, expect.any(Function));
   });
@@ -128,13 +131,15 @@ describe('connectTerminal', () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
-  it('cleanup removes registered listeners', () => {
-    const connection = connectTerminal(1, vi.fn(), vi.fn());
+  it('cleanup prevents further callbacks for the session', () => {
+    const onOutput = vi.fn();
+    const connection = connectTerminal(1, onOutput, vi.fn());
 
     connection.cleanup();
 
-    expect(mockSocket.off).toHaveBeenCalledWith(TerminalEvents.OUTPUT, expect.any(Function));
-    expect(mockSocket.off).toHaveBeenCalledWith(TerminalEvents.CLOSED, expect.any(Function));
+    // After cleanup, output events for this session should not fire
+    mockSocket.__simulateEvent(TerminalEvents.OUTPUT, { sessionId: 1, data: 'after-cleanup' });
+    expect(onOutput).not.toHaveBeenCalled();
   });
 });
 

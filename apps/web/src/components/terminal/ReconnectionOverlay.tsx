@@ -41,6 +41,8 @@ export function ReconnectionOverlay() {
     return (
       <div
         data-testid="reconnection-overlay"
+        role="status"
+        aria-live="polite"
         className="absolute inset-0 bg-background/80 backdrop-blur-xs z-10 flex flex-col items-center justify-center gap-2 transition-opacity duration-300"
       >
         <CheckCircle2 className="h-6 w-6 text-status-success" />
@@ -54,6 +56,8 @@ export function ReconnectionOverlay() {
     return (
       <div
         data-testid="reconnection-overlay"
+        role="status"
+        aria-live="polite"
         className="absolute inset-0 bg-background/80 backdrop-blur-xs z-10 flex flex-col items-center justify-center gap-3"
       >
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -66,6 +70,7 @@ export function ReconnectionOverlay() {
   return (
     <div
       data-testid="reconnection-overlay"
+      role="alert"
       className="absolute inset-0 bg-background/80 backdrop-blur-xs z-10 flex flex-col items-center justify-center gap-3"
     >
       <WifiOff className="h-6 w-6 text-destructive" />

@@ -76,6 +76,8 @@ export function StatusDot({
     <AnimatePresence mode="wait">
       <motion.span
         key={status}
+        role="img"
+        aria-label={title ?? config.label}
         variants={animationVariants.pop}
         initial="initial"
         animate="animate"

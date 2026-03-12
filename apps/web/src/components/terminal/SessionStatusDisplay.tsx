@@ -1,4 +1,11 @@
-import React, { useState, useRef, useEffect, useCallback, type ComponentType } from 'react';
+import React, {
+  useState,
+  useRef,
+  useEffect,
+  useCallback,
+  useMemo,
+  type ComponentType,
+} from 'react';
 import { cn } from '@/lib/utils';
 import {
   Terminal,
@@ -9,6 +16,7 @@ import {
   ShieldOff,
   RotateCcw,
 } from 'lucide-react';
+import { useShallow } from 'zustand/react/shallow';
 import { StatusDot } from '@/components/shared/StatusLegend';
 import { Input } from '@/components/ui/input';
 import { useSessionStore } from '@/stores/useSessionStore';
@@ -57,9 +65,12 @@ export const SessionStatusDisplay = React.memo(function SessionStatusDisplay({
   session,
   gitBranch,
 }: SessionStatusDisplayProps) {
-  const providers = usePluginStore(s => s.providers);
+  const providers = usePluginStore(useShallow(s => s.providers));
   const statusRenderers = usePluginStore(s => s.statusRenderers);
-  const modeConfig = getModeConfig(session.aiMode, providers, statusRenderers);
+  const modeConfig = useMemo(
+    () => getModeConfig(session.aiMode, providers, statusRenderers),
+    [session.aiMode, providers, statusRenderers]
+  );
   const ModeIcon = modeConfig.icon;
   const RendererComponent =
     modeConfig.rendererComponent as ComponentType<SessionStatusProps> | null;

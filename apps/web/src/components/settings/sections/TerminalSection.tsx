@@ -101,8 +101,11 @@ export function TerminalSection() {
 
       {/* Font Size */}
       <div className="space-y-2">
-        <label className="text-sm font-medium text-foreground">Font Size: {fontSize}px</label>
+        <label htmlFor="terminal-font-size" className="text-sm font-medium text-foreground">
+          Font Size: {fontSize}px
+        </label>
         <input
+          id="terminal-font-size"
           type="range"
           min={8}
           max={24}
@@ -118,10 +121,11 @@ export function TerminalSection() {
 
       {/* Line Height */}
       <div className="space-y-2">
-        <label className="text-sm font-medium text-foreground">
+        <label htmlFor="terminal-line-height" className="text-sm font-medium text-foreground">
           Line Height: {lineHeight.toFixed(1)}
         </label>
         <input
+          id="terminal-line-height"
           type="range"
           min={1}
           max={2}
@@ -144,6 +148,7 @@ export function TerminalSection() {
             <button
               key={opt.value}
               onClick={() => setCursorStyle(opt.value)}
+              aria-pressed={cursorStyle === opt.value}
               className={cn(
                 'px-3 py-1.5 rounded-md text-sm border transition-colors',
                 cursorStyle === opt.value
@@ -159,10 +164,13 @@ export function TerminalSection() {
 
       {/* Cursor Blink */}
       <div className="flex items-center justify-between">
-        <label className="text-sm font-medium text-foreground">Cursor Blink</label>
+        <label id="cursor-blink-label" className="text-sm font-medium text-foreground">
+          Cursor Blink
+        </label>
         <button
           role="switch"
           aria-checked={cursorBlink}
+          aria-labelledby="cursor-blink-label"
           onClick={() => setCursorBlink(!cursorBlink)}
           className={cn(
             'relative w-10 h-5 rounded-full transition-colors',
@@ -180,10 +188,11 @@ export function TerminalSection() {
 
       {/* Scrollback */}
       <div className="space-y-2">
-        <label className="text-sm font-medium text-foreground">
+        <label htmlFor="terminal-scrollback" className="text-sm font-medium text-foreground">
           Scrollback: {scrollback.toLocaleString()} lines
         </label>
         <input
+          id="terminal-scrollback"
           type="range"
           min={1000}
           max={100000}
@@ -209,6 +218,8 @@ export function TerminalSection() {
               <button
                 key={key}
                 onClick={() => setTerminalThemeName(key)}
+                aria-label={theme.name}
+                aria-pressed={isSelected}
                 className={cn(
                   'flex items-center gap-2 p-2 rounded-md border text-sm transition-colors',
                   isSelected

@@ -102,7 +102,7 @@ const SortableTab = React.memo(function SortableTab({
         </TooltipTrigger>
         <TooltipContent side="bottom">
           Close tab
-          <kbd className="ml-1.5 px-1 py-0.5 text-[10px] bg-white/10 rounded">
+          <kbd className="ml-1.5 px-1 py-0.5 text-[10px] bg-foreground/10 rounded">
             {closeTabShortcut}
           </kbd>
         </TooltipContent>

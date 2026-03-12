@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
 import type { Terminal } from '@xterm/xterm';
 import { Copy, ClipboardPaste, MousePointerClick, Eraser } from 'lucide-react';
 import { toast } from 'sonner';
@@ -22,6 +22,8 @@ interface MenuAction {
   separator?: boolean;
 }
 
+const MENU_ITEM_COUNT = 4;
+
 export function TerminalContextMenu({
   position,
   onClose,
@@ -29,6 +31,8 @@ export function TerminalContextMenu({
   sessionIdRef,
 }: TerminalContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
+  const [focusedIndex, setFocusedIndex] = useState(0);
+  const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
   const handleCopy = useCallback(() => {
     const terminal = xtermRef.current;
@@ -66,7 +70,21 @@ export function TerminalContextMenu({
     onClose();
   }, [xtermRef, onClose]);
 
-  // Close on click outside or Escape
+  // Reset focused index when menu opens
+  useEffect(() => {
+    if (position) {
+      setFocusedIndex(0);
+    }
+  }, [position]);
+
+  // Focus the active menu item when focusedIndex changes
+  useEffect(() => {
+    if (position) {
+      itemRefs.current[focusedIndex]?.focus();
+    }
+  }, [focusedIndex, position]);
+
+  // Close on click outside or Escape, arrow-key navigation
   useEffect(() => {
     if (!position) return;
 
@@ -79,6 +97,12 @@ export function TerminalContextMenu({
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         onClose();
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setFocusedIndex(prev => (prev + 1) % MENU_ITEM_COUNT);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setFocusedIndex(prev => (prev - 1 + MENU_ITEM_COUNT) % MENU_ITEM_COUNT);
       }
     };
 
@@ -129,14 +153,22 @@ export function TerminalContextMenu({
   return (
     <div
       ref={menuRef}
+      role="menu"
       className="fixed z-[100] min-w-[160px] bg-popover border border-border rounded-md shadow-lg py-1"
       style={{ left: x, top: y }}
     >
       {actions.map((action, i) => (
         <div key={action.label}>
-          {action.separator && i > 0 && <div className="h-px bg-border mx-2 my-1" />}
+          {action.separator && i > 0 && (
+            <div className="h-px bg-border mx-2 my-1" role="separator" />
+          )}
           <button
+            ref={el => {
+              itemRefs.current[i] = el;
+            }}
             type="button"
+            role="menuitem"
+            tabIndex={focusedIndex === i ? 0 : -1}
             onClick={action.onClick}
             disabled={action.disabled}
             className={cn(

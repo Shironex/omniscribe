@@ -132,7 +132,12 @@ export function useTerminalInitialization(
       });
     };
 
-    // ResizeObserver with init detection
+    // ResizeObserver with init detection.
+    // Each terminal gets its own ResizeObserver. A shared observer would reduce
+    // observer count but add routing complexity. The per-terminal approach is
+    // acceptable because: (1) the resize handler is already debounced in
+    // useTerminalResize, and (2) the browser coalesces observations into a
+    // single callback per frame, so N observers do not produce N*M callbacks.
     resizeObserverRef.current = new ResizeObserver(() => {
       if (isDisposedRef.current) return;
 

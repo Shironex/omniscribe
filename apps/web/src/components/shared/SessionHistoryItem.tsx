@@ -26,7 +26,7 @@ export const SessionHistoryItem = React.memo(function SessionHistoryItem({
             {entry.gitBranch && (
               <span className="flex items-center gap-0.5 text-2xs text-muted-foreground">
                 <GitBranch size={10} />
-                <span className="truncate max-w-16">{entry.gitBranch}</span>
+                <span className="truncate max-w-24">{entry.gitBranch}</span>
               </span>
             )}
             <span className="flex items-center gap-0.5 text-2xs text-muted-foreground">

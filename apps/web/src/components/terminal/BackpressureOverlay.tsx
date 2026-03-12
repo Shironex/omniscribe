@@ -40,6 +40,8 @@ export function BackpressureOverlay({ terminalSessionId }: BackpressureOverlayPr
   return (
     <div
       data-testid="backpressure-overlay"
+      role="status"
+      aria-live="polite"
       className="absolute inset-0 bg-background/60 backdrop-blur-xs z-10 flex flex-col items-center justify-center gap-3"
     >
       <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />

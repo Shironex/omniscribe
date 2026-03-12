@@ -67,6 +67,7 @@ export const TerminalSearchBar: React.FC<TerminalSearchBarProps> = ({
         value={query}
         onChange={e => setQuery(e.target.value)}
         placeholder="Find..."
+        aria-label="Search terminal"
         className="bg-transparent text-foreground text-sm w-40 outline-hidden placeholder:text-muted-foreground"
       />
 
@@ -78,6 +79,8 @@ export const TerminalSearchBar: React.FC<TerminalSearchBarProps> = ({
           caseSensitive ? 'text-primary bg-muted' : 'text-muted-foreground'
         )}
         title="Case Sensitive"
+        aria-label="Case Sensitive"
+        aria-pressed={caseSensitive}
       >
         <CaseSensitive size={14} />
       </button>
@@ -90,6 +93,8 @@ export const TerminalSearchBar: React.FC<TerminalSearchBarProps> = ({
           regex ? 'text-primary bg-muted' : 'text-muted-foreground'
         )}
         title="Regex"
+        aria-label="Regex"
+        aria-pressed={regex}
       >
         <Regex size={14} />
       </button>

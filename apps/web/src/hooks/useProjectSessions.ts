@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { createLogger, mapSessionStatus } from '@omniscribe/shared';
 import { useSessionStore, type FrontendSessionConfig } from '@/stores/useSessionStore';
 import { mapToTerminalSessions } from '@/lib/session-mappers';
@@ -36,10 +37,11 @@ export function useProjectSessions(
   activeProjectPath: string | null,
   preLaunchSlots: PreLaunchSlot[]
 ): UseProjectSessionsReturn {
-  // Session store
-  const sessions = useSessionStore(state => state.sessions);
+  // Session store — use shallow-compared selectors to avoid re-renders when
+  // unrelated sessions change.
+  const sessions = useSessionStore(useShallow(state => state.sessions));
   const updateSession = useSessionStore(state => state.updateSession);
-  const customTitles = useSessionStore(state => state.customTitles);
+  const customTitles = useSessionStore(useShallow(state => state.customTitles));
 
   // Focused session state
   const [focusedSessionId, setFocusedSessionId] = useState<string | null>(null);
@@ -50,7 +52,12 @@ export function useProjectSessions(
     return sessions.filter(s => s.projectPath === activeProjectPath);
   }, [sessions, activeProjectPath]);
 
-  // Convert sessions to TerminalSession format for TerminalGrid
+  // Convert sessions to TerminalSession format for App-level consumers
+  // (e.g. useQuickActionExecution, session counts).
+  // Note: PersistentProjectGrid independently maps its own sessions from the
+  // store so that each grid re-renders only when its own project's sessions
+  // change. This duplication is intentional to avoid coupling the grid to this
+  // hook's broader subscription.
   const terminalSessions: TerminalSession[] = useMemo(() => {
     return mapToTerminalSessions(activeProjectSessions, customTitles);
   }, [activeProjectSessions, customTitles]);

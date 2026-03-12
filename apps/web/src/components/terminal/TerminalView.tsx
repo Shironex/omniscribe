@@ -179,7 +179,10 @@ export const TerminalView: React.FC<TerminalViewProps> = React.memo(
       }
     }, [isFocused]);
 
-    const theme = getTerminalTheme(settings.terminalThemeName);
+    const theme = useMemo(
+      () => getTerminalTheme(settings.terminalThemeName),
+      [settings.terminalThemeName]
+    );
 
     const containerStyle = useMemo<React.CSSProperties>(
       () => ({
@@ -217,7 +220,7 @@ export const TerminalView: React.FC<TerminalViewProps> = React.memo(
             height: '100%',
             padding: '4px',
             boxSizing: 'border-box',
-            backgroundColor: theme.background ?? '#1a1b26',
+            backgroundColor: theme.background ?? 'var(--background)',
           }}
         />
         <TerminalContextMenu

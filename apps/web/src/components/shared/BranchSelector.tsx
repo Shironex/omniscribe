@@ -87,6 +87,9 @@ export function BranchSelector({
       <button
         onClick={() => !disabled && setIsOpen(!isOpen)}
         disabled={disabled}
+        aria-expanded={isOpen}
+        aria-haspopup="listbox"
+        aria-label="Select branch"
         className={cn(
           'flex items-center gap-2 px-3 py-1.5 rounded',
           'bg-card border border-border',
@@ -108,6 +111,8 @@ export function BranchSelector({
       {/* Dropdown */}
       {isOpen && (
         <div
+          role="listbox"
+          aria-label="Branches"
           className={cn(
             'absolute top-full left-0 mt-1 z-50',
             'w-64 max-h-80 overflow-hidden',
@@ -127,7 +132,14 @@ export function BranchSelector({
                 type="text"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Escape') {
+                    setIsOpen(false);
+                    setSearchQuery('');
+                  }
+                }}
                 placeholder="Search branches..."
+                aria-label="Filter branches"
                 className={cn(
                   'w-full pl-8 pr-3 py-1.5 rounded',
                   'bg-card border border-border',
@@ -149,6 +161,8 @@ export function BranchSelector({
                 {localBranches.map(branch => (
                   <button
                     key={branch.name}
+                    role="option"
+                    aria-selected={branch.name === currentBranch}
                     onClick={() => handleSelect(branch.name)}
                     className={cn(
                       'w-full flex items-center gap-2 px-3 py-1.5',
@@ -177,6 +191,8 @@ export function BranchSelector({
                 {remoteBranches.map(branch => (
                   <button
                     key={branch.name}
+                    role="option"
+                    aria-selected={branch.name === currentBranch}
                     onClick={() => handleSelect(branch.name)}
                     className={cn(
                       'w-full flex items-center gap-2 px-3 py-1.5',

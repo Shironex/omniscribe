@@ -14,6 +14,9 @@ import type { TerminalDragHandleProps } from './SortableTerminalWrapper';
 export type { QuickActionItem } from './terminal-types';
 export { EMPTY_QUICK_ACTIONS } from './terminal-types';
 
+const ANIMATE_FOCUSED = { scale: 1 };
+const ANIMATE_UNFOCUSED = { scale: 0.995 };
+
 interface TerminalCardProps {
   session: TerminalSession;
   /** Whether this terminal's project tab is currently active/visible */
@@ -72,7 +75,7 @@ export const TerminalCard = React.memo(function TerminalCard({
         isFocused && 'shadow-primary-glow',
         'transition-[border-color,box-shadow] duration-200'
       )}
-      animate={isFocused ? { scale: 1 } : { scale: 0.995 }}
+      animate={isFocused ? ANIMATE_FOCUSED : ANIMATE_UNFOCUSED}
       transition={transitions.fast}
       onClick={handleFocus}
     >

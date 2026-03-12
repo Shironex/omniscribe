@@ -151,14 +151,8 @@ export function SettingsNavigation({ activeSection, onNavigate }: SettingsNaviga
   }, [settingsSections]);
 
   return (
-    <nav
-      className={cn(
-        'w-56 shrink-0 overflow-y-auto',
-        'border-r border-border/50',
-        'bg-muted/95 backdrop-blur-xl'
-      )}
-    >
-      <div className="sticky top-0 p-4 space-y-1">
+    <nav className={cn('w-56 shrink-0 overflow-y-auto', 'border-r border-border/50', 'bg-muted')}>
+      <div className="p-4 space-y-1">
         {/* Navigation Groups */}
         {mergedGroups.map(group => (
           <div key={group.label}>
