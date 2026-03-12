@@ -37,8 +37,9 @@ export function useProjectSessions(
   activeProjectPath: string | null,
   preLaunchSlots: PreLaunchSlot[]
 ): UseProjectSessionsReturn {
-  // Session store — use shallow-compared selectors to avoid re-renders when
-  // unrelated sessions change.
+  // Session store — useShallow prevents re-renders when non-session state
+  // changes (e.g. pendingStatusUpdates), but any session object update will
+  // still trigger a re-render since spread creates new references.
   const sessions = useSessionStore(useShallow(state => state.sessions));
   const updateSession = useSessionStore(state => state.updateSession);
   const customTitles = useSessionStore(useShallow(state => state.customTitles));

@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { DndContext, DragOverlay, closestCenter } from '@dnd-kit/core';
 import { SortableContext, rectSwappingStrategy } from '@dnd-kit/sortable';
@@ -63,7 +63,18 @@ export function TerminalGrid({
   className,
 }: TerminalGridProps) {
   const sessionCount = sessions.length;
-  const layout = useMemo(() => getLayout(sessionCount), [sessionCount]);
+  const [containerWidth, setContainerWidth] = useState<number | undefined>();
+  const gridRef = useCallback((node: HTMLDivElement | null) => {
+    if (!node) return;
+    setContainerWidth(node.clientWidth);
+    const ro = new ResizeObserver(([entry]) => setContainerWidth(entry.contentRect.width));
+    ro.observe(node);
+    return () => ro.disconnect();
+  }, []);
+  const layout = useMemo(
+    () => getLayout(sessionCount, containerWidth),
+    [sessionCount, containerWidth]
+  );
   const columns = useMemo(
     () => buildColumns(layout.rows, layout.columns),
     [layout.rows, layout.columns]
@@ -115,7 +126,11 @@ export function TerminalGrid({
   );
 
   return (
-    <div data-testid="terminal-grid" className={cn('h-full w-full flex flex-col', className)}>
+    <div
+      ref={gridRef}
+      data-testid="terminal-grid"
+      className={cn('h-full w-full flex flex-col', className)}
+    >
       {/* Main grid area for active sessions */}
       <div className="flex-1 min-h-0 p-2.5 terminal-grid-bg">
         {sessionCount > 0 ? (

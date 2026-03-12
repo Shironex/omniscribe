@@ -78,6 +78,9 @@ export function resetSocket(): void {
     _socket.disconnect();
     _socket = null;
   }
+  // Reset terminal dispatcher so global listeners re-attach on next connect
+  // (import is lazy to avoid circular dependency)
+  import('./terminal').then(m => m.__resetTerminalDispatcher());
   // Clear test handle to avoid stale references during HMR/tests
   if (typeof window !== 'undefined') {
     window.__testSocket = undefined;

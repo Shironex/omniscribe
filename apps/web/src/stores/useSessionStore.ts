@@ -438,11 +438,16 @@ export const useSessionStore = create<SessionStore>()(
  * same projectPath return a stable reference when the filtered result hasn't
  * changed (shallow comparison).
  */
+const MAX_PROJECT_SELECTOR_CACHE = 50;
 const projectSelectorCache = new Map<string, (state: SessionStore) => FrontendSessionConfig[]>();
 
 export const selectSessionsForProject = (projectPath: string) => {
   let cached = projectSelectorCache.get(projectPath);
   if (!cached) {
+    if (projectSelectorCache.size >= MAX_PROJECT_SELECTOR_CACHE) {
+      const firstKey = projectSelectorCache.keys().next().value;
+      if (firstKey) projectSelectorCache.delete(firstKey);
+    }
     cached = createMemoizedSelector((state: SessionStore) =>
       state.sessions.filter(session => session.projectPath === projectPath)
     );
