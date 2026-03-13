@@ -10,6 +10,8 @@ import { mapToTerminalSessions } from '@/lib/session-mappers';
 import type { StatusCounts } from '@/components/shared/StatusLegend';
 import type { TerminalSession, PreLaunchSlot } from '@/components/terminal/TerminalGrid';
 
+const EMPTY_SESSIONS: FrontendSessionConfig[] = [];
+
 const logger = createLogger('ProjectSessions');
 
 interface UseProjectSessionsReturn {
@@ -43,8 +45,11 @@ export function useProjectSessions(
 ): UseProjectSessionsReturn {
   // Use project-scoped memoized selector so this hook only re-renders when the
   // active project's sessions change, not when any session across any project updates.
+  // Use project-scoped memoized selector for O(1) lookups. When no project is
+  // active, return a stable empty array constant to avoid infinite re-renders
+  // (a `() => []` lambda would return a new reference on every store update).
   const projectSelector = useMemo(
-    () => (activeProjectPath ? selectSessionsForProject(activeProjectPath) : () => []),
+    () => (activeProjectPath ? selectSessionsForProject(activeProjectPath) : () => EMPTY_SESSIONS),
     [activeProjectPath]
   );
   const activeProjectSessions = useSessionStore(projectSelector);
