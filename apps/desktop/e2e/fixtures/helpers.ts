@@ -48,7 +48,7 @@ export async function openProject(page: Page, projectPath: string): Promise<void
   // Wait for the new tab to be rendered in the UI
   await page.waitForFunction(
     (expectedPath: string) => {
-      const tabLabels = document.querySelectorAll('[data-testid="project-tabs"] span.truncate');
+      const tabLabels = document.querySelectorAll('[data-testid="tab-label"]');
       return Array.from(tabLabels).some(el =>
         el.textContent?.includes(expectedPath.split('/').pop() ?? '')
       );

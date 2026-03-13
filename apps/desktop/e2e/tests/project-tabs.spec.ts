@@ -56,7 +56,7 @@ test.describe('Project Tabs', () => {
     // Get tab references using the truncated label text in project-tabs.
     // Use auto-retrying assertion to wait for both tabs to render (avoids
     // flaky race where the DOM hasn't yet reflected the store update).
-    const tabLabels = page.locator('[data-testid="project-tabs"] span.truncate');
+    const tabLabels = page.locator('[data-testid="tab-label"]');
     await expect(tabLabels).toHaveCount(2, { timeout: 10_000 });
 
     // Click the first tab to ensure it's active
@@ -76,7 +76,7 @@ test.describe('Project Tabs', () => {
 
     // Verify the slot shows a valid AI mode label (depends on whether Claude CLI is installed)
     await expect(page.locator('[data-testid="ai-mode-label"]').first()).toHaveText(
-      /^(Plain|Claude)$/,
+      /^(Plain|Claude( Code)?)$/,
       {
         timeout: 5_000,
       }
