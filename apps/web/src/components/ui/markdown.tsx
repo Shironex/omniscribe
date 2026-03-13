@@ -4,6 +4,9 @@ import rehypeSanitize from 'rehype-sanitize';
 import remarkGfm from 'remark-gfm';
 import { cn } from '@/lib/utils';
 
+const REMARK_PLUGINS = [remarkGfm];
+const REHYPE_PLUGINS = [rehypeRaw, rehypeSanitize];
+
 interface MarkdownProps {
   children: string;
   className?: string;
@@ -22,7 +25,7 @@ export function Markdown({ children, className }: MarkdownProps) {
   return (
     <div
       className={cn(
-        'prose prose-sm prose-invert max-w-none',
+        'prose prose-sm max-w-none',
         // Headings
         '[&_h2]:text-lg [&_h2]:text-foreground [&_h2]:font-semibold [&_h2]:mt-3 [&_h2]:mb-2',
         '[&_h3]:text-base [&_h3]:text-foreground [&_h3]:font-semibold [&_h3]:mt-2 [&_h3]:mb-1',
@@ -37,10 +40,17 @@ export function Markdown({ children, className }: MarkdownProps) {
         '[&_strong]:text-foreground [&_strong]:font-semibold',
         // Links
         '[&_a]:text-primary [&_a]:no-underline [&_a]:hover:underline',
+        // Blockquotes
+        '[&_blockquote]:border-l-2 [&_blockquote]:border-border [&_blockquote]:pl-4 [&_blockquote]:text-foreground-muted [&_blockquote]:italic',
+        // Tables
+        '[&_table]:border-collapse [&_th]:text-foreground [&_th]:border-b [&_th]:border-border [&_th]:px-3 [&_th]:py-1.5 [&_th]:text-left',
+        '[&_td]:text-foreground-secondary [&_td]:border-b [&_td]:border-border/50 [&_td]:px-3 [&_td]:py-1.5',
+        // Horizontal rules
+        '[&_hr]:border-border [&_hr]:my-4',
         className
       )}
     >
-      <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw, rehypeSanitize]}>
+      <ReactMarkdown remarkPlugins={REMARK_PLUGINS} rehypePlugins={REHYPE_PLUGINS}>
         {children}
       </ReactMarkdown>
     </div>

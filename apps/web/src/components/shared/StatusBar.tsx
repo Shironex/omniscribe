@@ -13,7 +13,7 @@ export function StatusBar({ currentBranch, statusCounts }: StatusBarProps) {
       {/* Git branch */}
       <div className="flex items-center gap-1.5 px-2 py-1 rounded text-foreground-secondary">
         <GitBranch size={13} className="text-muted-foreground" />
-        <span className="font-mono text-xs">{currentBranch}</span>
+        <span className="font-mono text-xs truncate max-w-32">{currentBranch}</span>
       </div>
 
       {/* Claude usage */}

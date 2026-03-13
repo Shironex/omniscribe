@@ -19,6 +19,50 @@ export interface TerminalConnection {
   cleanup: () => void;
 }
 
+// ---------------------------------------------------------------------------
+// Map-based dispatcher for terminal output/close events.
+//
+// Instead of each terminal subscribing its own handler to the global
+// `terminal:output` / `terminal:closed` socket events (O(N) filtering per
+// event), we keep a single global listener per event type that routes to the
+// correct callback via a sessionId -> callback Map.  This reduces per-event
+// work from O(N) to O(1).
+//
+// TODO: An even better approach would be per-session socket event names
+// (e.g. `terminal:output:${sessionId}`) emitted by the backend, which would
+// let Socket.io handle the routing natively.  That requires backend changes.
+// ---------------------------------------------------------------------------
+
+type OutputCallback = (data: string) => void;
+type CloseCallback = (exitCode: number, signal?: number) => void;
+
+const outputHandlers = new Map<number, Set<OutputCallback>>();
+const closeHandlers = new Map<number, Set<CloseCallback>>();
+
+let globalListenersAttached = false;
+
+/** Reset global dispatcher state. Exposed for testing and HMR. */
+export function __resetTerminalDispatcher() {
+  globalListenersAttached = false;
+  outputHandlers.clear();
+  closeHandlers.clear();
+}
+
+function ensureGlobalListeners() {
+  if (globalListenersAttached) return;
+  globalListenersAttached = true;
+
+  getSocket().on(TerminalEvents.OUTPUT, (event: TerminalOutputEvent) => {
+    const handlers = outputHandlers.get(event.sessionId);
+    if (handlers) handlers.forEach(h => h(event.data));
+  });
+
+  getSocket().on(TerminalEvents.CLOSED, (event: TerminalClosedEvent) => {
+    const handlers = closeHandlers.get(event.sessionId);
+    if (handlers) handlers.forEach(h => h(event.exitCode, event.signal));
+  });
+}
+
 /**
  * Spawn a new terminal session
  * @param cwd Working directory for the terminal
@@ -29,10 +73,23 @@ export async function spawnTerminal(cwd?: string, env?: Record<string, string>):
   await connectSocket();
 
   return new Promise((resolve, reject) => {
+    let settled = false;
+
+    const timeoutId = setTimeout(() => {
+      if (!settled) {
+        settled = true;
+        logger.error('Terminal spawn timeout');
+        reject(new Error('Terminal spawn timeout'));
+      }
+    }, 10000);
+
     getSocket().emit(
       TerminalEvents.SPAWN,
       { cwd, env },
       (response: { sessionId: number } | { error: string }) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeoutId);
         if ('error' in response) {
           logger.error('Spawn failed:', response.error);
           reject(new Error(response.error));
@@ -42,17 +99,15 @@ export async function spawnTerminal(cwd?: string, env?: Record<string, string>):
         }
       }
     );
-
-    // Timeout after 10 seconds
-    setTimeout(() => {
-      logger.error('Terminal spawn timeout');
-      reject(new Error('Terminal spawn timeout'));
-    }, 10000);
   });
 }
 
 /**
- * Connect to a terminal session and set up event listeners
+ * Connect to a terminal session and set up event listeners.
+ *
+ * Uses a global Map-based dispatcher so that each `terminal:output` event is
+ * routed in O(1) rather than being checked by every connected terminal.
+ *
  * @param sessionId The session ID to connect to
  * @param onOutput Callback for terminal output
  * @param onClose Callback for terminal close
@@ -63,26 +118,27 @@ export function connectTerminal(
   onOutput: (data: string) => void,
   onClose: (exitCode: number, signal?: number) => void
 ): TerminalConnection {
-  const handleOutput = (event: TerminalOutputEvent) => {
-    if (event.sessionId === sessionId) {
-      onOutput(event.data);
-    }
-  };
-
-  const handleClosed = (event: TerminalClosedEvent) => {
-    if (event.sessionId === sessionId) {
-      onClose(event.exitCode, event.signal);
-    }
-  };
-
   logger.debug('Connecting to terminal', sessionId);
-  getSocket().on(TerminalEvents.OUTPUT, handleOutput);
-  getSocket().on(TerminalEvents.CLOSED, handleClosed);
+
+  ensureGlobalListeners();
+
+  if (!outputHandlers.has(sessionId)) outputHandlers.set(sessionId, new Set());
+  if (!closeHandlers.has(sessionId)) closeHandlers.set(sessionId, new Set());
+  outputHandlers.get(sessionId)!.add(onOutput);
+  closeHandlers.get(sessionId)!.add(onClose);
 
   const cleanup = () => {
     logger.debug('Cleaning up terminal connection', sessionId);
-    getSocket().off(TerminalEvents.OUTPUT, handleOutput);
-    getSocket().off(TerminalEvents.CLOSED, handleClosed);
+    const outputs = outputHandlers.get(sessionId);
+    const closes = closeHandlers.get(sessionId);
+    if (outputs) {
+      outputs.delete(onOutput);
+      if (outputs.size === 0) outputHandlers.delete(sessionId);
+    }
+    if (closes) {
+      closes.delete(onClose);
+      if (closes.size === 0) closeHandlers.delete(sessionId);
+    }
   };
 
   return {
@@ -173,13 +229,20 @@ export async function joinTerminal(
 
   logger.debug('Joining terminal', sessionId);
   return new Promise(resolve => {
+    let settled = false;
+
+    const timeoutId = setTimeout(() => {
+      if (!settled) {
+        settled = true;
+        resolve({ success: false });
+      }
+    }, 5000);
+
     getSocket().emit(TerminalEvents.JOIN, { sessionId }, (response: TerminalJoinResponse) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeoutId);
       resolve({ success: response.success, scrollback: response.scrollback });
     });
-
-    // Timeout after 5 seconds
-    setTimeout(() => {
-      resolve({ success: false });
-    }, 5000);
   });
 }

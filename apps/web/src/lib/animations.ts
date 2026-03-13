@@ -40,16 +40,6 @@ export const animationVariants = {
     },
     exit: { opacity: 0, scale: 0.8 },
   },
-  bounce: {
-    initial: { opacity: 0, y: 20, scale: 0.95 },
-    animate: {
-      opacity: 1,
-      y: 0,
-      scale: 1,
-      transition: { type: 'spring', stiffness: 300, damping: 10 },
-    },
-    exit: { opacity: 0, y: 20, scale: 0.95 },
-  },
 } satisfies Record<string, Variants>;
 
 export const transitions = {
@@ -58,7 +48,6 @@ export const transitions = {
   normal: { duration: 0.25 },
   slow: { duration: 0.4 },
   spring: { type: 'spring', stiffness: 400, damping: 25 },
-  springBouncy: { type: 'spring', stiffness: 300, damping: 10 },
   springSmooth: { type: 'spring', stiffness: 200, damping: 20 },
   easeOut: { duration: 0.25, ease: [0, 0, 0.2, 1] },
   easeIn: { duration: 0.25, ease: [0.4, 0, 1, 1] },

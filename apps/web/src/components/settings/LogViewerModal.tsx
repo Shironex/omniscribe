@@ -33,10 +33,10 @@ interface LogViewerModalProps {
 }
 
 const LEVEL_STYLES: Record<string, string> = {
-  error: 'bg-red-500/15 text-red-400 border-red-500/30',
-  warn: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
-  info: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
-  debug: 'bg-purple-500/15 text-purple-400 border-purple-500/30',
+  error: 'bg-status-error-bg text-status-error border-status-error/30',
+  warn: 'bg-status-warning-bg text-status-warning border-status-warning/30',
+  info: 'bg-status-info-bg text-status-info border-status-info/30',
+  debug: 'bg-status-accent-bg text-status-accent border-status-accent/30',
 };
 
 function ExpandableData({ data }: { data: unknown }) {
@@ -286,7 +286,7 @@ export function LogViewerModal({ open, onOpenChange }: LogViewerModalProps) {
                             >
                               {entry.level}
                             </span>
-                            <span className="shrink-0 text-primary/70 w-[140px] truncate">
+                            <span className="shrink-0 text-primary/70 max-w-[140px] min-w-0 truncate">
                               {entry.context}
                             </span>
                             <span className="text-foreground break-all min-w-0 flex-1">

@@ -434,12 +434,27 @@ export const useSessionStore = create<SessionStore>()(
 
 /**
  * Select sessions for a specific project.
- * Note: This parameterized selector returns a new array on each call.
- * Component consumers should wrap with `useShallow` or `useMemo` to avoid
- * unnecessary re-renders on every store update.
+ * Uses a per-project memoized selector cache so that repeated calls with the
+ * same projectPath return a stable reference when the filtered result hasn't
+ * changed (shallow comparison).
  */
-export const selectSessionsForProject = (projectPath: string) => (state: SessionStore) =>
-  state.sessions.filter(session => session.projectPath === projectPath);
+const MAX_PROJECT_SELECTOR_CACHE = 50;
+const projectSelectorCache = new Map<string, (state: SessionStore) => FrontendSessionConfig[]>();
+
+export const selectSessionsForProject = (projectPath: string) => {
+  let cached = projectSelectorCache.get(projectPath);
+  if (!cached) {
+    if (projectSelectorCache.size >= MAX_PROJECT_SELECTOR_CACHE) {
+      const firstKey = projectSelectorCache.keys().next().value;
+      if (firstKey) projectSelectorCache.delete(firstKey);
+    }
+    cached = createMemoizedSelector((state: SessionStore) =>
+      state.sessions.filter(session => session.projectPath === projectPath)
+    );
+    projectSelectorCache.set(projectPath, cached);
+  }
+  return cached;
+};
 
 /**
  * Select a specific session by ID
@@ -461,6 +476,14 @@ export const selectSessionsByStatus = (status: SessionStatus) => (state: Session
  */
 export const selectActiveSessions = createMemoizedSelector((state: SessionStore) =>
   state.sessions.filter(session => session.status !== 'idle' && session.status !== 'disconnected')
+);
+
+/**
+ * Select unique project paths from all sessions.
+ * Returns a stable reference when the set of paths hasn't changed.
+ */
+export const selectProjectPaths = createMemoizedSelector((state: SessionStore) =>
+  [...new Set(state.sessions.map(s => s.projectPath))].sort()
 );
 
 /**

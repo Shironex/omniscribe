@@ -51,7 +51,7 @@ export const PreLaunchBar = React.memo(function PreLaunchBar({
     <div
       className={cn(
         'flex items-center gap-2 px-3 py-2',
-        'bg-muted/50 border border-border/60 rounded-lg backdrop-blur-sm',
+        'bg-muted/50 border border-border/60 rounded-lg',
         className
       )}
     >
@@ -71,7 +71,7 @@ export const PreLaunchBar = React.memo(function PreLaunchBar({
           onCreateBranch={onCreateBranch}
           placeholder="Select branch"
           side="top"
-          className="h-8 w-[240px] text-xs"
+          className="h-8 flex-1 max-w-[240px] text-xs"
         />
       )}
 
@@ -90,7 +90,7 @@ export const PreLaunchBar = React.memo(function PreLaunchBar({
         <Play size={12} fill="currentColor" />
         <span>{isLaunching ? 'Launching...' : 'Launch'}</span>
         {shortcutKey && !isLaunching && (
-          <kbd className="ml-1 px-1 py-0.5 text-[10px] bg-white/20 rounded">{shortcutKey}</kbd>
+          <kbd className="ml-1 px-1 py-0.5 text-[10px] bg-foreground/20 rounded">{shortcutKey}</kbd>
         )}
       </Button>
 
@@ -99,7 +99,7 @@ export const PreLaunchBar = React.memo(function PreLaunchBar({
         variant="ghost"
         size="icon"
         onClick={() => onRemove(slot.id)}
-        className="text-muted-foreground hover:text-red-400 hover:bg-red-400/10"
+        className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
         aria-label="Remove"
       >
         <X size={14} />

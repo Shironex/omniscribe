@@ -22,3 +22,5 @@ export { ProgressBar } from './ProgressBar';
 export { UsageCard, getStatusInfo } from './UsageCard';
 
 export { SessionHistoryPanel } from './SessionHistoryPanel';
+
+export { SectionHeader } from './SectionHeader';

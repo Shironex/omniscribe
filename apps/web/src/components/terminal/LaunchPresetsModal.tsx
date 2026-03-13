@@ -148,7 +148,7 @@ export function LaunchPresetsModal({ projectPath, onCreateSessions }: LaunchPres
                     value={branch}
                     onChange={setBranch}
                     placeholder="Select branch"
-                    className="h-8 w-[220px] text-xs"
+                    className="h-8 flex-1 max-w-[220px] text-xs"
                   />
                 )}
               </div>

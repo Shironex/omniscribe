@@ -8,13 +8,17 @@ interface DiffViewerProps {
 
 const DiffLineRow = memo(function DiffLineRow({ line }: { line: GitDiffLine }) {
   const bgClass =
-    line.type === 'addition' ? 'bg-green-500/10' : line.type === 'deletion' ? 'bg-red-500/10' : '';
+    line.type === 'addition'
+      ? 'bg-status-success-bg'
+      : line.type === 'deletion'
+        ? 'bg-status-error-bg'
+        : '';
 
   const textClass =
     line.type === 'addition'
-      ? 'text-green-400'
+      ? 'text-status-success'
       : line.type === 'deletion'
-        ? 'text-red-400'
+        ? 'text-status-error'
         : 'text-muted-foreground';
 
   const prefix = line.type === 'addition' ? '+' : line.type === 'deletion' ? '-' : ' ';
@@ -37,8 +41,8 @@ const DiffLineRow = memo(function DiffLineRow({ line }: { line: GitDiffLine }) {
 
 function HunkHeader({ hunk }: { hunk: GitDiffHunk }) {
   return (
-    <tr className="bg-blue-500/5">
-      <td colSpan={3} className="text-[10px] text-blue-400/70 font-mono px-2 py-0.5">
+    <tr className="bg-status-info-bg">
+      <td colSpan={3} className="text-[10px] text-status-info/70 font-mono px-2 py-0.5">
         @@ -{hunk.oldStart},{hunk.oldLines} +{hunk.newStart},{hunk.newLines} @@ {hunk.header}
       </td>
     </tr>

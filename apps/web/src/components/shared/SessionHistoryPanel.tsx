@@ -53,7 +53,7 @@ export function SessionHistoryPanel({
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: 320, opacity: 0 }}
             transition={transitions.springSmooth}
-            className="h-full w-80 border-l border-border bg-muted flex flex-col"
+            className="h-full w-80 max-w-[40vw] border-l border-border bg-muted flex flex-col"
           >
             {/* Header */}
             <div className="flex items-center justify-between px-3 py-2 border-b border-border shrink-0">
@@ -123,7 +123,7 @@ export function SessionHistoryPanel({
                 </div>
               )}
 
-              {error && <div className="text-xs text-red-400 py-2 px-2">{error}</div>}
+              {error && <div className="text-xs text-status-error py-2 px-2">{error}</div>}
 
               {!isLoading && filteredSessions.length === 0 && !error && (
                 <div className="text-xs text-muted-foreground py-8 text-center">

@@ -19,6 +19,8 @@ export function GridPresetCard({ count, selected, disabled, onClick }: GridPrese
       onClick={onClick}
       disabled={disabled}
       title={`${count} ${count === 1 ? 'session' : 'sessions'}`}
+      aria-label={`${count} ${count === 1 ? 'session' : 'sessions'}`}
+      aria-pressed={selected}
       className={cn(
         'flex flex-col items-center p-2.5 h-auto',
         'transition-all duration-200',
@@ -28,7 +30,7 @@ export function GridPresetCard({ count, selected, disabled, onClick }: GridPrese
       )}
     >
       {/* Mini grid preview */}
-      <div className="flex flex-col gap-1 w-full aspect-4/3">
+      <div className="flex flex-col gap-1 w-full aspect-4/3" aria-hidden="true">
         {layout.rows.map((row, rowIndex) => (
           <div key={rowIndex} className="flex gap-1 flex-1">
             {row.map(cellIndex => (

@@ -3,6 +3,7 @@ import { Loader2, XCircle } from 'lucide-react';
 import { TerminalEvents } from '@omniscribe/shared';
 import { useTerminalStore } from '@/stores/useTerminalStore';
 import { getSocket } from '@/lib/socket';
+import { Z_OVERLAY } from '@/lib/z-index';
 
 const DEBOUNCE_MS = 500;
 
@@ -38,9 +39,11 @@ export function BackpressureOverlay({ terminalSessionId }: BackpressureOverlayPr
   }
 
   return (
-    <div
+    <output
       data-testid="backpressure-overlay"
-      className="absolute inset-0 bg-background/60 backdrop-blur-xs z-10 flex flex-col items-center justify-center gap-3"
+      aria-live="polite"
+      className="absolute inset-0 bg-background/60 backdrop-blur-xs flex flex-col items-center justify-center gap-3"
+      style={{ zIndex: Z_OVERLAY }}
     >
       <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
       <span className="text-sm text-muted-foreground">Buffering output...</span>
@@ -52,6 +55,6 @@ export function BackpressureOverlay({ terminalSessionId }: BackpressureOverlayPr
         <XCircle size={12} />
         Cancel output
       </button>
-    </div>
+    </output>
   );
 }

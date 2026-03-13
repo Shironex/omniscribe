@@ -15,7 +15,7 @@ import { useQuickActionExecution } from '@/hooks/useQuickActionExecution';
 import { useUpdateToast } from '@/hooks/useUpdateToast';
 import { useSessionOrderSync } from '@/hooks/useSessionOrderSync';
 import { useSessionActions } from '@/hooks/useSessionActions';
-import { useSessionStore } from '@/stores/useSessionStore';
+import { useSessionStore, selectProjectPaths } from '@/stores/useSessionStore';
 import { useWorkspaceStore } from '@/stores/useWorkspaceStore';
 import { useSettingsStore } from '@/stores/useSettingsStore';
 import { useAppUIStore } from '@/stores/useAppUIStore';
@@ -85,7 +85,7 @@ function App() {
     handleSessionClose,
   } = useProjectSessions(activeProjectPath, preLaunchSlots);
 
-  const allSessions = useSessionStore(state => state.sessions);
+  const sessionProjectPaths = useSessionStore(selectProjectPaths);
 
   const { handleStopAll, handleKillSession } = useSessionLifecycle(activeProjectSessions);
   const { quickActionsForTerminal, handleQuickAction } = useQuickActionExecution(terminalSessions);
@@ -93,15 +93,12 @@ function App() {
 
   // Unique project paths that need a persistent grid (sessions or pre-launch slots)
   const projectPathsWithGrids = useMemo(() => {
-    const paths = new Set<string>();
-    for (const session of allSessions) {
-      paths.add(session.projectPath);
-    }
+    const paths = new Set(sessionProjectPaths);
     if (activeProjectPath && preLaunchSlots.length > 0) {
       paths.add(activeProjectPath);
     }
     return [...paths];
-  }, [allSessions, activeProjectPath, preLaunchSlots.length]);
+  }, [sessionProjectPaths, activeProjectPath, preLaunchSlots.length]);
 
   const hasContent = terminalSessions.length > 0 || preLaunchSlots.length > 0;
 

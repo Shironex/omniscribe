@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { PRELAUNCH_SHORTCUT_KEYS } from '@/lib/prelaunch-shortcuts';
 import { useAppUIStore } from '@/stores/useAppUIStore';
 import type { PreLaunchSlot } from '@/components/terminal/TerminalGrid';
@@ -39,6 +39,27 @@ export function useAppKeyboardShortcuts({
   handleCloseCurrentTab,
   handleSelectTabByIndex,
 }: UseAppKeyboardShortcutsParams): void {
+  // Store frequently-changing values in refs so the keydown listener doesn't
+  // need to re-register on every session/slot change.
+  // Refs are synced in useEffect (not during render) per React 18 guidelines.
+  const preLaunchSlotsRef = useRef(preLaunchSlots);
+  const terminalSessionCountRef = useRef(terminalSessionCount);
+  const launchingSlotIdsRef = useRef(launchingSlotIds);
+  const canLaunchRef = useRef(canLaunch);
+  const isLaunchingRef = useRef(isLaunching);
+  const hasActiveSessionsRef = useRef(hasActiveSessions);
+  const activeProjectPathRef = useRef(activeProjectPath);
+
+  useEffect(() => {
+    preLaunchSlotsRef.current = preLaunchSlots;
+    terminalSessionCountRef.current = terminalSessionCount;
+    launchingSlotIdsRef.current = launchingSlotIds;
+    canLaunchRef.current = canLaunch;
+    isLaunchingRef.current = isLaunching;
+    hasActiveSessionsRef.current = hasActiveSessions;
+    activeProjectPathRef.current = activeProjectPath;
+  });
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
@@ -49,7 +70,7 @@ export function useAppKeyboardShortcuts({
       const isMod = e.metaKey || e.ctrlKey;
 
       // Cmd/Ctrl + K - Kill all sessions (works even when typing)
-      if (isMod && key === 'k' && hasActiveSessions) {
+      if (isMod && key === 'k' && hasActiveSessionsRef.current) {
         e.preventDefault();
         handleStopAll();
         return;
@@ -89,7 +110,7 @@ export function useAppKeyboardShortcuts({
       }
 
       // Shift+N - Open launch presets modal
-      if (key === 'n' && e.shiftKey && activeProjectPath) {
+      if (key === 'n' && e.shiftKey && activeProjectPathRef.current) {
         e.preventDefault();
         useAppUIStore.getState().openLaunchModal();
         return;
@@ -101,15 +122,16 @@ export function useAppKeyboardShortcuts({
       }
 
       // N - Add new session slot (max 12)
-      const canAddMore = terminalSessionCount + preLaunchSlots.length < 12;
-      if (key === 'n' && canAddMore && activeProjectPath) {
+      const currentSlots = preLaunchSlotsRef.current;
+      const canAddMore = terminalSessionCountRef.current + currentSlots.length < 12;
+      if (key === 'n' && canAddMore && activeProjectPathRef.current) {
         e.preventDefault();
         handleAddSession();
         return;
       }
 
       // L - Launch all pre-launch slots
-      if (key === 'l' && canLaunch && !isLaunching) {
+      if (key === 'l' && canLaunchRef.current && !isLaunchingRef.current) {
         e.preventDefault();
         handleLaunch();
         return;
@@ -117,8 +139,8 @@ export function useAppKeyboardShortcuts({
 
       // Launch individual slot by assigned shortcut key
       if (PRELAUNCH_SHORTCUT_KEYS.includes(key)) {
-        const slot = preLaunchSlots.find(candidate => candidate.shortcutKey === key);
-        if (slot && !launchingSlotIds?.has(slot.id)) {
+        const slot = currentSlots.find(candidate => candidate.shortcutKey === key);
+        if (slot && !launchingSlotIdsRef.current?.has(slot.id)) {
           e.preventDefault();
           handleLaunchSlot(slot.id);
         }
@@ -128,13 +150,6 @@ export function useAppKeyboardShortcuts({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [
-    canLaunch,
-    isLaunching,
-    hasActiveSessions,
-    terminalSessionCount,
-    preLaunchSlots,
-    launchingSlotIds,
-    activeProjectPath,
     handleAddSession,
     handleLaunch,
     handleLaunchSlot,

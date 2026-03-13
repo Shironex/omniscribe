@@ -16,93 +16,43 @@ export interface UseStoreListenersReturn {
 }
 
 /**
- * Hook that subscribes to all store init/cleanup listener pairs.
- * Returns functions to synchronously register and cleanup all socket-based store listeners.
+ * Hook that provides functions to register and cleanup all socket-based store listeners.
+ *
+ * Uses getState() to read listener functions directly from each store rather than
+ * subscribing to them via selectors. These function references are stable (they never
+ * change after store creation), so subscribing would only add unnecessary hook overhead.
  *
  * IMPORTANT: `initAllListeners()` must be called BEFORE `connectSocket()` so that
  * onConnect callbacks fire on the initial connection, not just on reconnect.
  */
 export function useStoreListeners(): UseStoreListenersReturn {
-  // Session store
-  const initSessionListeners = useSessionStore(state => state.initListeners);
-  const cleanupSessionListeners = useSessionStore(state => state.cleanupListeners);
-
-  // Workspace store
-  const initWorkspaceListeners = useWorkspaceStore(state => state.initListeners);
-  const cleanupWorkspaceListeners = useWorkspaceStore(state => state.cleanupListeners);
-
-  // Git store
-  const initGitListeners = useGitStore(state => state.initListeners);
-  const cleanupGitListeners = useGitStore(state => state.cleanupListeners);
-
-  // MCP store
-  const initMcpListeners = useMcpStore(state => state.initListeners);
-  const cleanupMcpListeners = useMcpStore(state => state.cleanupListeners);
-  const fetchInternalMcpStatus = useMcpStore(state => state.fetchInternalMcpStatus);
-
-  // Task store
-  const initTaskListeners = useTaskStore(state => state.initListeners);
-  const cleanupTaskListeners = useTaskStore(state => state.cleanupListeners);
-
-  // Session history store
-  const initSessionHistoryListeners = useSessionHistoryStore(state => state.initListeners);
-  const cleanupSessionHistoryListeners = useSessionHistoryStore(state => state.cleanupListeners);
-
-  // Connection store (global socket connection state)
-  const initConnectionListeners = useConnectionStore(state => state.initListeners);
-  const cleanupConnectionListeners = useConnectionStore(state => state.cleanupListeners);
-
-  // Terminal store (backpressure events)
-  const initTerminalListeners = useTerminalStore(state => state.initListeners);
-  const cleanupTerminalListeners = useTerminalStore(state => state.cleanupListeners);
-
-  // Plugin store (provider status, enabled, error events)
-  const initPluginListeners = usePluginStore(state => state.initListeners);
-  const cleanupPluginListeners = usePluginStore(state => state.cleanupListeners);
-
   const initAllListeners = useCallback(() => {
-    initConnectionListeners();
-    initSessionListeners();
-    initGitListeners();
-    initWorkspaceListeners();
-    initMcpListeners();
-    initTaskListeners();
-    initSessionHistoryListeners();
-    initTerminalListeners();
-    initPluginListeners();
-  }, [
-    initConnectionListeners,
-    initSessionListeners,
-    initGitListeners,
-    initWorkspaceListeners,
-    initMcpListeners,
-    initTaskListeners,
-    initSessionHistoryListeners,
-    initTerminalListeners,
-    initPluginListeners,
-  ]);
+    useConnectionStore.getState().initListeners();
+    useSessionStore.getState().initListeners();
+    useGitStore.getState().initListeners();
+    useWorkspaceStore.getState().initListeners();
+    useMcpStore.getState().initListeners();
+    useTaskStore.getState().initListeners();
+    useSessionHistoryStore.getState().initListeners();
+    useTerminalStore.getState().initListeners();
+    usePluginStore.getState().initListeners();
+  }, []);
 
   const cleanupAllListeners = useCallback(() => {
-    cleanupConnectionListeners();
-    cleanupSessionListeners();
-    cleanupGitListeners();
-    cleanupWorkspaceListeners();
-    cleanupMcpListeners();
-    cleanupTaskListeners();
-    cleanupSessionHistoryListeners();
-    cleanupTerminalListeners();
-    cleanupPluginListeners();
-  }, [
-    cleanupConnectionListeners,
-    cleanupSessionListeners,
-    cleanupGitListeners,
-    cleanupWorkspaceListeners,
-    cleanupMcpListeners,
-    cleanupTaskListeners,
-    cleanupSessionHistoryListeners,
-    cleanupTerminalListeners,
-    cleanupPluginListeners,
-  ]);
+    useConnectionStore.getState().cleanupListeners();
+    useSessionStore.getState().cleanupListeners();
+    useGitStore.getState().cleanupListeners();
+    useWorkspaceStore.getState().cleanupListeners();
+    useMcpStore.getState().cleanupListeners();
+    useTaskStore.getState().cleanupListeners();
+    useSessionHistoryStore.getState().cleanupListeners();
+    useTerminalStore.getState().cleanupListeners();
+    usePluginStore.getState().cleanupListeners();
+  }, []);
+
+  const fetchInternalMcpStatus = useCallback(() => {
+    useMcpStore.getState().fetchInternalMcpStatus();
+  }, []);
 
   return {
     initAllListeners,

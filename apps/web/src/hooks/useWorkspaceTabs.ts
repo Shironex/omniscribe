@@ -1,4 +1,5 @@
 import { useCallback, useMemo } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { arrayMove } from '@dnd-kit/sortable';
 import { createLogger, mapSessionStatus, type UISessionStatus } from '@omniscribe/shared';
 import { useWorkspaceStore, type ProjectTab } from '@/stores/useWorkspaceStore';
@@ -51,8 +52,9 @@ export function useWorkspaceTabs(): UseWorkspaceTabsReturn {
   const selectWorkspaceTab = useWorkspaceStore(state => state.selectTab);
   const reorderWorkspaceTabs = useWorkspaceStore(state => state.reorderTabs);
 
-  // Session store for status
-  const sessions = useSessionStore(state => state.sessions);
+  // Session store for status — shallow compare to avoid re-renders when
+  // session fields unrelated to tab status change.
+  const sessions = useSessionStore(useShallow(state => state.sessions));
 
   // Get active tab and project path using useMemo to avoid recalculating on every render
   const activeTab = useMemo(() => {

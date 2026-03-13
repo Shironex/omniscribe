@@ -23,7 +23,7 @@ test.describe('Reconnection Overlay', () => {
 
     // Verify the slot shows a valid AI mode label (depends on whether Claude CLI is installed)
     await expect(page.locator('[data-testid="ai-mode-label"]').first()).toHaveText(
-      /^(Plain|Claude)$/,
+      /^(Plain|Claude( Code)?)$/,
       {
         timeout: 5_000,
       }

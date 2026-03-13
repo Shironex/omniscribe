@@ -60,7 +60,7 @@ export function TopBar({
     <div
       data-testid="project-tabs"
       className={cn(
-        'h-11 bg-gradient-to-b from-muted/90 to-muted border-b border-border/80',
+        'min-h-11 h-11 bg-gradient-to-b from-muted/90 to-muted border-b border-border/80',
         'flex items-center select-none drag',
         IS_ELECTRON && IS_MAC && 'pl-[78px]',
         className
