@@ -41,20 +41,24 @@ export function useAppKeyboardShortcuts({
 }: UseAppKeyboardShortcutsParams): void {
   // Store frequently-changing values in refs so the keydown listener doesn't
   // need to re-register on every session/slot change.
+  // Refs are synced in useEffect (not during render) per React 18 guidelines.
   const preLaunchSlotsRef = useRef(preLaunchSlots);
-  preLaunchSlotsRef.current = preLaunchSlots;
   const terminalSessionCountRef = useRef(terminalSessionCount);
-  terminalSessionCountRef.current = terminalSessionCount;
   const launchingSlotIdsRef = useRef(launchingSlotIds);
-  launchingSlotIdsRef.current = launchingSlotIds;
   const canLaunchRef = useRef(canLaunch);
-  canLaunchRef.current = canLaunch;
   const isLaunchingRef = useRef(isLaunching);
-  isLaunchingRef.current = isLaunching;
   const hasActiveSessionsRef = useRef(hasActiveSessions);
-  hasActiveSessionsRef.current = hasActiveSessions;
   const activeProjectPathRef = useRef(activeProjectPath);
-  activeProjectPathRef.current = activeProjectPath;
+
+  useEffect(() => {
+    preLaunchSlotsRef.current = preLaunchSlots;
+    terminalSessionCountRef.current = terminalSessionCount;
+    launchingSlotIdsRef.current = launchingSlotIds;
+    canLaunchRef.current = canLaunch;
+    isLaunchingRef.current = isLaunching;
+    hasActiveSessionsRef.current = hasActiveSessions;
+    activeProjectPathRef.current = activeProjectPath;
+  });
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

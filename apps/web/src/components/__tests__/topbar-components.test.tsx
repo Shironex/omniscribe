@@ -174,18 +174,13 @@ describe('BranchSelector', () => {
     expect(screen.queryByPlaceholderText('Search branches...')).toBeNull();
   });
 
-  it('closes dropdown on click outside', () => {
-    render(
-      <div>
-        <BranchSelector branches={sampleBranches} currentBranch="main" onSelect={vi.fn()} />
-        <div data-testid="outside">Outside</div>
-      </div>
-    );
+  it('closes dropdown on Escape key', () => {
+    render(<BranchSelector branches={sampleBranches} currentBranch="main" onSelect={vi.fn()} />);
     fireEvent.click(screen.getByText('main'));
     expect(screen.getByPlaceholderText('Search branches...')).toBeTruthy();
 
-    // Click outside
-    fireEvent.mouseDown(screen.getByTestId('outside'));
+    // Radix Popover handles Escape dismissal natively
+    fireEvent.keyDown(screen.getByPlaceholderText('Search branches...'), { key: 'Escape' });
     expect(screen.queryByPlaceholderText('Search branches...')).toBeNull();
   });
 });

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { createLogger } from '@omniscribe/shared';
 import type { Terminal } from '@xterm/xterm';
 import type { FitAddon } from '@xterm/addon-fit';
@@ -74,25 +74,6 @@ export const TerminalView: React.FC<TerminalViewProps> = React.memo(
     );
 
     const attachKeyboardHandler = useTerminalKeyboard(sessionIdRef, setShowSearch);
-
-    // Context menu state
-    const [contextMenuPos, setContextMenuPos] = useState<{ x: number; y: number } | null>(null);
-    const closeContextMenu = useCallback(() => setContextMenuPos(null), []);
-
-    // Attach native contextmenu listener to the terminal container
-    // (xterm.js canvas events may not bubble to React synthetic events)
-    useEffect(() => {
-      const el = terminalRef.current;
-      if (!el) return;
-
-      const handleContextMenu = (e: MouseEvent) => {
-        e.preventDefault();
-        setContextMenuPos({ x: e.clientX, y: e.clientY });
-      };
-
-      el.addEventListener('contextmenu', handleContextMenu);
-      return () => el.removeEventListener('contextmenu', handleContextMenu);
-    }, []);
 
     const { status, connectionRef, connectAndJoin, flushBuffer } = useTerminalConnection(
       xtermRef,
@@ -213,22 +194,18 @@ export const TerminalView: React.FC<TerminalViewProps> = React.memo(
             onClose={handleSearchClose}
           />
         )}
-        <div
-          ref={terminalRef}
-          style={{
-            width: '100%',
-            height: '100%',
-            padding: '4px',
-            boxSizing: 'border-box',
-            backgroundColor: theme.background ?? 'var(--background)',
-          }}
-        />
-        <TerminalContextMenu
-          position={contextMenuPos}
-          onClose={closeContextMenu}
-          xtermRef={xtermRef}
-          sessionIdRef={sessionIdRef}
-        />
+        <TerminalContextMenu xtermRef={xtermRef} sessionIdRef={sessionIdRef}>
+          <div
+            ref={terminalRef}
+            style={{
+              width: '100%',
+              height: '100%',
+              padding: '4px',
+              boxSizing: 'border-box',
+              backgroundColor: theme.background ?? 'var(--background)',
+            }}
+          />
+        </TerminalContextMenu>
       </div>
     );
   }

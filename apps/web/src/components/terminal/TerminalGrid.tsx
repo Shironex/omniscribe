@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { DndContext, DragOverlay, closestCenter } from '@dnd-kit/core';
 import { SortableContext, rectSwappingStrategy } from '@dnd-kit/sortable';
@@ -64,7 +64,12 @@ export function TerminalGrid({
 }: TerminalGridProps) {
   const sessionCount = sessions.length;
   const [containerWidth, setContainerWidth] = useState<number | undefined>();
-  const gridRef = useCallback((node: HTMLDivElement | null) => {
+  const gridRef = useRef<HTMLDivElement | null>(null);
+
+  // ResizeObserver in useEffect for proper cleanup (callback ref cleanup is not
+  // supported in React 18 — only React 19+ supports return values from ref callbacks)
+  useEffect(() => {
+    const node = gridRef.current;
     if (!node) return;
     setContainerWidth(node.clientWidth);
     const ro = new ResizeObserver(([entry]) => setContainerWidth(entry.contentRect.width));

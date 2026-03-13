@@ -36,12 +36,12 @@ export interface TerminalConnection {
 type OutputCallback = (data: string) => void;
 type CloseCallback = (exitCode: number, signal?: number) => void;
 
-const outputHandlers = new Map<number, OutputCallback>();
-const closeHandlers = new Map<number, CloseCallback>();
+const outputHandlers = new Map<number, Set<OutputCallback>>();
+const closeHandlers = new Map<number, Set<CloseCallback>>();
 
 let globalListenersAttached = false;
 
-/** Reset global dispatcher state. Exposed for testing only. */
+/** Reset global dispatcher state. Exposed for testing and HMR. */
 export function __resetTerminalDispatcher() {
   globalListenersAttached = false;
   outputHandlers.clear();
@@ -53,13 +53,13 @@ function ensureGlobalListeners() {
   globalListenersAttached = true;
 
   getSocket().on(TerminalEvents.OUTPUT, (event: TerminalOutputEvent) => {
-    const handler = outputHandlers.get(event.sessionId);
-    if (handler) handler(event.data);
+    const handlers = outputHandlers.get(event.sessionId);
+    if (handlers) handlers.forEach(h => h(event.data));
   });
 
   getSocket().on(TerminalEvents.CLOSED, (event: TerminalClosedEvent) => {
-    const handler = closeHandlers.get(event.sessionId);
-    if (handler) handler(event.exitCode, event.signal);
+    const handlers = closeHandlers.get(event.sessionId);
+    if (handlers) handlers.forEach(h => h(event.exitCode, event.signal));
   });
 }
 
@@ -121,13 +121,24 @@ export function connectTerminal(
   logger.debug('Connecting to terminal', sessionId);
 
   ensureGlobalListeners();
-  outputHandlers.set(sessionId, onOutput);
-  closeHandlers.set(sessionId, onClose);
+
+  if (!outputHandlers.has(sessionId)) outputHandlers.set(sessionId, new Set());
+  if (!closeHandlers.has(sessionId)) closeHandlers.set(sessionId, new Set());
+  outputHandlers.get(sessionId)!.add(onOutput);
+  closeHandlers.get(sessionId)!.add(onClose);
 
   const cleanup = () => {
     logger.debug('Cleaning up terminal connection', sessionId);
-    outputHandlers.delete(sessionId);
-    closeHandlers.delete(sessionId);
+    const outputs = outputHandlers.get(sessionId);
+    const closes = closeHandlers.get(sessionId);
+    if (outputs) {
+      outputs.delete(onOutput);
+      if (outputs.size === 0) outputHandlers.delete(sessionId);
+    }
+    if (closes) {
+      closes.delete(onClose);
+      if (closes.size === 0) closeHandlers.delete(sessionId);
+    }
   };
 
   return {

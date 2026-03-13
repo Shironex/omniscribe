@@ -1,7 +1,11 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { createLogger, mapSessionStatus } from '@omniscribe/shared';
-import { useSessionStore, type FrontendSessionConfig } from '@/stores/useSessionStore';
+import {
+  useSessionStore,
+  selectSessionsForProject,
+  type FrontendSessionConfig,
+} from '@/stores/useSessionStore';
 import { mapToTerminalSessions } from '@/lib/session-mappers';
 import type { StatusCounts } from '@/components/shared/StatusLegend';
 import type { TerminalSession, PreLaunchSlot } from '@/components/terminal/TerminalGrid';
@@ -37,21 +41,19 @@ export function useProjectSessions(
   activeProjectPath: string | null,
   preLaunchSlots: PreLaunchSlot[]
 ): UseProjectSessionsReturn {
-  // Session store — useShallow prevents re-renders when non-session state
-  // changes (e.g. pendingStatusUpdates), but any session object update will
-  // still trigger a re-render since spread creates new references.
+  // Use project-scoped memoized selector so this hook only re-renders when the
+  // active project's sessions change, not when any session across any project updates.
+  const projectSelector = useMemo(
+    () => (activeProjectPath ? selectSessionsForProject(activeProjectPath) : () => []),
+    [activeProjectPath]
+  );
+  const activeProjectSessions = useSessionStore(projectSelector);
   const sessions = useSessionStore(useShallow(state => state.sessions));
   const updateSession = useSessionStore(state => state.updateSession);
   const customTitles = useSessionStore(useShallow(state => state.customTitles));
 
   // Focused session state
   const [focusedSessionId, setFocusedSessionId] = useState<string | null>(null);
-
-  // Filter sessions for the active project
-  const activeProjectSessions = useMemo(() => {
-    if (!activeProjectPath) return [];
-    return sessions.filter(s => s.projectPath === activeProjectPath);
-  }, [sessions, activeProjectPath]);
 
   // Convert sessions to TerminalSession format for App-level consumers
   // (e.g. useQuickActionExecution, session counts).

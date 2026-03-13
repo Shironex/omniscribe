@@ -482,9 +482,9 @@ export const selectActiveSessions = createMemoizedSelector((state: SessionStore)
  * Select unique project paths from all sessions.
  * Returns a stable reference when the set of paths hasn't changed.
  */
-export const selectProjectPaths = createMemoizedSelector((state: SessionStore) => [
-  ...new Set(state.sessions.map(s => s.projectPath)),
-]);
+export const selectProjectPaths = createMemoizedSelector((state: SessionStore) =>
+  [...new Set(state.sessions.map(s => s.projectPath))].sort()
+);
 
 /**
  * Get count of running sessions (those with active terminals).

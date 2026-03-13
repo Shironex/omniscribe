@@ -3,7 +3,7 @@ import { BrainCircuit, Plus } from 'lucide-react';
 import { useMemo } from 'react';
 import { getGreeting } from '@/lib/date-utils';
 import { Button } from '@/components/ui/button';
-import { motion } from 'motion/react';
+import { motion, useReducedMotion } from 'motion/react';
 import { transitions } from '@/lib/animations';
 
 interface IdleLandingViewProps {
@@ -18,6 +18,7 @@ export function IdleLandingView({
   className,
 }: IdleLandingViewProps) {
   const greeting = useMemo(() => getGreeting(), []);
+  const reduceMotion = useReducedMotion();
 
   // Keyboard shortcuts (N, Shift+N) are handled globally by useAppKeyboardShortcuts
 
@@ -41,9 +42,9 @@ export function IdleLandingView({
           'border border-border',
           'shadow-sm'
         )}
-        initial={{ opacity: 0, y: 10 }}
+        initial={reduceMotion ? false : { opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={transitions.spring}
+        transition={reduceMotion ? transitions.instant : transitions.spring}
       >
         {/* Greeting */}
         <p className="text-sm text-foreground-secondary mb-6 text-center">{greeting}</p>

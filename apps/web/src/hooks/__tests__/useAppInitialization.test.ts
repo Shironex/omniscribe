@@ -84,7 +84,7 @@ vi.mock('@/stores/useSessionHistoryStore', () => ({
 }));
 
 vi.mock('@/stores/useUpdateStore', () => ({
-  useUpdateStore: (sel: Selector) => sel({ initListeners: mockInitUpdate }),
+  useUpdateStore: createMockStore(() => ({ initListeners: mockInitUpdate })),
 }));
 
 vi.mock('@/stores/useConnectionStore', () => ({

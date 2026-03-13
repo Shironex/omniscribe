@@ -164,9 +164,9 @@ export function TerminalSection() {
 
       {/* Cursor Blink */}
       <div className="flex items-center justify-between">
-        <label id="cursor-blink-label" className="text-sm font-medium text-foreground">
+        <span id="cursor-blink-label" className="text-sm font-medium text-foreground">
           Cursor Blink
-        </label>
+        </span>
         <button
           role="switch"
           aria-checked={cursorBlink}

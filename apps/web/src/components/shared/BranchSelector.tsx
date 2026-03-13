@@ -1,6 +1,16 @@
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
-import { ChevronDown, Search, GitBranch, Check, Plus } from 'lucide-react';
+import { ChevronDown, GitBranch, Check, Plus } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandSeparator,
+} from '@/components/ui/command';
 
 export interface Branch {
   name: string;
@@ -25,151 +35,89 @@ export function BranchSelector({
   disabled = false,
   className,
 }: BranchSelectorProps) {
-  const [isOpen, setIsOpen] = useState(false);
+  const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const containerRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-        setSearchQuery('');
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  // Focus search input when dropdown opens
-  useEffect(() => {
-    if (isOpen && inputRef.current) {
-      inputRef.current.focus();
-    }
-  }, [isOpen]);
-
-  // Filter and group branches
   const { localBranches, remoteBranches } = useMemo(() => {
-    const lower = searchQuery.toLowerCase();
     const local: Branch[] = [];
     const remote: Branch[] = [];
     for (const b of branches) {
-      if (!b.name.toLowerCase().includes(lower)) continue;
       (b.isRemote ? remote : local).push(b);
     }
     return { localBranches: local, remoteBranches: remote };
-  }, [branches, searchQuery]);
-
-  const handleSelect = (branchName: string) => {
-    onSelect(branchName);
-    setIsOpen(false);
-    setSearchQuery('');
-  };
-
-  const handleCreateBranch = () => {
-    if (searchQuery.trim() && onCreateBranch) {
-      onCreateBranch(searchQuery.trim());
-      setIsOpen(false);
-      setSearchQuery('');
-    }
-  };
+  }, [branches]);
 
   const showCreateOption =
     searchQuery.trim() &&
     onCreateBranch &&
     !branches.some(b => b.name.toLowerCase() === searchQuery.toLowerCase());
 
-  return (
-    <div ref={containerRef} className={cn('relative', className)}>
-      {/* Trigger button */}
-      <button
-        onClick={() => !disabled && setIsOpen(!isOpen)}
-        disabled={disabled}
-        aria-expanded={isOpen}
-        aria-haspopup="listbox"
-        aria-label="Select branch"
-        className={cn(
-          'flex items-center gap-2 px-3 py-1.5 rounded',
-          'bg-card border border-border',
-          'text-sm text-foreground',
-          'transition-colors',
-          disabled
-            ? 'opacity-50 cursor-not-allowed'
-            : 'hover:bg-border hover:border-muted-foreground'
-        )}
-      >
-        <GitBranch size={14} className="text-foreground-secondary" />
-        <span className="truncate max-w-32">{currentBranch}</span>
-        <ChevronDown
-          size={14}
-          className={cn('text-muted-foreground transition-transform', isOpen && 'rotate-180')}
-        />
-      </button>
+  const handleSelect = (branchName: string) => {
+    onSelect(branchName);
+    setOpen(false);
+    setSearchQuery('');
+  };
 
-      {/* Dropdown */}
-      {isOpen && (
-        <div
-          role="listbox"
-          aria-label="Branches"
+  const handleCreateBranch = () => {
+    if (searchQuery.trim() && onCreateBranch) {
+      onCreateBranch(searchQuery.trim());
+      setOpen(false);
+      setSearchQuery('');
+    }
+  };
+
+  return (
+    <Popover
+      open={open}
+      onOpenChange={nextOpen => {
+        setOpen(nextOpen);
+        if (!nextOpen) setSearchQuery('');
+      }}
+    >
+      <PopoverTrigger asChild disabled={disabled}>
+        <button
+          aria-label="Select branch"
+          disabled={disabled}
           className={cn(
-            'absolute top-full left-0 mt-1 z-50',
-            'w-64 max-h-80 overflow-hidden',
-            'bg-muted border border-border rounded-lg shadow-xl',
-            'animate-fade-in'
+            'flex items-center gap-2 px-3 py-1.5 rounded',
+            'bg-card border border-border',
+            'text-sm text-foreground',
+            'transition-colors',
+            disabled
+              ? 'opacity-50 cursor-not-allowed'
+              : 'hover:bg-border hover:border-muted-foreground',
+            className
           )}
         >
-          {/* Search input */}
-          <div className="p-2 border-b border-border">
-            <div className="relative">
-              <Search
-                size={14}
-                className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"
-              />
-              <input
-                ref={inputRef}
-                type="text"
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                onKeyDown={e => {
-                  if (e.key === 'Escape') {
-                    setIsOpen(false);
-                    setSearchQuery('');
-                  }
-                }}
-                placeholder="Search branches..."
-                aria-label="Filter branches"
-                className={cn(
-                  'w-full pl-8 pr-3 py-1.5 rounded',
-                  'bg-card border border-border',
-                  'text-sm text-foreground placeholder:text-muted-foreground',
-                  'focus:outline-hidden focus:border-primary'
-                )}
-              />
-            </div>
-          </div>
+          <GitBranch size={14} className="text-foreground-secondary" />
+          <span className="truncate max-w-32">{currentBranch}</span>
+          <ChevronDown
+            size={14}
+            className={cn('text-muted-foreground transition-transform', open && 'rotate-180')}
+          />
+        </button>
+      </PopoverTrigger>
 
-          {/* Branch list */}
-          <div className="max-h-56 overflow-y-auto">
-            {/* Local branches */}
+      <PopoverContent className="w-64 p-0" align="start" onCloseAutoFocus={e => e.preventDefault()}>
+        <Command shouldFilter={true}>
+          <CommandInput
+            placeholder="Search branches..."
+            value={searchQuery}
+            onValueChange={setSearchQuery}
+          />
+          <CommandList>
+            <CommandEmpty>No branches found</CommandEmpty>
+
             {localBranches.length > 0 && (
-              <div>
-                <div className="px-3 py-1.5 text-2xs font-medium text-muted-foreground uppercase tracking-wide">
-                  Local
-                </div>
+              <CommandGroup heading="Local">
                 {localBranches.map(branch => (
-                  <button
+                  <CommandItem
                     key={branch.name}
-                    role="option"
-                    aria-selected={branch.name === currentBranch}
-                    onClick={() => handleSelect(branch.name)}
+                    value={branch.name}
+                    onSelect={() => handleSelect(branch.name)}
                     className={cn(
-                      'w-full flex items-center gap-2 px-3 py-1.5',
-                      'text-sm text-left transition-colors',
-                      branch.name === currentBranch
-                        ? 'bg-primary/10 text-primary'
-                        : 'text-foreground hover:bg-card'
+                      'gap-2',
+                      branch.name === currentBranch && 'bg-primary/10 text-primary'
                     )}
                   >
                     <GitBranch size={14} className="shrink-0" />
@@ -177,69 +125,54 @@ export function BranchSelector({
                     {branch.name === currentBranch && (
                       <Check size={14} className="shrink-0 text-primary" />
                     )}
-                  </button>
+                  </CommandItem>
                 ))}
-              </div>
+              </CommandGroup>
             )}
 
-            {/* Remote branches */}
             {remoteBranches.length > 0 && (
-              <div>
-                <div className="px-3 py-1.5 text-2xs font-medium text-muted-foreground uppercase tracking-wide border-t border-border mt-1 pt-2">
-                  Remote
-                </div>
-                {remoteBranches.map(branch => (
-                  <button
-                    key={branch.name}
-                    role="option"
-                    aria-selected={branch.name === currentBranch}
-                    onClick={() => handleSelect(branch.name)}
-                    className={cn(
-                      'w-full flex items-center gap-2 px-3 py-1.5',
-                      'text-sm text-left transition-colors',
-                      branch.name === currentBranch
-                        ? 'bg-primary/10 text-primary'
-                        : 'text-foreground-secondary hover:bg-card hover:text-foreground'
-                    )}
-                  >
-                    <GitBranch size={14} className="shrink-0" />
-                    <span className="truncate flex-1">{branch.name}</span>
-                    {branch.name === currentBranch && (
-                      <Check size={14} className="shrink-0 text-primary" />
-                    )}
-                  </button>
-                ))}
-              </div>
+              <>
+                {localBranches.length > 0 && <CommandSeparator />}
+                <CommandGroup heading="Remote">
+                  {remoteBranches.map(branch => (
+                    <CommandItem
+                      key={branch.name}
+                      value={branch.name}
+                      onSelect={() => handleSelect(branch.name)}
+                      className={cn(
+                        'gap-2',
+                        branch.name === currentBranch
+                          ? 'bg-primary/10 text-primary'
+                          : 'text-foreground-secondary'
+                      )}
+                    >
+                      <GitBranch size={14} className="shrink-0" />
+                      <span className="truncate flex-1">{branch.name}</span>
+                      {branch.name === currentBranch && (
+                        <Check size={14} className="shrink-0 text-primary" />
+                      )}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </>
             )}
 
-            {/* Empty state */}
-            {localBranches.length === 0 && remoteBranches.length === 0 && !showCreateOption && (
-              <div className="px-3 py-4 text-center text-sm text-muted-foreground">
-                No branches found
-              </div>
+            {showCreateOption && (
+              <>
+                <CommandSeparator />
+                <CommandGroup>
+                  <CommandItem onSelect={handleCreateBranch} className="gap-2 text-primary">
+                    <Plus size={14} />
+                    <span>
+                      Create branch <strong>"{searchQuery}"</strong>
+                    </span>
+                  </CommandItem>
+                </CommandGroup>
+              </>
             )}
-          </div>
-
-          {/* Create new branch option */}
-          {showCreateOption && (
-            <div className="border-t border-border">
-              <button
-                onClick={handleCreateBranch}
-                className={cn(
-                  'w-full flex items-center gap-2 px-3 py-2',
-                  'text-sm text-primary',
-                  'hover:bg-card transition-colors'
-                )}
-              >
-                <Plus size={14} />
-                <span>
-                  Create branch <strong>"{searchQuery}"</strong>
-                </span>
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 }
