@@ -53,10 +53,11 @@ test.describe('Project Tabs', () => {
   test('should switch between project tabs and show correct sessions', async () => {
     const page = fixture.page;
 
-    // Get tab references using the truncated label text in project-tabs
+    // Get tab references using the truncated label text in project-tabs.
+    // Use auto-retrying assertion to wait for both tabs to render (avoids
+    // flaky race where the DOM hasn't yet reflected the store update).
     const tabLabels = page.locator('[data-testid="project-tabs"] span.truncate');
-    const tabCount = await tabLabels.count();
-    expect(tabCount).toBe(2);
+    await expect(tabLabels).toHaveCount(2, { timeout: 10_000 });
 
     // Click the first tab to ensure it's active
     await tabLabels.nth(0).click();
