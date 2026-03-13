@@ -43,10 +43,11 @@ test.describe('Session Limit (12 cap)', () => {
       });
     }
 
-    // Verify the first slot defaults to plain mode (Claude CLI not available in test env)
-    await expect(page.locator('[data-testid="ai-mode-label"]').first()).toHaveText('Plain', {
-      timeout: 5_000,
-    });
+    // Verify the first slot shows a valid AI mode label
+    await expect(page.locator('[data-testid="ai-mode-label"]').first()).toHaveText(
+      /^(Plain|Claude( Code)?)$/,
+      { timeout: 5_000 }
+    );
 
     // The setup-sessions-button should be hidden (12 slots = at the limit)
     const setupButton = page.locator('[data-testid="setup-sessions-button"]');

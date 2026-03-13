@@ -43,9 +43,8 @@ export function useProjectSessions(
   activeProjectPath: string | null,
   preLaunchSlots: PreLaunchSlot[]
 ): UseProjectSessionsReturn {
-  // Use project-scoped memoized selector so this hook only re-renders when the
-  // active project's sessions change, not when any session across any project updates.
-  // Use project-scoped memoized selector for O(1) lookups. When no project is
+  // Use project-scoped memoized selector for O(1) lookups so this hook only
+  // re-renders when the active project's sessions change. When no project is
   // active, return a stable empty array constant to avoid infinite re-renders
   // (a `() => []` lambda would return a new reference on every store update).
   const projectSelector = useMemo(

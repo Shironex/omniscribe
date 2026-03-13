@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { DndContext, DragOverlay, closestCenter } from '@dnd-kit/core';
 import { SortableContext, rectSwappingStrategy } from '@dnd-kit/sortable';
@@ -64,18 +64,22 @@ export function TerminalGrid({
 }: TerminalGridProps) {
   const sessionCount = sessions.length;
   const [containerWidth, setContainerWidth] = useState<number | undefined>();
-  const gridRef = useRef<HTMLDivElement | null>(null);
+  const [gridNode, setGridNode] = useState<HTMLDivElement | null>(null);
+  const gridRef = useCallback((node: HTMLDivElement | null) => {
+    setGridNode(node);
+  }, []);
 
   // ResizeObserver in useEffect for proper cleanup (callback ref cleanup is not
-  // supported in React 18 — only React 19+ supports return values from ref callbacks)
+  // supported in React 18 — only React 19+ supports return values from ref callbacks).
+  // Using state-based ref so the effect re-runs when the node becomes available
+  // (e.g. transitioning from empty state to having sessions).
   useEffect(() => {
-    const node = gridRef.current;
-    if (!node) return;
-    setContainerWidth(node.clientWidth);
+    if (!gridNode) return;
+    setContainerWidth(gridNode.clientWidth);
     const ro = new ResizeObserver(([entry]) => setContainerWidth(entry.contentRect.width));
-    ro.observe(node);
+    ro.observe(gridNode);
     return () => ro.disconnect();
-  }, []);
+  }, [gridNode]);
   const layout = useMemo(
     () => getLayout(sessionCount, containerWidth),
     [sessionCount, containerWidth]

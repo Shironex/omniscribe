@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import type { Terminal } from '@xterm/xterm';
 import { Copy, ClipboardPaste, MousePointerClick, Eraser } from 'lucide-react';
 import { toast } from 'sonner';
@@ -54,10 +54,19 @@ export function TerminalContextMenu({
     xtermRef.current?.clear();
   }, [xtermRef]);
 
-  const hasSelection = xtermRef.current?.hasSelection() ?? false;
+  const [hasSelection, setHasSelection] = useState(false);
+
+  const handleOpenChange = useCallback(
+    (open: boolean) => {
+      if (open) {
+        setHasSelection(xtermRef.current?.hasSelection() ?? false);
+      }
+    },
+    [xtermRef]
+  );
 
   return (
-    <ContextMenu>
+    <ContextMenu onOpenChange={handleOpenChange}>
       <ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
       <ContextMenuContent className="min-w-[160px]">
         <ContextMenuItem onSelect={handleCopy} disabled={!hasSelection} className="gap-2 text-xs">

@@ -76,6 +76,7 @@ export function BranchSelector({
     >
       <PopoverTrigger asChild disabled={disabled}>
         <button
+          type="button"
           aria-label="Select branch"
           disabled={disabled}
           className={cn(

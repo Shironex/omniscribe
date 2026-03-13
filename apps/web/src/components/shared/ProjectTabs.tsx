@@ -81,9 +81,7 @@ const SortableTab = React.memo(function SortableTab({
       }}
     >
       {tab.status && <StatusDot status={tab.status} />}
-      <span data-testid="tab-label" className="text-sm truncate max-w-32">
-        {tab.label}
-      </span>
+      <span className="text-sm truncate max-w-32">{tab.label}</span>
       {isActive && (
         <div className="absolute bottom-0 left-2 right-2 h-0.5 bg-primary/60 rounded-full" />
       )}
