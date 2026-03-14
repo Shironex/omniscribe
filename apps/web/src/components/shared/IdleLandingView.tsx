@@ -53,8 +53,9 @@ export function IdleLandingView({
         {/* Animated orchestration icon */}
         <motion.div
           className="mb-6"
-          variants={animationVariants.slideUp}
-          transition={transitions.spring}
+          initial={reduceMotion ? false : animationVariants.slideUp.initial}
+          animate={animationVariants.slideUp.animate}
+          transition={reduceMotion ? transitions.instant : transitions.spring}
         >
           <OmniscribeAnimation size={96} reduceMotion={!!reduceMotion} />
         </motion.div>

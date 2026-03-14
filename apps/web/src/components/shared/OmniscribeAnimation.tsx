@@ -7,6 +7,15 @@ interface OmniscribeAnimationProps {
   reduceMotion?: boolean;
 }
 
+// Elliptical orbit path centered at (50,50), rx=38, ry=14
+const ORBIT_PATH = 'M 12,50 A 38,14 0 1,0 88,50 A 38,14 0 1,0 12,50';
+
+const ORBITS = [
+  { rotation: 0, dur: '7s', r: 3, opacity: 0.9 },
+  { rotation: 60, dur: '9s', r: 2.5, opacity: 0.7 },
+  { rotation: -60, dur: '11s', r: 2, opacity: 0.55 },
+] as const;
+
 /**
  * Animated SVG icon representing Omniscribe's orchestration concept.
  * Three tilted elliptical orbits with glowing dots circling a central hub —
@@ -17,18 +26,8 @@ export function OmniscribeAnimation({
   size = 96,
   reduceMotion = false,
 }: OmniscribeAnimationProps) {
-  const uid = useId().replace(/:/g, '');
-  const glow = `oa-glow-${uid}`;
-  const soft = `oa-soft-${uid}`;
-
-  // Elliptical orbit path centered at (50,50), rx=38, ry=14
-  const orbitPath = 'M 12,50 A 38,14 0 1,0 88,50 A 38,14 0 1,0 12,50';
-
-  const orbits = [
-    { rotation: 0, dur: '7s', r: 3, opacity: 0.9 },
-    { rotation: 60, dur: '9s', r: 2.5, opacity: 0.7 },
-    { rotation: -60, dur: '11s', r: 2, opacity: 0.55 },
-  ];
+  const glowFilterId = useId();
+  const softFilterId = useId();
 
   return (
     <svg
@@ -37,18 +36,17 @@ export function OmniscribeAnimation({
       height={size}
       className={cn('text-primary', className)}
       fill="none"
-      role="img"
-      aria-label="Omniscribe"
+      aria-hidden="true"
     >
       <defs>
-        <filter id={glow}>
+        <filter id={glowFilterId}>
           <feGaussianBlur stdDeviation="2.5" result="blur" />
           <feMerge>
             <feMergeNode in="blur" />
             <feMergeNode in="SourceGraphic" />
           </feMerge>
         </filter>
-        <filter id={soft}>
+        <filter id={softFilterId}>
           <feGaussianBlur stdDeviation="1.5" result="blur" />
           <feMerge>
             <feMergeNode in="blur" />
@@ -58,7 +56,7 @@ export function OmniscribeAnimation({
       </defs>
 
       {/* Orbit rings */}
-      {orbits.map(({ rotation }) => (
+      {ORBITS.map(({ rotation }) => (
         <ellipse
           key={rotation}
           cx="50"
@@ -69,38 +67,34 @@ export function OmniscribeAnimation({
           strokeOpacity="0.1"
           strokeWidth="0.7"
           strokeDasharray="4 3"
-          transform={rotation ? `rotate(${rotation} 50 50)` : undefined}
+          transform={rotation !== 0 ? `rotate(${rotation} 50 50)` : undefined}
         />
       ))}
 
       {/* Orbiting nodes */}
-      {orbits.map(({ rotation, dur, r, opacity }) => {
-        const wrapper = (children: React.ReactNode) =>
-          rotation ? (
-            <g key={rotation} transform={`rotate(${rotation} 50 50)`}>
-              {children}
-            </g>
-          ) : (
-            <g key={rotation}>{children}</g>
-          );
-
-        return wrapper(
-          reduceMotion ? (
+      {ORBITS.map(({ rotation, dur, r, opacity }) => (
+        <g key={rotation} transform={rotation !== 0 ? `rotate(${rotation} 50 50)` : undefined}>
+          {reduceMotion ? (
             <circle
               cx="88"
               cy="50"
               r={r}
               fill="currentColor"
               fillOpacity={opacity}
-              filter={`url(#${soft})`}
+              filter={`url(#${softFilterId})`}
             />
           ) : (
-            <circle r={r} fill="currentColor" fillOpacity={opacity} filter={`url(#${soft})`}>
-              <animateMotion dur={dur} repeatCount="indefinite" path={orbitPath} />
+            <circle
+              r={r}
+              fill="currentColor"
+              fillOpacity={opacity}
+              filter={`url(#${softFilterId})`}
+            >
+              <animateMotion dur={dur} repeatCount="indefinite" path={ORBIT_PATH} />
             </circle>
-          )
-        );
-      })}
+          )}
+        </g>
+      ))}
 
       {/* Central hub — outer halo */}
       <circle cx="50" cy="50" r="7" fill="currentColor" fillOpacity="0.08" />
@@ -110,13 +104,13 @@ export function OmniscribeAnimation({
         <circle
           cx="50"
           cy="50"
-          r="4"
+          r="3.5"
           fill="currentColor"
           fillOpacity="0.85"
-          filter={`url(#${glow})`}
+          filter={`url(#${glowFilterId})`}
         />
       ) : (
-        <circle cx="50" cy="50" r="4" fill="currentColor" filter={`url(#${glow})`}>
+        <circle cx="50" cy="50" r="3.5" fill="currentColor" filter={`url(#${glowFilterId})`}>
           <animate attributeName="r" values="3.5;5;3.5" dur="3s" repeatCount="indefinite" />
           <animate
             attributeName="fill-opacity"
