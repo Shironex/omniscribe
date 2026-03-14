@@ -10,13 +10,13 @@ interface DiffFileListProps {
 
 function getFileIcon(file: GitFileDiff) {
   if (file.deletions > 0 && file.additions === 0) {
-    return <FileX size={12} className="text-red-400" />;
+    return <FileX size={12} className="text-status-error" />;
   }
   if (file.additions > 0 && file.deletions === 0) {
-    return <FilePlus size={12} className="text-green-400" />;
+    return <FilePlus size={12} className="text-status-success" />;
   }
   if (file.additions > 0 || file.deletions > 0) {
-    return <FileEdit size={12} className="text-yellow-400" />;
+    return <FileEdit size={12} className="text-status-warning" />;
   }
   return <FileText size={12} className="text-muted-foreground" />;
 }
@@ -58,10 +58,10 @@ function FileDiffItem({ file }: { file: GitFileDiff }) {
         <span className="text-xs text-foreground truncate">{getFileName(file.path)}</span>
         <span className="ml-auto flex items-center gap-1 shrink-0">
           {file.additions > 0 && (
-            <span className="text-[10px] text-green-400">+{file.additions}</span>
+            <span className="text-[10px] text-status-success">+{file.additions}</span>
           )}
           {file.deletions > 0 && (
-            <span className="text-[10px] text-red-400">-{file.deletions}</span>
+            <span className="text-[10px] text-status-error">-{file.deletions}</span>
           )}
         </span>
       </button>

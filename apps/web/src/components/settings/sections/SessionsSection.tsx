@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { Monitor, AlertTriangle, RotateCcw, FlaskConical } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { SectionHeader } from '@/components/shared/SectionHeader';
 import { useWorkspaceStore } from '@/stores/useWorkspaceStore';
 import { usePluginStore } from '@/stores/usePluginStore';
 import { getModeIcon, buildAiModeOptions } from '@/lib/ai-mode-utils';
@@ -55,29 +56,11 @@ export function SessionsSection() {
 
   return (
     <div className="space-y-6">
-      {/* Section Header */}
-      <div className="flex items-center gap-3">
-        <div
-          className={cn(
-            'w-10 h-10 rounded-xl flex items-center justify-center',
-            'bg-linear-to-br from-primary/20 to-brand-600/10',
-            'ring-1'
-          )}
-          style={
-            {
-              '--tw-ring-color': 'color-mix(in oklch, var(--primary), transparent 80%)',
-            } as React.CSSProperties
-          }
-        >
-          <Monitor className="w-5 h-5 text-primary" />
-        </div>
-        <div className="flex-1">
-          <h2 className="text-lg font-semibold text-foreground">Sessions</h2>
-          <p className="text-sm text-muted-foreground">
-            Configure default behavior for new sessions
-          </p>
-        </div>
-      </div>
+      <SectionHeader
+        icon={Monitor}
+        title="Sessions"
+        description="Configure default behavior for new sessions"
+      />
 
       {/* Default AI Mode */}
       <div className="space-y-4">
@@ -156,9 +139,9 @@ export function SessionsSection() {
           </div>
 
           {skipPermissions && (
-            <div className="flex items-start gap-2 p-2 rounded-lg bg-amber-500/10 border border-amber-500/20 mt-3">
-              <AlertTriangle className="w-4 h-4 text-amber-400 mt-0.5 shrink-0" />
-              <div className="text-xs text-amber-400">
+            <div className="flex items-start gap-2 p-2 rounded-lg bg-status-warning-bg border border-status-warning/20 mt-3">
+              <AlertTriangle className="w-4 h-4 text-status-warning mt-0.5 shrink-0" />
+              <div className="text-xs text-status-warning">
                 <strong>Warning:</strong> Skip-permissions mode allows Claude to execute commands,
                 edit files, and make changes without asking for confirmation. Only enable this if
                 you trust your prompts and understand the risks. This applies to new sessions only —
@@ -173,7 +156,7 @@ export function SessionsSection() {
       <div className="space-y-4">
         <div className="flex items-center gap-2">
           <h3 className="text-sm font-medium text-foreground">Auto-Resume</h3>
-          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-500/15 text-amber-400 border border-amber-500/20">
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-status-warning-bg text-status-warning border border-status-warning/20">
             <FlaskConical className="w-3 h-3" />
             Experimental
           </span>

@@ -76,7 +76,7 @@ export function DiffPanel({ className }: DiffPanelProps) {
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: 480, opacity: 0 }}
             transition={transitions.springSmooth}
-            className="h-full w-[480px] border-l border-border bg-muted flex flex-col"
+            className="h-full w-[min(480px,45vw)] border-l border-border bg-muted flex flex-col"
           >
             {/* Header */}
             <div className="flex items-center justify-between px-3 py-2 border-b border-border shrink-0">
@@ -126,8 +126,8 @@ export function DiffPanel({ className }: DiffPanelProps) {
             {/* Summary bar */}
             {fileCount > 0 && (
               <div className="flex items-center gap-3 px-3 py-1.5 border-b border-border shrink-0 text-[11px]">
-                <span className="text-green-400">+{totalAdditions}</span>
-                <span className="text-red-400">-{totalDeletions}</span>
+                <span className="text-status-success">+{totalAdditions}</span>
+                <span className="text-status-error">-{totalDeletions}</span>
               </div>
             )}
 
@@ -139,7 +139,7 @@ export function DiffPanel({ className }: DiffPanelProps) {
                 </div>
               )}
 
-              {error && <div className="text-xs text-red-400 py-2 px-3">{error}</div>}
+              {error && <div className="text-xs text-status-error py-2 px-3">{error}</div>}
 
               {diffData && <DiffFileList files={diffData.files} />}
             </div>

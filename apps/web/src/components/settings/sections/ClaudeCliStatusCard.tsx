@@ -129,6 +129,8 @@ export function ClaudeCliStatusCard({
               <button
                 type="button"
                 onClick={onVersionPickerOpen}
+                aria-expanded={showVersionPicker}
+                aria-haspopup="listbox"
                 className={cn(
                   'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium',
                   'bg-muted text-muted-foreground',
@@ -145,6 +147,8 @@ export function ClaudeCliStatusCard({
 
               {showVersionPicker && availableVersions.length > 0 && (
                 <div
+                  role="listbox"
+                  aria-label="Available versions"
                   className={cn(
                     'absolute top-full left-0 mt-1 z-50',
                     'w-40 max-h-60 overflow-y-auto',
@@ -154,6 +158,8 @@ export function ClaudeCliStatusCard({
                   {availableVersions.map(version => (
                     <button
                       type="button"
+                      role="option"
+                      aria-selected={version === claudeCliStatus.version}
                       key={version}
                       onClick={() => onVersionSelect(version)}
                       className={cn(

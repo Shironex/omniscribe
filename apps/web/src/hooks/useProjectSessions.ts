@@ -1,9 +1,16 @@
 import { useState, useCallback, useMemo } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { createLogger, mapSessionStatus } from '@omniscribe/shared';
-import { useSessionStore, type FrontendSessionConfig } from '@/stores/useSessionStore';
+import {
+  useSessionStore,
+  selectSessionsForProject,
+  type FrontendSessionConfig,
+} from '@/stores/useSessionStore';
 import { mapToTerminalSessions } from '@/lib/session-mappers';
 import type { StatusCounts } from '@/components/shared/StatusLegend';
 import type { TerminalSession, PreLaunchSlot } from '@/components/terminal/TerminalGrid';
+
+const EMPTY_SESSIONS: FrontendSessionConfig[] = [];
 
 const logger = createLogger('ProjectSessions');
 
@@ -36,21 +43,28 @@ export function useProjectSessions(
   activeProjectPath: string | null,
   preLaunchSlots: PreLaunchSlot[]
 ): UseProjectSessionsReturn {
-  // Session store
-  const sessions = useSessionStore(state => state.sessions);
+  // Use project-scoped memoized selector for O(1) lookups so this hook only
+  // re-renders when the active project's sessions change. When no project is
+  // active, return a stable empty array constant to avoid infinite re-renders
+  // (a `() => []` lambda would return a new reference on every store update).
+  const projectSelector = useMemo(
+    () => (activeProjectPath ? selectSessionsForProject(activeProjectPath) : () => EMPTY_SESSIONS),
+    [activeProjectPath]
+  );
+  const activeProjectSessions = useSessionStore(projectSelector);
+  const sessions = useSessionStore(useShallow(state => state.sessions));
   const updateSession = useSessionStore(state => state.updateSession);
-  const customTitles = useSessionStore(state => state.customTitles);
+  const customTitles = useSessionStore(useShallow(state => state.customTitles));
 
   // Focused session state
   const [focusedSessionId, setFocusedSessionId] = useState<string | null>(null);
 
-  // Filter sessions for the active project
-  const activeProjectSessions = useMemo(() => {
-    if (!activeProjectPath) return [];
-    return sessions.filter(s => s.projectPath === activeProjectPath);
-  }, [sessions, activeProjectPath]);
-
-  // Convert sessions to TerminalSession format for TerminalGrid
+  // Convert sessions to TerminalSession format for App-level consumers
+  // (e.g. useQuickActionExecution, session counts).
+  // Note: PersistentProjectGrid independently maps its own sessions from the
+  // store so that each grid re-renders only when its own project's sessions
+  // change. This duplication is intentional to avoid coupling the grid to this
+  // hook's broader subscription.
   const terminalSessions: TerminalSession[] = useMemo(() => {
     return mapToTerminalSessions(activeProjectSessions, customTitles);
   }, [activeProjectSessions, customTitles]);

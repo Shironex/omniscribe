@@ -34,7 +34,7 @@ function NoUsageFallback() {
         <TooltipContent side="bottom">Usage</TooltipContent>
       </Tooltip>
       <PopoverContent
-        className="w-[280px] p-0 overflow-hidden bg-background/95 backdrop-blur-xl border-border shadow-2xl"
+        className="w-[280px] p-0 overflow-hidden bg-background border-border shadow-lg"
         align="end"
         sideOffset={8}
       >
@@ -77,7 +77,7 @@ function MultiProviderPopover({
         {!open && <TooltipContent side="bottom">Usage</TooltipContent>}
       </Tooltip>
       <PopoverContent
-        className="w-[340px] p-0 overflow-hidden bg-background/95 backdrop-blur-xl border-border shadow-2xl"
+        className="w-[340px] p-0 overflow-hidden bg-background border-border shadow-lg"
         align="end"
         sideOffset={8}
       >

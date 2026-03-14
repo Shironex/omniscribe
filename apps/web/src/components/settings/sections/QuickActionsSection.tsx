@@ -1,5 +1,6 @@
 import { Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { SectionHeader } from '@/components/shared/SectionHeader';
 import { useWorkspaceStore } from '@/stores/useWorkspaceStore';
 import type { SessionSettings, QuickActionMode } from '@omniscribe/shared';
 import { DEFAULT_SESSION_SETTINGS } from '@omniscribe/shared';
@@ -37,29 +38,11 @@ export function QuickActionsSection() {
 
   return (
     <div className="space-y-6">
-      {/* Section Header */}
-      <div className="flex items-center gap-3">
-        <div
-          className={cn(
-            'w-10 h-10 rounded-xl flex items-center justify-center',
-            'bg-linear-to-br from-primary/20 to-brand-600/10',
-            'ring-1'
-          )}
-          style={
-            {
-              '--tw-ring-color': 'color-mix(in oklch, var(--primary), transparent 80%)',
-            } as React.CSSProperties
-          }
-        >
-          <Zap className="w-5 h-5 text-primary" />
-        </div>
-        <div className="flex-1">
-          <h2 className="text-lg font-semibold text-foreground">Quick Actions</h2>
-          <p className="text-sm text-muted-foreground">
-            Configure how quick actions are executed in terminals
-          </p>
-        </div>
-      </div>
+      <SectionHeader
+        icon={Zap}
+        title="Quick Actions"
+        description="Configure how quick actions are executed in terminals"
+      />
 
       {/* Execution Mode */}
       <div className="space-y-4">

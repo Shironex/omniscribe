@@ -40,7 +40,7 @@ test.describe('Session Create and Launch', () => {
 
     // Verify the slot shows a valid AI mode label (depends on whether Claude CLI is installed)
     await expect(page.locator('[data-testid="ai-mode-label"]').first()).toHaveText(
-      /^(Plain|Claude)$/,
+      /^(Plain|Claude( Code)?)$/,
       {
         timeout: 5_000,
       }
@@ -93,8 +93,8 @@ test.describe('Session Create and Launch', () => {
       { timeout: 15_000 }
     );
 
-    // Verify the session card shows the AI mode label (e.g., "Plain #1" or "Claude #1")
-    const modeLabel = firstCard.locator('text=/(?:Claude|Plain) #\\d+/');
+    // Verify the session card shows the AI mode label (e.g., "Plain #1" or "Claude Code #1")
+    const modeLabel = firstCard.locator('text=/(?:Claude(?: Code)?|Plain) #\\d+/');
     await expect(modeLabel).toBeVisible({ timeout: 5_000 });
   });
 
@@ -117,8 +117,8 @@ test.describe('Session Create and Launch', () => {
     const sessionCard = page.locator('[data-testid^="session-card-"]').first();
     await expect(sessionCard).toBeVisible();
 
-    // The AI mode label (e.g., "Plain #1") confirms the session header rendered
-    const sessionLabel = sessionCard.locator('text=/(?:Claude|Plain) #\\d+/');
+    // The AI mode label (e.g., "Plain #1" or "Claude Code #1") confirms the session header rendered
+    const sessionLabel = sessionCard.locator('text=/(?:Claude(?: Code)?|Plain) #\\d+/');
     await expect(sessionLabel).toBeVisible({ timeout: 5_000 });
   });
 });

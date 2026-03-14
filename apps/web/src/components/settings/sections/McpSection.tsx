@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useEffect } from 'react';
 import { Server, CheckCircle2, RefreshCw, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { SectionHeader } from '@/components/shared/SectionHeader';
 import { MCP_SERVER_NAME } from '@omniscribe/shared';
 import { useMcpStore, selectInternalMcp } from '@/stores/useMcpStore';
 import { useWorkspaceStore, selectActiveTab } from '@/stores/useWorkspaceStore';
@@ -33,26 +34,11 @@ export function McpSection() {
 
   return (
     <div className="space-y-6">
-      {/* Section Header */}
-      <div className="flex items-center gap-3">
-        <div
-          className={cn(
-            'w-10 h-10 rounded-xl flex items-center justify-center',
-            'bg-linear-to-br from-primary/20 to-brand-600/10',
-            'ring-1'
-          )}
-          style={
-            {
-              '--tw-ring-color': 'color-mix(in oklch, var(--primary), transparent 80%)',
-            } as React.CSSProperties
-          }
-        >
-          <Server className="w-5 h-5 text-primary" />
-        </div>
-        <div className="flex-1">
-          <h2 className="text-lg font-semibold text-foreground">MCP Servers</h2>
-          <p className="text-sm text-muted-foreground">Model Context Protocol server connections</p>
-        </div>
+      <SectionHeader
+        icon={Server}
+        title="MCP Servers"
+        description="Model Context Protocol server connections"
+      >
         <button
           type="button"
           aria-label="Refresh MCP servers"
@@ -71,7 +57,7 @@ export function McpSection() {
             <RefreshCw className="w-4 h-4" />
           )}
         </button>
-      </div>
+      </SectionHeader>
 
       {/* Internal MCP Status */}
       <div className="rounded-xl border border-border/50 bg-card/50 p-4">

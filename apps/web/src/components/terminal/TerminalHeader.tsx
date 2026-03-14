@@ -96,14 +96,14 @@ export const TerminalHeader = React.memo(function TerminalHeader({
   return (
     <div
       className={cn(
-        'h-8 bg-gradient-to-b from-muted to-muted/80 border-b border-border',
+        'min-h-8 h-8 bg-gradient-to-b from-muted to-muted/80 border-b border-border',
         'flex items-center justify-between px-2 gap-2',
         'select-none',
         className
       )}
     >
       {/* Left section */}
-      <div className="flex items-center gap-1.5 min-w-0 flex-1">
+      <div className="flex items-center gap-1.5 min-w-0 flex-1 overflow-hidden">
         {dragHandleProps && (
           <div
             ref={node => dragHandleProps.setNodeRef(node)}

@@ -30,11 +30,23 @@ export const useAppUIStore = create<AppUIStore>()(
       diffPanelSessionId: null,
 
       toggleHistory: () => {
-        set(state => ({ isHistoryOpen: !state.isHistoryOpen }), undefined, 'appUI/toggleHistory');
+        set(
+          state => ({
+            isHistoryOpen: !state.isHistoryOpen,
+            // Close diff panel when opening history
+            ...(!state.isHistoryOpen ? { isDiffPanelOpen: false, diffPanelSessionId: null } : {}),
+          }),
+          undefined,
+          'appUI/toggleHistory'
+        );
       },
 
       openHistory: () => {
-        set({ isHistoryOpen: true }, undefined, 'appUI/openHistory');
+        set(
+          { isHistoryOpen: true, isDiffPanelOpen: false, diffPanelSessionId: null },
+          undefined,
+          'appUI/openHistory'
+        );
       },
 
       closeHistory: () => {
@@ -51,7 +63,7 @@ export const useAppUIStore = create<AppUIStore>()(
 
       openDiffPanel: (sessionId: string) => {
         set(
-          { isDiffPanelOpen: true, diffPanelSessionId: sessionId },
+          { isDiffPanelOpen: true, diffPanelSessionId: sessionId, isHistoryOpen: false },
           undefined,
           'appUI/openDiffPanel'
         );
@@ -72,6 +84,8 @@ export const useAppUIStore = create<AppUIStore>()(
             return {
               isDiffPanelOpen: !isOpen,
               diffPanelSessionId: isOpen ? null : sessionId,
+              // Close history panel when opening diff panel
+              ...(!isOpen ? { isHistoryOpen: false } : {}),
             };
           },
           undefined,

@@ -94,9 +94,9 @@ export function QuickActionsDropdown({
           disabled
             ? 'text-muted-foreground/40 cursor-not-allowed'
             : [
-                'text-muted-foreground hover:text-yellow-400',
-                'hover:bg-yellow-400/10 transition-colors',
-                isOpen && 'bg-yellow-400/10 text-yellow-400',
+                'text-muted-foreground hover:text-status-warning',
+                'hover:bg-status-warning-bg transition-colors',
+                isOpen && 'bg-status-warning-bg text-status-warning',
               ]
         )}
         aria-label="Quick actions"

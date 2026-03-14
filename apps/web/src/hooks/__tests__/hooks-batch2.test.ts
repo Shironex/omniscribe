@@ -70,6 +70,10 @@ describe('useProjectSessions', () => {
     vi.doMock('@/stores/useSessionStore', () => ({
       useSessionStore: (sel: Selector) =>
         sel({ sessions: mockSessions, updateSession: mockUpdateSession, customTitles: {} }),
+      selectSessionsForProject: (projectPath: string) => (state: Record<string, unknown>) =>
+        (state.sessions as Array<{ projectPath: string }>).filter(
+          s => s.projectPath === projectPath
+        ),
     }));
 
     const mod = await import('../useProjectSessions');

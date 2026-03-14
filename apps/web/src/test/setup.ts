@@ -1,5 +1,17 @@
 import { vi } from 'vitest';
 
+// Polyfill scrollIntoView for jsdom (used by cmdk Command component)
+if (typeof Element.prototype.scrollIntoView === 'undefined') {
+  Element.prototype.scrollIntoView = function () {};
+}
+
+// Polyfill hasPointerCapture for jsdom (used by Radix UI primitives)
+if (typeof Element.prototype.hasPointerCapture === 'undefined') {
+  Element.prototype.hasPointerCapture = function () {
+    return false;
+  };
+}
+
 // Polyfill ResizeObserver for jsdom (used by Radix UI dialogs, popovers, etc.)
 if (typeof globalThis.ResizeObserver === 'undefined') {
   globalThis.ResizeObserver = class ResizeObserver {

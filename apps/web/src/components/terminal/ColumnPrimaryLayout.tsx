@@ -31,7 +31,7 @@ export function ColumnPrimaryLayout({
           <Panel
             id={`column-${columnIndex}`}
             defaultSize={100 / columns.length}
-            minSize={15}
+            minSize={20}
             className="min-h-0 min-w-0 overflow-hidden"
           >
             <Group
@@ -52,7 +52,7 @@ export function ColumnPrimaryLayout({
                     <Panel
                       id={`cell-${columnIndex}-${rowIndex}`}
                       defaultSize={100 / column.length}
-                      minSize={15}
+                      minSize={20}
                       className="min-h-0 min-w-0 overflow-hidden"
                     >
                       {renderTerminalCard(session)}

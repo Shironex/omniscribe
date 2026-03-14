@@ -2,6 +2,7 @@ import { useState, useCallback, useMemo } from 'react';
 import { Palette, Check, Puzzle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { APP_NAME } from '@omniscribe/shared';
+import { SectionHeader } from '@/components/shared/SectionHeader';
 import type { Theme } from '@omniscribe/shared';
 import { themeOptions, darkThemes, lightThemes } from '@/lib/theme';
 import { useSettingsStore } from '@/stores/useSettingsStore';
@@ -88,27 +89,11 @@ export function AppearanceSection() {
 
   return (
     <div className="space-y-6">
-      {/* Section Header */}
-      <div className="flex items-center gap-3">
-        <div
-          className={cn(
-            'w-10 h-10 rounded-xl flex items-center justify-center',
-            'bg-linear-to-br from-primary/20 to-brand-600/10',
-            'ring-1'
-          )}
-          style={
-            {
-              '--tw-ring-color': 'color-mix(in oklch, var(--primary), transparent 80%)',
-            } as React.CSSProperties
-          }
-        >
-          <Palette className="w-5 h-5 text-primary" />
-        </div>
-        <div>
-          <h2 className="text-lg font-semibold text-foreground">Appearance</h2>
-          <p className="text-sm text-muted-foreground">Customize how {APP_NAME} looks</p>
-        </div>
-      </div>
+      <SectionHeader
+        icon={Palette}
+        title="Appearance"
+        description={`Customize how ${APP_NAME} looks`}
+      />
 
       {/* Theme Selection */}
       <div className="space-y-4">

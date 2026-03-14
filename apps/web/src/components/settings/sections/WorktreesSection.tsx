@@ -7,6 +7,7 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { SectionHeader } from '@/components/shared/SectionHeader';
 import { useWorkspaceStore } from '@/stores/useWorkspaceStore';
 import type { WorktreeMode, WorktreeLocation, WorktreeSettings } from '@omniscribe/shared';
 import { DEFAULT_WORKTREE_SETTINGS, USER_DATA_DIR, WORKTREES_DIR } from '@omniscribe/shared';
@@ -83,35 +84,16 @@ export function WorktreesSection() {
 
   return (
     <div className="space-y-6">
-      {/* Section Header */}
-      <div className="flex items-center gap-3">
-        <div
-          className={cn(
-            'w-10 h-10 rounded-xl flex items-center justify-center',
-            'bg-linear-to-br from-primary/20 to-brand-600/10',
-            'ring-1'
-          )}
-          style={
-            {
-              '--tw-ring-color': 'color-mix(in oklch, var(--primary), transparent 80%)',
-            } as React.CSSProperties
-          }
-        >
-          <GitBranch className="w-5 h-5 text-primary" />
-        </div>
-        <div className="flex-1">
-          <div className="flex items-center gap-2">
-            <h2 className="text-lg font-semibold text-foreground">Worktrees</h2>
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500/20 text-amber-400 border border-amber-500/30">
-              <FlaskConical className="w-3 h-3" />
-              Experimental
-            </span>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            Configure Git worktree behavior for sessions
-          </p>
-        </div>
-      </div>
+      <SectionHeader
+        icon={GitBranch}
+        title="Worktrees"
+        description="Configure Git worktree behavior for sessions"
+      >
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-status-warning-bg text-status-warning border border-status-warning/30">
+          <FlaskConical className="w-3 h-3" />
+          Experimental
+        </span>
+      </SectionHeader>
 
       {/* Worktree Mode */}
       <div className="space-y-4">
@@ -216,9 +198,9 @@ export function WorktreesSection() {
 
           {/* Warning for auto-cleanup */}
           {worktreeSettings.autoCleanup && (
-            <div className="flex items-start gap-2 p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
-              <AlertTriangle className="w-4 h-4 text-amber-400 mt-0.5 shrink-0" />
-              <div className="text-xs text-amber-400">
+            <div className="flex items-start gap-2 p-2 rounded-lg bg-status-warning-bg border border-status-warning/20">
+              <AlertTriangle className="w-4 h-4 text-status-warning mt-0.5 shrink-0" />
+              <div className="text-xs text-status-warning">
                 <strong>Warning:</strong> If the app crashes or terminals close unexpectedly,
                 worktrees and any uncommitted changes may be lost.
               </div>

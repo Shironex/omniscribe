@@ -45,6 +45,7 @@ export function QuickActionPills({ actions, onRunAction, className }: QuickActio
             transition={transitions.spring}
           >
             <motion.button
+              type="button"
               onClick={() => onRunAction(action.id)}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
