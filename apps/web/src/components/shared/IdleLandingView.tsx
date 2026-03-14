@@ -1,10 +1,11 @@
 import { cn } from '@/lib/utils';
-import { BrainCircuit, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { useMemo } from 'react';
+import { OmniscribeAnimation } from './OmniscribeAnimation';
 import { getGreeting } from '@/lib/date-utils';
 import { Button } from '@/components/ui/button';
 import { motion, useReducedMotion } from 'motion/react';
-import { transitions } from '@/lib/animations';
+import { animationVariants, transitions } from '@/lib/animations';
 
 interface IdleLandingViewProps {
   onAddSession: () => void;
@@ -49,18 +50,15 @@ export function IdleLandingView({
         {/* Greeting */}
         <p className="text-sm text-foreground-secondary mb-6 text-center">{greeting}</p>
 
-        {/* Icon */}
-        <div className="mb-6">
-          <div
-            className={cn(
-              'w-24 h-24 rounded-full',
-              'bg-primary/10',
-              'flex items-center justify-center'
-            )}
-          >
-            <BrainCircuit size={48} className="text-primary" strokeWidth={1.5} />
-          </div>
-        </div>
+        {/* Animated orchestration icon */}
+        <motion.div
+          className="mb-6"
+          initial={reduceMotion ? false : animationVariants.slideUp.initial}
+          animate={animationVariants.slideUp.animate}
+          transition={reduceMotion ? transitions.instant : transitions.spring}
+        >
+          <OmniscribeAnimation size={96} reduceMotion={!!reduceMotion} />
+        </motion.div>
 
         {/* Text */}
         <h2 className="text-lg font-medium text-foreground mb-2 text-center">No Active Sessions</h2>
