@@ -10,7 +10,13 @@
       "electron",
       "esbuild",
       "node-pty"
-    ]
+    ],
+    "overrides": {
+      "undici": ">=7.24.0",
+      "flatted": ">=3.4.0",
+      "tar@>=7": ">=7.5.11",
+      "hono": ">=4.12.7"
+    }
   },
   "scripts": {
     "dev": "pnpm build:packages && concurrently -k -n web,desktop -c cyan,yellow \"pnpm dev:web\" \"wait-on http://localhost:15174 && pnpm --filter @omniscribe/mcp-server build:dev && pnpm --filter @omniscribe/desktop dev\"",
