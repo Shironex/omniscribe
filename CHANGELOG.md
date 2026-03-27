@@ -2,6 +2,31 @@
 
 All notable changes to this project will be documented in this file.
 
+## 1.4.0 (2026-03-27)
+
+### Features
+
+- **System notifications** — Cross-platform OS-level desktop notifications with deep linking for session status changes, including configurable sound, persistence, and per-event toggles (#254)
+- **Animated idle landing** — Replace static idle landing icon with an animated orchestration SVG (#250)
+
+### Bug Fixes
+
+- **Infinite re-renders** — Use stable empty array in project selector to prevent infinite re-renders (#251)
+- **E2E test fixes** — Fix tab selector and AI mode label regex, use auto-retrying assertion for tab count (#251)
+
+### Refactoring
+
+- **Frontend audit** — Comprehensive frontend cleanup addressing code quality, consistency, and maintainability (#251)
+
+### Dependencies
+
+- **Security overrides** — Resolve 31 security vulnerabilities via pnpm overrides, including critical handlebars injection, high-severity tar path traversal, and multer DoS (#252)
+
+### Stats
+
+- 4 PRs merged (18 commits)
+- 103 files changed — +2,433 / −1,294 lines
+
 ## 1.3.0 (2026-03-08)
 
 ### Features
