@@ -1,4 +1,4 @@
-import { ipcMain } from 'electron';
+import { ipcMain, Notification } from 'electron';
 import { createLogger } from '@omniscribe/shared';
 
 const logger = createLogger('IPC:Notification');
@@ -6,18 +6,15 @@ const logger = createLogger('IPC:Notification');
 /**
  * Register notification-related IPC handlers.
  *
- * The test notification handler needs access to the NestJS NotificationService.
- * We use a lazy import approach: when the test button is clicked, we import
- * the notification service from the NestJS app context.
+ * - `notification:test`: Shows a simple test notification to verify OS support.
+ *   This intentionally bypasses NotificationService preferences/throttling
+ *   so the user can verify notifications work even if their settings would suppress them.
  *
- * Note: `notification:navigate` is sent FROM main process TO renderer (not a handler).
+ * - `notification:navigate`: Sent FROM main process TO renderer (not a handler here).
  */
 export function registerNotificationHandlers(): void {
-  ipcMain.handle('notification:test', async () => {
+  ipcMain.handle('notification:test', () => {
     try {
-      // Dynamically import to avoid circular dependency with NestJS bootstrap
-      const { Notification } = await import('electron');
-
       if (!Notification.isSupported()) {
         logger.warn('Notifications not supported on this platform');
         return { success: false, reason: 'not-supported' };

@@ -3,6 +3,7 @@ import { OnEvent } from '@nestjs/event-emitter';
 import { Notification } from 'electron';
 import {
   createLogger,
+  DEFAULT_NOTIFICATION_SETTINGS,
   type SessionStatus,
   type SessionStatusUpdate,
   type NotificationSettings,
@@ -16,11 +17,10 @@ import {
   InternalUpdaterEvents,
 } from '../shared/events';
 import {
-  DEFAULT_NOTIFICATION_SETTINGS,
   DEBOUNCE_WINDOW_MS,
   RATE_LIMIT_PER_MINUTE,
   RATE_LIMIT_WINDOW_MS,
-  MAX_BODY_LENGTH,
+  MAX_BODY_BYTES,
   type NotificationEventType,
 } from './notification.constants';
 
@@ -299,10 +299,15 @@ export class NotificationService implements OnModuleDestroy {
       .map(n => n.body)
       .join('\n');
 
+    // Navigate to the most recent notification's session on click
+    const last = notifications[notifications.length - 1];
+
     return {
       title,
       body: count > 3 ? `${body}\n...and ${count - 3} more` : body,
       eventType: notifications[0].eventType,
+      sessionId: last.sessionId,
+      tabId: last.tabId,
     };
   }
 
@@ -327,14 +332,25 @@ export class NotificationService implements OnModuleDestroy {
   }
 
   private truncateBody(body: string): string {
-    if (body.length <= MAX_BODY_LENGTH) return body;
-    return body.slice(0, MAX_BODY_LENGTH - 3) + '...';
+    // Use byte length for macOS 256-byte limit (multi-byte chars like emoji)
+    const encoder = new TextEncoder();
+    if (encoder.encode(body).length <= MAX_BODY_BYTES) return body;
+
+    // Truncate by removing characters until byte length fits
+    let truncated = body;
+    while (encoder.encode(truncated + '...').length > MAX_BODY_BYTES && truncated.length > 0) {
+      truncated = truncated.slice(0, -1);
+    }
+    return truncated + '...';
   }
 
   private pruneRateLimit(now: number): void {
     const cutoff = now - RATE_LIMIT_WINDOW_MS;
-    while (this.recentTimestamps.length > 0 && this.recentTimestamps[0] < cutoff) {
-      this.recentTimestamps.shift();
+    const firstValid = this.recentTimestamps.findIndex(t => t >= cutoff);
+    if (firstValid === -1) {
+      this.recentTimestamps.length = 0;
+    } else if (firstValid > 0) {
+      this.recentTimestamps.splice(0, firstValid);
     }
   }
 }

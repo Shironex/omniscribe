@@ -16,6 +16,8 @@ export function useNotificationNavigation(): void {
       if (data.tabId) {
         selectTab(data.tabId);
       }
+      // TODO: Scroll to / highlight the specific session when sessionId is provided.
+      // Requires a session selection API in the session store (not yet available).
     });
 
     return cleanup;

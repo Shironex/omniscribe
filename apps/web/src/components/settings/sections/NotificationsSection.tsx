@@ -159,7 +159,7 @@ export function NotificationsSection() {
           <div className="rounded-xl border border-border/50 bg-card/50 p-4 space-y-4">
             {EVENT_TOGGLES.map((toggle, index) => (
               <div key={toggle.key}>
-                {index > 0 && <div className="border-t border-border/30 mb-4" />}
+                {index > 0 && <div className="border-t border-border/30" />}
                 <ToggleRow
                   id={`notification-event-${toggle.key}`}
                   label={toggle.label}

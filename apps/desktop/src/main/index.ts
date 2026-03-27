@@ -88,6 +88,11 @@ async function shutdownNestApp(): Promise<void> {
   }
 }
 
+function setupAutoUpdater(window: BrowserWindow): void {
+  const emitter = nestApp?.get(EventEmitter2);
+  initializeAutoUpdater(window, process.env.NODE_ENV === 'development', emitter);
+}
+
 async function bootstrap(): Promise<void> {
   // Resolve the user's full shell PATH before any child processes are spawned.
   // macOS/Linux GUI apps inherit a minimal PATH that's missing dev tools.
@@ -106,10 +111,13 @@ async function bootstrap(): Promise<void> {
 
   await bootstrapNestApp();
   mainWindow = await createMainWindow();
+  setupAutoUpdater(mainWindow);
 
-  // Pass the NestJS EventEmitter2 to the updater for OS notification integration
-  const emitter = nestApp?.get(EventEmitter2);
-  initializeAutoUpdater(mainWindow, process.env.NODE_ENV === 'development', emitter);
+  // Process any protocol URLs that arrived before the window was ready (macOS)
+  if (pendingProtocolUrl) {
+    handleProtocolUrl(pendingProtocolUrl);
+    pendingProtocolUrl = null;
+  }
 }
 
 // Global error handling
@@ -132,19 +140,36 @@ for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   });
 }
 
+/** UUID v4 format regex for validating sessionId and tabId */
+const UUID_RE = /^[a-f0-9-]{36}$/i;
+
 /**
  * Parse an omniscribe:// protocol URL and forward navigation data to the renderer.
  * URL format: omniscribe://session/{sessionId}?tab={tabId}
+ *
+ * Since protocol URLs are externally controlled (any app can invoke omniscribe://),
+ * we validate all extracted IDs before forwarding to the renderer.
  */
 function handleProtocolUrl(url: string): void {
-  logger.info(`Handling protocol URL: ${url}`);
+  logger.debug('Handling protocol URL');
   try {
     const parsed = new URL(url);
     if (parsed.protocol !== 'omniscribe:') return;
 
     if (parsed.hostname === 'session' || parsed.pathname.startsWith('//session/')) {
       const sessionId = parsed.pathname.replace(/^\/\/session\//, '').replace(/^\//, '');
+
+      // Validate sessionId format (UUID)
+      if (!UUID_RE.test(sessionId)) {
+        logger.warn('Invalid sessionId format in protocol URL');
+        return;
+      }
+
       const tabId = parsed.searchParams.get('tab') ?? undefined;
+      if (tabId && !UUID_RE.test(tabId)) {
+        logger.warn('Invalid tabId format in protocol URL');
+        return;
+      }
 
       if (mainWindow && !mainWindow.isDestroyed()) {
         if (mainWindow.isMinimized()) mainWindow.restore();
@@ -152,8 +177,8 @@ function handleProtocolUrl(url: string): void {
         mainWindow.webContents.send('notification:navigate', { sessionId, tabId });
       }
     }
-  } catch (error) {
-    logger.warn('Failed to parse protocol URL:', error);
+  } catch {
+    logger.warn('Failed to parse protocol URL');
   }
 }
 
@@ -172,10 +197,17 @@ app.on('second-instance', (_event, argv) => {
   }
 });
 
+// Buffer protocol URLs that arrive before the window is ready (macOS cold launch)
+let pendingProtocolUrl: string | null = null;
+
 // macOS: open-url event fires for protocol URLs
 app.on('open-url', (event, url) => {
   event.preventDefault();
-  handleProtocolUrl(url);
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    handleProtocolUrl(url);
+  } else {
+    pendingProtocolUrl = url;
+  }
 });
 
 app
@@ -199,8 +231,7 @@ app.on('activate', async () => {
     // NestJS is already running, clean up old IPC handlers and recreate the window
     cleanupIpcHandlers();
     mainWindow = await createMainWindow();
-    const emitter = nestApp?.get(EventEmitter2);
-    initializeAutoUpdater(mainWindow, process.env.NODE_ENV === 'development', emitter);
+    setupAutoUpdater(mainWindow);
   }
 });
 
