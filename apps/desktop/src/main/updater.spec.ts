@@ -20,6 +20,7 @@ const mockAutoUpdater = {
   allowPrerelease: false as boolean,
   allowDowngrade: false as boolean,
   on: jest.fn(),
+  removeAllListeners: jest.fn(),
   checkForUpdates: jest.fn(),
   downloadUpdate: jest.fn(),
   quitAndInstall: jest.fn(),

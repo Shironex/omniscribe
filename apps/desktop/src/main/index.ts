@@ -113,11 +113,11 @@ async function bootstrap(): Promise<void> {
   mainWindow = await createMainWindow();
   setupAutoUpdater(mainWindow);
 
-  // Process any protocol URLs that arrived before the window was ready (macOS)
-  if (pendingProtocolUrl) {
-    handleProtocolUrl(pendingProtocolUrl);
-    pendingProtocolUrl = null;
+  // Process any protocol URLs that arrived before the window was ready
+  for (const url of pendingProtocolUrls) {
+    handleProtocolUrl(url);
   }
+  pendingProtocolUrls.length = 0;
 }
 
 // Global error handling
@@ -140,8 +140,8 @@ for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   });
 }
 
-/** UUID v4 format regex for validating sessionId and tabId */
-const UUID_RE = /^[a-f0-9-]{36}$/i;
+/** Strict UUID v4 format regex (8-4-4-4-12) for validating sessionId and tabId */
+const UUID_RE = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
 
 /**
  * Parse an omniscribe:// protocol URL and forward navigation data to the renderer.
@@ -197,8 +197,16 @@ app.on('second-instance', (_event, argv) => {
   }
 });
 
-// Buffer protocol URLs that arrive before the window is ready (macOS cold launch)
-let pendingProtocolUrl: string | null = null;
+// Buffer protocol URLs that arrive before the window is ready (macOS cold launch,
+// Windows/Linux cold launch via process.argv). Uses an array to handle multiple
+// URLs arriving before bootstrap completes.
+const pendingProtocolUrls: string[] = [];
+
+// Capture protocol URL from initial launch argv (Windows/Linux cold start)
+const launchProtocolUrl = process.argv.find(arg => arg.startsWith('omniscribe://'));
+if (launchProtocolUrl) {
+  pendingProtocolUrls.push(launchProtocolUrl);
+}
 
 // macOS: open-url event fires for protocol URLs
 app.on('open-url', (event, url) => {
@@ -206,7 +214,7 @@ app.on('open-url', (event, url) => {
   if (mainWindow && !mainWindow.isDestroyed()) {
     handleProtocolUrl(url);
   } else {
-    pendingProtocolUrl = url;
+    pendingProtocolUrls.push(url);
   }
 });
 

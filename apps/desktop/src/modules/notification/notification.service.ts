@@ -221,19 +221,18 @@ export class NotificationService implements OnModuleDestroy {
 
     const remaining = RATE_LIMIT_PER_MINUTE - this.recentTimestamps.length;
     if (remaining <= 0) {
-      this.logger.debug('Rate limit reached, skipping notifications');
+      // Rate limit reached — still show a summary so notifications aren't silently lost
+      this.logger.debug('Rate limit reached, showing summary');
+      const summary = this.buildBatchSummary(notifications);
+      this.showNativeNotification(summary, settings);
       return;
     }
 
     if (notifications.length === 1) {
       this.showNativeNotification(notifications[0], settings);
-    } else if (notifications.length <= remaining) {
-      // Show a batched summary notification
-      const summary = this.buildBatchSummary(notifications);
-      this.showNativeNotification(summary, settings);
     } else {
-      // Show as many as we can within rate limit
-      const summary = this.buildBatchSummary(notifications.slice(0, remaining));
+      // Batch all pending notifications into a single summary
+      const summary = this.buildBatchSummary(notifications);
       this.showNativeNotification(summary, settings);
     }
   }
@@ -336,12 +335,18 @@ export class NotificationService implements OnModuleDestroy {
     const encoder = new TextEncoder();
     if (encoder.encode(body).length <= MAX_BODY_BYTES) return body;
 
-    // Truncate by removing characters until byte length fits
-    let truncated = body;
-    while (encoder.encode(truncated + '...').length > MAX_BODY_BYTES && truncated.length > 0) {
-      truncated = truncated.slice(0, -1);
+    // Binary search for the longest prefix that fits within the byte limit
+    let lo = 0;
+    let hi = body.length;
+    while (lo < hi) {
+      const mid = (lo + hi + 1) >> 1;
+      if (encoder.encode(body.slice(0, mid) + '...').length <= MAX_BODY_BYTES) {
+        lo = mid;
+      } else {
+        hi = mid - 1;
+      }
     }
-    return truncated + '...';
+    return body.slice(0, lo) + '...';
   }
 
   private pruneRateLimit(now: number): void {

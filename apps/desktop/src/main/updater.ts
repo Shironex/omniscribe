@@ -19,6 +19,8 @@ const store = new Store();
 let updaterEnabled = false;
 let currentChannel: UpdateChannel = DEFAULT_UPDATE_CHANNEL;
 let eventEmitter: EventEmitter2 | null = null;
+let initialCheckTimer: ReturnType<typeof setTimeout> | null = null;
+let periodicCheckTimer: ReturnType<typeof setInterval> | null = null;
 
 // Disable auto download — user controls when to download
 autoUpdater.autoDownload = false;
@@ -72,6 +74,17 @@ export function initializeAutoUpdater(
     updaterEnabled = false;
     return;
   }
+
+  // Re-init safety: clear existing listeners/timers before re-wiring
+  // (this function can be called again on window recreation via macOS activate)
+  autoUpdater.removeAllListeners('checking-for-update');
+  autoUpdater.removeAllListeners('update-available');
+  autoUpdater.removeAllListeners('update-not-available');
+  autoUpdater.removeAllListeners('download-progress');
+  autoUpdater.removeAllListeners('update-downloaded');
+  autoUpdater.removeAllListeners('error');
+  if (initialCheckTimer) clearTimeout(initialCheckTimer);
+  if (periodicCheckTimer) clearInterval(periodicCheckTimer);
 
   updaterEnabled = true;
   applyChannel(getPersistedChannel());
@@ -155,12 +168,12 @@ export function initializeAutoUpdater(
   });
 
   // Initial check after a short delay to let the app finish loading
-  setTimeout(() => {
+  initialCheckTimer = setTimeout(() => {
     checkForUpdates();
   }, 5000);
 
   // Periodic checks every hour
-  setInterval(
+  periodicCheckTimer = setInterval(
     () => {
       checkForUpdates();
     },

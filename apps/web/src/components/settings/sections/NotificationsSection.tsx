@@ -1,45 +1,26 @@
 import { Bell, Send } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Switch } from '@/components/ui/switch';
 import { SectionHeader } from '@/components/shared/SectionHeader';
 import { useWorkspaceStore } from '@/stores/useWorkspaceStore';
 import type { NotificationSettings } from '@omniscribe/shared';
 import { DEFAULT_NOTIFICATION_SETTINGS } from '@omniscribe/shared';
 
 interface ToggleRowProps {
-  id: string;
   label: string;
   description: string;
   checked: boolean;
   onChange: () => void;
 }
 
-function ToggleRow({ id, label, description, checked, onChange }: ToggleRowProps) {
+function ToggleRow({ label, description, checked, onChange }: ToggleRowProps) {
   return (
     <div className="flex items-center justify-between">
       <div>
-        <div id={`${id}-label`} className="text-sm font-medium text-foreground">
-          {label}
-        </div>
+        <div className="text-sm font-medium text-foreground">{label}</div>
         <div className="text-xs text-muted-foreground">{description}</div>
       </div>
-      <button
-        type="button"
-        onClick={onChange}
-        className={cn(
-          'relative w-11 h-6 rounded-full transition-colors duration-200',
-          checked ? 'bg-primary' : 'bg-border'
-        )}
-        role="switch"
-        aria-checked={checked}
-        aria-labelledby={`${id}-label`}
-      >
-        <div
-          className={cn(
-            'absolute top-1 w-4 h-4 rounded-full bg-white transition-transform duration-200',
-            checked ? 'translate-x-6' : 'translate-x-1'
-          )}
-        />
-      </button>
+      <Switch checked={checked} onCheckedChange={onChange} aria-label={label} />
     </div>
   );
 }
@@ -87,15 +68,23 @@ export function NotificationsSection() {
 
   const settings: NotificationSettings = preferences.notifications ?? DEFAULT_NOTIFICATION_SETTINGS;
 
+  // Read latest settings at call time to avoid stale-closure overwrites
+  // when two toggles are clicked in quick succession
+  const getLatestSettings = (): NotificationSettings =>
+    (useWorkspaceStore.getState().preferences.notifications as NotificationSettings) ??
+    DEFAULT_NOTIFICATION_SETTINGS;
+
   const update = (partial: Partial<NotificationSettings>) => {
-    updatePreference('notifications', { ...settings, ...partial });
+    updatePreference('notifications', { ...getLatestSettings(), ...partial });
   };
 
   const updateEvent = (key: keyof NotificationSettings['events']) => {
-    update({
+    const latest = getLatestSettings();
+    updatePreference('notifications', {
+      ...latest,
       events: {
-        ...settings.events,
-        [key]: !settings.events[key],
+        ...latest.events,
+        [key]: !latest.events[key],
       },
     });
   };
@@ -120,7 +109,6 @@ export function NotificationsSection() {
 
         <div className="rounded-xl border border-border/50 bg-card/50 p-4 space-y-4">
           <ToggleRow
-            id="notifications-enabled"
             label="Enable desktop notifications"
             description="Show OS-level notifications for session events"
             checked={settings.enabled}
@@ -131,7 +119,6 @@ export function NotificationsSection() {
             <>
               <div className="border-t border-border/30" />
               <ToggleRow
-                id="notifications-sound"
                 label="Play sound"
                 description="Play the system notification sound"
                 checked={settings.sound}
@@ -140,7 +127,6 @@ export function NotificationsSection() {
 
               <div className="border-t border-border/30" />
               <ToggleRow
-                id="notifications-unfocused"
                 label="Only when app is unfocused"
                 description="Skip notifications when Omniscribe is in the foreground"
                 checked={settings.onlyWhenUnfocused}
@@ -161,7 +147,6 @@ export function NotificationsSection() {
               <div key={toggle.key}>
                 {index > 0 && <div className="border-t border-border/30" />}
                 <ToggleRow
-                  id={`notification-event-${toggle.key}`}
                   label={toggle.label}
                   description={toggle.description}
                   checked={settings.events[toggle.key]}
