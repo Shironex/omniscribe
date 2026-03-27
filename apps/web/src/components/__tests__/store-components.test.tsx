@@ -131,6 +131,7 @@ vi.mock('../settings/sections', () => ({
   WorktreesSection: () => <div data-testid="worktrees-section" />,
   SessionsSection: () => <div data-testid="sessions-section" />,
   QuickActionsSection: () => <div data-testid="quick-actions-section" />,
+  NotificationsSection: () => <div data-testid="notifications-section" />,
   TerminalSection: () => <div data-testid="terminal-section" />,
 }));
 

@@ -24,3 +24,6 @@ export { registerUpdaterHandlers, cleanupUpdaterHandlers } from './updater';
 
 // Plugin handlers
 export { registerPluginIpc, cleanupPluginIpc } from './plugin';
+
+// Notification handlers
+export { registerNotificationHandlers, cleanupNotificationHandlers } from './notification';

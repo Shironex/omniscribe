@@ -2,8 +2,12 @@
  * Project Tab Types - Shared types for project tabs in workspace
  */
 
-import type { Theme, WorktreeSettings, SessionSettings } from './settings';
-import { DEFAULT_WORKTREE_SETTINGS, DEFAULT_SESSION_SETTINGS } from './settings';
+import type { Theme, WorktreeSettings, SessionSettings, NotificationSettings } from './settings';
+import {
+  DEFAULT_WORKTREE_SETTINGS,
+  DEFAULT_SESSION_SETTINGS,
+  DEFAULT_NOTIFICATION_SETTINGS,
+} from './settings';
 
 /**
  * Base project tab fields shared between frontend and backend
@@ -51,9 +55,11 @@ export interface UserPreferences {
   worktree?: WorktreeSettings;
   /** Session settings */
   session?: SessionSettings;
+  /** Notification settings */
+  notifications?: NotificationSettings;
   /** Other preferences */
   [key: string]: unknown;
 }
 
 // Re-export for convenience
-export { DEFAULT_WORKTREE_SETTINGS, DEFAULT_SESSION_SETTINGS };
+export { DEFAULT_WORKTREE_SETTINGS, DEFAULT_SESSION_SETTINGS, DEFAULT_NOTIFICATION_SETTINGS };

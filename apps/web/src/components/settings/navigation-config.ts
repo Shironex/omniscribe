@@ -9,6 +9,7 @@ import {
   TerminalSquare,
   Zap,
   Puzzle,
+  Bell,
 } from 'lucide-react';
 import type { SettingsSectionId } from '@omniscribe/shared';
 
@@ -42,6 +43,7 @@ export const CORE_NAV_GROUPS: NavigationGroup[] = [
       { id: 'sessions', label: 'Sessions', icon: Monitor },
       { id: 'quickActions', label: 'Quick Actions', icon: Zap },
       { id: 'worktrees', label: 'Worktrees', icon: GitBranch },
+      { id: 'notifications', label: 'Notifications', icon: Bell },
     ],
   },
   {

@@ -13,6 +13,7 @@ import { useSessionLifecycle } from '@/hooks/useSessionLifecycle';
 import { useAppKeyboardShortcuts } from '@/hooks/useAppKeyboardShortcuts';
 import { useQuickActionExecution } from '@/hooks/useQuickActionExecution';
 import { useUpdateToast } from '@/hooks/useUpdateToast';
+import { useNotificationNavigation } from '@/hooks/useNotificationNavigation';
 import { useSessionOrderSync } from '@/hooks/useSessionOrderSync';
 import { useSessionActions } from '@/hooks/useSessionActions';
 import { useSessionStore, selectProjectPaths } from '@/stores/useSessionStore';
@@ -48,6 +49,7 @@ const DiffPanel = lazy(() =>
 function App() {
   useAppInitialization();
   useUpdateToast();
+  useNotificationNavigation();
   useWorkspacePreferences();
   useSessionOrderSync();
 

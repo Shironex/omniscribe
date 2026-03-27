@@ -10,12 +10,15 @@ import {
 import type { UpdateChannel } from '@omniscribe/shared';
 import type { UpdateInfo as ElectronUpdateInfo } from 'electron-updater';
 import type { ProgressInfo } from 'electron-updater';
+import type { EventEmitter2 } from '@nestjs/event-emitter';
+import { InternalUpdaterEvents } from '../modules/shared/events';
 
 const logger = createLogger('AutoUpdater');
 const store = new Store();
 
 let updaterEnabled = false;
 let currentChannel: UpdateChannel = DEFAULT_UPDATE_CHANNEL;
+let eventEmitter: EventEmitter2 | null = null;
 
 // Disable auto download — user controls when to download
 autoUpdater.autoDownload = false;
@@ -56,7 +59,14 @@ export async function setUpdateChannel(channel: UpdateChannel): Promise<UpdateCh
   return channel;
 }
 
-export function initializeAutoUpdater(mainWindow: BrowserWindow, isDev: boolean): void {
+export function initializeAutoUpdater(
+  mainWindow: BrowserWindow,
+  isDev: boolean,
+  emitter?: EventEmitter2
+): void {
+  if (emitter) {
+    eventEmitter = emitter;
+  }
   if (isDev) {
     logger.info('Skipping auto-updater in development mode');
     updaterEnabled = false;
@@ -87,6 +97,9 @@ export function initializeAutoUpdater(mainWindow: BrowserWindow, isDev: boolean)
       channel: currentChannel,
       isDowngrade,
     });
+
+    // Emit for OS notification integration
+    eventEmitter?.emit(InternalUpdaterEvents.UPDATE_AVAILABLE, { version: info.version });
   });
 
   autoUpdater.on('update-not-available', (info: ElectronUpdateInfo) => {
@@ -117,6 +130,9 @@ export function initializeAutoUpdater(mainWindow: BrowserWindow, isDev: boolean)
       releaseNotes: parseReleaseNotes(info.releaseNotes),
       releaseDate: info.releaseDate,
     });
+
+    // Emit for OS notification integration
+    eventEmitter?.emit(InternalUpdaterEvents.UPDATE_DOWNLOADED, { version: info.version });
   });
 
   autoUpdater.on('error', (error: Error) => {

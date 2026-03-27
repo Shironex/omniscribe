@@ -14,6 +14,12 @@
       "filter": ["**/*", "!**/*.map", "!**/*.d.ts"]
     }
   ],
+  "protocols": [
+    {
+      "name": "Omniscribe",
+      "schemes": ["omniscribe"]
+    }
+  ],
   "asarUnpack": ["**/node_modules/node-pty/**/*"],
   "artifactName": "${productName}-${version}-${arch}.${ext}",
   "nodeGypRebuild": false,

@@ -27,6 +27,7 @@ const ALLOWED_STORE_KEYS = new Set([
   'preferences.autoSave',
   'preferences.updateChannel',
   'preferences.worktree',
+  'preferences.notifications',
   'preferences', // Root preferences object
   // Recent projects
   'recentProjects',
