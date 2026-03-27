@@ -74,6 +74,10 @@ export interface ElectronAPI {
     onUpdateError: (callback: (message: string) => void) => () => void;
     onChannelChanged: (callback: (channel: UpdateChannel) => void) => () => void;
   };
+  notification: {
+    sendTest: () => Promise<{ success: boolean; reason?: string }>;
+    onNavigate: (callback: (data: { sessionId?: string; tabId?: string }) => void) => () => void;
+  };
   plugin: {
     invoke: (
       pluginId: string,
@@ -194,6 +198,23 @@ const electronAPI: ElectronAPI = {
       ipcRenderer.on('updater:channel-changed', listener);
       return () => {
         ipcRenderer.removeListener('updater:channel-changed', listener);
+      };
+    },
+  },
+  notification: {
+    sendTest: () =>
+      ipcRenderer.invoke('notification:test') as Promise<{
+        success: boolean;
+        reason?: string;
+      }>,
+    onNavigate: (callback: (data: { sessionId?: string; tabId?: string }) => void) => {
+      const listener = (
+        _event: Electron.IpcRendererEvent,
+        data: { sessionId?: string; tabId?: string }
+      ) => callback(data);
+      ipcRenderer.on('notification:navigate', listener);
+      return () => {
+        ipcRenderer.removeListener('notification:navigate', listener);
       };
     },
   },

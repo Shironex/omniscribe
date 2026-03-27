@@ -121,6 +121,7 @@ export type SettingsSectionId =
   | 'sessions'
   | 'terminal'
   | 'quickActions'
+  | 'notifications'
   | 'marketplace'
   | (string & {});
 
@@ -189,6 +190,55 @@ export const DEFAULT_SESSION_SETTINGS: SessionSettings = {
   skipPermissions: false,
   quickActionMode: 'paste-only',
   autoResumeOnRestart: false,
+};
+
+/**
+ * Notification event toggles
+ */
+export interface NotificationEventSettings {
+  /** Notify when a session completes */
+  sessionCompleted: boolean;
+  /** Notify when a session needs user input */
+  sessionNeedsInput: boolean;
+  /** Notify when a session encounters an error */
+  sessionError: boolean;
+  /** Notify when a zombie session is cleaned up */
+  zombieDetected: boolean;
+  /** Notify when an app update is available */
+  updateAvailable: boolean;
+  /** Notify when an app update is downloaded and ready */
+  updateDownloaded: boolean;
+}
+
+/**
+ * Desktop notification settings
+ */
+export interface NotificationSettings {
+  /** Master toggle for all OS notifications */
+  enabled: boolean;
+  /** Play system sound with notifications */
+  sound: boolean;
+  /** Only show OS notifications when app window is unfocused */
+  onlyWhenUnfocused: boolean;
+  /** Individual event type toggles */
+  events: NotificationEventSettings;
+}
+
+/**
+ * Default notification settings
+ */
+export const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
+  enabled: true,
+  sound: true,
+  onlyWhenUnfocused: true,
+  events: {
+    sessionCompleted: true,
+    sessionNeedsInput: true,
+    sessionError: true,
+    zombieDetected: true,
+    updateAvailable: true,
+    updateDownloaded: true,
+  },
 };
 
 /**

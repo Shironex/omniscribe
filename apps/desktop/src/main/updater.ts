@@ -10,12 +10,17 @@ import {
 import type { UpdateChannel } from '@omniscribe/shared';
 import type { UpdateInfo as ElectronUpdateInfo } from 'electron-updater';
 import type { ProgressInfo } from 'electron-updater';
+import type { EventEmitter2 } from '@nestjs/event-emitter';
+import { InternalUpdaterEvents } from '../modules/shared/events';
 
 const logger = createLogger('AutoUpdater');
 const store = new Store();
 
 let updaterEnabled = false;
 let currentChannel: UpdateChannel = DEFAULT_UPDATE_CHANNEL;
+let eventEmitter: EventEmitter2 | null = null;
+let initialCheckTimer: ReturnType<typeof setTimeout> | null = null;
+let periodicCheckTimer: ReturnType<typeof setInterval> | null = null;
 
 // Disable auto download — user controls when to download
 autoUpdater.autoDownload = false;
@@ -56,12 +61,30 @@ export async function setUpdateChannel(channel: UpdateChannel): Promise<UpdateCh
   return channel;
 }
 
-export function initializeAutoUpdater(mainWindow: BrowserWindow, isDev: boolean): void {
+export function initializeAutoUpdater(
+  mainWindow: BrowserWindow,
+  isDev: boolean,
+  emitter?: EventEmitter2
+): void {
+  if (emitter) {
+    eventEmitter = emitter;
+  }
   if (isDev) {
     logger.info('Skipping auto-updater in development mode');
     updaterEnabled = false;
     return;
   }
+
+  // Re-init safety: clear existing listeners/timers before re-wiring
+  // (this function can be called again on window recreation via macOS activate)
+  autoUpdater.removeAllListeners('checking-for-update');
+  autoUpdater.removeAllListeners('update-available');
+  autoUpdater.removeAllListeners('update-not-available');
+  autoUpdater.removeAllListeners('download-progress');
+  autoUpdater.removeAllListeners('update-downloaded');
+  autoUpdater.removeAllListeners('error');
+  if (initialCheckTimer) clearTimeout(initialCheckTimer);
+  if (periodicCheckTimer) clearInterval(periodicCheckTimer);
 
   updaterEnabled = true;
   applyChannel(getPersistedChannel());
@@ -87,6 +110,9 @@ export function initializeAutoUpdater(mainWindow: BrowserWindow, isDev: boolean)
       channel: currentChannel,
       isDowngrade,
     });
+
+    // Emit for OS notification integration
+    eventEmitter?.emit(InternalUpdaterEvents.UPDATE_AVAILABLE, { version: info.version });
   });
 
   autoUpdater.on('update-not-available', (info: ElectronUpdateInfo) => {
@@ -117,6 +143,9 @@ export function initializeAutoUpdater(mainWindow: BrowserWindow, isDev: boolean)
       releaseNotes: parseReleaseNotes(info.releaseNotes),
       releaseDate: info.releaseDate,
     });
+
+    // Emit for OS notification integration
+    eventEmitter?.emit(InternalUpdaterEvents.UPDATE_DOWNLOADED, { version: info.version });
   });
 
   autoUpdater.on('error', (error: Error) => {
@@ -139,12 +168,12 @@ export function initializeAutoUpdater(mainWindow: BrowserWindow, isDev: boolean)
   });
 
   // Initial check after a short delay to let the app finish loading
-  setTimeout(() => {
+  initialCheckTimer = setTimeout(() => {
     checkForUpdates();
   }, 5000);
 
   // Periodic checks every hour
-  setInterval(
+  periodicCheckTimer = setInterval(
     () => {
       checkForUpdates();
     },

@@ -14,6 +14,7 @@ import {
   SessionsSection,
   QuickActionsSection,
   TerminalSection,
+  NotificationsSection,
 } from './sections';
 import { PluginMarketplace } from '@/components/plugin/PluginMarketplace';
 
@@ -29,6 +30,7 @@ const coreSections: Record<string, ComponentType> = {
   worktrees: WorktreesSection,
   sessions: SessionsSection,
   quickActions: QuickActionsSection,
+  notifications: NotificationsSection,
   terminal: TerminalSection,
   marketplace: PluginMarketplace,
 };

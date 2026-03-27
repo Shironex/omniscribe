@@ -7,6 +7,7 @@ import { createMainWindow } from './window';
 import { cleanupIpcHandlers } from './ipc-handlers';
 import { logger, getLogPath, flushLogs } from './logger';
 import { initializeAutoUpdater } from './updater';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { corsOriginCallback } from '../modules/shared/cors.config';
 import { NestLoggerAdapter } from '../modules/shared/nest-logger';
 import { LOCALHOST } from '@omniscribe/shared';
@@ -24,6 +25,23 @@ export let mainWindow: BrowserWindow | null = null;
 let nestApp: INestApplication | null = null;
 let isShuttingDown = false;
 let cleanupDone = false;
+
+// Register custom protocol for deep linking (notification click-to-navigate)
+if (process.defaultApp) {
+  // Dev mode: register with the path to the electron binary
+  app.setAsDefaultProtocolClient('omniscribe', process.execPath, [process.argv[1]]);
+} else {
+  app.setAsDefaultProtocolClient('omniscribe');
+}
+
+// Set AppUserModelId for Windows notification center integration
+app.setAppUserModelId('com.omniscribe.desktop');
+
+// Ensure single instance — second instances forward protocol URLs to the first
+const gotTheLock = app.requestSingleInstanceLock();
+if (!gotTheLock) {
+  app.quit();
+}
 
 async function bootstrapNestApp(): Promise<void> {
   try {
@@ -70,6 +88,11 @@ async function shutdownNestApp(): Promise<void> {
   }
 }
 
+function setupAutoUpdater(window: BrowserWindow): void {
+  const emitter = nestApp?.get(EventEmitter2);
+  initializeAutoUpdater(window, process.env.NODE_ENV === 'development', emitter);
+}
+
 async function bootstrap(): Promise<void> {
   // Resolve the user's full shell PATH before any child processes are spawned.
   // macOS/Linux GUI apps inherit a minimal PATH that's missing dev tools.
@@ -88,7 +111,13 @@ async function bootstrap(): Promise<void> {
 
   await bootstrapNestApp();
   mainWindow = await createMainWindow();
-  initializeAutoUpdater(mainWindow, process.env.NODE_ENV === 'development');
+  setupAutoUpdater(mainWindow);
+
+  // Process any protocol URLs that arrived before the window was ready
+  for (const url of pendingProtocolUrls) {
+    handleProtocolUrl(url);
+  }
+  pendingProtocolUrls.length = 0;
 }
 
 // Global error handling
@@ -111,6 +140,84 @@ for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   });
 }
 
+/** Strict UUID v4 format regex (8-4-4-4-12) for validating sessionId and tabId */
+const UUID_RE = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
+
+/**
+ * Parse an omniscribe:// protocol URL and forward navigation data to the renderer.
+ * URL format: omniscribe://session/{sessionId}?tab={tabId}
+ *
+ * Since protocol URLs are externally controlled (any app can invoke omniscribe://),
+ * we validate all extracted IDs before forwarding to the renderer.
+ */
+function handleProtocolUrl(url: string): void {
+  logger.debug('Handling protocol URL');
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== 'omniscribe:') return;
+
+    if (parsed.hostname === 'session' || parsed.pathname.startsWith('//session/')) {
+      const sessionId = parsed.pathname.replace(/^\/\/session\//, '').replace(/^\//, '');
+
+      // Validate sessionId format (UUID)
+      if (!UUID_RE.test(sessionId)) {
+        logger.warn('Invalid sessionId format in protocol URL');
+        return;
+      }
+
+      const tabId = parsed.searchParams.get('tab') ?? undefined;
+      if (tabId && !UUID_RE.test(tabId)) {
+        logger.warn('Invalid tabId format in protocol URL');
+        return;
+      }
+
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        if (mainWindow.isMinimized()) mainWindow.restore();
+        mainWindow.focus();
+        mainWindow.webContents.send('notification:navigate', { sessionId, tabId });
+      }
+    }
+  } catch {
+    logger.warn('Failed to parse protocol URL');
+  }
+}
+
+// Windows/Linux: second-instance event fires when another instance is launched
+// (e.g., from a notification protocol click)
+app.on('second-instance', (_event, argv) => {
+  if (mainWindow) {
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.focus();
+  }
+
+  // On Windows, the protocol URL is in argv
+  const protocolUrl = argv.find(arg => arg.startsWith('omniscribe://'));
+  if (protocolUrl) {
+    handleProtocolUrl(protocolUrl);
+  }
+});
+
+// Buffer protocol URLs that arrive before the window is ready (macOS cold launch,
+// Windows/Linux cold launch via process.argv). Uses an array to handle multiple
+// URLs arriving before bootstrap completes.
+const pendingProtocolUrls: string[] = [];
+
+// Capture protocol URL from initial launch argv (Windows/Linux cold start)
+const launchProtocolUrl = process.argv.find(arg => arg.startsWith('omniscribe://'));
+if (launchProtocolUrl) {
+  pendingProtocolUrls.push(launchProtocolUrl);
+}
+
+// macOS: open-url event fires for protocol URLs
+app.on('open-url', (event, url) => {
+  event.preventDefault();
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    handleProtocolUrl(url);
+  } else {
+    pendingProtocolUrls.push(url);
+  }
+});
+
 app
   .whenReady()
   .then(bootstrap)
@@ -132,7 +239,7 @@ app.on('activate', async () => {
     // NestJS is already running, clean up old IPC handlers and recreate the window
     cleanupIpcHandlers();
     mainWindow = await createMainWindow();
-    initializeAutoUpdater(mainWindow, process.env.NODE_ENV === 'development');
+    setupAutoUpdater(mainWindow);
   }
 });
 
