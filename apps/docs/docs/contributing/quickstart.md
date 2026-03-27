@@ -14,7 +14,6 @@ Get Omniscribe running locally for development and contributing.
 - A C++ compiler for native modules (`node-pty`):
   - **macOS**: `xcode-select --install`
   - **Windows**: Visual Studio Build Tools
-  - **Linux**: `build-essential` package
 
 ## Setup
 
@@ -55,7 +54,6 @@ pnpm test             # Run all tests
 # Packaging
 pnpm package:mac      # Package for macOS
 pnpm package:win      # Package for Windows
-pnpm package:linux    # Package for Linux
 ```
 
 ## Project Configuration

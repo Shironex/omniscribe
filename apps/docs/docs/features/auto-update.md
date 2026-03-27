@@ -53,18 +53,4 @@ macOS requires apps to be code-signed for auto-install to work. Until Omniscribe
 Full auto-update support. Detection, download, and installation all work automatically. After downloading, click **Restart & Install** and the app will restart with the new version.
 
 </TabItem>
-<TabItem value="linux-appimage" label="Linux (AppImage)">
-
-Full auto-update support. The AppImage format supports in-place updates. After downloading, click **Restart & Install** to apply.
-
-</TabItem>
-<TabItem value="linux-deb" label="Linux (.deb)">
-
-Update detection works, but automatic installation is not supported for `.deb` packages. You will see a **Download from GitHub** button to download and install the new `.deb` manually.
-
-```bash
-sudo dpkg -i omniscribe_*.deb
-```
-
-</TabItem>
 </Tabs>

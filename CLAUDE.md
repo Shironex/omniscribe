@@ -41,7 +41,6 @@ pnpm --filter @omniscribe/desktop package
 # Platform-specific builds
 pnpm package:win    # Windows
 pnpm package:mac    # macOS
-pnpm package:linux  # Linux
 
 # Rebuild node-pty after electron update
 pnpm --filter @omniscribe/desktop rebuild

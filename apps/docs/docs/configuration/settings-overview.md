@@ -8,7 +8,7 @@ Open Settings with `Cmd/Ctrl + ,` or by clicking the gear icon in the top bar. O
 
 ## Opening Settings
 
-- **Keyboard shortcut:** `Cmd + ,` (macOS) or `Ctrl + ,` (Windows/Linux)
+- **Keyboard shortcut:** `Cmd + ,` (macOS) or `Ctrl + ,` (Windows)
 - **Mouse:** Click the gear icon in the top bar
 
 The modal displays a sidebar on the left with section names grouped into categories, and the active section's controls on the right.

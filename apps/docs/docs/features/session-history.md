@@ -8,7 +8,7 @@ Session History lets you browse, search, and resume past AI coding sessions. Eve
 
 ## Opening Session History
 
-Open the history panel with **Cmd+Shift+H** (macOS) or **Ctrl+Shift+H** (Windows/Linux). You can also access it from the top bar of the app.
+Open the history panel with **Cmd+Shift+H** (macOS) or **Ctrl+Shift+H** (Windows). You can also access it from the top bar of the app.
 
 The panel shows a chronological list of past sessions with the following information for each entry:
 

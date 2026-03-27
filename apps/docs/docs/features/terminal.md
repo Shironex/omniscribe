@@ -8,7 +8,7 @@ Every session in Omniscribe runs in a full terminal emulator built on xterm.js w
 
 ## Search
 
-Press **Cmd+F** (macOS) or **Ctrl+F** (Windows/Linux) to open the terminal search bar. Search supports two modes:
+Press **Cmd+F** (macOS) or **Ctrl+F** (Windows) to open the terminal search bar. Search supports two modes:
 
 - **Case-sensitive** — Toggle to match exact letter casing
 - **Regex** — Toggle to use regular expressions for pattern matching
@@ -17,8 +17,8 @@ The search highlights all matches in the terminal scrollback and lets you naviga
 
 ## Copy and Paste
 
-- **Copy** — **Cmd+C** (macOS) or **Ctrl+C** (Windows/Linux) copies the selected text. If nothing is selected, the shortcut sends `^C` (interrupt signal) to the running process instead.
-- **Paste** — **Cmd+V** (macOS) or **Ctrl+V** (Windows/Linux) pastes from the clipboard.
+- **Copy** — **Cmd+C** (macOS) or **Ctrl+C** (Windows) copies the selected text. If nothing is selected, the shortcut sends `^C` (interrupt signal) to the running process instead.
+- **Paste** — **Cmd+V** (macOS) or **Ctrl+V** (Windows) pastes from the clipboard.
 
 ## Clickable Links
 

@@ -10,7 +10,6 @@ Thank you for your interest in contributing to Omniscribe! This guide will help 
 - A C++ compiler for native modules (node-pty):
   - **Windows**: Visual Studio Build Tools
   - **macOS**: Xcode Command Line Tools (`xcode-select --install`)
-  - **Linux**: `build-essential` package
 
 ## Getting Started
 

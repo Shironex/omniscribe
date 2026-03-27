@@ -37,7 +37,7 @@ The terminal header includes a dropdown menu with quick actions for common git o
 
 ## Stopping Sessions
 
-- **All sessions** -- Press `Cmd+K` (macOS) or `Ctrl+K` (Windows/Linux) to kill every running session
+- **All sessions** -- Press `Cmd+K` (macOS) or `Ctrl+K` (Windows) to kill every running session
 - **Single session** -- Use the terminal header menu to stop an individual session
 
 :::warning

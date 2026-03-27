@@ -22,7 +22,6 @@
     "package": "pnpm build && electron-builder",
     "package:win": "pnpm build && electron-builder --win",
     "package:mac": "pnpm build && electron-builder --mac",
-    "package:linux": "pnpm build && electron-builder --linux",
     "postinstall": "electron-builder install-app-deps"
   },
   "dependencies": {

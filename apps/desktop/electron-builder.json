@@ -32,17 +32,11 @@
   "mac": {
     "category": "public.app-category.developer-tools",
     "icon": "resources/icon.png",
-    "target": ["dmg", "zip"]
+    "target": ["dmg"]
   },
   "win": {
     "icon": "resources/icon.ico",
     "target": ["nsis"]
-  },
-  "linux": {
-    "icon": "resources/icon.png",
-    "target": ["AppImage", "deb"],
-    "category": "Development",
-    "executableName": "omniscribe"
   },
   "nsis": {
     "oneClick": false,

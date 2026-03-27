@@ -11,10 +11,10 @@
 [![React](https://img.shields.io/badge/React-18.3-61DAFB?logo=react&logoColor=white)](https://react.dev/)
 [![NestJS](https://img.shields.io/badge/NestJS-10.4-E0234E?logo=nestjs&logoColor=white)](https://nestjs.com/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![OS](https://img.shields.io/badge/OS-Windows%20%7C%20macOS%20%7C%20Linux-0078D4)](https://github.com/Shironex/omniscribe)
+[![OS](https://img.shields.io/badge/OS-Windows%20%7C%20macOS-0078D4)](https://github.com/Shironex/omniscribe)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-**[Download Latest Release](https://github.com/Shironex/omniscribe/releases/latest)** | [macOS](https://github.com/Shironex/omniscribe/releases/latest) | [Windows](https://github.com/Shironex/omniscribe/releases/latest) | [Linux](https://github.com/Shironex/omniscribe/releases/latest)
+**[Download Latest Release](https://github.com/Shironex/omniscribe/releases/latest)** | [macOS](https://github.com/Shironex/omniscribe/releases/latest) | [Windows](https://github.com/Shironex/omniscribe/releases/latest)
 
 **[Beta Releases](https://github.com/Shironex/omniscribe/releases)** — opt into pre-release builds via Settings > About > Updates
 
@@ -76,7 +76,7 @@ Omniscribe is a desktop application for managing multiple AI coding assistant se
 | **MCP Integration**    | Configure Model Context Protocol servers per session                                                             |
 | **Hooks Integration**  | Automatic Claude Code hooks for instant session detection via SessionStart/SessionEnd events                     |
 | **Project Tabs**       | Manage multiple projects with persistent recent history                                                          |
-| **Cross-Platform**     | Native support for Windows, macOS, and Linux                                                                     |
+| **Cross-Platform**     | Native support for Windows and macOS                                                                             |
 
 ## Keyboard Shortcuts
 
@@ -119,7 +119,6 @@ pnpm build
 pnpm package          # Current platform
 pnpm package:win      # Windows
 pnpm package:mac      # macOS
-pnpm package:linux    # Linux
 ```
 
 ## Development

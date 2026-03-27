@@ -78,7 +78,6 @@ body:
       options:
         - Windows
         - macOS
-        - Linux
         - Other
     validations:
       required: false

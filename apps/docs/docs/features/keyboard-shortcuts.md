@@ -4,13 +4,13 @@ sidebar_position: 8
 
 # Keyboard Shortcuts
 
-A complete reference of keyboard shortcuts available in Omniscribe. macOS uses `Cmd`, while Windows and Linux use `Ctrl`.
+A complete reference of keyboard shortcuts available in Omniscribe. macOS uses `Cmd`, while Windows uses `Ctrl`.
 
 ## Global Shortcuts
 
 These work from anywhere in the app.
 
-| macOS                       | Windows / Linux               | Action                          |
+| macOS                       | Windows                       | Action                          |
 | --------------------------- | ----------------------------- | ------------------------------- |
 | `Cmd + K`                   | `Ctrl + K`                    | Stop all running sessions       |
 | `Cmd + ,`                   | `Ctrl + ,`                    | Toggle settings                 |
@@ -37,7 +37,7 @@ The slot position keys map left-to-right, top-to-bottom across the grid: `1` lau
 
 These work when a terminal pane is focused.
 
-| macOS                | Windows / Linux      | Action                                                    |
+| macOS                | Windows              | Action                                                    |
 | -------------------- | -------------------- | --------------------------------------------------------- |
 | `Cmd + F`            | `Ctrl + F`           | Toggle terminal search                                    |
 | `Cmd + L`            | `Ctrl + L`           | Clear focused terminal                                    |

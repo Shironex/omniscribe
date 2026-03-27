@@ -93,7 +93,7 @@ Common issues and their solutions. If your problem is not listed here, check the
 **Solutions:**
 
 - This was fixed in v0.6.0. If you are on an older version, update Omniscribe.
-- If the issue persists on v0.6.0+, ensure your shell profile (`~/.zshrc`, `~/.bashrc`, or `~/.bash_profile`) exports PATH correctly. Omniscribe reads the user's shell PATH on macOS and Linux.
+- If the issue persists on v0.6.0+, ensure your shell profile (`~/.zshrc`, `~/.bashrc`, or `~/.bash_profile`) exports PATH correctly. Omniscribe reads the user's shell PATH on macOS.
 
 ## Clipboard Copy Not Working on Windows
 

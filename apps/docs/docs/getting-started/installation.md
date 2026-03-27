@@ -15,7 +15,6 @@ Download the latest release of Omniscribe for your platform from [GitHub Release
 | -------- | --------------- | ------------- |
 | macOS    | 10.15 Catalina  | Apple Silicon |
 | Windows  | 10              | 64-bit        |
-| Linux    | Ubuntu 20.04+   | x86_64        |
 
 ## Download & Install
 
@@ -36,26 +35,6 @@ macOS builds currently target Apple Silicon (M1/M2/M3/M4). Intel Mac support is 
 1. Download the `.exe` installer from the [latest release](https://github.com/Shironex/omniscribe/releases/latest)
 2. Run the NSIS installer — you can choose a custom install directory during setup
 3. Launch Omniscribe from the Start Menu or desktop shortcut
-
-</TabItem>
-<TabItem value="linux" label="Linux">
-
-Two package formats are available:
-
-**AppImage (recommended)**
-
-```bash
-chmod +x Omniscribe-*.AppImage
-./Omniscribe-*.AppImage
-```
-
-**Debian package (.deb)**
-
-```bash
-sudo dpkg -i omniscribe_*.deb
-```
-
-Download either format from the [latest release](https://github.com/Shironex/omniscribe/releases/latest).
 
 </TabItem>
 </Tabs>

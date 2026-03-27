@@ -66,7 +66,7 @@ If you need to step away, your session history is preserved. Open the session hi
 
 ### Stop All Sessions at Once
 
-When you are done, press `Cmd+K` (macOS) or `Ctrl+K` (Windows/Linux) to stop all running sessions. This cleanly terminates all PTY processes.
+When you are done, press `Cmd+K` (macOS) or `Ctrl+K` (Windows) to stop all running sessions. This cleanly terminates all PTY processes.
 
 ### Watch for "Needs Input" Status
 

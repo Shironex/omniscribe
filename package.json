@@ -37,7 +37,6 @@
     "package": "pnpm build && pnpm --filter @omniscribe/desktop package",
     "package:win": "pnpm build && pnpm --filter @omniscribe/desktop package:win",
     "package:mac": "pnpm build && pnpm --filter @omniscribe/desktop package:mac",
-    "package:linux": "pnpm build && pnpm --filter @omniscribe/desktop package:linux",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
