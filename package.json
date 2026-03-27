@@ -13,9 +13,19 @@
     ],
     "overrides": {
       "undici": ">=7.24.0",
-      "flatted": ">=3.4.0",
-      "tar@>=7": ">=7.5.11",
-      "hono": ">=4.12.7"
+      "flatted": ">=3.4.2",
+      "tar@>=6": ">=7.5.11",
+      "hono": ">=4.12.7",
+      "handlebars": ">=4.7.9",
+      "multer": ">=2.1.1",
+      "serialize-javascript": ">=7.0.5",
+      "socket.io-parser": ">=4.2.6",
+      "path-to-regexp@<1": ">=0.1.13",
+      "picomatch": ">=4.0.4",
+      "file-type": ">=21.3.2",
+      "brace-expansion": ">=5.0.5",
+      "yaml@>=2": ">=2.8.3",
+      "@tootallnate/once": ">=3.0.1"
     }
   },
   "scripts": {
