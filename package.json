@@ -20,10 +20,10 @@
       "multer": ">=2.1.1",
       "serialize-javascript": ">=7.0.5",
       "socket.io-parser": ">=4.2.6",
-      "path-to-regexp@<1": ">=0.1.13",
+      "path-to-regexp@<1": ">=0.1.13 <0.2.0",
       "picomatch": ">=4.0.4",
       "file-type": ">=21.3.2",
-      "brace-expansion": ">=5.0.5",
+      "brace-expansion@>=5": ">=5.0.5",
       "yaml@>=2": ">=2.8.3",
       "@tootallnate/once": ">=3.0.1"
     }
