@@ -10,7 +10,7 @@ import {
   Flame,
   Flower2,
   Ghost,
-  Github,
+  Code,
   Heart,
   Leaf,
   Moon,
@@ -261,7 +261,7 @@ export const themeOptions: ReadonlyArray<ThemeOption> = [
   {
     value: 'github',
     label: 'GitHub',
-    Icon: Github,
+    Icon: Code,
     testId: 'github-mode-button',
     isDark: false,
     color: '#0969da',

@@ -3,7 +3,7 @@ import { createLogger } from '@omniscribe/shared';
 
 const logger = createLogger('GithubSection');
 import {
-  Github,
+  GitPullRequest,
   CheckCircle2,
   XCircle,
   RefreshCw,
@@ -53,7 +53,7 @@ export function GithubSection() {
   return (
     <div className="space-y-6">
       <SectionHeader
-        icon={Github}
+        icon={GitPullRequest}
         title="GitHub CLI"
         description="GitHub CLI (gh) for PRs, issues, and more"
       >
