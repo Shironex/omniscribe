@@ -1,5 +1,6 @@
 import { lazy, Suspense, useCallback, useMemo, useEffect } from 'react';
-import { TopBar } from '@/components/shared/TopBar';
+import { Sidebar } from '@/components/sidebar/Sidebar';
+import { ContentToolbar } from '@/components/sidebar/ContentToolbar';
 import { IdleLandingView } from '@/components/shared/IdleLandingView';
 import { WelcomeView } from '@/components/shared/WelcomeView';
 import { PersistentProjectGrid } from '@/components/terminal/PersistentProjectGrid';
@@ -163,6 +164,22 @@ function App() {
     handleSelectTabByIndex,
   });
 
+  // Active project name for toolbar breadcrumb
+  const activeProjectName = useMemo(() => {
+    if (!activeTabId) return null;
+    const tab = tabs.find(t => t.id === activeTabId);
+    return tab?.label ?? null;
+  }, [tabs, activeTabId]);
+
+  // Trigger terminal refit on sidebar transition end
+  const handleSidebarTransitionEnd = useCallback(() => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        window.dispatchEvent(new CustomEvent('terminal-refit-all'));
+      });
+    });
+  }, []);
+
   // Trigger refit when switching tabs so terminals recalculate dimensions.
   useEffect(() => {
     if (activeProjectPath) {
@@ -179,11 +196,12 @@ function App() {
     <div
       data-testid="app-ready"
       className={cn(
-        'h-screen w-screen bg-background text-foreground flex flex-col overflow-hidden',
+        'h-screen w-screen bg-background text-foreground flex flex-row overflow-hidden',
         IS_ELECTRON && 'rounded-t-[10px]'
       )}
     >
-      <TopBar
+      {/* Left sidebar */}
+      <Sidebar
         tabs={tabs}
         activeTabId={activeTabId}
         onSelectTab={handleSelectTab}
@@ -191,77 +209,88 @@ function App() {
         onNewTab={handleNewTab}
         onReorderTabs={handleReorderTabs}
         currentBranch={currentBranch}
-        statusCounts={statusCounts}
-        onAddSlot={handleAddSession}
-        hasActiveProject={!!activeProjectPath}
-        sessionCount={terminalSessions.length}
-        preLaunchSlotCount={preLaunchSlots.length}
-        onStopAll={handleStopAll}
-        onLaunch={handleLaunch}
-        canLaunch={canLaunch}
-        isLaunching={isLaunching}
-        hasActiveSessions={hasActiveSessions}
+        onTransitionEnd={handleSidebarTransitionEnd}
       />
 
-      <main className="flex-1 flex overflow-hidden bg-background">
-        {/* Main content area — relative container for stacked persistent grids */}
-        <div className="flex-1 min-w-0 relative">
-          {/* Persistent terminal grids for all projects with sessions */}
-          {projectPathsWithGrids.map(projectPath => {
-            const isActiveGrid = projectPath === activeProjectPath;
-            return (
-              <PersistentProjectGrid
-                key={projectPath}
-                projectPath={projectPath}
-                isActive={isActiveGrid}
-                preLaunchSlots={isActiveGrid ? preLaunchSlots : undefined}
-                launchingSlotIds={isActiveGrid ? launchingSlotIds : undefined}
-                branches={isActiveGrid ? branches : undefined}
-                worktreeMode={isActiveGrid ? worktreeMode : undefined}
-                quickActions={isActiveGrid ? quickActionsForTerminal : undefined}
-                onAddSlot={handleAddSession}
-                onOpenLaunchModal={openLaunchModal}
-                onRemoveSlot={handleRemoveSlot}
-                onUpdateSlot={handleUpdateSlot}
-                onLaunch={handleLaunchSlot}
-                onKill={handleKillSession}
-                onSessionClose={handleSessionClose}
-                onQuickAction={handleQuickAction}
-                onResume={handleResume}
-                onOpenInEditor={handleOpenInEditor}
-              />
-            );
-          })}
+      {/* Right content area */}
+      <div className="flex-1 flex flex-col min-w-0">
+        <ContentToolbar
+          activeProjectName={activeProjectName}
+          statusCounts={statusCounts}
+          hasActiveProject={!!activeProjectPath}
+          sessionCount={terminalSessions.length}
+          preLaunchSlotCount={preLaunchSlots.length}
+          onAddSlot={handleAddSession}
+          onStopAll={handleStopAll}
+          onLaunch={handleLaunch}
+          canLaunch={canLaunch}
+          isLaunching={isLaunching}
+          hasActiveSessions={hasActiveSessions}
+        />
 
-          {/* Overlay views shown on top of grids when appropriate */}
-          {activeProjectPath ? (
-            !hasContent && (
-              <div className="absolute inset-0 z-20">
-                <IdleLandingView
-                  onAddSession={handleAddSession}
+        <main className="flex-1 flex overflow-hidden bg-background">
+          {/* Main content area — relative container for stacked persistent grids */}
+          <div className="flex-1 min-w-0 relative">
+            {/* Persistent terminal grids for all projects with sessions */}
+            {projectPathsWithGrids.map(projectPath => {
+              const isActiveGrid = projectPath === activeProjectPath;
+              return (
+                <PersistentProjectGrid
+                  key={projectPath}
+                  projectPath={projectPath}
+                  isActive={isActiveGrid}
+                  preLaunchSlots={isActiveGrid ? preLaunchSlots : undefined}
+                  launchingSlotIds={isActiveGrid ? launchingSlotIds : undefined}
+                  branches={isActiveGrid ? branches : undefined}
+                  worktreeMode={isActiveGrid ? worktreeMode : undefined}
+                  quickActions={isActiveGrid ? quickActionsForTerminal : undefined}
+                  onAddSlot={handleAddSession}
                   onOpenLaunchModal={openLaunchModal}
+                  onRemoveSlot={handleRemoveSlot}
+                  onUpdateSlot={handleUpdateSlot}
+                  onLaunch={handleLaunchSlot}
+                  onKill={handleKillSession}
+                  onSessionClose={handleSessionClose}
+                  onQuickAction={handleQuickAction}
+                  onResume={handleResume}
+                  onOpenInEditor={handleOpenInEditor}
                 />
-              </div>
-            )
-          ) : (
-            <WelcomeView onOpenProject={handleSelectDirectory} onSelectProject={handleSelectTab} />
+              );
+            })}
+
+            {/* Overlay views shown on top of grids when appropriate */}
+            {activeProjectPath ? (
+              !hasContent && (
+                <div className="absolute inset-0 z-20">
+                  <IdleLandingView
+                    onAddSession={handleAddSession}
+                    onOpenLaunchModal={openLaunchModal}
+                  />
+                </div>
+              )
+            ) : (
+              <WelcomeView
+                onOpenProject={handleSelectDirectory}
+                onSelectProject={handleSelectTab}
+              />
+            )}
+          </div>
+
+          {/* Session History Panel */}
+          {isHistoryOpen && (
+            <Suspense fallback={null}>
+              <SessionHistoryPanel projectPath={activeProjectPath} currentBranch={currentBranch} />
+            </Suspense>
           )}
-        </div>
 
-        {/* Session History Panel */}
-        {isHistoryOpen && (
-          <Suspense fallback={null}>
-            <SessionHistoryPanel projectPath={activeProjectPath} currentBranch={currentBranch} />
-          </Suspense>
-        )}
-
-        {/* Diff Panel */}
-        {isDiffPanelOpen && (
-          <Suspense fallback={null}>
-            <DiffPanel />
-          </Suspense>
-        )}
-      </main>
+          {/* Diff Panel */}
+          {isDiffPanelOpen && (
+            <Suspense fallback={null}>
+              <DiffPanel />
+            </Suspense>
+          )}
+        </main>
+      </div>
 
       {isSettingsOpen && (
         <SettingsModalShell>
