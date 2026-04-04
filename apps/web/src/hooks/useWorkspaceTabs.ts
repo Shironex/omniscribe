@@ -4,7 +4,14 @@ import { arrayMove } from '@dnd-kit/sortable';
 import { createLogger, mapSessionStatus, type UISessionStatus } from '@omniscribe/shared';
 import { useWorkspaceStore, type ProjectTab } from '@/stores/useWorkspaceStore';
 import { useSessionStore } from '@/stores/useSessionStore';
-import type { Tab } from '@/components/shared/TopBar';
+import type { SessionStatus } from '@/components/shared/StatusLegend';
+
+export interface Tab {
+  id: string;
+  label: string;
+  projectPath: string;
+  status?: SessionStatus;
+}
 
 const logger = createLogger('WorkspaceTabs');
 
@@ -68,7 +75,7 @@ export function useWorkspaceTabs(): UseWorkspaceTabsReturn {
     return workspaceTabs.map(tab => {
       const projectSessions = sessions.filter(s => s.projectPath === tab.projectPath);
       if (projectSessions.length === 0) {
-        return { id: tab.id, label: tab.name, status: undefined };
+        return { id: tab.id, label: tab.name, projectPath: tab.projectPath, status: undefined };
       }
 
       // Pick the highest-priority status across all sessions
@@ -80,7 +87,7 @@ export function useWorkspaceTabs(): UseWorkspaceTabsReturn {
         }
       }
 
-      return { id: tab.id, label: tab.name, status: topStatus };
+      return { id: tab.id, label: tab.name, projectPath: tab.projectPath, status: topStatus };
     });
   }, [workspaceTabs, sessions]);
 

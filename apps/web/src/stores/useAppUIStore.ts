@@ -6,6 +6,8 @@ interface AppUIState {
   isLaunchModalOpen: boolean;
   isDiffPanelOpen: boolean;
   diffPanelSessionId: string | null;
+  isSidebarCollapsed: boolean;
+  expandedProjects: string[];
 }
 
 interface AppUIActions {
@@ -17,6 +19,9 @@ interface AppUIActions {
   openDiffPanel: (sessionId: string) => void;
   closeDiffPanel: () => void;
   toggleDiffPanel: (sessionId: string) => void;
+  toggleSidebar: () => void;
+  setSidebarCollapsed: (collapsed: boolean) => void;
+  toggleProjectExpanded: (projectPath: string) => void;
 }
 
 type AppUIStore = AppUIState & AppUIActions;
@@ -28,6 +33,8 @@ export const useAppUIStore = create<AppUIStore>()(
       isLaunchModalOpen: false,
       isDiffPanelOpen: false,
       diffPanelSessionId: null,
+      isSidebarCollapsed: false,
+      expandedProjects: [],
 
       toggleHistory: () => {
         set(
@@ -92,6 +99,33 @@ export const useAppUIStore = create<AppUIStore>()(
           'appUI/toggleDiffPanel'
         );
       },
+
+      toggleSidebar: () => {
+        set(
+          state => ({ isSidebarCollapsed: !state.isSidebarCollapsed }),
+          undefined,
+          'appUI/toggleSidebar'
+        );
+      },
+
+      setSidebarCollapsed: (collapsed: boolean) => {
+        set({ isSidebarCollapsed: collapsed }, undefined, 'appUI/setSidebarCollapsed');
+      },
+
+      toggleProjectExpanded: (projectPath: string) => {
+        set(
+          state => {
+            const isExpanded = state.expandedProjects.includes(projectPath);
+            return {
+              expandedProjects: isExpanded
+                ? state.expandedProjects.filter(p => p !== projectPath)
+                : [...state.expandedProjects, projectPath],
+            };
+          },
+          undefined,
+          'appUI/toggleProjectExpanded'
+        );
+      },
     }),
     { name: 'appUI' }
   )
@@ -101,3 +135,5 @@ export const selectIsHistoryOpen = (state: AppUIStore) => state.isHistoryOpen;
 export const selectIsLaunchModalOpen = (state: AppUIStore) => state.isLaunchModalOpen;
 export const selectIsDiffPanelOpen = (state: AppUIStore) => state.isDiffPanelOpen;
 export const selectDiffPanelSessionId = (state: AppUIStore) => state.diffPanelSessionId;
+export const selectIsSidebarCollapsed = (state: AppUIStore) => state.isSidebarCollapsed;
+export const selectExpandedProjects = (state: AppUIStore) => state.expandedProjects;

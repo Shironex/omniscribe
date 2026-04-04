@@ -20,15 +20,15 @@
     "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\""
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.27.1",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "@omniscribe/shared": "workspace:*",
     "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/jest": "^30.0.0",
-    "@types/node": "^25.3.5",
-    "esbuild": "^0.27.3",
-    "jest": "^30.2.0",
+    "@types/node": "^25.5.0",
+    "esbuild": "^0.27.4",
+    "jest": "^30.3.0",
     "ts-jest": "^29.4.6",
     "typescript": "^5.9.3"
   },

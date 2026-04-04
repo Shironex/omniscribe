@@ -12,16 +12,13 @@ import {
 } from '@dnd-kit/core';
 import { SortableContext, horizontalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { StatusDot, type SessionStatus } from './StatusLegend';
+import { StatusDot } from './StatusLegend';
+import type { Tab } from '@/hooks/useWorkspaceTabs';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
-export interface Tab {
-  id: string;
-  label: string;
-  status?: SessionStatus;
-}
+export type { Tab };
 
 interface ProjectTabsProps {
   tabs: Tab[];

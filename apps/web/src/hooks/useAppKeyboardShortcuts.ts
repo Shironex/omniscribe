@@ -90,6 +90,13 @@ export function useAppKeyboardShortcuts({
         return;
       }
 
+      // Cmd/Ctrl + B - Toggle sidebar (works even when typing)
+      if (isMod && key === 'b' && !e.shiftKey) {
+        e.preventDefault();
+        useAppUIStore.getState().toggleSidebar();
+        return;
+      }
+
       // Cmd/Ctrl + W - Close current tab (works even when typing)
       if (isMod && key === 'w' && !e.shiftKey) {
         e.preventDefault();

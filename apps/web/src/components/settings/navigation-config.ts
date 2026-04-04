@@ -4,7 +4,7 @@ import {
   Server,
   Info,
   GitBranch,
-  Github,
+  GitPullRequest,
   Monitor,
   TerminalSquare,
   Zap,
@@ -32,7 +32,7 @@ export const CORE_NAV_GROUPS: NavigationGroup[] = [
   {
     label: 'Integrations',
     items: [
-      { id: 'github', label: 'GitHub CLI', icon: Github },
+      { id: 'github', label: 'GitHub CLI', icon: GitPullRequest },
       { id: 'mcp', label: 'MCP Servers', icon: Server },
       { id: 'marketplace', label: 'Extensions', icon: Puzzle },
     ],
