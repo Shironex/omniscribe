@@ -1,0 +1,57 @@
+---
+title: Auto-Update
+description: Automatic update checking with manual download and install control.
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+import { Tabs, Tab } from 'fumadocs-ui/components/tabs';
+
+Omniscribe checks for new versions automatically so you always know when an update is available.
+
+## How It Works
+
+The app checks for updates on startup and every 60 minutes while running. Updates are **never downloaded automatically** -- you choose when to download and install.
+
+The update flow:
+
+1. A notification appears when a new version is available
+2. Click **Download** to fetch the update in the background
+3. Once downloaded, click **Restart & Install** to apply immediately, or the update installs automatically the next time you quit the app
+
+## Update Channels
+
+Omniscribe offers two update channels:
+
+| Channel              | What you get                                              |
+| -------------------- | --------------------------------------------------------- |
+| **Stable** (default) | Production releases only                                  |
+| **Beta**             | Pre-release versions with new features (may contain bugs) |
+
+Switch channels in **Settings > General > Updates**.
+
+<Callout>
+  Switching from beta back to stable may offer a "downgrade" to the latest stable version if the
+  current beta is newer.
+</Callout>
+
+## Platform Behavior
+
+<Tabs items={["macOS", "Windows"]}>
+<Tab value="macOS">
+
+Update detection and download work, but **automatic installation is not available** because the app is not code-signed.
+
+Instead of "Restart & Install", you will see a **Download from GitHub** button. Click it to download the latest `.dmg` from GitHub Releases and install it manually.
+
+<Callout type="warn">
+  macOS requires apps to be code-signed for auto-install to work. Until Omniscribe is signed with an
+  Apple Developer certificate, macOS users need to install updates manually.
+</Callout>
+
+</Tab>
+<Tab value="Windows">
+
+Full auto-update support. Detection, download, and installation all work automatically. After downloading, click **Restart & Install** and the app will restart with the new version.
+
+</Tab>
+</Tabs>

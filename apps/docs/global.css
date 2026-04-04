@@ -1,0 +1,91 @@
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap');
+@import 'tailwindcss';
+@import 'fumadocs-ui/css/neutral.css';
+@import 'fumadocs-ui/css/preset.css';
+
+:root {
+  --fd-color-fd-primary: 262.1 83.3% 57.8%;
+  --fd-sidebar-width: 240px;
+}
+
+body {
+  font-family:
+    Geist,
+    system-ui,
+    -apple-system,
+    sans-serif;
+}
+
+/* ── Border Beam — spinning conic gradient ──────────────────────── */
+@keyframes border-beam-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── Shimmer Button Animation ────────────────────────────────────── */
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* ── Grid Cell Pulse ─────────────────────────────────────────────── */
+@keyframes grid-cell-pulse {
+  0% {
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* ── Terminal Cursor Blink ───────────────────────────────────────── */
+@keyframes terminal-cursor {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+.animate-cursor {
+  animation: terminal-cursor 1.2s step-end infinite;
+}
+
+/* ── Retro Perspective Grid (CTA background) ─────────────────────── */
+.retro-grid {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  opacity: 0.25;
+}
+
+.retro-grid::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 200%;
+  height: 80%;
+  transform: translateX(-50%) perspective(600px) rotateX(55deg);
+  transform-origin: bottom center;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: 60px 40px;
+  mask-image: linear-gradient(to top, white 20%, transparent 90%);
+  -webkit-mask-image: linear-gradient(to top, white 20%, transparent 90%);
+}

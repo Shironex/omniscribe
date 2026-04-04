@@ -1,0 +1,88 @@
+---
+title: Git Worktrees
+description: Isolate AI sessions with git worktrees so each works on its own branch without conflicts.
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+Git worktrees let you check out multiple branches simultaneously in separate directories. Omniscribe uses this to give each AI session its own isolated working copy, so sessions working on different branches never interfere with each other.
+
+## Why Worktrees Matter
+
+Without worktrees, all sessions share the same project directory. If two sessions try to work on different branches, they would conflict — one switching branches would break the other mid-task.
+
+With worktrees, each session gets its own directory with its own checked-out branch. The sessions can run in parallel without any coordination, and changes in one worktree do not affect another.
+
+## Worktree Modes
+
+Configure the worktree mode in **Settings > Worktrees**. There are three options:
+
+### Branch Mode (Default)
+
+A worktree is created only when you select a branch that differs from the currently checked-out branch in the pre-launch slot. If you launch a session on the current branch, it runs directly in the project directory.
+
+This is the most practical option for most workflows. You get isolation when you need it and avoid unnecessary worktrees when you don't.
+
+<Callout title="Tip">
+  Branch mode is recommended for most users. It provides isolation when working across branches
+  while keeping things simple for single-branch work.
+</Callout>
+
+### Always Mode
+
+Every new session gets its own worktree, regardless of which branch is selected. Each worktree directory is named with a random suffix to ensure uniqueness.
+
+Use this when you want full isolation between all sessions, even those on the same branch. This prevents any possibility of file conflicts between concurrent sessions.
+
+### Never Mode
+
+No worktrees are created. All sessions work directly in the main project directory. The branch selector is hidden in the pre-launch slots since branch switching is not supported in this mode.
+
+Use this only if your project does not use git or you are running sessions that do not modify files.
+
+## Storage Location
+
+Configure where worktree directories are stored in **Settings > Worktrees**:
+
+### Project Storage (Default)
+
+Worktrees are stored in a `.worktrees/` directory inside your project:
+
+```
+your-project/
+  .worktrees/
+    feature-auth-a1b2c3/
+    fix-typo-d4e5f6/
+  src/
+  package.json
+```
+
+Add `.worktrees/` to your `.gitignore` to keep them out of version control.
+
+### Central Storage
+
+Worktrees are stored in `~/.omniscribe/worktrees/`, outside of your project directory entirely. This keeps your project tree clean and avoids any risk of accidentally committing worktree directories.
+
+```
+~/.omniscribe/worktrees/
+  your-project/
+    feature-auth-a1b2c3/
+    fix-typo-d4e5f6/
+```
+
+## Branch Selector
+
+When worktree mode is set to **Branch** or **Always**, each pre-launch slot shows a branch selector. Pick the branch you want that session to work on before launching. Omniscribe creates the worktree automatically when the session starts.
+
+When worktree mode is **Never**, the branch selector is hidden.
+
+## Auto-Cleanup
+
+<Callout type="warn" title="Experimental">
+  Auto-cleanup is experimental. If a session ends unexpectedly, the worktree may be cleaned up
+  before you have a chance to inspect its changes.
+</Callout>
+
+Enable **Auto-Cleanup** in **Settings > Worktrees** to automatically remove worktree directories when their associated sessions end. This prevents worktrees from accumulating on disk over time.
+
+When disabled, worktrees persist after sessions end. You can manually delete them from the file system or use `git worktree remove` from the terminal.

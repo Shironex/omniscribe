@@ -11,7 +11,7 @@ jobs:
   build:
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
 
     env:
@@ -55,11 +55,6 @@ jobs:
         shell: bash
         run: pnpm build
 
-      - name: Install RPM build tools (Linux)
-        if: matrix.os == 'ubuntu-latest'
-        shell: bash
-        run: sudo apt-get update && sudo apt-get install -y rpm
-
       - name: Build Electron app (macOS)
         if: matrix.os == 'macos-latest'
         shell: bash
@@ -74,12 +69,6 @@ jobs:
         working-directory: apps/desktop
         run: pnpm exec electron-builder --win --publish never -c.publish.channel=${{ steps.version.outputs.channel }}
 
-      - name: Build Electron app (Linux)
-        if: matrix.os == 'ubuntu-latest'
-        shell: bash
-        working-directory: apps/desktop
-        run: pnpm exec electron-builder --linux --publish never -c.publish.channel=${{ steps.version.outputs.channel }}
-
       - name: Upload macOS artifacts
         if: matrix.os == 'macos-latest'
         uses: actions/upload-artifact@v7
@@ -87,7 +76,6 @@ jobs:
           name: macos-builds
           path: |
             apps/desktop/release/*.dmg
-            apps/desktop/release/*.zip
             apps/desktop/release/*-mac.yml
           if-no-files-found: error
           retention-days: 30
@@ -95,24 +83,12 @@ jobs:
       - name: Upload Windows artifacts
         if: matrix.os == 'windows-latest'
         uses: actions/upload-artifact@v7
+        # Windows emits un-prefixed YML files (latest.yml, beta.yml), unlike macOS
         with:
           name: windows-builds
           path: |
             apps/desktop/release/*.exe
-            # Windows emits un-prefixed YML (latest.yml, beta.yml) unlike macOS/Linux
             apps/desktop/release/*.yml
-          if-no-files-found: error
-          retention-days: 30
-
-      - name: Upload Linux artifacts
-        if: matrix.os == 'ubuntu-latest'
-        uses: actions/upload-artifact@v7
-        with:
-          name: linux-builds
-          path: |
-            apps/desktop/release/*.AppImage
-            apps/desktop/release/*.deb
-            apps/desktop/release/*-linux.yml
           if-no-files-found: error
           retention-days: 30
 
@@ -134,25 +110,15 @@ jobs:
           name: windows-builds
           path: artifacts/windows-builds
 
-      - name: Download Linux artifacts
-        uses: actions/download-artifact@v8
-        with:
-          name: linux-builds
-          path: artifacts/linux-builds
-
       - name: Upload to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           fail_on_unmatched_files: true
           files: |
             artifacts/macos-builds/*.dmg
-            artifacts/macos-builds/*.zip
             artifacts/macos-builds/*-mac.yml
             artifacts/windows-builds/*.exe
             artifacts/windows-builds/*.yml
-            artifacts/linux-builds/*.AppImage
-            artifacts/linux-builds/*.deb
-            artifacts/linux-builds/*-linux.yml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

@@ -37,16 +37,15 @@
     "package": "pnpm build && pnpm --filter @omniscribe/desktop package",
     "package:win": "pnpm build && pnpm --filter @omniscribe/desktop package:win",
     "package:mac": "pnpm build && pnpm --filter @omniscribe/desktop package:mac",
-    "package:linux": "pnpm build && pnpm --filter @omniscribe/desktop package:linux",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "pnpm build:packages && pnpm -r run test",
     "test:cov": "pnpm build:packages && pnpm -r run test:cov",
     "typecheck": "pnpm build:packages && pnpm --filter @omniscribe/web typecheck && pnpm --filter @omniscribe/mcp-server typecheck && pnpm --filter @omniscribe/desktop typecheck",
-    "docs:dev": "pnpm --filter @omniscribe/docs start",
+    "docs:dev": "pnpm --filter @omniscribe/docs dev",
     "docs:build": "pnpm build:packages && pnpm --filter @omniscribe/docs build",
-    "docs:serve": "pnpm --filter @omniscribe/docs serve",
+    "docs:serve": "pnpm --filter @omniscribe/docs start",
     "prepare": "husky"
   },
   "engines": {

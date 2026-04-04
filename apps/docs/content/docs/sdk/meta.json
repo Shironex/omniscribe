@@ -1,0 +1,5 @@
+{
+  "title": "Plugin SDK",
+  "root": true,
+  "pages": ["overview", "plugin-anatomy", "creating-a-provider"]
+}
