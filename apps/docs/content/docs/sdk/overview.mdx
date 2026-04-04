@@ -1,0 +1,95 @@
+---
+title: Plugin System Overview
+description: How Omniscribe's plugin system works for adding new AI coding assistant providers.
+---
+
+Omniscribe's plugin system allows you to add support for new AI coding assistants. Each provider plugin teaches Omniscribe how to detect, launch, and interact with a specific CLI tool.
+
+## Plugin Types
+
+| Type       | Description                                                    |
+| ---------- | -------------------------------------------------------------- |
+| `provider` | Backend logic: CLI detection, command building, status parsing |
+| `frontend` | UI contributions: settings sections, themes, status renderers  |
+| `both`     | Combined provider + frontend in a single package               |
+
+Most provider plugins use type `both` since they need both backend logic and custom UI.
+
+## Architecture: Backend + Frontend Split
+
+A plugin has two independent lifecycles:
+
+### Backend (Electron Main Process)
+
+The backend plugin class extends `BaseProviderPlugin` and runs inside NestJS. It handles:
+
+- **CLI detection** — Is the AI tool installed? What version? Is the user authenticated?
+- **Command building** — What shell command starts a session? How to resume/fork?
+- **Status parsing** — Parse terminal output to detect session state (idle, working, needs input)
+- **Usage data** — Fetch and format API usage metrics (optional)
+- **Session history** — Read past session records from disk (optional)
+
+### Frontend (React Renderer)
+
+The frontend activation function runs in the React app and registers UI contributions:
+
+- **Settings sections** — Custom configuration panels in the settings page
+- **Status renderers** — Provider-specific icons and status indicators
+- **Usage panels** — Custom usage data visualization
+- **Themes** — Custom color themes
+- **Terminal actions** — Buttons in the terminal header
+- **Menu items** — Entries in action bar and "more" menus
+
+### Lifecycle Flow
+
+```
+App Startup
+  → Plugin loader reads manifest from package.json
+  → Validates manifest, instantiates plugin class
+  → Runs detectCli() to check if the AI tool is available
+  → Calls activate(context) on the backend plugin
+
+Frontend Ready (WebSocket connected)
+  → Core sends plugin list to frontend
+  → Frontend dynamically imports the plugin's frontend module
+  → Calls frontendActivate(context) with registration methods
+  → Plugin registers UI contributions via context.registerXxx()
+```
+
+## Capabilities System
+
+Provider plugins declare their optional features via `capabilities`:
+
+```typescript
+get capabilities(): ProviderCapabilities {
+  return {
+    supportsMcp: true,          // Can provide MCP config
+    supportsUsage: true,        // Can fetch usage data
+    supportsSessionHistory: false, // Can read past sessions
+    supportedOperations: new Set(['resume', 'continue']),
+  };
+}
+```
+
+The core only calls optional methods when their corresponding capability is enabled. This allows minimal providers to implement just 3 methods while full-featured providers can implement all 10+.
+
+## Plugin SDK (`@omniscribe/ui`)
+
+Plugin frontend code imports UI components from `@omniscribe/ui`, which provides access to the same design system as the core app:
+
+- **UI components** — Button, Card, Badge, Tooltip, Popover, Dialog, Select, Tabs, etc.
+- **Utilities** — `cn()` for class name merging
+- **Socket helpers** — `emitAsync()`, `getSocket()` for backend communication
+- **Shared components** — `UsageCard`, `ProgressBar`
+
+## Reference Implementations
+
+Two complete reference plugins ship with Omniscribe:
+
+- **[provider-claude](https://github.com/Shironex/omniscribe/tree/master/packages/plugins/provider-claude)** — Full-featured Claude Code integration (all capabilities enabled)
+- **[provider-codex](https://github.com/Shironex/omniscribe/tree/master/packages/plugins/provider-codex)** — OpenAI Codex integration (simpler, no session history)
+
+## Next Steps
+
+- [Plugin Anatomy](/docs/sdk/plugin-anatomy) — Every file in a plugin, explained
+- [Creating a Provider Plugin](/docs/sdk/creating-a-provider) — Step-by-step guide

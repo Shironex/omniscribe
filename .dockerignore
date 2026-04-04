@@ -1,0 +1,35 @@
+# Git
+.git
+.gitignore
+
+# Node modules (reinstalled in Docker)
+node_modules
+**/node_modules
+
+# Build outputs
+apps/desktop/dist
+apps/desktop/out
+apps/web/dist
+apps/docs/.next
+apps/docs/build
+
+# IDE / OS
+.vscode
+.idea
+*.swp
+.DS_Store
+
+# Unnecessary apps for docs build
+apps/desktop/src
+apps/web/src
+apps/mcp-server
+
+# Test files
+**/__tests__
+**/test
+**/*.test.*
+**/*.spec.*
+
+# Planning / dev files
+.planning
+.claude

@@ -1,32 +1,32 @@
 {
   "name": "@omniscribe/docs",
-  "version": "1.1.0-beta.1",
+  "version": "1.4.0",
   "private": true,
   "scripts": {
-    "start": "docusaurus start",
-    "build": "docusaurus build",
-    "serve": "docusaurus serve",
-    "clear": "docusaurus clear"
+    "dev": "next dev --turbopack",
+    "build": "pnpm generate:api && next build",
+    "generate:api": "typedoc && node scripts/fix-api-meta.mjs",
+    "start": "next start"
   },
   "dependencies": {
-    "@docusaurus/core": "^3.9.2",
-    "@docusaurus/plugin-content-docs": "^3.9.2",
-    "@docusaurus/preset-classic": "^3.9.2",
-    "@easyops-cn/docusaurus-search-local": "^0.55.1",
-    "docusaurus-plugin-llms": "^0.3.0",
-    "docusaurus-plugin-typedoc": "^1.4.2",
-    "prism-react-renderer": "^2.4.1",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "typedoc": "^0.28.17",
-    "typedoc-plugin-markdown": "^4.10.0"
+    "fumadocs-ui": "^16.7.0",
+    "fumadocs-core": "^16.7.0",
+    "fumadocs-mdx": "^14.2.0",
+    "@types/mdx": "^2.0.13",
+    "next": "^16.0.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "framer-motion": "^12.9.0"
   },
   "devDependencies": {
-    "@docusaurus/module-type-aliases": "^3.9.2",
-    "@docusaurus/types": "^3.9.2",
-    "typescript": "^5.9.3"
-  },
-  "engines": {
-    "node": ">=22.0.0"
+    "typescript": "^5.8.3",
+    "tailwindcss": "^4.1.0",
+    "@tailwindcss/postcss": "^4.1.0",
+    "postcss": "^8.5.0",
+    "@types/node": "^22.15.0",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "typedoc": "^0.28.0",
+    "typedoc-plugin-markdown": "^4.10.0"
   }
 }

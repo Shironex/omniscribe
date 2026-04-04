@@ -1,0 +1,41 @@
+---
+title: Quick Actions
+description: One-click shortcuts for common git operations on AI session terminals.
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+Quick Actions are shortcuts for common git operations that appear on AI session terminals. Instead of typing out git commands manually, you can trigger them with a single click.
+
+## Available Actions
+
+Quick Actions include common git workflow commands such as **Commit & Push** and other frequently used operations. They are contextual to the session's working directory, so the commands run against the correct repository and branch.
+
+<Callout>
+Quick Actions only appear on AI session terminals, not on plain terminals. They are designed to complement AI-assisted workflows where you want to quickly commit or push changes the AI has made.
+</Callout>
+
+## Accessing Quick Actions
+
+There are two ways to trigger Quick Actions:
+
+- **Action pills** — Small buttons displayed below the terminal header. Click any pill to trigger that action.
+- **Dropdown menu** — Open the terminal's dropdown menu (the three-dot icon in the header) to see the full list of available actions.
+
+## Execution Modes
+
+Configure how Quick Actions behave in **Settings > Quick Actions**:
+
+### Paste Only (Default)
+
+The command is pasted into the terminal but not executed. You can review the command, modify it if needed, and press Enter to run it.
+
+This is the safer option — you always see exactly what will run before it happens.
+
+### Execute
+
+The command is pasted into the terminal and immediately executed. This is faster for routine operations where you trust the command and do not need to review it.
+
+<Callout title="Tip">
+Start with **Paste Only** mode until you are comfortable with the commands Quick Actions generate. You can switch to **Execute** mode later for faster workflows.
+</Callout>

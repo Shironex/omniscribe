@@ -1,0 +1,15 @@
+{
+  "title": "Features",
+  "pages": [
+    "multi-session-grid",
+    "session-history",
+    "git-worktrees",
+    "quick-actions",
+    "terminal",
+    "mcp-integration",
+    "themes",
+    "keyboard-shortcuts",
+    "auto-update",
+    "project-tabs"
+  ]
+}

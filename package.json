@@ -43,9 +43,9 @@
     "test": "pnpm build:packages && pnpm -r run test",
     "test:cov": "pnpm build:packages && pnpm -r run test:cov",
     "typecheck": "pnpm build:packages && pnpm --filter @omniscribe/web typecheck && pnpm --filter @omniscribe/mcp-server typecheck && pnpm --filter @omniscribe/desktop typecheck",
-    "docs:dev": "pnpm --filter @omniscribe/docs start",
+    "docs:dev": "pnpm --filter @omniscribe/docs dev",
     "docs:build": "pnpm build:packages && pnpm --filter @omniscribe/docs build",
-    "docs:serve": "pnpm --filter @omniscribe/docs serve",
+    "docs:serve": "pnpm --filter @omniscribe/docs start",
     "prepare": "husky"
   },
   "engines": {

@@ -1,10 +1,10 @@
 # Documentation (generated/research - root only)
 /docs/
 
-# Docusaurus
-apps/docs/.docusaurus/
-apps/docs/build/
-apps/docs/docs/api/
+# Fumadocs
+apps/docs/.next/
+apps/docs/.source/
+apps/docs/content/docs/api/
 
 # Dependencies
 node_modules/

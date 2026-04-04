@@ -1,0 +1,75 @@
+---
+title: Multi-Session Grid
+description: Run up to 12 AI coding sessions simultaneously in a resizable grid layout.
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+Omniscribe's core feature is running multiple AI coding sessions simultaneously in a single window. You can launch up to 12 sessions arranged in a resizable grid, each with its own terminal, status indicator, and working directory.
+
+## Adding Sessions
+
+Press **N** to add a new session slot to the grid. Each slot appears as an empty terminal panel ready for configuration and launch.
+
+The maximum is 12 concurrent sessions, enforced by the server. If you try to add more, the request is ignored.
+
+### Launch Presets
+
+Press **Shift+N** to open the preset modal, which offers common grid configurations:
+
+| Preset | Layout        |
+| ------ | ------------- |
+| 1      | Full screen   |
+| 2      | Side by side  |
+| 3      | Three columns |
+| 4      | 2x2 grid      |
+| 6      | 2x3 grid      |
+| 8      | 2x4 grid      |
+| 9      | 3x3 grid      |
+| 12     | 3x4 grid      |
+
+Presets create all the session slots at once, so you can configure and launch them as a batch.
+
+## Launching Sessions
+
+There are two ways to launch sessions:
+
+- **Launch all** — Press **L** to launch every configured slot in the grid simultaneously.
+- **Launch individually** — Press the slot's number key to launch that specific session. Keys map to slots in order: **1** through **9**, then **0**, **-**, and **=** for slots 10-12.
+
+Before launching, each slot shows a pre-launch configuration area where you can select a branch, set the initial prompt, and choose the AI provider.
+
+## Resizable Panels
+
+Drag the dividers between terminal panels to resize them. The grid layout is flexible — you can make one session take up most of the screen while keeping others visible in smaller panels.
+
+Panel sizes are preserved as long as the tab is open. Switching to a different tab and back restores the layout you had.
+
+## Drag-and-Drop Reordering
+
+Each terminal panel has a grip handle in its header. Click and drag the handle to reorder sessions within the grid. This is useful when you want to group related sessions together or move the most active session to a prominent position.
+
+## Independent Sessions
+
+Every session in the grid runs independently:
+
+- **Own terminal** — Each session has a dedicated PTY process with full terminal emulation.
+- **Own status** — Status indicators (Working, Idle, Needs Input, Error) update per session.
+- **Own working directory** — Sessions can operate in different directories or git worktrees.
+- **Own provider** — You can mix AI providers (e.g., Claude Code and Codex) in the same grid.
+
+Closing one session does not affect the others. You can add and remove sessions while others are actively running.
+
+## Keyboard Shortcuts Summary
+
+| Action              | Shortcut            |
+| ------------------- | ------------------- |
+| Add a session slot  | **N**               |
+| Open launch presets | **Shift+N**         |
+| Launch all sessions | **L**               |
+| Launch slot 1-9     | **1** - **9**       |
+| Launch slot 10-12   | **0**, **-**, **=** |
+
+<Callout>
+Keyboard shortcuts work when focus is outside of a terminal. If a terminal has focus, keys are sent to the terminal instead. Click outside any terminal panel or press **Escape** to return focus to the grid.
+</Callout>
