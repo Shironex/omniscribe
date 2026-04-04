@@ -1,6 +1,6 @@
 import type { StatusCounts } from './StatusLegend';
 import { ProjectTabs } from './ProjectTabs';
-import type { Tab } from './ProjectTabs';
+import type { Tab } from '@/hooks/useWorkspaceTabs';
 import { StatusBar } from './StatusBar';
 import { ActionBar } from './ActionBar';
 import { WindowControls } from './WindowControls';

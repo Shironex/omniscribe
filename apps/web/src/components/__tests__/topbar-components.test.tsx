@@ -39,7 +39,7 @@ import { BranchSelector, type Branch } from '../shared/BranchSelector';
 // =============================================================================
 
 const defaultTopBarProps = {
-  tabs: [{ id: 'tab-1', label: 'Project A' }],
+  tabs: [{ id: 'tab-1', label: 'Project A', projectPath: '/test/project-a' }],
   activeTabId: 'tab-1',
   onSelectTab: vi.fn(),
   onCloseTab: vi.fn(),
