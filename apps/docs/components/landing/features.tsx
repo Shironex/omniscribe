@@ -197,7 +197,7 @@ function FeatureCard({
     >
       {/* Border beam on hover for large cards */}
       <div className="pointer-events-none opacity-0 transition-opacity duration-500 group-hover:opacity-100">
-        {isLarge && <BorderBeam duration={5} borderWidth={1} size={160} />}
+        {isLarge && <BorderBeam duration={5} borderWidth={1} />}
       </div>
 
       {isLarge ? (

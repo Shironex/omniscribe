@@ -39,13 +39,7 @@ export function Hero() {
             href="/docs/changelog"
             className="group relative inline-flex items-center gap-2 overflow-hidden rounded-full border border-white/[0.08] bg-white/[0.03] px-4 py-1.5 text-xs font-medium text-white/50 transition-colors hover:border-white/[0.15] hover:text-white/70"
           >
-            <BorderBeam
-              duration={8}
-              borderWidth={1}
-              colorFrom="#7c3aed"
-              colorTo="#a78bfa"
-              size={80}
-            />
+            <BorderBeam duration={8} borderWidth={1} colorFrom="#7c3aed" colorTo="#a78bfa" />
             <span className="relative z-10 flex items-center gap-2">
               <span className="h-1.5 w-1.5 rounded-full bg-violet-500" />
               v1.4.0
@@ -114,13 +108,7 @@ export function Hero() {
             style={{ transformStyle: 'preserve-3d' }}
           >
             {/* Border beam effect */}
-            <BorderBeam
-              duration={5}
-              borderWidth={3}
-              colorFrom="#7c3aed"
-              colorTo="#c4b5fd"
-              size={250}
-            />
+            <BorderBeam duration={5} borderWidth={3} colorFrom="#7c3aed" colorTo="#c4b5fd" />
 
             {/* Outer glow */}
             <div

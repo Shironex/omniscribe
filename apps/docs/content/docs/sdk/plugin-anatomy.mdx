@@ -152,7 +152,9 @@ export function frontendActivate(context: FrontendPluginContext): void {
 ```
 
 <Callout>
-The `as any` casts are required because `@omniscribe/plugin-api` is React-free (pure TypeScript), but the registration methods accept generic component types that are rendered by the React frontend.
+  The `as any` casts are required because `@omniscribe/plugin-api` is React-free (pure TypeScript),
+  but the registration methods accept generic component types that are rendered by the React
+  frontend.
 </Callout>
 
 ## Wiring a New Plugin

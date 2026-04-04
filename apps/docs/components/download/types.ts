@@ -5,7 +5,7 @@ export interface ReleaseAsset {
 }
 
 export interface PlatformRelease {
-  platform: 'macos' | 'windows' | 'linux';
+  platform: 'macos' | 'windows';
   label: string;
   assets: ReleaseAsset[];
   note: string;

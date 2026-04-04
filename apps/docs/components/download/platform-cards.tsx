@@ -22,7 +22,6 @@ function formatDate(iso: string): string {
 
 function getFileExtension(name: string): string {
   const parts = name.split('.');
-  if (name.toLowerCase().endsWith('.appimage')) return 'AppImage';
   return parts.pop()?.toUpperCase() ?? '';
 }
 

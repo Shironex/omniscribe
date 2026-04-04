@@ -29,8 +29,14 @@ function getTitle(content) {
 
 function sanitizeYamlValue(value) {
   // Remove backslash-escaped angle brackets (e.g. \<P\> -> <P>)
-  // then strip angle bracket content entirely for clean YAML
-  return value.replace(/\\</g, '<').replace(/\\>/g, '>').replace(/<[^>]*>/g, '');
+  let result = value.replace(/\\</g, '<').replace(/\\>/g, '>');
+  // Strip angle bracket content entirely for clean YAML (loop to handle nested tags)
+  let prev;
+  do {
+    prev = result;
+    result = result.replace(/<[^>]*>/g, '');
+  } while (result !== prev);
+  return result;
 }
 
 function ensureFrontmatter(filePath) {
@@ -48,13 +54,24 @@ function ensureFrontmatter(filePath) {
       // Fix escaped angle brackets in quoted strings
       fm = fm.replace(/\\</g, '<').replace(/\\>/g, '>');
       // Remove generic type params from quoted values to keep YAML clean
-      fm = fm.replace(/"([^"]*)"/g, (match, inner) => `"${inner.replace(/<[^>]*>/g, '')}"`);
+      fm = fm.replace(/"([^"]*)"/g, (_match, inner) => {
+        let cleaned = inner;
+        let prev;
+        do {
+          prev = cleaned;
+          cleaned = cleaned.replace(/<[^>]*>/g, '');
+        } while (cleaned !== prev);
+        return `"${cleaned}"`;
+      });
       content = `---\n${fm}\n---${content.slice(fmMatch[0].length)}`;
 
       // Ensure title exists
       if (!fm.includes('title:')) {
         const title = basename(filePath, '.mdx');
-        content = content.replace('---\n', `---\ntitle: "${title}"\ndescription: "API Reference - ${title}"\n`);
+        content = content.replace(
+          '---\n',
+          `---\ntitle: "${title}"\ndescription: "API Reference - ${title}"\n`
+        );
       }
     }
   }
