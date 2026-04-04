@@ -68,10 +68,10 @@ function ensureFrontmatter(filePath) {
       // Ensure title exists
       if (!fm.includes('title:')) {
         const title = basename(filePath, '.mdx');
-        content = content.replace(
-          '---\n',
-          `---\ntitle: "${title}"\ndescription: "API Reference - ${title}"\n`
-        );
+        const descLine = fm.includes('description:')
+          ? ''
+          : `\ndescription: "API Reference - ${title}"`;
+        content = content.replace('---\n', `---\ntitle: "${title}"${descLine}\n`);
       }
     }
   }

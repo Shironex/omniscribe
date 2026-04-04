@@ -83,11 +83,11 @@ jobs:
       - name: Upload Windows artifacts
         if: matrix.os == 'windows-latest'
         uses: actions/upload-artifact@v7
+        # Windows emits un-prefixed YML files (latest.yml, beta.yml), unlike macOS
         with:
           name: windows-builds
           path: |
             apps/desktop/release/*.exe
-            # Windows emits un-prefixed YML (latest.yml, beta.yml) unlike macOS
             apps/desktop/release/*.yml
           if-no-files-found: error
           retention-days: 30

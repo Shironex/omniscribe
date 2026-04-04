@@ -1,8 +1,12 @@
+import { headers } from 'next/headers';
 import { source } from '@/lib/source';
 
-const siteUrl = 'https://omniscribe.dev';
+export async function GET() {
+  const headersList = await headers();
+  const host = headersList.get('host') ?? 'omniscribe.dev';
+  const protocol = host.startsWith('localhost') ? 'http' : 'https';
+  const siteUrl = `${protocol}://${host}`;
 
-export function GET() {
   const pages = source.getPages();
 
   const lines = pages.map(page => `${page.data.title}: ${siteUrl}${page.url}`);

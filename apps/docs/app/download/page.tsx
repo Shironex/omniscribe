@@ -76,7 +76,8 @@ async function fetchRelease(): Promise<ReleaseData | null> {
       releaseUrl: data.html_url,
       platforms: Object.values(platformMap).filter(p => p.assets.length > 0),
     };
-  } catch {
+  } catch (error) {
+    console.error('Failed to fetch release data:', error);
     return null;
   }
 }

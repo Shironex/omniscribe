@@ -9,6 +9,7 @@ interface AnimatedGridBgProps {
 export function AnimatedGridBg({ className = '' }: AnimatedGridBgProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const cellsRef = useRef<{ x: number; y: number; opacity: number; decay: number }[]>([]);
+  const sizeRef = useRef({ w: 0, h: 0, dpr: 1 });
 
   const animate = useCallback(() => {
     const canvas = canvasRef.current;
@@ -16,12 +17,8 @@ export function AnimatedGridBg({ className = '' }: AnimatedGridBgProps) {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const dpr = window.devicePixelRatio || 1;
-    const w = canvas.clientWidth;
-    const h = canvas.clientHeight;
-    canvas.width = w * dpr;
-    canvas.height = h * dpr;
-    ctx.scale(dpr, dpr);
+    const { w, h, dpr } = sizeRef.current;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
     const cellSize = 60;
     const cols = Math.ceil(w / cellSize);
@@ -92,12 +89,29 @@ export function AnimatedGridBg({ className = '' }: AnimatedGridBgProps) {
       }
     };
 
+    // Resize canvas via ResizeObserver instead of every frame
+    const canvas = canvasRef.current;
+    const resizeCanvas = () => {
+      if (!canvas) return;
+      const dpr = window.devicePixelRatio || 1;
+      const w = canvas.clientWidth;
+      const h = canvas.clientHeight;
+      canvas.width = w * dpr;
+      canvas.height = h * dpr;
+      sizeRef.current = { w, h, dpr };
+    };
+    resizeCanvas();
+
+    const observer = new ResizeObserver(resizeCanvas);
+    if (canvas) observer.observe(canvas);
+
     frameId = requestAnimationFrame(loop);
     const intervalId = setInterval(spawnCell, 800);
 
     return () => {
       cancelAnimationFrame(frameId);
       clearInterval(intervalId);
+      observer.disconnect();
     };
   }, [animate]);
 

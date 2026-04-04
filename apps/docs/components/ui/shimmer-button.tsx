@@ -3,11 +3,10 @@
 import { type ButtonHTMLAttributes, type ReactNode } from 'react';
 import Link from 'next/link';
 
-interface ShimmerButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+type ShimmerButtonProps = {
   children: ReactNode;
-  href?: string;
   className?: string;
-}
+} & ({ href: string } | ({ href?: never } & ButtonHTMLAttributes<HTMLButtonElement>));
 
 export function ShimmerButton({ children, href, className = '', ...props }: ShimmerButtonProps) {
   const baseClasses = `group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-lg bg-violet-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-violet-600/20 transition-all duration-300 hover:bg-violet-500 hover:shadow-violet-500/30 hover:-translate-y-0.5 ${className}`;

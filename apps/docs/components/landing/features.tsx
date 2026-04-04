@@ -167,6 +167,7 @@ function FeatureCard({
   description,
   children,
   visualLeft = false,
+  large = false,
   className = '',
   index,
 }: {
@@ -174,12 +175,12 @@ function FeatureCard({
   description: string;
   children?: ReactNode;
   visualLeft?: boolean;
+  large?: boolean;
   className?: string;
   index: number;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const isInView = useInView(ref, { once: true, margin: '-60px' });
-  const isLarge = className.includes('col-span');
 
   return (
     <motion.div
@@ -192,15 +193,15 @@ function FeatureCard({
         ease: 'easeOut',
       }}
       className={`group relative overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.02] transition-all duration-300 hover:border-white/[0.1] ${
-        isLarge ? 'p-6 sm:p-8' : 'p-6'
+        large ? 'p-6 sm:p-8' : 'p-6'
       } ${className}`}
     >
       {/* Border beam on hover for large cards */}
       <div className="pointer-events-none opacity-0 transition-opacity duration-500 group-hover:opacity-100">
-        {isLarge && <BorderBeam duration={5} borderWidth={1} />}
+        {large && <BorderBeam duration={5} borderWidth={1} />}
       </div>
 
-      {isLarge ? (
+      {large ? (
         <div
           className={`flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between ${
             visualLeft ? 'sm:flex-row-reverse' : ''
@@ -250,6 +251,7 @@ export function Features() {
             title="12 Parallel Sessions"
             description="Run up to 12 AI coding sessions simultaneously in a resizable grid. Assign tasks, monitor progress, and manage everything from one window."
             className="col-span-1 sm:col-span-2"
+            large
             index={0}
           >
             <SessionGrid />
@@ -276,6 +278,7 @@ export function Features() {
             title="Plugin System"
             description="Extend Omniscribe with custom AI provider plugins. Claude, Codex, or your own — build and share integrations using the Plugin SDK."
             className="col-span-1 sm:col-span-2"
+            large
             visualLeft
             index={3}
           >
@@ -287,6 +290,7 @@ export function Features() {
             title="Keyboard-First"
             description="Navigate sessions, launch tasks, and manage your workflow without leaving the keyboard. Every action has a shortcut."
             className="col-span-1 sm:col-span-3"
+            large
             index={4}
           >
             <KeyboardShortcuts />

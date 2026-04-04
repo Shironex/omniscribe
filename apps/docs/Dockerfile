@@ -31,7 +31,9 @@ RUN pnpm --filter @omniscribe/shared build && \
     pnpm --filter @omniscribe/plugin-api build
 
 # Generate API docs and build Next.js
-RUN cd apps/docs && pnpm generate:api && pnpm run build
+WORKDIR /app/apps/docs
+RUN pnpm generate:api && pnpm run build
+WORKDIR /app
 
 # ─── Stage 3: Production runner ─────────────────────────────────────────────
 FROM node:22-alpine AS runner
@@ -52,5 +54,8 @@ COPY --from=builder --chown=nextjs:nodejs /app/apps/docs/.next/static ./apps/doc
 
 USER nextjs
 EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD wget -qO- http://localhost:3000/ || exit 1
 
 CMD ["node", "apps/docs/server.js"]

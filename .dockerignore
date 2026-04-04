@@ -11,6 +11,7 @@ apps/desktop/dist
 apps/desktop/out
 apps/web/dist
 apps/docs/.next
+apps/docs/.source
 apps/docs/build
 
 # IDE / OS

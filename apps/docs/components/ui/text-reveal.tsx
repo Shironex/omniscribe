@@ -1,6 +1,6 @@
 'use client';
 
-import { motion, useInView } from 'framer-motion';
+import { motion, useInView, useReducedMotion } from 'framer-motion';
 import { useRef } from 'react';
 
 interface TextRevealProps {
@@ -12,8 +12,13 @@ interface TextRevealProps {
 export function TextReveal({ text, className = '', delay = 0 }: TextRevealProps) {
   const ref = useRef<HTMLHeadingElement>(null);
   const isInView = useInView(ref, { once: true, margin: '-40px' });
+  const prefersReduced = useReducedMotion();
 
   const words = text.split(' ');
+
+  if (prefersReduced) {
+    return <h1 className={className}>{text}</h1>;
+  }
 
   return (
     <h1 ref={ref} className={className}>

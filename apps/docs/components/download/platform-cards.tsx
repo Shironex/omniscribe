@@ -13,7 +13,7 @@ function formatBytes(bytes: number): string {
 }
 
 function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-US', {
+  return new Date(iso).toLocaleDateString(undefined, {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
@@ -77,6 +77,8 @@ function ShimmerDownloadButton({
   return (
     <a
       href={href}
+      target="_blank"
+      rel="noopener noreferrer"
       className={`group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-lg bg-violet-600 px-8 py-3 text-sm font-semibold text-white shadow-lg shadow-violet-600/20 transition-all duration-300 hover:bg-violet-500 hover:shadow-violet-500/30 hover:-translate-y-0.5 ${className}`}
     >
       <span
@@ -133,6 +135,8 @@ function HeroDownload({ platform, release }: { platform: PlatformRelease; releas
               <a
                 key={asset.name}
                 href={asset.url}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 rounded-lg border border-white/[0.1] bg-white/[0.05] px-5 py-2.5 text-sm text-white/50 transition-colors hover:border-white/[0.2] hover:text-white/70"
               >
                 <DownloadIcon />.{getFileExtension(asset.name).toLowerCase()}
@@ -169,6 +173,8 @@ function CompactPlatformCard({ platform, index }: { platform: PlatformRelease; i
           <a
             key={asset.name}
             href={asset.url}
+            target="_blank"
+            rel="noopener noreferrer"
             className="flex items-center justify-between rounded-lg border border-white/[0.1] bg-white/[0.05] px-4 py-2.5 text-sm transition-colors hover:border-white/[0.2] hover:bg-white/[0.08]"
           >
             <span className="flex items-center gap-2 text-white/70">

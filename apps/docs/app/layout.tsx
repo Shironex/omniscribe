@@ -32,6 +32,7 @@ export const metadata: Metadata = {
     description:
       'Orchestrate multiple AI coding sessions in parallel. A desktop app for managing Claude Code, Codex, and other AI assistants.',
     url: siteUrl,
+    images: [{ url: '/app.png', width: 1200, height: 630, alt: 'Omniscribe App Screenshot' }],
   },
   twitter: {
     card: 'summary_large_image',

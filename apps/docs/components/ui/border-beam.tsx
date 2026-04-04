@@ -20,6 +20,7 @@ export function BorderBeam({
       className={`pointer-events-none absolute -inset-px z-10 overflow-hidden rounded-[inherit] ${className}`}
       style={{
         // Mask: show only the border area (outer minus inner)
+        mask: `linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)`,
         WebkitMask: `linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)`,
         WebkitMaskComposite: 'xor',
         maskComposite: 'exclude',

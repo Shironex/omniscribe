@@ -10,7 +10,7 @@ import { TextReveal } from '@/components/ui/text-reveal';
 
 /* ── Hero Section ────────────────────────────────────────────────── */
 
-export function Hero() {
+export function Hero({ version = 'v1.4.0' }: { version?: string }) {
   return (
     <section
       id="hero"
@@ -42,7 +42,7 @@ export function Hero() {
             <BorderBeam duration={8} borderWidth={1} colorFrom="#7c3aed" colorTo="#a78bfa" />
             <span className="relative z-10 flex items-center gap-2">
               <span className="h-1.5 w-1.5 rounded-full bg-violet-500" />
-              v1.4.0
+              {version}
             </span>
           </Link>
         </motion.div>
