@@ -171,26 +171,29 @@ function App() {
     return tab?.label ?? null;
   }, [tabs, activeTabId]);
 
-  // Trigger terminal refit on sidebar transition end
-  const handleSidebarTransitionEnd = useCallback(() => {
-    requestAnimationFrame(() => {
+  // Dispatch terminal-refit-all after two animation frames to ensure layout
+  // has settled (e.g. after sidebar transition or tab switch).
+  const dispatchRefitAfterLayout = useCallback(() => {
+    const id = requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         window.dispatchEvent(new CustomEvent('terminal-refit-all'));
       });
     });
+    return id;
   }, []);
+
+  // Trigger terminal refit on sidebar transition end
+  const handleSidebarTransitionEnd = useCallback(() => {
+    dispatchRefitAfterLayout();
+  }, [dispatchRefitAfterLayout]);
 
   // Trigger refit when switching tabs so terminals recalculate dimensions.
   useEffect(() => {
     if (activeProjectPath) {
-      let rafId = requestAnimationFrame(() => {
-        rafId = requestAnimationFrame(() => {
-          window.dispatchEvent(new CustomEvent('terminal-refit-all'));
-        });
-      });
+      const rafId = dispatchRefitAfterLayout();
       return () => cancelAnimationFrame(rafId);
     }
-  }, [activeProjectPath]);
+  }, [activeProjectPath, dispatchRefitAfterLayout]);
 
   return (
     <div

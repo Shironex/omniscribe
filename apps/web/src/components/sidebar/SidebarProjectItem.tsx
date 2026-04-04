@@ -89,6 +89,8 @@ export const SidebarProjectItem = React.memo(function SidebarProjectItem({
             style={style}
             {...attributes}
             {...listeners}
+            role="tab"
+            aria-selected={isActive}
             onClick={handleClick}
             className={cn(
               'no-drag flex items-center justify-center w-8 h-8 mx-auto rounded-lg cursor-pointer',
@@ -120,6 +122,8 @@ export const SidebarProjectItem = React.memo(function SidebarProjectItem({
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
       <div
+        role="tab"
+        aria-selected={isActive}
         onClick={handleClick}
         className={cn(
           'no-drag group flex items-center gap-2 px-2 py-1.5 mx-1 rounded-lg cursor-pointer',
