@@ -14,7 +14,7 @@ COPY apps/docs/package.json apps/docs/
 COPY packages/shared/package.json packages/shared/
 COPY packages/plugin-api/package.json packages/plugin-api/
 
-RUN pnpm install --frozen-lockfile --filter @omniscribe/docs...
+RUN pnpm install --frozen-lockfile --filter @omniscribe/docs... --filter @omniscribe/shared... --filter @omniscribe/plugin-api...
 
 # ─── Stage 2: Build ─────────────────────────────────────────────────────────
 FROM node:22-alpine AS builder
