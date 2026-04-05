@@ -5,6 +5,7 @@ export const layoutOptions: BaseLayoutProps = {
     title: 'Omniscribe',
   },
   githubUrl: 'https://github.com/Shironex/omniscribe',
+  themeSwitch: { enabled: false },
   links: [
     {
       text: 'Docs',
