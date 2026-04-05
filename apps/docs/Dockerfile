@@ -22,6 +22,7 @@ RUN corepack enable && corepack prepare pnpm@10.9.0 --activate
 WORKDIR /app
 
 COPY --from=deps /app/ ./
+COPY tsconfig.base.json ./
 COPY packages/shared/ packages/shared/
 COPY packages/plugin-api/ packages/plugin-api/
 COPY apps/docs/ apps/docs/
