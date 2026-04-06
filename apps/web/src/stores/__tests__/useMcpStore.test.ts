@@ -323,7 +323,7 @@ describe('useMcpStore', () => {
     it('sets isDiscovering to true while discovering', async () => {
       mockEmitAsync.mockResolvedValue({ servers: [] });
 
-      const promise = useMcpStore.getState().discoverServers();
+      const promise = useMcpStore.getState().discoverServers('/some/path');
 
       // isDiscovering should be true during the operation
       expect(useMcpStore.getState().isDiscovering).toBe(true);
@@ -335,7 +335,7 @@ describe('useMcpStore', () => {
       useMcpStore.setState({ error: 'previous error' });
       mockEmitAsync.mockResolvedValue({ servers: [] });
 
-      await useMcpStore.getState().discoverServers();
+      await useMcpStore.getState().discoverServers('/some/path');
 
       expect(useMcpStore.getState().error).toBeNull();
     });
@@ -344,7 +344,7 @@ describe('useMcpStore', () => {
       const servers = [createMockServer({ id: 'srv-1' }), createMockServer({ id: 'srv-2' })];
       mockEmitAsync.mockResolvedValue({ servers });
 
-      await useMcpStore.getState().discoverServers();
+      await useMcpStore.getState().discoverServers('/some/path');
 
       expect(useMcpStore.getState().servers).toEqual(servers);
       expect(useMcpStore.getState().isDiscovering).toBe(false);
@@ -362,7 +362,7 @@ describe('useMcpStore', () => {
     it('handles empty servers in response', async () => {
       mockEmitAsync.mockResolvedValue({ servers: [] });
 
-      await useMcpStore.getState().discoverServers();
+      await useMcpStore.getState().discoverServers('/some/path');
 
       expect(useMcpStore.getState().servers).toEqual([]);
       expect(useMcpStore.getState().isDiscovering).toBe(false);
@@ -371,7 +371,7 @@ describe('useMcpStore', () => {
     it('handles undefined servers in response', async () => {
       mockEmitAsync.mockResolvedValue({});
 
-      await useMcpStore.getState().discoverServers();
+      await useMcpStore.getState().discoverServers('/some/path');
 
       expect(useMcpStore.getState().servers).toEqual([]);
       expect(useMcpStore.getState().isDiscovering).toBe(false);
@@ -380,7 +380,7 @@ describe('useMcpStore', () => {
     it('sets error when response contains error', async () => {
       mockEmitAsync.mockResolvedValue({ error: 'Discovery failed: no config found' });
 
-      await useMcpStore.getState().discoverServers();
+      await useMcpStore.getState().discoverServers('/some/path');
 
       expect(useMcpStore.getState().error).toBe('Discovery failed: no config found');
       expect(useMcpStore.getState().isDiscovering).toBe(false);
@@ -391,7 +391,7 @@ describe('useMcpStore', () => {
       useMcpStore.setState({ servers: existingServers });
       mockEmitAsync.mockResolvedValue({ error: 'fail' });
 
-      await useMcpStore.getState().discoverServers();
+      await useMcpStore.getState().discoverServers('/some/path');
 
       // Servers should remain unchanged
       expect(useMcpStore.getState().servers).toEqual(existingServers);
@@ -400,7 +400,7 @@ describe('useMcpStore', () => {
     it('sets error message on exception', async () => {
       mockEmitAsync.mockRejectedValue(new Error('Network timeout'));
 
-      await useMcpStore.getState().discoverServers();
+      await useMcpStore.getState().discoverServers('/some/path');
 
       expect(useMcpStore.getState().error).toBe('Network timeout');
       expect(useMcpStore.getState().isDiscovering).toBe(false);
@@ -409,9 +409,16 @@ describe('useMcpStore', () => {
     it('sets fallback error message for non-Error exceptions', async () => {
       mockEmitAsync.mockRejectedValue('some string error');
 
-      await useMcpStore.getState().discoverServers();
+      await useMcpStore.getState().discoverServers('/some/path');
 
       expect(useMcpStore.getState().error).toBe('Discovery failed');
+      expect(useMcpStore.getState().isDiscovering).toBe(false);
+    });
+
+    it('skips discovery when no projectPath is provided', async () => {
+      await useMcpStore.getState().discoverServers();
+
+      expect(mockEmitAsync).not.toHaveBeenCalled();
       expect(useMcpStore.getState().isDiscovering).toBe(false);
     });
   });
@@ -566,14 +573,15 @@ describe('useMcpStore', () => {
     });
 
     describe('connect event (onConnect)', () => {
-      it('calls discoverServers on connect when not recovered', async () => {
+      it('skips discoverServers on connect when no projectPath available', async () => {
         mockEmitAsync.mockResolvedValue({ servers: [] });
         mockSocket.recovered = false;
         useMcpStore.getState().initListeners();
 
         mockSocket.__simulateEvent('connect');
 
-        expect(mockEmitAsync).toHaveBeenCalled();
+        // onConnect calls discoverServers() with no projectPath, which is a no-op
+        expect(mockEmitAsync).not.toHaveBeenCalled();
       });
 
       it('skips discoverServers on connect when socket.recovered is true', () => {

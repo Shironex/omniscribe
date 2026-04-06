@@ -69,6 +69,13 @@ export function useWorkspacePreferences(): void {
       return;
     }
 
+    // Guard against stale closure: when Effect 1 (tab→settings) updates the
+    // settings store in the same React commit, this effect runs with the OLD
+    // settingsTheme from its closure. Detect this by comparing against the
+    // current store value — if they differ, this closure is stale.
+    const currentStoreTheme = useSettingsStore.getState().theme;
+    if (currentStoreTheme !== settingsTheme) return;
+
     const { tabs, activeTabId } = useWorkspaceStore.getState();
     const activeTab = tabs.find(tab => tab.id === activeTabId);
     if (activeTab && settingsTheme !== activeTab.theme) {

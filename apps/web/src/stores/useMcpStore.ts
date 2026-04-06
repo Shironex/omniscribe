@@ -129,6 +129,10 @@ export const useMcpStore = create<McpStore>()(
 
         // Custom actions
         discoverServers: async (projectPath?: string) => {
+          if (!projectPath) {
+            logger.debug('Skipping discovery: no projectPath provided');
+            return;
+          }
           logger.info('Discovering servers', projectPath);
           set({ isDiscovering: true, error: null }, undefined, 'mcp/discoverServersStart');
           try {
