@@ -2,6 +2,29 @@
 
 All notable changes to this project will be documented in this file.
 
+## 1.5.0-beta.1 (2026-04-06)
+
+### Features
+
+- **Sidebar navigation** — Replace top bar with a collapsible sidebar for improved navigation and screen real estate (#267)
+- **Docs migration** — Migrate documentation site to Next.js with Fumadocs for better DX and content management (#268)
+
+### Bug Fixes
+
+- **Theme corruption** — Prevent theme corruption on tab switch and MCP discovery error on startup
+- **Usage panel backgrounds** — Make usage panel backgrounds fully opaque
+
+### Maintenance
+
+- **Drop Linux support** — Remove Linux and macOS zip targets from release builds
+- **Electron 41** — Bump Electron to v41 along with safe patch/minor dependency updates
+- **Dependency updates** — Update patch/minor dependencies and upgrade lucide-react to v1
+
+### Stats
+
+- 2 PRs merged (14 commits)
+- 119 files changed — +10,142 / −14,933 lines
+
 ## 1.4.0 (2026-03-27)
 
 ### Features
