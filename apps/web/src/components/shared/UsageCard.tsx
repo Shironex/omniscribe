@@ -40,7 +40,7 @@ export function UsageCard({
   return (
     <div
       className={cn(
-        'rounded-xl border bg-card/50 p-4 transition-opacity',
+        'rounded-xl border bg-card p-4 transition-opacity',
         isPrimary ? 'border-border shadow-xs' : 'border-border/60',
         (stale || !isValidPercentage) && 'opacity-50'
       )}

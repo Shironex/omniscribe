@@ -240,7 +240,7 @@ export function ClaudeUsagePanel({ embedded = false }: UsagePanelProps) {
         {!open && <TooltipContent side="bottom">{tooltipLabel}</TooltipContent>}
       </Tooltip>
       <PopoverContent
-        className="w-[340px] p-0 overflow-hidden bg-background/95 backdrop-blur-xl border-border shadow-2xl"
+        className="w-[340px] p-0 overflow-hidden bg-background border-border shadow-2xl"
         align="end"
         sideOffset={8}
       >
