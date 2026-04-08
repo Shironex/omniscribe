@@ -3,6 +3,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { createLogger } from '@omniscribe/shared';
 
+const fsp = fs.promises;
 const logger = createLogger('ThumbnailIpc');
 
 const ALLOWED_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg']);
@@ -12,11 +13,8 @@ function getThumbnailsDir(): string {
   return path.join(app.getPath('userData'), 'thumbnails');
 }
 
-function ensureThumbnailsDir(): void {
-  const dir = getThumbnailsDir();
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
+async function ensureThumbnailsDir(): Promise<void> {
+  await fsp.mkdir(getThumbnailsDir(), { recursive: true });
 }
 
 function isValidFilename(name: string): boolean {
@@ -35,11 +33,9 @@ export function registerThumbnailHandlers(): void {
       }
 
       // Validate the source file
-      if (!fs.existsSync(imagePath)) {
-        throw new Error('Image file not found');
-      }
+      await fsp.access(imagePath, fs.constants.R_OK);
 
-      const stat = fs.statSync(imagePath);
+      const stat = await fsp.stat(imagePath);
       if (stat.size > MAX_FILE_SIZE) {
         throw new Error('Image file exceeds 10MB size limit');
       }
@@ -53,15 +49,15 @@ export function registerThumbnailHandlers(): void {
       const safeTabId = tabId.replace(/[^a-zA-Z0-9\-_]/g, '_');
       const fileName = `${safeTabId}.${ext}`;
 
-      ensureThumbnailsDir();
+      await ensureThumbnailsDir();
       const destPath = path.join(getThumbnailsDir(), fileName);
 
       // Remove any existing thumbnail for this tab (different extension)
       try {
-        const existing = fs.readdirSync(getThumbnailsDir());
+        const existing = await fsp.readdir(getThumbnailsDir());
         for (const file of existing) {
           if (file.startsWith(`${safeTabId}.`)) {
-            fs.unlinkSync(path.join(getThumbnailsDir(), file));
+            await fsp.unlink(path.join(getThumbnailsDir(), file));
           }
         }
       } catch {
@@ -69,7 +65,7 @@ export function registerThumbnailHandlers(): void {
       }
 
       // Copy the image
-      fs.copyFileSync(imagePath, destPath);
+      await fsp.copyFile(imagePath, destPath);
       logger.info(`Thumbnail set for tab ${tabId}: ${fileName}`);
 
       return { fileName };
@@ -83,6 +79,12 @@ export function registerThumbnailHandlers(): void {
         throw new Error('Invalid arguments');
       }
 
+      // Enforce tab-to-filename binding
+      const safeTabId = tabId.replace(/[^a-zA-Z0-9\-_]/g, '_');
+      if (!safeTabId || !fileName.startsWith(`${safeTabId}.`)) {
+        throw new Error('Filename does not match tab');
+      }
+
       if (!isValidFilename(fileName)) {
         throw new Error('Invalid filename');
       }
@@ -93,9 +95,11 @@ export function registerThumbnailHandlers(): void {
         throw new Error('Forbidden');
       }
 
-      if (fs.existsSync(resolved)) {
-        fs.unlinkSync(resolved);
+      try {
+        await fsp.unlink(resolved);
         logger.info(`Thumbnail removed for tab ${tabId}: ${fileName}`);
+      } catch {
+        // File may not exist, ignore
       }
     }
   );
@@ -109,16 +113,14 @@ export function cleanupThumbnailHandlers(): void {
 /**
  * Delete thumbnail file for a tab. Called when a tab is removed.
  */
-export function deleteThumbnailFile(thumbnailFileName?: string): void {
+export async function deleteThumbnailFile(thumbnailFileName?: string): Promise<void> {
   if (!thumbnailFileName) return;
   if (!isValidFilename(thumbnailFileName)) return;
 
   const filePath = path.join(getThumbnailsDir(), thumbnailFileName);
   try {
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
-      logger.debug(`Cleaned up thumbnail file: ${thumbnailFileName}`);
-    }
+    await fsp.unlink(filePath);
+    logger.debug(`Cleaned up thumbnail file: ${thumbnailFileName}`);
   } catch {
     // Ignore cleanup errors
   }

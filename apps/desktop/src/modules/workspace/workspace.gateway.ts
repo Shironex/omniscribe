@@ -270,6 +270,7 @@ export class WorkspaceGateway implements OnGatewayInit {
   /**
    * Handle update tab thumbnail request
    */
+  @SkipThrottle()
   @SubscribeMessage(WorkspaceEvents.UPDATE_TAB_THUMBNAIL)
   handleUpdateTabThumbnail(
     @MessageBody() payload: UpdateTabThumbnailPayload,

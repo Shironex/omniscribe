@@ -75,7 +75,7 @@ export function useWorkspaceTabs(): UseWorkspaceTabsReturn {
   const tabs: Tab[] = useMemo(() => {
     return workspaceTabs.map(tab => {
       const thumbnailUrl = tab.thumbnailFileName
-        ? `omniscribe-thumb://thumbnail/${tab.thumbnailFileName}`
+        ? `omniscribe-thumb://${tab.thumbnailFileName}`
         : undefined;
 
       const projectSessions = sessions.filter(s => s.projectPath === tab.projectPath);

@@ -32,7 +32,7 @@ let cleanupDone = false;
 protocol.registerSchemesAsPrivileged([
   {
     scheme: 'omniscribe-thumb',
-    privileges: { standard: false, secure: true, supportFetchAPI: true },
+    privileges: { standard: true, secure: true, supportFetchAPI: true },
   },
 ]);
 
