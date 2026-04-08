@@ -85,6 +85,10 @@ export interface ElectronAPI {
       ...args: unknown[]
     ) => Promise<{ result?: unknown; error?: string }>;
   };
+  thumbnail: {
+    set: (tabId: string, imagePath: string) => Promise<{ fileName: string } | null>;
+    remove: (tabId: string, fileName: string) => Promise<void>;
+  };
   platform: NodeJS.Platform;
 }
 
@@ -224,6 +228,14 @@ const electronAPI: ElectronAPI = {
         result?: unknown;
         error?: string;
       }>,
+  },
+  thumbnail: {
+    set: (tabId: string, imagePath: string) =>
+      ipcRenderer.invoke('thumbnail:set', tabId, imagePath) as Promise<{
+        fileName: string;
+      } | null>,
+    remove: (tabId: string, fileName: string) =>
+      ipcRenderer.invoke('thumbnail:remove', tabId, fileName) as Promise<void>,
   },
   platform: process.platform,
 };

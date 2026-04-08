@@ -1,4 +1,6 @@
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, protocol, net } from 'electron';
+import * as path from 'path';
+import * as fs from 'fs';
 import { NestFactory } from '@nestjs/core';
 import { type INestApplication } from '@nestjs/common';
 import { CustomIoAdapter } from '../modules/shared/custom-io-adapter';
@@ -25,6 +27,14 @@ export let mainWindow: BrowserWindow | null = null;
 let nestApp: INestApplication | null = null;
 let isShuttingDown = false;
 let cleanupDone = false;
+
+// Register omniscribe-thumb:// as a privileged scheme (must be before app.ready)
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: 'omniscribe-thumb',
+    privileges: { standard: false, secure: true, supportFetchAPI: true },
+  },
+]);
 
 // Register custom protocol for deep linking (notification click-to-navigate)
 if (process.defaultApp) {
@@ -93,10 +103,48 @@ function setupAutoUpdater(window: BrowserWindow): void {
   initializeAutoUpdater(window, process.env.NODE_ENV === 'development', emitter);
 }
 
+/** Thumbnails directory inside userData */
+function getThumbnailsDir(): string {
+  return path.join(app.getPath('userData'), 'thumbnails');
+}
+
+/** Validate thumbnail filename: no path traversal, only safe chars */
+function isValidThumbnailFilename(name: string): boolean {
+  if (!name || name.length > 255) return false;
+  if (name.includes('..') || name.includes('/') || name.includes('\\') || name.includes('\0'))
+    return false;
+  // Only allow alphanumeric, dash, underscore, dot
+  return /^[\w\-.]+$/.test(name);
+}
+
 async function bootstrap(): Promise<void> {
   // Resolve the user's full shell PATH before any child processes are spawned.
   // macOS/Linux GUI apps inherit a minimal PATH that's missing dev tools.
   resolveShellPath();
+
+  // Register omniscribe-thumb:// protocol handler for serving project thumbnails
+  protocol.handle('omniscribe-thumb', request => {
+    const url = new URL(request.url);
+    const fileName = url.pathname.replace(/^\/+/, '');
+
+    if (!isValidThumbnailFilename(fileName)) {
+      return new Response('Invalid filename', { status: 400 });
+    }
+
+    const filePath = path.join(getThumbnailsDir(), fileName);
+
+    // Double-check resolved path is within thumbnails dir
+    const resolved = path.resolve(filePath);
+    if (!resolved.startsWith(path.resolve(getThumbnailsDir()))) {
+      return new Response('Forbidden', { status: 403 });
+    }
+
+    if (!fs.existsSync(resolved)) {
+      return new Response('Not found', { status: 404 });
+    }
+
+    return net.fetch(`file://${resolved}`);
+  });
 
   // Log security posture at startup
   const isPackaged = app.isPackaged;

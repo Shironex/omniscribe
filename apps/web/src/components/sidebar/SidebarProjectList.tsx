@@ -87,6 +87,7 @@ export function SidebarProjectList({
                 status={tab.status}
                 isActive={activeTabId === tab.id}
                 collapsed={collapsed}
+                thumbnailUrl={tab.thumbnailUrl}
                 onSelect={onSelectTab}
                 onClose={onCloseTab}
               />

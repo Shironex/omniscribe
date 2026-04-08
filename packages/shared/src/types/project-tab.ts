@@ -23,6 +23,8 @@ interface ProjectTabBase {
   sessionIds: string[];
   /** Whether this tab is selected */
   isActive: boolean;
+  /** Thumbnail file name stored in {userData}/thumbnails/ */
+  thumbnailFileName?: string;
 }
 
 /**

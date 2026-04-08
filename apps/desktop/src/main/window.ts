@@ -19,8 +19,8 @@ function setupContentSecurityPolicy(isDev: boolean, backendPort: number): void {
         : "script-src 'self'",
       // Allow styles from same origin and inline (needed for CSS-in-JS)
       "style-src 'self' 'unsafe-inline'",
-      // Allow images from same origin and data URIs
-      "img-src 'self' data: blob:",
+      // Allow images from same origin, data URIs, and thumbnail protocol
+      "img-src 'self' data: blob: omniscribe-thumb:",
       // Allow fonts from same origin
       "font-src 'self' data:",
       // Allow connections to localhost (WebSocket and API)

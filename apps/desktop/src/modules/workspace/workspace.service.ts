@@ -411,6 +411,19 @@ export class WorkspaceService implements OnModuleInit {
   }
 
   /**
+   * Update a tab's thumbnail
+   */
+  updateTabThumbnail(tabId: string, thumbnailFileName: string | null): ProjectTabDTO[] {
+    this.logger.debug(`[updateTabThumbnail] tabId=${tabId}, file=${thumbnailFileName}`);
+    const tabs = this.getTabs();
+    const updatedTabs = tabs.map(t =>
+      t.id === tabId ? { ...t, thumbnailFileName: thumbnailFileName ?? undefined } : t
+    );
+    this.setTabs(updatedTabs);
+    return updatedTabs;
+  }
+
+  /**
    * Update a tab's theme
    */
   updateTabTheme(tabId: string, theme: string): ProjectTabDTO[] {

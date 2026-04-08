@@ -80,6 +80,10 @@ interface ElectronAPI {
     sendTest: () => Promise<{ success: boolean; reason?: string }>;
     onNavigate: (callback: (data: { sessionId?: string; tabId?: string }) => void) => () => void;
   };
+  thumbnail?: {
+    set: (tabId: string, imagePath: string) => Promise<{ fileName: string } | null>;
+    remove: (tabId: string, fileName: string) => Promise<void>;
+  };
   platform: NodeJS.Platform;
 }
 

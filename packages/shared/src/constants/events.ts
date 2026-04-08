@@ -104,6 +104,7 @@ export const WorkspaceEvents = {
   SAVE_STATE: 'workspace:save-state',
   ADD_TAB: 'workspace:add-tab',
   UPDATE_TAB_THEME: 'workspace:update-tab-theme',
+  UPDATE_TAB_THUMBNAIL: 'workspace:update-tab-thumbnail',
   REMOVE_TAB: 'workspace:remove-tab',
   SELECT_TAB: 'workspace:select-tab',
   REORDER_TABS: 'workspace:reorder-tabs',

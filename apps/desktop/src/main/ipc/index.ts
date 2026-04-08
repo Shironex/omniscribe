@@ -27,3 +27,10 @@ export { registerPluginIpc, cleanupPluginIpc } from './plugin';
 
 // Notification handlers
 export { registerNotificationHandlers, cleanupNotificationHandlers } from './notification';
+
+// Thumbnail handlers
+export {
+  registerThumbnailHandlers,
+  cleanupThumbnailHandlers,
+  deleteThumbnailFile,
+} from './thumbnail';
