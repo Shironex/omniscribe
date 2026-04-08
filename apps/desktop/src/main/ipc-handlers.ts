@@ -18,6 +18,8 @@ import {
   cleanupPluginIpc,
   registerNotificationHandlers,
   cleanupNotificationHandlers,
+  registerThumbnailHandlers,
+  cleanupThumbnailHandlers,
 } from './ipc';
 
 /**
@@ -33,6 +35,7 @@ export function registerIpcHandlers(mainWindow: BrowserWindow): void {
   registerUpdaterHandlers();
   registerPluginIpc();
   registerNotificationHandlers();
+  registerThumbnailHandlers();
 }
 
 /**
@@ -48,4 +51,5 @@ export function cleanupIpcHandlers(): void {
   cleanupUpdaterHandlers();
   cleanupPluginIpc();
   cleanupNotificationHandlers();
+  cleanupThumbnailHandlers();
 }

@@ -11,6 +11,7 @@ export interface Tab {
   label: string;
   projectPath: string;
   status?: SessionStatus;
+  thumbnailUrl?: string;
 }
 
 const logger = createLogger('WorkspaceTabs');
@@ -73,9 +74,19 @@ export function useWorkspaceTabs(): UseWorkspaceTabsReturn {
   // Convert workspace tabs to UI tabs format
   const tabs: Tab[] = useMemo(() => {
     return workspaceTabs.map(tab => {
+      const thumbnailUrl = tab.thumbnailFileName
+        ? `omniscribe-thumb://${tab.thumbnailFileName}`
+        : undefined;
+
       const projectSessions = sessions.filter(s => s.projectPath === tab.projectPath);
       if (projectSessions.length === 0) {
-        return { id: tab.id, label: tab.name, projectPath: tab.projectPath, status: undefined };
+        return {
+          id: tab.id,
+          label: tab.name,
+          projectPath: tab.projectPath,
+          status: undefined,
+          thumbnailUrl,
+        };
       }
 
       // Pick the highest-priority status across all sessions
@@ -87,7 +98,13 @@ export function useWorkspaceTabs(): UseWorkspaceTabsReturn {
         }
       }
 
-      return { id: tab.id, label: tab.name, projectPath: tab.projectPath, status: topStatus };
+      return {
+        id: tab.id,
+        label: tab.name,
+        projectPath: tab.projectPath,
+        status: topStatus,
+        thumbnailUrl,
+      };
     });
   }, [workspaceTabs, sessions]);
 

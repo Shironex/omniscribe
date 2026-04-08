@@ -464,6 +464,14 @@ export interface UpdateTabThemePayload {
 }
 
 /**
+ * Payload for updating a tab's thumbnail
+ */
+export interface UpdateTabThumbnailPayload {
+  tabId: string;
+  thumbnailFileName: string | null;
+}
+
+/**
  * Payload for removing a tab
  */
 export interface RemoveTabPayload {

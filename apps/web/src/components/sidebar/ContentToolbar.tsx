@@ -1,4 +1,4 @@
-import { PanelLeft, Play, LayoutGrid, History, Plus, Square } from 'lucide-react';
+import { Play, LayoutGrid, History, Plus, Square } from 'lucide-react';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
 import { WindowControls } from '@/components/shared/WindowControls';
@@ -10,7 +10,6 @@ import { MAX_CONCURRENT_SESSIONS } from '@omniscribe/shared';
 
 const STOP_SHORTCUT = IS_MAC ? '⌘ K' : 'Ctrl+K';
 const HISTORY_SHORTCUT = IS_MAC ? '⌘ ⇧ H' : 'Ctrl+Shift+H';
-const SIDEBAR_SHORTCUT = IS_MAC ? '⌘ B' : 'Ctrl+B';
 
 interface ContentToolbarProps {
   activeProjectName: string | null;
@@ -39,8 +38,6 @@ export function ContentToolbar({
   isLaunching,
   hasActiveSessions,
 }: ContentToolbarProps) {
-  const isSidebarCollapsed = useAppUIStore(state => state.isSidebarCollapsed);
-  const toggleSidebar = useAppUIStore(state => state.toggleSidebar);
   const toggleHistory = useAppUIStore(state => state.toggleHistory);
   const isHistoryOpen = useAppUIStore(state => state.isHistoryOpen);
   const openLaunchModal = useAppUIStore(state => state.openLaunchModal);
@@ -55,30 +52,8 @@ export function ContentToolbar({
         'border-b border-border/50 bg-background'
       )}
     >
-      {/* Left: Sidebar toggle + project breadcrumb */}
-      <div className="no-drag flex items-center gap-1 px-2">
-        {isSidebarCollapsed && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={toggleSidebar}
-                className="w-7 h-7 text-muted-foreground hover:text-foreground"
-                aria-label="Expand sidebar"
-              >
-                <PanelLeft size={16} />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom">
-              Expand sidebar
-              <kbd className="ml-1.5 px-1 py-0.5 text-[10px] bg-foreground/10 rounded">
-                {SIDEBAR_SHORTCUT}
-              </kbd>
-            </TooltipContent>
-          </Tooltip>
-        )}
-
+      {/* Left: Project breadcrumb */}
+      <div className="no-drag flex items-center gap-1 pl-3 pr-2">
         {activeProjectName && (
           <span className="text-sm text-foreground-secondary truncate max-w-48">
             {activeProjectName}

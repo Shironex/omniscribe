@@ -25,6 +25,8 @@ interface StoreSchema {
   preferences: UserPreferences;
   sessionHistory: SessionHistoryEntry[];
   activeSessionsSnapshot: ActiveSessionSnapshot[];
+  /** Maps normalized project path → thumbnail filename (persists across tab close/reopen) */
+  projectThumbnails: Record<string, string>;
   [key: string]: unknown;
 }
 
@@ -191,6 +193,7 @@ export class WorkspaceService implements OnModuleInit {
           preferences: DEFAULT_PREFERENCES,
           sessionHistory: [],
           activeSessionsSnapshot: [],
+          projectThumbnails: {},
         },
       });
       this.logger.debug(`Store initialized at ${this.store.path}`);
@@ -208,6 +211,7 @@ export class WorkspaceService implements OnModuleInit {
             preferences: DEFAULT_PREFERENCES,
             sessionHistory: [],
             activeSessionsSnapshot: [],
+            projectThumbnails: {},
           },
         });
       } catch (retryError) {
@@ -329,10 +333,19 @@ export class WorkspaceService implements OnModuleInit {
       return tabs;
     }
 
+    // Restore thumbnail from project map if available
+    const projectKey = normalizePath(tab.projectPath);
+    const thumbnailMap = this.store.get('projectThumbnails', {});
+    const savedThumbnail = thumbnailMap[projectKey];
+
     // Deactivate all existing tabs
     const updatedTabs = tabs.map(t => ({ ...t, isActive: false }));
-    // Add new tab as active
-    updatedTabs.push({ ...tab, isActive: true });
+    // Add new tab as active, restoring thumbnail if available
+    updatedTabs.push({
+      ...tab,
+      isActive: true,
+      ...(savedThumbnail ? { thumbnailFileName: savedThumbnail } : {}),
+    });
     this.setTabs(updatedTabs);
     this.setActiveTabId(tab.id);
     return updatedTabs;
@@ -408,6 +421,33 @@ export class WorkspaceService implements OnModuleInit {
 
     this.setTabs(reordered);
     return reordered;
+  }
+
+  /**
+   * Update a tab's thumbnail and persist the association by project path
+   */
+  updateTabThumbnail(tabId: string, thumbnailFileName: string | null): ProjectTabDTO[] {
+    this.logger.debug(`[updateTabThumbnail] tabId=${tabId}, file=${thumbnailFileName}`);
+    const tabs = this.getTabs();
+    const tab = tabs.find(t => t.id === tabId);
+
+    // Persist thumbnail association by project path so it survives tab close/reopen
+    if (tab) {
+      const projectKey = normalizePath(tab.projectPath);
+      const map = this.store.get('projectThumbnails', {});
+      if (thumbnailFileName) {
+        map[projectKey] = thumbnailFileName;
+      } else {
+        delete map[projectKey];
+      }
+      this.store.set('projectThumbnails', map);
+    }
+
+    const updatedTabs = tabs.map(t =>
+      t.id === tabId ? { ...t, thumbnailFileName: thumbnailFileName ?? undefined } : t
+    );
+    this.setTabs(updatedTabs);
+    return updatedTabs;
   }
 
   /**

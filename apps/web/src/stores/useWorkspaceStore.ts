@@ -22,6 +22,7 @@ import type {
   PreferencesUpdatedEvent,
   PreferencesResponse,
   WorkspaceStateResponse,
+  UpdateTabThumbnailPayload,
 } from '@omniscribe/shared';
 import { useSettingsStore } from './useSettingsStore';
 import {
@@ -61,6 +62,8 @@ interface WorkspaceActions extends SocketStoreActions {
   selectTab: (tabId: string) => void;
   /** Update a tab's theme */
   updateTabTheme: (tabId: string, theme: Theme) => void;
+  /** Update a tab's thumbnail */
+  updateTabThumbnail: (tabId: string, thumbnailFileName: string | null) => void;
   /** Reorder tabs */
   reorderTabs: (tabIds: string[]) => void;
   /** Add a session to a tab */
@@ -318,6 +321,24 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
                   { tabs: response.tabs.map(convertBackendTab) },
                   undefined,
                   'workspace/updateTabTheme'
+                );
+              }
+            }
+          );
+        },
+
+        updateTabThumbnail: (tabId: string, thumbnailFileName: string | null) => {
+          logger.debug('updateTabThumbnail', tabId, thumbnailFileName);
+          const payload: UpdateTabThumbnailPayload = { tabId, thumbnailFileName };
+          getSocket().emit(
+            WorkspaceEvents.UPDATE_TAB_THUMBNAIL,
+            payload,
+            (response: TabsOnlyResponse) => {
+              if (response.success) {
+                set(
+                  { tabs: response.tabs.map(convertBackendTab) },
+                  undefined,
+                  'workspace/updateTabThumbnail'
                 );
               }
             }

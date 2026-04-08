@@ -17,6 +17,7 @@ import {
   UserPreferences,
   AddTabPayload,
   UpdateTabThemePayload,
+  UpdateTabThumbnailPayload,
   RemoveTabPayload,
   SelectTabPayload,
   ReorderTabsPayload,
@@ -256,6 +257,28 @@ export class WorkspaceGateway implements OnGatewayInit {
     this.logger.log(`Updating tab theme: ${payload.tabId} -> ${payload.theme}`);
 
     const tabs = this.workspaceService.updateTabTheme(payload.tabId, payload.theme);
+
+    // Broadcast tab update to all other clients
+    client.broadcast.emit(WorkspaceEvents.TABS_UPDATED, {
+      tabs,
+      activeTabId: this.workspaceService.getActiveTabId(),
+    });
+
+    return { success: true, tabs };
+  }
+
+  /**
+   * Handle update tab thumbnail request
+   */
+  @SkipThrottle()
+  @SubscribeMessage(WorkspaceEvents.UPDATE_TAB_THUMBNAIL)
+  handleUpdateTabThumbnail(
+    @MessageBody() payload: UpdateTabThumbnailPayload,
+    @ConnectedSocket() client: Socket
+  ): TabsOnlyResponse {
+    this.logger.log(`Updating tab thumbnail: ${payload.tabId} -> ${payload.thumbnailFileName}`);
+
+    const tabs = this.workspaceService.updateTabThumbnail(payload.tabId, payload.thumbnailFileName);
 
     // Broadcast tab update to all other clients
     client.broadcast.emit(WorkspaceEvents.TABS_UPDATED, {
