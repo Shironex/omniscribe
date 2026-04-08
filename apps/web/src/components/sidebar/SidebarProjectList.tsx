@@ -65,7 +65,7 @@ export function SidebarProjectList({
       data-testid="project-tabs"
       className={cn(
         'flex-1 min-h-0 overflow-y-auto overflow-x-hidden py-1 no-scrollbar',
-        collapsed && 'space-y-1'
+        collapsed && 'space-y-1.5'
       )}
     >
       {tabs.length === 0 ? (

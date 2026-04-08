@@ -134,7 +134,7 @@ export const SidebarProjectItem = React.memo(function SidebarProjectItem({
         <img
           src={thumbnailUrl}
           alt={label}
-          className={cn(sizeClasses, 'rounded-md object-cover')}
+          className={cn(sizeClasses, 'rounded-md object-contain')}
           draggable={false}
         />
       );
