@@ -2,17 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
-## 1.5.0-beta.1 (2026-04-06)
+## 1.5.0 (2026-04-08)
 
 ### Features
 
 - **Sidebar navigation** — Replace top bar with a collapsible sidebar for improved navigation and screen real estate (#267)
+- **Project thumbnails** — Auto-capture project screenshots as sidebar thumbnails with custom protocol handler and persistence across tab reopen (#274)
 - **Docs migration** — Migrate documentation site to Next.js with Fumadocs for better DX and content management (#268)
 
 ### Bug Fixes
 
 - **Theme corruption** — Prevent theme corruption on tab switch and MCP discovery error on startup
 - **Usage panel backgrounds** — Make usage panel backgrounds fully opaque
+- **Thumbnail rendering** — Fix object-fit, status dot clipping, protocol URL parsing, context menu width, and path traversal check (#274)
 
 ### Maintenance
 
@@ -22,8 +24,8 @@ All notable changes to this project will be documented in this file.
 
 ### Stats
 
-- 2 PRs merged (14 commits)
-- 119 files changed — +10,142 / −14,933 lines
+- 3 PRs merged (27 commits)
+- 135 files changed — +10,651 / −14,944 lines
 
 ## 1.4.0 (2026-03-27)
 
