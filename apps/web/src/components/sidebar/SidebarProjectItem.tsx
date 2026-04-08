@@ -188,7 +188,7 @@ export const SidebarProjectItem = React.memo(function SidebarProjectItem({
             </Tooltip>
           </div>
         </ContextMenuTrigger>
-        <ContextMenuContent>
+        <ContextMenuContent className="min-w-[12rem]">
           <ContextMenuItem onClick={handleSetThumbnail}>
             <ImagePlus size={14} className="mr-2" />
             Set Project Icon...
@@ -280,7 +280,7 @@ export const SidebarProjectItem = React.memo(function SidebarProjectItem({
           />
         </div>
       </ContextMenuTrigger>
-      <ContextMenuContent>
+      <ContextMenuContent className="min-w-[12rem]">
         <ContextMenuItem onClick={handleSetThumbnail}>
           <ImagePlus size={14} className="mr-2" />
           Set Project Icon...

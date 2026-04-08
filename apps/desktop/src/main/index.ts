@@ -32,7 +32,7 @@ let cleanupDone = false;
 protocol.registerSchemesAsPrivileged([
   {
     scheme: 'omniscribe-thumb',
-    privileges: { standard: true, secure: true, supportFetchAPI: true },
+    privileges: { standard: false, secure: true, supportFetchAPI: true },
   },
 ]);
 
@@ -123,9 +123,10 @@ async function bootstrap(): Promise<void> {
   resolveShellPath();
 
   // Register omniscribe-thumb:// protocol handler for serving project thumbnails
+  // Scheme is non-standard (opaque), so URL() puts everything after :// in pathname.
+  // Extract filename by stripping the scheme prefix and any leading slashes.
   protocol.handle('omniscribe-thumb', request => {
-    const url = new URL(request.url);
-    const fileName = url.pathname.replace(/^\/+/, '');
+    const fileName = request.url.replace(/^omniscribe-thumb:\/\//, '').replace(/\/+$/, '');
 
     if (!isValidThumbnailFilename(fileName)) {
       return new Response('Invalid filename', { status: 400 });
