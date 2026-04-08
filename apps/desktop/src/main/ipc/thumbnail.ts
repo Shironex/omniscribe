@@ -1,17 +1,14 @@
-import { app, ipcMain } from 'electron';
+import { ipcMain } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
 import { createLogger } from '@omniscribe/shared';
+import { getThumbnailsDir } from '../utils';
 
 const fsp = fs.promises;
 const logger = createLogger('ThumbnailIpc');
 
 const ALLOWED_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg']);
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-
-function getThumbnailsDir(): string {
-  return path.join(app.getPath('userData'), 'thumbnails');
-}
 
 async function ensureThumbnailsDir(): Promise<void> {
   await fsp.mkdir(getThumbnailsDir(), { recursive: true });
@@ -45,9 +42,9 @@ export function registerThumbnailHandlers(): void {
         throw new Error(`Unsupported image format: .${ext}`);
       }
 
-      // Sanitize tabId for use in filename
+      // Sanitize tabId for use in filename, include timestamp for cache busting
       const safeTabId = tabId.replace(/[^a-zA-Z0-9\-_]/g, '_');
-      const fileName = `${safeTabId}.${ext}`;
+      const fileName = `${safeTabId}-${Date.now()}.${ext}`;
 
       await ensureThumbnailsDir();
       const destPath = path.join(getThumbnailsDir(), fileName);
@@ -60,8 +57,10 @@ export function registerThumbnailHandlers(): void {
             await fsp.unlink(path.join(getThumbnailsDir(), file));
           }
         }
-      } catch {
-        // Ignore cleanup errors
+      } catch (err: unknown) {
+        if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
+          logger.warn('Failed to clean up old thumbnail:', err);
+        }
       }
 
       // Copy the image
@@ -79,9 +78,9 @@ export function registerThumbnailHandlers(): void {
         throw new Error('Invalid arguments');
       }
 
-      // Enforce tab-to-filename binding
+      // Enforce tab-to-filename binding (filename format: {safeTabId}-{timestamp}.{ext})
       const safeTabId = tabId.replace(/[^a-zA-Z0-9\-_]/g, '_');
-      if (!safeTabId || !fileName.startsWith(`${safeTabId}.`)) {
+      if (!safeTabId || !fileName.startsWith(`${safeTabId}-`)) {
         throw new Error('Filename does not match tab');
       }
 
@@ -98,8 +97,10 @@ export function registerThumbnailHandlers(): void {
       try {
         await fsp.unlink(resolved);
         logger.info(`Thumbnail removed for tab ${tabId}: ${fileName}`);
-      } catch {
-        // File may not exist, ignore
+      } catch (err: unknown) {
+        if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
+          logger.warn('Failed to remove thumbnail:', err);
+        }
       }
     }
   );
@@ -121,7 +122,9 @@ export async function deleteThumbnailFile(thumbnailFileName?: string): Promise<v
   try {
     await fsp.unlink(filePath);
     logger.debug(`Cleaned up thumbnail file: ${thumbnailFileName}`);
-  } catch {
-    // Ignore cleanup errors
+  } catch (err: unknown) {
+    if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
+      logger.warn('Failed to delete thumbnail file:', err);
+    }
   }
 }

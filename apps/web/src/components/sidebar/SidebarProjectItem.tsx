@@ -17,7 +17,8 @@ import { useSessionStore } from '@/stores/useSessionStore';
 import { useAppUIStore } from '@/stores/useAppUIStore';
 import { useWorkspaceStore } from '@/stores/useWorkspaceStore';
 import { cn } from '@/lib/utils';
-import { mapSessionStatus, createLogger } from '@omniscribe/shared';
+import { mapSessionStatus, createLogger, extractErrorMessage } from '@omniscribe/shared';
+import { toast } from 'sonner';
 
 const logger = createLogger('SidebarProjectItem');
 
@@ -107,6 +108,7 @@ export const SidebarProjectItem = React.memo(function SidebarProjectItem({
       }
     } catch (error) {
       logger.error('Failed to set thumbnail:', error);
+      toast.error(extractErrorMessage(error, 'Failed to set project icon'));
     }
   }, [id, updateTabThumbnail]);
 
@@ -117,8 +119,8 @@ export const SidebarProjectItem = React.memo(function SidebarProjectItem({
     if (tab?.thumbnailFileName) {
       try {
         await window.electronAPI.thumbnail.remove(id, tab.thumbnailFileName);
-      } catch {
-        // Ignore removal errors
+      } catch (error) {
+        logger.debug('Failed to remove thumbnail file:', error);
       }
     }
     updateTabThumbnail(id, null);
@@ -165,9 +167,14 @@ export const SidebarProjectItem = React.memo(function SidebarProjectItem({
                   <div
                     className={cn(
                       'flex items-center justify-center w-full h-full rounded-lg',
-                      'transition-colors duration-100',
+                      'transition-all duration-100',
                       thumbnailUrl
-                        ? 'overflow-hidden'
+                        ? cn(
+                            'overflow-hidden ring-1.5 ring-offset-1 ring-offset-background',
+                            isActive
+                              ? 'ring-primary'
+                              : 'ring-transparent hover:ring-muted-foreground/30'
+                          )
                         : isActive
                           ? 'bg-primary/15 text-primary'
                           : 'text-foreground-secondary hover:bg-muted-foreground/10 hover:text-foreground'
@@ -258,7 +265,12 @@ export const SidebarProjectItem = React.memo(function SidebarProjectItem({
             {thumbnailUrl && renderAvatar('md')}
             {status && <StatusDot status={status} className="shrink-0" />}
 
-            <span className="text-sm truncate flex-1">{label}</span>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="text-sm truncate flex-1">{label}</span>
+              </TooltipTrigger>
+              <TooltipContent side="right">{label}</TooltipContent>
+            </Tooltip>
 
             {sessionCount > 0 && (
               <span className="text-[10px] text-muted-foreground tabular-nums shrink-0">

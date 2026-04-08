@@ -1,6 +1,7 @@
 import { app, BrowserWindow, protocol, net } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
+import { pathToFileURL } from 'url';
 import { NestFactory } from '@nestjs/core';
 import { type INestApplication } from '@nestjs/common';
 import { CustomIoAdapter } from '../modules/shared/custom-io-adapter';
@@ -14,6 +15,7 @@ import { corsOriginCallback } from '../modules/shared/cors.config';
 import { NestLoggerAdapter } from '../modules/shared/nest-logger';
 import { LOCALHOST } from '@omniscribe/shared';
 import { resolveShellPath } from './utils/shell-path';
+import { getThumbnailsDir } from './utils';
 import { setBackendPort } from './backend-port';
 
 // Allow E2E tests to isolate userData by setting ELECTRON_USER_DATA_DIR.
@@ -103,11 +105,6 @@ function setupAutoUpdater(window: BrowserWindow): void {
   initializeAutoUpdater(window, process.env.NODE_ENV === 'development', emitter);
 }
 
-/** Thumbnails directory inside userData */
-function getThumbnailsDir(): string {
-  return path.join(app.getPath('userData'), 'thumbnails');
-}
-
 /** Validate thumbnail filename: no path traversal, only safe chars */
 function isValidThumbnailFilename(name: string): boolean {
   if (!name || name.length > 255) return false;
@@ -125,7 +122,7 @@ async function bootstrap(): Promise<void> {
   // Register omniscribe-thumb:// protocol handler for serving project thumbnails
   // Scheme is non-standard (opaque), so URL() puts everything after :// in pathname.
   // Extract filename by stripping the scheme prefix and any leading slashes.
-  protocol.handle('omniscribe-thumb', request => {
+  protocol.handle('omniscribe-thumb', async request => {
     const fileName = request.url.replace(/^omniscribe-thumb:\/\//, '').replace(/\/+$/, '');
 
     if (!isValidThumbnailFilename(fileName)) {
@@ -140,11 +137,13 @@ async function bootstrap(): Promise<void> {
       return new Response('Forbidden', { status: 403 });
     }
 
-    if (!fs.existsSync(resolved)) {
+    try {
+      await fs.promises.access(resolved, fs.constants.R_OK);
+    } catch {
       return new Response('Not found', { status: 404 });
     }
 
-    return net.fetch(`file://${resolved}`);
+    return net.fetch(pathToFileURL(resolved).toString());
   });
 
   // Log security posture at startup

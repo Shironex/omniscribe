@@ -1,5 +1,13 @@
 // Path utilities
-export { normalizePath, joinPaths, getHomeDir, isWindows, isMac, isLinux } from './path';
+export {
+  normalizePath,
+  joinPaths,
+  getHomeDir,
+  isWindows,
+  isMac,
+  isLinux,
+  getThumbnailsDir,
+} from './path';
 
 // CLI detection utilities
 export {

@@ -1,5 +1,6 @@
 import { join } from 'path';
 import { homedir } from 'os';
+import { app } from 'electron';
 import { normalizePath } from '@omniscribe/shared';
 
 // Re-export for consumers that import from this file
@@ -38,4 +39,11 @@ export function isMac(): boolean {
  */
 export function isLinux(): boolean {
   return process.platform === 'linux';
+}
+
+/**
+ * Get the thumbnails directory inside userData
+ */
+export function getThumbnailsDir(): string {
+  return join(app.getPath('userData'), 'thumbnails');
 }
