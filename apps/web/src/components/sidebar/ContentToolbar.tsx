@@ -53,7 +53,7 @@ export function ContentToolbar({
       )}
     >
       {/* Left: Project breadcrumb */}
-      <div className="no-drag flex items-center gap-1 px-2">
+      <div className="no-drag flex items-center gap-1 pl-3 pr-2">
         {activeProjectName && (
           <span className="text-sm text-foreground-secondary truncate max-w-48">
             {activeProjectName}
