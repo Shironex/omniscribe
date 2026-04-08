@@ -53,7 +53,7 @@ export function registerThumbnailHandlers(): void {
       try {
         const existing = await fsp.readdir(getThumbnailsDir());
         for (const file of existing) {
-          if (file.startsWith(`${safeTabId}.`)) {
+          if (file.startsWith(`${safeTabId}-`)) {
             await fsp.unlink(path.join(getThumbnailsDir(), file));
           }
         }
@@ -119,8 +119,14 @@ export async function deleteThumbnailFile(thumbnailFileName?: string): Promise<v
   if (!isValidFilename(thumbnailFileName)) return;
 
   const filePath = path.join(getThumbnailsDir(), thumbnailFileName);
+  const resolved = path.resolve(filePath);
+  if (!resolved.startsWith(path.resolve(getThumbnailsDir()))) {
+    logger.warn('Blocked path traversal attempt in deleteThumbnailFile');
+    return;
+  }
+
   try {
-    await fsp.unlink(filePath);
+    await fsp.unlink(resolved);
     logger.debug(`Cleaned up thumbnail file: ${thumbnailFileName}`);
   } catch (err: unknown) {
     if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
