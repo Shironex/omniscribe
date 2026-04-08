@@ -160,17 +160,21 @@ export const SidebarProjectItem = React.memo(function SidebarProjectItem({
                   role="tab"
                   aria-selected={isActive}
                   onClick={handleClick}
-                  className={cn(
-                    'no-drag flex items-center justify-center w-8 h-8 mx-auto rounded-lg cursor-pointer',
-                    'transition-colors duration-100 relative',
-                    thumbnailUrl
-                      ? 'overflow-hidden'
-                      : isActive
-                        ? 'bg-primary/15 text-primary'
-                        : 'text-foreground-secondary hover:bg-muted-foreground/10 hover:text-foreground'
-                  )}
+                  className="no-drag relative w-8 h-8 mx-auto cursor-pointer"
                 >
-                  {renderAvatar('sm')}
+                  <div
+                    className={cn(
+                      'flex items-center justify-center w-full h-full rounded-lg',
+                      'transition-colors duration-100',
+                      thumbnailUrl
+                        ? 'overflow-hidden'
+                        : isActive
+                          ? 'bg-primary/15 text-primary'
+                          : 'text-foreground-secondary hover:bg-muted-foreground/10 hover:text-foreground'
+                    )}
+                  >
+                    {renderAvatar('sm')}
+                  </div>
                   {status && (
                     <StatusDot
                       status={status}
