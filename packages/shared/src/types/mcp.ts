@@ -204,6 +204,11 @@ export interface McpCapabilityDescriptor {
    * (e.g. drives a dev server). UI may show a "Dev only" badge.
    */
   requiresDev?: boolean;
+  /**
+   * If present, the capability is currently unavailable and the UI should
+   * surface this reason (populated from the capability's preflight check).
+   */
+  disabledReason?: string;
 }
 
 /**

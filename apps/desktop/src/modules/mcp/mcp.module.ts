@@ -9,6 +9,7 @@ import {
 } from './services';
 import { McpCapabilityRegistryService } from './services/mcp-capability-registry.service';
 import { McpCapabilityStateService } from './services/mcp-capability-state.service';
+import { CdpInfoService } from './services/cdp-info.service';
 import { McpStatusServerService } from './mcp-status-server.service';
 import { McpGateway } from './mcp.gateway';
 import { WorkspaceModule } from '../workspace';
@@ -21,6 +22,7 @@ import { WorkspaceModule } from '../workspace';
     McpInternalService,
     McpTrackingService,
     McpStatusServerService,
+    CdpInfoService,
     McpCapabilityRegistryService,
     McpCapabilityStateService,
     McpWriterService,

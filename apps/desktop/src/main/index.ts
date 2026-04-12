@@ -17,6 +17,17 @@ import { LOCALHOST } from '@omniscribe/shared';
 import { resolveShellPath } from './utils/shell-path';
 import { getThumbnailsDir } from './utils';
 import { setBackendPort } from './backend-port';
+import { CDP_PORT, cdpEnabledForRuntime } from './cdp';
+
+// Enable Chrome DevTools Protocol in dev (or when OMNISCRIBE_ENABLE_CDP=1)
+// so external tools (e.g. @playwright/mcp --cdp-endpoint) can drive the
+// running Omniscribe window. Must happen before app.whenReady() / any
+// BrowserWindow construction, hence this being placed at module top-level.
+if (cdpEnabledForRuntime(app.isPackaged)) {
+  app.commandLine.appendSwitch('remote-debugging-port', String(CDP_PORT));
+  app.commandLine.appendSwitch('remote-debugging-address', '127.0.0.1');
+  console.info(`[cdp] remote debugging enabled on 127.0.0.1:${CDP_PORT}`);
+}
 
 // Allow E2E tests to isolate userData by setting ELECTRON_USER_DATA_DIR.
 // Must run before app.ready so electron-store and other userData consumers

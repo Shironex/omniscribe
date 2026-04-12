@@ -67,38 +67,51 @@ export function AiCapabilitiesSection() {
 
       {projectPath && capabilities.length > 0 && (
         <div className="space-y-3">
-          {capabilities.map(cap => (
-            <div
-              key={cap.id}
-              className={cn(
-                'rounded-xl border border-border/50 bg-card/50 p-4',
-                'flex items-start gap-4'
-              )}
-            >
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-medium text-foreground truncate">{cap.label}</h3>
-                  {cap.requiresDev && (
-                    <span className="text-[10px] font-medium text-status-warning bg-status-warning-bg px-1.5 py-0.5 rounded">
-                      Dev only
-                    </span>
+          {capabilities.map(cap => {
+            // Allow disabling an already-enabled capability even when the
+            // preflight now reports it unavailable — otherwise users get
+            // stuck with a permanently-on toggle.
+            const unavailable = Boolean(cap.disabledReason) && !cap.enabled;
+            return (
+              <div
+                key={cap.id}
+                className={cn(
+                  'rounded-xl border border-border/50 bg-card/50 p-4',
+                  'flex items-start gap-4',
+                  unavailable && 'opacity-70'
+                )}
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-medium text-foreground truncate">{cap.label}</h3>
+                    {cap.requiresDev && (
+                      <span className="text-[10px] font-medium text-status-warning bg-status-warning-bg px-1.5 py-0.5 rounded">
+                        Dev only
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">{cap.description}</p>
+                  {cap.disabledReason ? (
+                    <p className="text-xs text-status-warning/90 mt-1.5">{cap.disabledReason}</p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground/70 mt-1.5">
+                      Applies to new sessions.
+                    </p>
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">{cap.description}</p>
-                <p className="text-xs text-muted-foreground/70 mt-1.5">Applies to new sessions.</p>
+                <Switch
+                  checked={cap.enabled}
+                  disabled={disabledAll || unavailable}
+                  onCheckedChange={next => {
+                    if (projectPath) {
+                      void toggleCapability(projectPath, cap.id, next);
+                    }
+                  }}
+                  aria-label={`Toggle ${cap.label}`}
+                />
               </div>
-              <Switch
-                checked={cap.enabled}
-                disabled={disabledAll}
-                onCheckedChange={next => {
-                  if (projectPath) {
-                    void toggleCapability(projectPath, cap.id, next);
-                  }
-                }}
-                aria-label={`Toggle ${cap.label}`}
-              />
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

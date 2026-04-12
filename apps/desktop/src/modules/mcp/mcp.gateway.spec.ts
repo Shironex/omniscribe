@@ -694,11 +694,11 @@ describe('McpGateway', () => {
       { id: 'playwright-web', label: 'PW', description: 'd2', buildConfig: jest.fn() },
     ];
 
-    it('returns capabilities merged with per-project enabled state', () => {
+    it('returns capabilities merged with per-project enabled state', async () => {
       capRegistry.list.mockReturnValue(fakeCaps as never);
       capState.getEnabled.mockReturnValue(['omniscribe']);
 
-      const result = gateway.handleCapabilityList({ projectPath: '/p' }, mockSocket);
+      const result = await gateway.handleCapabilityList({ projectPath: '/p' }, mockSocket);
 
       expect(result.error).toBeUndefined();
       expect(result.capabilities).toEqual([
@@ -708,10 +708,55 @@ describe('McpGateway', () => {
       expect(capState.getEnabled).toHaveBeenCalledWith('/p');
     });
 
-    it('returns error for missing projectPath', () => {
-      const result = gateway.handleCapabilityList({ projectPath: '' }, mockSocket);
+    it('returns error for missing projectPath', async () => {
+      const result = await gateway.handleCapabilityList({ projectPath: '' }, mockSocket);
       expect(result.capabilities).toEqual([]);
       expect(result.error).toBe('Invalid projectPath: must be a non-empty string');
+    });
+
+    it('propagates requiresDev and disabledReason from preflight', async () => {
+      const capWithPreflight = {
+        id: 'playwright-electron',
+        label: 'PE',
+        description: 'd3',
+        requiresDev: true,
+        buildConfig: jest.fn(),
+        preflight: jest.fn().mockResolvedValue({ ok: false, reason: 'CDP not enabled' }),
+      };
+      capRegistry.list.mockReturnValue([capWithPreflight] as never);
+      capState.getEnabled.mockReturnValue([]);
+
+      const result = await gateway.handleCapabilityList({ projectPath: '/p' }, mockSocket);
+
+      expect(result.error).toBeUndefined();
+      expect(result.capabilities).toHaveLength(1);
+      expect(result.capabilities[0]).toEqual({
+        id: 'playwright-electron',
+        label: 'PE',
+        description: 'd3',
+        enabled: false,
+        requiresDev: true,
+        disabledReason: 'CDP not enabled',
+      });
+      expect(capWithPreflight.preflight).toHaveBeenCalled();
+    });
+
+    it('omits disabledReason when preflight returns ok', async () => {
+      const capWithPreflight = {
+        id: 'playwright-electron',
+        label: 'PE',
+        description: 'd3',
+        requiresDev: true,
+        buildConfig: jest.fn(),
+        preflight: jest.fn().mockResolvedValue({ ok: true }),
+      };
+      capRegistry.list.mockReturnValue([capWithPreflight] as never);
+      capState.getEnabled.mockReturnValue([]);
+
+      const result = await gateway.handleCapabilityList({ projectPath: '/p' }, mockSocket);
+
+      expect(result.capabilities[0].disabledReason).toBeUndefined();
+      expect(result.capabilities[0].requiresDev).toBe(true);
     });
   });
 

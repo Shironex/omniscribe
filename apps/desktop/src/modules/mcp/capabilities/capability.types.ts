@@ -44,6 +44,12 @@ export interface McpCapability {
   /** Whether this capability is enabled by default for new projects. */
   defaultEnabled?: boolean;
   /**
+   * If true, this capability only works in dev/local environments. Surfaces
+   * the "Dev only" badge in Settings. Propagated to the descriptor sent to
+   * the UI.
+   */
+  requiresDev?: boolean;
+  /**
    * Optional preflight check (e.g. binary present, port available).
    * If it returns `{ ok: false }`, the capability is skipped for this write.
    */

@@ -285,10 +285,10 @@ export class McpGateway implements OnGatewayInit {
    */
   @SkipThrottle()
   @SubscribeMessage(McpEvents.CAPABILITY_LIST)
-  handleCapabilityList(
+  async handleCapabilityList(
     @MessageBody() payload: McpCapabilityListPayload,
     @ConnectedSocket() _client: Socket
-  ): McpCapabilityListResponse {
+  ): Promise<McpCapabilityListResponse> {
     try {
       const projectPath = payload?.projectPath;
       if (!projectPath || typeof projectPath !== 'string') {
@@ -299,12 +299,43 @@ export class McpGateway implements OnGatewayInit {
       }
 
       const enabled = new Set(this.capState.getEnabled(projectPath));
-      const capabilities: McpCapabilityDescriptor[] = this.capRegistry.list().map(cap => ({
-        id: cap.id,
-        label: cap.label,
-        description: cap.description,
-        enabled: enabled.has(cap.id),
-      }));
+      // Preflight context used only when capability.preflight exists; current
+      // preflights don't touch session/workingDir fields, so we pass a minimal
+      // stub keyed to projectPath. Capabilities that need real context must be
+      // invoked through the writer pipeline instead.
+      const preflightCtx = {
+        sessionId: '',
+        workingDir: projectPath,
+        projectPath,
+        projectHash: '',
+        statusUrl: null,
+        instanceId: null,
+      };
+
+      const capabilities: McpCapabilityDescriptor[] = await Promise.all(
+        this.capRegistry.list().map(async cap => {
+          let disabledReason: string | undefined;
+          if (typeof cap.preflight === 'function') {
+            try {
+              const pre = await cap.preflight(preflightCtx);
+              if (!pre.ok) {
+                disabledReason = pre.reason ?? 'Unavailable';
+              }
+            } catch (err) {
+              disabledReason = extractErrorMessage(err, 'Preflight failed');
+            }
+          }
+          const descriptor: McpCapabilityDescriptor = {
+            id: cap.id,
+            label: cap.label,
+            description: cap.description,
+            enabled: enabled.has(cap.id),
+          };
+          if (cap.requiresDev) descriptor.requiresDev = true;
+          if (disabledReason) descriptor.disabledReason = disabledReason;
+          return descriptor;
+        })
+      );
 
       return { capabilities };
     } catch (error) {

@@ -1,8 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { createLogger } from '@omniscribe/shared';
 import { McpInternalService } from './mcp-internal.service';
+import { CdpInfoService } from './cdp-info.service';
 import { createOmniscribeCapability } from '../capabilities/omniscribe.capability';
 import { playwrightWebCapability } from '../capabilities/playwright-web.capability';
+import { createPlaywrightElectronCapability } from '../capabilities/playwright-electron.capability';
 import type { McpCapability } from '../capabilities/capability.types';
 
 /**
@@ -17,9 +19,10 @@ export class McpCapabilityRegistryService {
   private readonly logger = createLogger('McpCapabilityRegistryService');
   private readonly caps = new Map<string, McpCapability>();
 
-  constructor(internal: McpInternalService) {
+  constructor(internal: McpInternalService, cdp: CdpInfoService) {
     this.register(createOmniscribeCapability(internal));
     this.register(playwrightWebCapability);
+    this.register(createPlaywrightElectronCapability(cdp));
   }
 
   register(cap: McpCapability): void {
