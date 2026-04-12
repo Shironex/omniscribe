@@ -10,6 +10,8 @@ import {
   McpSessionRegistryService,
   McpTrackingService,
 } from './services';
+import { McpCapabilityRegistryService } from './services/mcp-capability-registry.service';
+import { McpCapabilityStateService } from './services/mcp-capability-state.service';
 
 // ---- Helpers ----
 
@@ -39,6 +41,8 @@ describe('McpGateway', () => {
   let sessionRegistry: jest.Mocked<McpSessionRegistryService>;
   let trackingService: jest.Mocked<McpTrackingService>;
   let statusServer: jest.Mocked<McpStatusServerService>;
+  let capRegistry: jest.Mocked<McpCapabilityRegistryService>;
+  let capState: jest.Mocked<McpCapabilityStateService>;
   let mockServer: Server;
   let mockSocket: Socket;
 
@@ -76,6 +80,17 @@ describe('McpGateway', () => {
       getInstanceId: jest.fn(),
     } as unknown as jest.Mocked<McpStatusServerService>;
 
+    capRegistry = {
+      list: jest.fn().mockReturnValue([]),
+      get: jest.fn(),
+    } as unknown as jest.Mocked<McpCapabilityRegistryService>;
+
+    capState = {
+      getEnabled: jest.fn().mockReturnValue([]),
+      setEnabled: jest.fn(),
+      toggle: jest.fn(),
+    } as unknown as jest.Mocked<McpCapabilityStateService>;
+
     const module: TestingModule = await Test.createTestingModule({
       imports: [ThrottlerModule.forRoot([])],
       providers: [
@@ -86,6 +101,8 @@ describe('McpGateway', () => {
         { provide: McpSessionRegistryService, useValue: sessionRegistry },
         { provide: McpTrackingService, useValue: trackingService },
         { provide: McpStatusServerService, useValue: statusServer },
+        { provide: McpCapabilityRegistryService, useValue: capRegistry },
+        { provide: McpCapabilityStateService, useValue: capState },
       ],
     }).compile();
 
@@ -665,6 +682,109 @@ describe('McpGateway', () => {
       });
 
       expect(mockServer.emit).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // ================================================================
+  // handleCapabilityList
+  // ================================================================
+  describe('handleCapabilityList', () => {
+    const fakeCaps = [
+      { id: 'omniscribe', label: 'Omniscribe', description: 'd1', buildConfig: jest.fn() },
+      { id: 'playwright-web', label: 'PW', description: 'd2', buildConfig: jest.fn() },
+    ];
+
+    it('returns capabilities merged with per-project enabled state', () => {
+      capRegistry.list.mockReturnValue(fakeCaps as never);
+      capState.getEnabled.mockReturnValue(['omniscribe']);
+
+      const result = gateway.handleCapabilityList({ projectPath: '/p' }, mockSocket);
+
+      expect(result.error).toBeUndefined();
+      expect(result.capabilities).toEqual([
+        { id: 'omniscribe', label: 'Omniscribe', description: 'd1', enabled: true },
+        { id: 'playwright-web', label: 'PW', description: 'd2', enabled: false },
+      ]);
+      expect(capState.getEnabled).toHaveBeenCalledWith('/p');
+    });
+
+    it('returns error for missing projectPath', () => {
+      const result = gateway.handleCapabilityList({ projectPath: '' }, mockSocket);
+      expect(result.capabilities).toEqual([]);
+      expect(result.error).toBe('Invalid projectPath: must be a non-empty string');
+    });
+  });
+
+  // ================================================================
+  // handleCapabilityToggle
+  // ================================================================
+  describe('handleCapabilityToggle', () => {
+    it('toggles capability, broadcasts CAPABILITY_CHANGED, returns enabledIds', () => {
+      capRegistry.get.mockReturnValue({
+        id: 'playwright-web',
+        label: 'PW',
+        description: '',
+        buildConfig: jest.fn(),
+      } as never);
+      capState.toggle.mockReturnValue(['omniscribe', 'playwright-web']);
+
+      const result = gateway.handleCapabilityToggle(
+        { projectPath: '/p', capabilityId: 'playwright-web', enabled: true },
+        mockSocket
+      );
+
+      expect(result).toEqual({
+        success: true,
+        enabledIds: ['omniscribe', 'playwright-web'],
+      });
+      expect(capState.toggle).toHaveBeenCalledWith('/p', 'playwright-web', true);
+      expect(mockServer.emit).toHaveBeenCalledWith('mcp:capability-changed', {
+        projectPath: '/p',
+        enabledIds: ['omniscribe', 'playwright-web'],
+      });
+    });
+
+    it('returns error for unknown capability id without broadcasting', () => {
+      capRegistry.get.mockReturnValue(undefined);
+
+      const result = gateway.handleCapabilityToggle(
+        { projectPath: '/p', capabilityId: 'nope', enabled: true },
+        mockSocket
+      );
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('Unknown capability: nope');
+      expect(capState.toggle).not.toHaveBeenCalled();
+      expect(mockServer.emit).not.toHaveBeenCalled();
+    });
+
+    it('returns error for missing projectPath', () => {
+      const result = gateway.handleCapabilityToggle(
+        { projectPath: '', capabilityId: 'x', enabled: true },
+        mockSocket
+      );
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('Invalid projectPath: must be a non-empty string');
+    });
+
+    it('returns error when capState.toggle throws', () => {
+      capRegistry.get.mockReturnValue({
+        id: 'playwright-web',
+        label: 'PW',
+        description: '',
+        buildConfig: jest.fn(),
+      } as never);
+      capState.toggle.mockImplementation(() => {
+        throw new Error('boom');
+      });
+
+      const result = gateway.handleCapabilityToggle(
+        { projectPath: '/p', capabilityId: 'playwright-web', enabled: true },
+        mockSocket
+      );
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('boom');
     });
   });
 });

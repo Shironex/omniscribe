@@ -28,6 +28,11 @@ import {
   McpRemoveConfigResponse,
   McpInternalStatusResponse,
   McpStatusServerInfoResponse,
+  McpCapabilityListPayload,
+  McpCapabilityListResponse,
+  McpCapabilityTogglePayload,
+  McpCapabilityToggleResponse,
+  McpCapabilityDescriptor,
   SessionTasksUpdate,
   McpEvents,
   SessionEvents,
@@ -43,6 +48,8 @@ import {
   McpSessionRegistryService,
   McpTrackingService,
 } from './services';
+import { McpCapabilityRegistryService } from './services/mcp-capability-registry.service';
+import { McpCapabilityStateService } from './services/mcp-capability-state.service';
 import { CORS_CONFIG } from '../shared/cors.config';
 
 /**
@@ -71,7 +78,9 @@ export class McpGateway implements OnGatewayInit {
     private readonly projectCache: McpProjectCacheService,
     private readonly sessionRegistry: McpSessionRegistryService,
     private readonly trackingService: McpTrackingService,
-    private readonly statusServer: McpStatusServerService
+    private readonly statusServer: McpStatusServerService,
+    private readonly capRegistry: McpCapabilityRegistryService,
+    private readonly capState: McpCapabilityStateService
   ) {}
 
   afterInit(): void {
@@ -268,6 +277,80 @@ export class McpGateway implements OnGatewayInit {
       statusUrl: this.statusServer.getStatusUrl(),
       instanceId: this.statusServer.getInstanceId(),
     };
+  }
+
+  /**
+   * List all registered MCP capabilities, merged with the per-project
+   * enabled state. Used by the Settings UI.
+   */
+  @SkipThrottle()
+  @SubscribeMessage(McpEvents.CAPABILITY_LIST)
+  handleCapabilityList(
+    @MessageBody() payload: McpCapabilityListPayload,
+    @ConnectedSocket() _client: Socket
+  ): McpCapabilityListResponse {
+    try {
+      const projectPath = payload?.projectPath;
+      if (!projectPath || typeof projectPath !== 'string') {
+        return {
+          capabilities: [],
+          error: 'Invalid projectPath: must be a non-empty string',
+        };
+      }
+
+      const enabled = new Set(this.capState.getEnabled(projectPath));
+      const capabilities: McpCapabilityDescriptor[] = this.capRegistry.list().map(cap => ({
+        id: cap.id,
+        label: cap.label,
+        description: cap.description,
+        enabled: enabled.has(cap.id),
+      }));
+
+      return { capabilities };
+    } catch (error) {
+      this.logger.error('Error listing capabilities:', error);
+      return {
+        capabilities: [],
+        error: extractErrorMessage(error, 'Unknown error'),
+      };
+    }
+  }
+
+  /**
+   * Toggle a capability on/off for a project, broadcast the change.
+   */
+  @SubscribeMessage(McpEvents.CAPABILITY_TOGGLE)
+  handleCapabilityToggle(
+    @MessageBody() payload: McpCapabilityTogglePayload,
+    @ConnectedSocket() _client: Socket
+  ): McpCapabilityToggleResponse {
+    try {
+      const { projectPath, capabilityId, enabled } = payload ?? ({} as McpCapabilityTogglePayload);
+      if (!projectPath || typeof projectPath !== 'string') {
+        return { success: false, error: 'Invalid projectPath: must be a non-empty string' };
+      }
+      if (!capabilityId || typeof capabilityId !== 'string') {
+        return { success: false, error: 'Invalid capabilityId: must be a non-empty string' };
+      }
+      if (!this.capRegistry.get(capabilityId)) {
+        return { success: false, error: `Unknown capability: ${capabilityId}` };
+      }
+
+      const enabledIds = this.capState.toggle(projectPath, capabilityId, Boolean(enabled));
+
+      this.server.emit(McpEvents.CAPABILITY_CHANGED, {
+        projectPath,
+        enabledIds,
+      });
+
+      return { success: true, enabledIds };
+    } catch (error) {
+      this.logger.error('Error toggling capability:', error);
+      return {
+        success: false,
+        error: extractErrorMessage(error, 'Unknown error'),
+      };
+    }
   }
 
   /**

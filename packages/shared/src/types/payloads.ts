@@ -5,7 +5,13 @@
 import type { ProjectTabDTO, UserPreferences } from './project-tab';
 import type { QuickAction } from './workspace';
 import type { BranchInfo, CommitInfo, WorktreeInfo, GitFileDiff } from './git';
-import type { TaskItem, McpServerConfig, McpServerState, McpServerStatus } from './mcp';
+import type {
+  TaskItem,
+  McpServerConfig,
+  McpServerState,
+  McpServerStatus,
+  McpCapabilityDescriptor,
+} from './mcp';
 import type { ClaudeSessionEntry } from './session';
 
 // ============================================
@@ -373,6 +379,51 @@ export interface McpStatusUpdateEvent {
 export interface McpServerStateUpdateEvent {
   serverId: string;
   state: McpServerState;
+}
+
+// ============================================
+// MCP Capability Payloads / Responses
+// ============================================
+
+/**
+ * Payload for listing capabilities for a project.
+ */
+export interface McpCapabilityListPayload {
+  projectPath: string;
+}
+
+/**
+ * Response for listing capabilities for a project.
+ */
+export interface McpCapabilityListResponse {
+  capabilities: McpCapabilityDescriptor[];
+  error?: string;
+}
+
+/**
+ * Payload for toggling a single capability on/off for a project.
+ */
+export interface McpCapabilityTogglePayload {
+  projectPath: string;
+  capabilityId: string;
+  enabled: boolean;
+}
+
+/**
+ * Response for toggling a capability.
+ */
+export interface McpCapabilityToggleResponse {
+  success: boolean;
+  enabledIds?: string[];
+  error?: string;
+}
+
+/**
+ * Broadcast event when a project's enabled-capability set changes.
+ */
+export interface McpCapabilityChangedEvent {
+  projectPath: string;
+  enabledIds: string[];
 }
 
 // ============================================

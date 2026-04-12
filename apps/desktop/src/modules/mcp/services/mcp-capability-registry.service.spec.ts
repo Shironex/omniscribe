@@ -82,4 +82,15 @@ describe('McpCapabilityRegistryService', () => {
   it('get() returns undefined for unknown ids', () => {
     expect(service.get('nope')).toBeUndefined();
   });
+
+  it('auto-registers the playwright-web capability', () => {
+    const pw = service.get('playwright-web');
+    expect(pw).toBeDefined();
+    expect(pw?.id).toBe('playwright-web');
+    expect(pw?.label).toBe('Playwright (Web)');
+  });
+
+  it('playwright-web is opt-in (not in defaultEnabledIds)', () => {
+    expect(service.defaultEnabledIds()).not.toContain('playwright-web');
+  });
 });

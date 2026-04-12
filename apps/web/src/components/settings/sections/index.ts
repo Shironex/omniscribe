@@ -1,6 +1,7 @@
 export { AppearanceSection } from './AppearanceSection';
 export { GithubSection } from './GithubSection';
 export { McpSection } from './McpSection';
+export { AiCapabilitiesSection } from './AiCapabilitiesSection';
 export { GeneralSection } from './GeneralSection';
 export { WorktreesSection } from './WorktreesSection';
 export { SessionsSection } from './SessionsSection';

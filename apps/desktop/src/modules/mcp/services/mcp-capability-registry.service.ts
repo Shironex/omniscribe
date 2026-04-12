@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { createLogger } from '@omniscribe/shared';
 import { McpInternalService } from './mcp-internal.service';
 import { createOmniscribeCapability } from '../capabilities/omniscribe.capability';
+import { playwrightWebCapability } from '../capabilities/playwright-web.capability';
 import type { McpCapability } from '../capabilities/capability.types';
 
 /**
@@ -18,6 +19,7 @@ export class McpCapabilityRegistryService {
 
   constructor(internal: McpInternalService) {
     this.register(createOmniscribeCapability(internal));
+    this.register(playwrightWebCapability);
   }
 
   register(cap: McpCapability): void {

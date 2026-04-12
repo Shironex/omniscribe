@@ -15,6 +15,8 @@ import {
   emitWithAck,
 } from '../../../test/integration/helpers/socket-client';
 import { McpGateway } from './mcp.gateway';
+import { McpCapabilityRegistryService } from './services/mcp-capability-registry.service';
+import { McpCapabilityStateService } from './services/mcp-capability-state.service';
 import { McpDiscoveryService } from './services/mcp-discovery.service';
 import { McpWriterService } from './services/mcp-writer.service';
 import { McpProjectCacheService } from './services/mcp-project-cache.service';
@@ -77,6 +79,18 @@ describe('McpGateway (integration)', () => {
         { provide: McpSessionRegistryService, useValue: mockSessionRegistry },
         { provide: McpTrackingService, useValue: mockTrackingService },
         { provide: McpStatusServerService, useValue: mockStatusServer },
+        {
+          provide: McpCapabilityRegistryService,
+          useValue: { list: jest.fn().mockReturnValue([]), get: jest.fn() },
+        },
+        {
+          provide: McpCapabilityStateService,
+          useValue: {
+            getEnabled: jest.fn().mockReturnValue([]),
+            setEnabled: jest.fn(),
+            toggle: jest.fn().mockReturnValue([]),
+          },
+        },
       ],
     })
     class TestMcpModule {}
