@@ -426,6 +426,25 @@ export interface McpCapabilityChangedEvent {
   enabledIds: string[];
 }
 
+/**
+ * Payload for setting the per-project Electron CDP port (used by the
+ * `playwright-electron` capability to target the user's own app).
+ */
+export interface McpCapabilitySetPortPayload {
+  projectPath: string;
+  capabilityId: string;
+  port: number;
+}
+
+/**
+ * Response for setting the per-project Electron CDP port.
+ */
+export interface McpCapabilitySetPortResponse {
+  success: boolean;
+  port?: number;
+  error?: string;
+}
+
 // ============================================
 // Session Payloads
 // ============================================

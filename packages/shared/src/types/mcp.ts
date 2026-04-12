@@ -209,6 +209,12 @@ export interface McpCapabilityDescriptor {
    * surface this reason (populated from the capability's preflight check).
    */
   disabledReason?: string;
+  /**
+   * Per-project CDP port for the user's own Electron app. Only set on the
+   * `playwright-electron` descriptor. Defaults to 9222 when the user
+   * hasn't explicitly configured one.
+   */
+  electronCdpPort?: number;
 }
 
 /**

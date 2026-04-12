@@ -129,8 +129,8 @@ Curated registry of MCP servers Omniscribe ships alongside user-authored entries
 
 ### Dev-only environment flags
 
-- `OMNISCRIBE_ENABLE_CDP=1` — forces Chrome DevTools Protocol on the Electron window (bound to `127.0.0.1:9222`). Auto-enabled in unpackaged dev. Required for the `playwright-electron` MCP capability to attach. Never bind beyond `127.0.0.1`.
-- `OMNISCRIBE_CDP_PORT` — override CDP port (default 9222).
+- `OMNISCRIBE_ENABLE_CDP=1` — "dogfood mode": exposes Chrome DevTools Protocol on Omniscribe's OWN Electron window (bound to `127.0.0.1:9222`) so you can drive Omniscribe itself from `@playwright/mcp` while developing it. OFF by default, including in unpackaged dev — otherwise Omniscribe would squat on 9222 and block the user's own Electron apps running inside sessions. Never bind beyond `127.0.0.1`.
+- `OMNISCRIBE_CDP_PORT` — override the dogfood CDP port (default 9222). Note: the `playwright-electron` MCP capability targets the USER's Electron apps via a per-project port configured in Settings → AI Capabilities — it's independent of this switch.
 
 ### Testing
 

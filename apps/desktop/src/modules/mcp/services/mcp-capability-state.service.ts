@@ -54,4 +54,24 @@ export class McpCapabilityStateService {
     this.setEnabled(projectPath, next);
     return next;
   }
+
+  /** Default CDP port assumed when the user hasn't configured one. */
+  static readonly DEFAULT_ELECTRON_CDP_PORT = 9222;
+
+  /**
+   * Get the user-configured CDP port for this project's own Electron app,
+   * falling back to 9222 when unset.
+   */
+  getElectronCdpPort(projectPath: string): number {
+    const stored = this.workspace.getProjectElectronCdpPort(normalizePath(projectPath));
+    return stored ?? McpCapabilityStateService.DEFAULT_ELECTRON_CDP_PORT;
+  }
+
+  /**
+   * Persist the user's Electron app CDP port for a project.
+   */
+  setElectronCdpPort(projectPath: string, port: number): void {
+    this.workspace.setProjectElectronCdpPort(normalizePath(projectPath), port);
+    this.logger.debug(`[setElectronCdpPort] project=${projectPath}, port=${port}`);
+  }
 }

@@ -41,16 +41,16 @@ describe('cdp helpers', () => {
       expect(cdpEnabledForRuntime(false)).toBe(true);
     });
 
-    it('packaged build without env override is disabled even in dev', () => {
+    it('packaged build without env override is disabled', () => {
       delete process.env.OMNISCRIBE_ENABLE_CDP;
       process.env.NODE_ENV = 'development';
       expect(cdpEnabledForRuntime(true)).toBe(false);
     });
 
-    it('unpackaged + NODE_ENV=development enables', () => {
+    it('unpackaged + NODE_ENV=development is disabled without env override', () => {
       delete process.env.OMNISCRIBE_ENABLE_CDP;
       process.env.NODE_ENV = 'development';
-      expect(cdpEnabledForRuntime(false)).toBe(true);
+      expect(cdpEnabledForRuntime(false)).toBe(false);
     });
 
     it('unpackaged + NODE_ENV=production is disabled', () => {

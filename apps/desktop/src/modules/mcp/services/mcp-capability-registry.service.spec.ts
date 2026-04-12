@@ -2,30 +2,21 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { MCP_SERVER_NAME } from '@omniscribe/shared';
 import { McpCapabilityRegistryService } from './mcp-capability-registry.service';
 import { McpInternalService } from './mcp-internal.service';
-import { CdpInfoService } from './cdp-info.service';
 import type { McpCapability } from '../capabilities/capability.types';
 
 describe('McpCapabilityRegistryService', () => {
   let service: McpCapabilityRegistryService;
   let internal: jest.Mocked<McpInternalService>;
-  let cdp: jest.Mocked<CdpInfoService>;
 
   beforeEach(async () => {
     internal = {
       getPath: jest.fn().mockReturnValue('/path/to/index.cjs'),
     } as unknown as jest.Mocked<McpInternalService>;
 
-    cdp = {
-      isEnabled: jest.fn().mockReturnValue(false),
-      getPort: jest.fn().mockReturnValue(9222),
-      getEndpoint: jest.fn().mockReturnValue('http://127.0.0.1:9222'),
-    } as unknown as jest.Mocked<CdpInfoService>;
-
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         McpCapabilityRegistryService,
         { provide: McpInternalService, useValue: internal },
-        { provide: CdpInfoService, useValue: cdp },
       ],
     }).compile();
 
@@ -103,47 +94,15 @@ describe('McpCapabilityRegistryService', () => {
     expect(service.defaultEnabledIds()).not.toContain('playwright-web');
   });
 
-  it('auto-registers the playwright-electron capability with requiresDev', () => {
+  it('auto-registers the playwright-electron capability', () => {
     const pw = service.get('playwright-electron');
     expect(pw).toBeDefined();
     expect(pw?.label).toBe('Playwright (Electron)');
-    expect(pw?.requiresDev).toBe(true);
+    // No longer dev-only — it targets user-built Electron apps.
+    expect(pw?.requiresDev).toBeFalsy();
   });
 
   it('playwright-electron is opt-in (not in defaultEnabledIds)', () => {
     expect(service.defaultEnabledIds()).not.toContain('playwright-electron');
-  });
-
-  it('playwright-electron preflight fails when CDP disabled', async () => {
-    cdp.isEnabled.mockReturnValue(false);
-    const pw = service.get('playwright-electron');
-    const result = await pw?.preflight?.({
-      sessionId: '',
-      workingDir: '/tmp',
-      projectPath: '/tmp',
-      projectHash: '',
-      statusUrl: null,
-      instanceId: null,
-    });
-    expect(result?.ok).toBe(false);
-    expect(result?.reason).toMatch(/CDP not enabled/);
-  });
-
-  it('playwright-electron buildConfig uses the CDP endpoint', async () => {
-    cdp.isEnabled.mockReturnValue(true);
-    const pw = service.get('playwright-electron');
-    const cfg = await pw?.buildConfig({
-      sessionId: '',
-      workingDir: '/tmp',
-      projectPath: '/tmp',
-      projectHash: '',
-      statusUrl: null,
-      instanceId: null,
-    });
-    expect(cfg).toEqual({
-      type: 'stdio',
-      command: 'npx',
-      args: ['-y', '@playwright/mcp@latest', '--cdp-endpoint', 'http://127.0.0.1:9222'],
-    });
   });
 });

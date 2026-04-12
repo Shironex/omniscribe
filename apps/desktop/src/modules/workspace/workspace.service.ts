@@ -29,6 +29,8 @@ interface StoreSchema {
   projectThumbnails: Record<string, string>;
   /** Maps normalized project path → enabled MCP capability IDs */
   projectCapabilities: Record<string, string[]>;
+  /** Maps normalized project path → user's own Electron app CDP port */
+  projectElectronCdpPort: Record<string, number>;
   [key: string]: unknown;
 }
 
@@ -197,6 +199,7 @@ export class WorkspaceService implements OnModuleInit {
           activeSessionsSnapshot: [],
           projectThumbnails: {},
           projectCapabilities: {},
+          projectElectronCdpPort: {},
         },
       });
       this.logger.debug(`Store initialized at ${this.store.path}`);
@@ -216,6 +219,7 @@ export class WorkspaceService implements OnModuleInit {
             activeSessionsSnapshot: [],
             projectThumbnails: {},
             projectCapabilities: {},
+            projectElectronCdpPort: {},
           },
         });
       } catch (retryError) {
@@ -650,6 +654,26 @@ export class WorkspaceService implements OnModuleInit {
     const map = this.store.get('projectCapabilities', {});
     map[key] = ids;
     this.store.set('projectCapabilities', map);
+  }
+
+  /**
+   * Get the user-configured CDP port for the user's own Electron app
+   * running inside this project, or `undefined` if none has been set.
+   */
+  getProjectElectronCdpPort(projectPath: string): number | undefined {
+    const map = this.store.get('projectElectronCdpPort', {});
+    const key = normalizePath(projectPath);
+    return Object.prototype.hasOwnProperty.call(map, key) ? map[key] : undefined;
+  }
+
+  /**
+   * Persist the user's Electron app CDP port for a project.
+   */
+  setProjectElectronCdpPort(projectPath: string, port: number): void {
+    const key = normalizePath(projectPath);
+    const map = this.store.get('projectElectronCdpPort', {});
+    map[key] = port;
+    this.store.set('projectElectronCdpPort', map);
   }
 
   // ============================================

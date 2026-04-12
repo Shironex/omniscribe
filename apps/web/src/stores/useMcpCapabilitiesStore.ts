@@ -9,6 +9,8 @@ import {
   type McpCapabilityListResponse,
   type McpCapabilityTogglePayload,
   type McpCapabilityToggleResponse,
+  type McpCapabilitySetPortPayload,
+  type McpCapabilitySetPortResponse,
   type McpCapabilityChangedEvent,
 } from '@omniscribe/shared';
 import { emitAsync } from '@/lib/socketHelpers';
@@ -32,6 +34,7 @@ interface McpCapabilitiesState extends SocketStoreState {
 interface McpCapabilitiesActions extends SocketStoreActions {
   fetchCapabilities: (projectPath: string) => Promise<void>;
   toggleCapability: (projectPath: string, id: string, enabled: boolean) => Promise<void>;
+  setElectronCdpPort: (projectPath: string, id: string, port: number) => Promise<void>;
   initListeners: () => void;
   cleanupListeners: () => void;
   clear: () => void;
@@ -174,6 +177,43 @@ export const useMcpCapabilitiesStore = create<McpCapabilitiesStore>()(
               { capabilities: previous, error: message },
               undefined,
               'mcpCapabilities/toggleError'
+            );
+          }
+        },
+
+        setElectronCdpPort: async (projectPath: string, id: string, port: number) => {
+          // Optimistic update
+          const previous = get().capabilities;
+          set(
+            {
+              capabilities: previous.map(c => (c.id === id ? { ...c, electronCdpPort: port } : c)),
+              error: null,
+            },
+            undefined,
+            'mcpCapabilities/setPortOptimistic'
+          );
+
+          try {
+            const response = await emitAsync<
+              McpCapabilitySetPortPayload,
+              McpCapabilitySetPortResponse
+            >(McpEvents.CAPABILITY_SET_PORT, { projectPath, capabilityId: id, port });
+
+            if (!response.success) {
+              logger.error('CAPABILITY_SET_PORT failed:', response.error);
+              set(
+                { capabilities: previous, error: response.error ?? 'Set port failed' },
+                undefined,
+                'mcpCapabilities/setPortError'
+              );
+            }
+          } catch (err) {
+            const message = extractErrorMessage(err, 'Set port failed');
+            logger.error('CAPABILITY_SET_PORT exception:', message);
+            set(
+              { capabilities: previous, error: message },
+              undefined,
+              'mcpCapabilities/setPortError'
             );
           }
         },

@@ -78,6 +78,8 @@ describe('McpWriterService', () => {
       getEnabled: jest.fn().mockReturnValue([MCP_SERVER_NAME]),
       setEnabled: jest.fn(),
       toggle: jest.fn(),
+      getElectronCdpPort: jest.fn().mockReturnValue(9222),
+      setElectronCdpPort: jest.fn(),
     } as unknown as jest.Mocked<McpCapabilityStateService>;
 
     const module: TestingModule = await Test.createTestingModule({
@@ -316,6 +318,56 @@ describe('McpWriterService', () => {
       const writtenConfig = JSON.parse(writeFileMock.mock.calls[0][1]);
       expect(writtenConfig.mcpServers['minimal'].args).toBeUndefined();
       expect(writtenConfig.mcpServers['minimal'].env).toBeUndefined();
+    });
+
+    it('passes electronCdpPort to the playwright-electron capability ctx', async () => {
+      const buildConfig = jest.fn().mockResolvedValue({
+        type: 'stdio',
+        command: 'npx',
+        args: ['-y', '@playwright/mcp@latest'],
+      });
+      const pwElectronCap = {
+        id: 'playwright-electron',
+        label: 'PE',
+        description: '',
+        buildConfig,
+      };
+      capRegistry.get.mockImplementation((id: string) =>
+        id === 'playwright-electron' ? (pwElectronCap as never) : undefined
+      );
+      capState.getEnabled.mockReturnValue(['playwright-electron']);
+      (capState.getElectronCdpPort as jest.Mock).mockReturnValue(9444);
+
+      await service.writeConfig('/work', 'session-1', '/project', []);
+
+      expect(capState.getElectronCdpPort).toHaveBeenCalledWith('/project');
+      expect(buildConfig).toHaveBeenCalledTimes(1);
+      const ctx = buildConfig.mock.calls[0][0];
+      expect(ctx.electronCdpPort).toBe(9444);
+    });
+
+    it('does not populate electronCdpPort for non-electron capabilities', async () => {
+      const buildConfig = jest.fn().mockResolvedValue({
+        type: 'stdio',
+        command: 'npx',
+        args: [],
+      });
+      const pwWebCap = {
+        id: 'playwright-web',
+        label: 'PW',
+        description: '',
+        buildConfig,
+      };
+      capRegistry.get.mockImplementation((id: string) =>
+        id === 'playwright-web' ? (pwWebCap as never) : undefined
+      );
+      capState.getEnabled.mockReturnValue(['playwright-web']);
+
+      await service.writeConfig('/work', 'session-1', '/project', []);
+
+      expect(capState.getElectronCdpPort).not.toHaveBeenCalled();
+      const ctx = buildConfig.mock.calls[0][0];
+      expect(ctx.electronCdpPort).toBeUndefined();
     });
   });
 

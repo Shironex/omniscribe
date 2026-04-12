@@ -13,6 +13,8 @@ describe('McpCapabilityStateService', () => {
     workspace = {
       getProjectCapabilities: jest.fn(),
       setProjectCapabilities: jest.fn(),
+      getProjectElectronCdpPort: jest.fn(),
+      setProjectElectronCdpPort: jest.fn(),
     } as unknown as jest.Mocked<WorkspaceService>;
 
     registry = {
@@ -92,6 +94,25 @@ describe('McpCapabilityStateService', () => {
       workspace.getProjectCapabilities.mockReturnValue(['a']);
       const result = service.toggle('/p', 'b', false);
       expect(result).toEqual(['a']);
+    });
+
+    it('electron cdp port: defaults to 9222 when unset', () => {
+      (workspace.getProjectElectronCdpPort as jest.Mock).mockReturnValue(undefined);
+      expect(service.getElectronCdpPort('/p')).toBe(9222);
+    });
+
+    it('electron cdp port: returns stored value when set', () => {
+      (workspace.getProjectElectronCdpPort as jest.Mock).mockReturnValue(9333);
+      expect(service.getElectronCdpPort('/p')).toBe(9333);
+    });
+
+    it('electron cdp port: persists via workspace with normalized path', () => {
+      service.setElectronCdpPort('/Proj', 9444);
+      expect(workspace.setProjectElectronCdpPort).toHaveBeenCalledTimes(1);
+      const [key, port] = (workspace.setProjectElectronCdpPort as jest.Mock).mock.calls[0];
+      expect(typeof key).toBe('string');
+      expect(key.length).toBeGreaterThan(0);
+      expect(port).toBe(9444);
     });
 
     it('persistence roundtrip via workspace mock', () => {

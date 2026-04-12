@@ -92,6 +92,7 @@ export const McpEvents = {
   GET_STATUS_SERVER_INFO: 'mcp:get-status-server-info',
   CAPABILITY_LIST: 'mcp:capability-list',
   CAPABILITY_TOGGLE: 'mcp:capability-toggle',
+  CAPABILITY_SET_PORT: 'mcp:capability-set-port',
 
   // Server -> Client (broadcasts)
   ENABLED_CHANGED: 'mcp:enabled-changed',

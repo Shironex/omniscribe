@@ -32,6 +32,8 @@ import {
   McpCapabilityListResponse,
   McpCapabilityTogglePayload,
   McpCapabilityToggleResponse,
+  McpCapabilitySetPortPayload,
+  McpCapabilitySetPortResponse,
   McpCapabilityDescriptor,
   SessionTasksUpdate,
   McpEvents,
@@ -299,21 +301,23 @@ export class McpGateway implements OnGatewayInit {
       }
 
       const enabled = new Set(this.capState.getEnabled(projectPath));
-      // Preflight context used only when capability.preflight exists; current
-      // preflights don't touch session/workingDir fields, so we pass a minimal
-      // stub keyed to projectPath. Capabilities that need real context must be
-      // invoked through the writer pipeline instead.
-      const preflightCtx = {
-        sessionId: '',
-        workingDir: projectPath,
-        projectPath,
-        projectHash: '',
-        statusUrl: null,
-        instanceId: null,
-      };
+      const electronCdpPort = this.capState.getElectronCdpPort(projectPath);
 
       const capabilities: McpCapabilityDescriptor[] = await Promise.all(
         this.capRegistry.list().map(async cap => {
+          // Preflight context used only when capability.preflight exists;
+          // capabilities that need real session/workingDir context are
+          // invoked through the writer pipeline instead.
+          const preflightCtx = {
+            sessionId: '',
+            workingDir: projectPath,
+            projectPath,
+            projectHash: '',
+            statusUrl: null,
+            instanceId: null,
+            ...(cap.id === 'playwright-electron' ? { electronCdpPort } : {}),
+          };
+
           let disabledReason: string | undefined;
           if (typeof cap.preflight === 'function') {
             try {
@@ -333,6 +337,7 @@ export class McpGateway implements OnGatewayInit {
           };
           if (cap.requiresDev) descriptor.requiresDev = true;
           if (disabledReason) descriptor.disabledReason = disabledReason;
+          if (cap.id === 'playwright-electron') descriptor.electronCdpPort = electronCdpPort;
           return descriptor;
         })
       );
@@ -381,6 +386,53 @@ export class McpGateway implements OnGatewayInit {
         success: false,
         error: extractErrorMessage(error, 'Unknown error'),
       };
+    }
+  }
+
+  /**
+   * Set the per-project CDP port for a capability (currently only the
+   * `playwright-electron` capability consumes it). Validates the range
+   * and broadcasts CAPABILITY_CHANGED so other clients re-fetch.
+   */
+  @SubscribeMessage(McpEvents.CAPABILITY_SET_PORT)
+  handleCapabilitySetPort(
+    @MessageBody() payload: McpCapabilitySetPortPayload,
+    @ConnectedSocket() _client: Socket
+  ): McpCapabilitySetPortResponse {
+    try {
+      const { projectPath, capabilityId, port } = payload ?? ({} as McpCapabilitySetPortPayload);
+      if (!projectPath || typeof projectPath !== 'string') {
+        return { success: false, error: 'Invalid projectPath: must be a non-empty string' };
+      }
+      if (!capabilityId || typeof capabilityId !== 'string') {
+        return { success: false, error: 'Invalid capabilityId: must be a non-empty string' };
+      }
+      if (!this.capRegistry.get(capabilityId)) {
+        return { success: false, error: `Unknown capability: ${capabilityId}` };
+      }
+      if (capabilityId !== 'playwright-electron') {
+        return {
+          success: false,
+          error: `Capability "${capabilityId}" does not accept a port setting`,
+        };
+      }
+      if (!Number.isInteger(port) || port < 1024 || port > 65535) {
+        return { success: false, error: 'Invalid port: must be an integer between 1024 and 65535' };
+      }
+
+      this.capState.setElectronCdpPort(projectPath, port);
+
+      // Re-broadcast the current enabled set so listeners re-fetch the
+      // descriptor (which carries the new port + refreshed preflight).
+      this.server.emit(McpEvents.CAPABILITY_CHANGED, {
+        projectPath,
+        enabledIds: this.capState.getEnabled(projectPath),
+      });
+
+      return { success: true, port };
+    } catch (error) {
+      this.logger.error('Error setting capability port:', error);
+      return { success: false, error: extractErrorMessage(error, 'Unknown error') };
     }
   }
 

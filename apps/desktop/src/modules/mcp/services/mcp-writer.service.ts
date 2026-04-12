@@ -89,8 +89,9 @@ export class McpWriterService implements OnModuleDestroy {
       const mcpServers: Record<string, McpWrittenServerEntry> = {};
       const managedCapabilities: string[] = [];
 
-      // Build context for capability builders
-      const ctx: CapabilityBuildContext = {
+      // Build base context for capability builders. Per-capability fields
+      // (e.g. electronCdpPort) are layered on below when resolving each cap.
+      const baseCtx: CapabilityBuildContext = {
         sessionId,
         workingDir,
         projectPath,
@@ -109,6 +110,11 @@ export class McpWriterService implements OnModuleDestroy {
           this.logger.warn(`Skipping unknown capability id: ${id}`);
           continue;
         }
+
+        const ctx: CapabilityBuildContext =
+          cap.id === 'playwright-electron'
+            ? { ...baseCtx, electronCdpPort: this.capState.getElectronCdpPort(projectPath) }
+            : baseCtx;
 
         if (cap.preflight) {
           try {

@@ -173,6 +173,55 @@ describe('useMcpCapabilitiesStore', () => {
     });
   });
 
+  describe('setElectronCdpPort', () => {
+    it('emits CAPABILITY_SET_PORT and applies optimistic update', async () => {
+      useMcpCapabilitiesStore.setState({
+        capabilities: [
+          {
+            id: 'playwright-electron',
+            label: 'PE',
+            description: 'd',
+            enabled: true,
+            electronCdpPort: 9222,
+          },
+        ],
+        projectPath: '/p',
+      });
+      mockEmitAsync.mockResolvedValue({ success: true, port: 9555 });
+
+      await useMcpCapabilitiesStore
+        .getState()
+        .setElectronCdpPort('/p', 'playwright-electron', 9555);
+
+      expect(mockEmitAsync).toHaveBeenCalledWith('mcp:capability-set-port', {
+        projectPath: '/p',
+        capabilityId: 'playwright-electron',
+        port: 9555,
+      });
+      const updated = useMcpCapabilitiesStore.getState().capabilities;
+      expect(updated.find(c => c.id === 'playwright-electron')?.electronCdpPort).toBe(9555);
+    });
+
+    it('rolls back on failure response', async () => {
+      const before = [
+        {
+          id: 'playwright-electron',
+          label: 'PE',
+          description: 'd',
+          enabled: true,
+          electronCdpPort: 9222,
+        },
+      ];
+      useMcpCapabilitiesStore.setState({ capabilities: before, projectPath: '/p' });
+      mockEmitAsync.mockResolvedValue({ success: false, error: 'nope' });
+
+      await useMcpCapabilitiesStore.getState().setElectronCdpPort('/p', 'playwright-electron', 80);
+
+      expect(useMcpCapabilitiesStore.getState().capabilities).toEqual(before);
+      expect(useMcpCapabilitiesStore.getState().error).toBe('nope');
+    });
+  });
+
   describe('clear', () => {
     it('resets capabilities and project state', () => {
       useMcpCapabilitiesStore.setState({

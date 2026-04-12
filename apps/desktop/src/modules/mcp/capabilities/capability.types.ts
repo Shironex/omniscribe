@@ -29,6 +29,12 @@ export interface CapabilityBuildContext {
   projectHash: string;
   statusUrl: string | null;
   instanceId: string | null;
+  /**
+   * Per-project CDP port for the user's own Electron app. Only populated
+   * for capabilities that need it (e.g. `playwright-electron`). Defaults
+   * to 9222 when the user hasn't explicitly configured one.
+   */
+  electronCdpPort?: number;
 }
 
 /**

@@ -89,6 +89,8 @@ describe('McpGateway', () => {
       getEnabled: jest.fn().mockReturnValue([]),
       setEnabled: jest.fn(),
       toggle: jest.fn(),
+      getElectronCdpPort: jest.fn().mockReturnValue(9222),
+      setElectronCdpPort: jest.fn(),
     } as unknown as jest.Mocked<McpCapabilityStateService>;
 
     const module: TestingModule = await Test.createTestingModule({
@@ -737,6 +739,7 @@ describe('McpGateway', () => {
         enabled: false,
         requiresDev: true,
         disabledReason: 'CDP not enabled',
+        electronCdpPort: 9222,
       });
       expect(capWithPreflight.preflight).toHaveBeenCalled();
     });
@@ -812,6 +815,23 @@ describe('McpGateway', () => {
       expect(result.error).toBe('Invalid projectPath: must be a non-empty string');
     });
 
+    it('CAPABILITY_LIST surfaces electronCdpPort on playwright-electron descriptor', async () => {
+      const cap = {
+        id: 'playwright-electron',
+        label: 'PE',
+        description: 'd',
+        buildConfig: jest.fn(),
+      };
+      capRegistry.list.mockReturnValue([cap] as never);
+      capState.getEnabled.mockReturnValue([]);
+      (capState.getElectronCdpPort as jest.Mock).mockReturnValue(9555);
+
+      const result = await gateway.handleCapabilityList({ projectPath: '/p' }, mockSocket);
+
+      expect(result.capabilities[0].electronCdpPort).toBe(9555);
+      expect(capState.getElectronCdpPort).toHaveBeenCalledWith('/p');
+    });
+
     it('returns error when capState.toggle throws', () => {
       capRegistry.get.mockReturnValue({
         id: 'playwright-web',
@@ -830,6 +850,97 @@ describe('McpGateway', () => {
 
       expect(result.success).toBe(false);
       expect(result.error).toBe('boom');
+    });
+  });
+
+  // ================================================================
+  // handleCapabilitySetPort
+  // ================================================================
+  describe('handleCapabilitySetPort', () => {
+    beforeEach(() => {
+      capRegistry.get.mockReturnValue({
+        id: 'playwright-electron',
+        label: 'PE',
+        description: '',
+        buildConfig: jest.fn(),
+      } as never);
+    });
+
+    it('persists the port and broadcasts CAPABILITY_CHANGED', () => {
+      capState.getEnabled.mockReturnValue(['playwright-electron']);
+
+      const result = gateway.handleCapabilitySetPort(
+        { projectPath: '/p', capabilityId: 'playwright-electron', port: 9555 },
+        mockSocket
+      );
+
+      expect(result).toEqual({ success: true, port: 9555 });
+      expect(capState.setElectronCdpPort).toHaveBeenCalledWith('/p', 9555);
+      expect(mockServer.emit).toHaveBeenCalledWith('mcp:capability-changed', {
+        projectPath: '/p',
+        enabledIds: ['playwright-electron'],
+      });
+    });
+
+    it('rejects ports below 1024', () => {
+      const result = gateway.handleCapabilitySetPort(
+        { projectPath: '/p', capabilityId: 'playwright-electron', port: 80 },
+        mockSocket
+      );
+      expect(result.success).toBe(false);
+      expect(result.error).toMatch(/between 1024 and 65535/);
+      expect(capState.setElectronCdpPort).not.toHaveBeenCalled();
+    });
+
+    it('rejects ports above 65535', () => {
+      const result = gateway.handleCapabilitySetPort(
+        { projectPath: '/p', capabilityId: 'playwright-electron', port: 70000 },
+        mockSocket
+      );
+      expect(result.success).toBe(false);
+      expect(result.error).toMatch(/between 1024 and 65535/);
+    });
+
+    it('rejects non-integer ports', () => {
+      const result = gateway.handleCapabilitySetPort(
+        { projectPath: '/p', capabilityId: 'playwright-electron', port: 9222.5 },
+        mockSocket
+      );
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects unknown capability ids', () => {
+      capRegistry.get.mockReturnValue(undefined);
+      const result = gateway.handleCapabilitySetPort(
+        { projectPath: '/p', capabilityId: 'nope', port: 9222 },
+        mockSocket
+      );
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('Unknown capability: nope');
+    });
+
+    it('rejects capabilities that do not accept a port', () => {
+      capRegistry.get.mockReturnValue({
+        id: 'playwright-web',
+        label: 'PW',
+        description: '',
+        buildConfig: jest.fn(),
+      } as never);
+      const result = gateway.handleCapabilitySetPort(
+        { projectPath: '/p', capabilityId: 'playwright-web', port: 9222 },
+        mockSocket
+      );
+      expect(result.success).toBe(false);
+      expect(result.error).toMatch(/does not accept a port/);
+    });
+
+    it('rejects empty projectPath', () => {
+      const result = gateway.handleCapabilitySetPort(
+        { projectPath: '', capabilityId: 'playwright-electron', port: 9222 },
+        mockSocket
+      );
+      expect(result.success).toBe(false);
+      expect(result.error).toMatch(/projectPath/);
     });
   });
 });
