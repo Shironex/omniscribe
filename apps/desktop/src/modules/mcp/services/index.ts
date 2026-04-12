@@ -4,3 +4,5 @@ export { McpProjectCacheService } from './mcp-project-cache.service';
 export { McpSessionRegistryService } from './mcp-session-registry.service';
 export { McpTrackingService } from './mcp-tracking.service';
 export { McpWriterService } from './mcp-writer.service';
+export { McpCapabilityRegistryService } from './mcp-capability-registry.service';
+export { McpCapabilityStateService } from './mcp-capability-state.service';

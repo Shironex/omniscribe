@@ -27,6 +27,8 @@ interface StoreSchema {
   activeSessionsSnapshot: ActiveSessionSnapshot[];
   /** Maps normalized project path → thumbnail filename (persists across tab close/reopen) */
   projectThumbnails: Record<string, string>;
+  /** Maps normalized project path → enabled MCP capability IDs */
+  projectCapabilities: Record<string, string[]>;
   [key: string]: unknown;
 }
 
@@ -194,6 +196,7 @@ export class WorkspaceService implements OnModuleInit {
           sessionHistory: [],
           activeSessionsSnapshot: [],
           projectThumbnails: {},
+          projectCapabilities: {},
         },
       });
       this.logger.debug(`Store initialized at ${this.store.path}`);
@@ -212,6 +215,7 @@ export class WorkspaceService implements OnModuleInit {
             sessionHistory: [],
             activeSessionsSnapshot: [],
             projectThumbnails: {},
+            projectCapabilities: {},
           },
         });
       } catch (retryError) {
@@ -622,6 +626,30 @@ export class WorkspaceService implements OnModuleInit {
    */
   clearActiveSessionsSnapshot(): void {
     this.store.set('activeSessionsSnapshot', []);
+  }
+
+  // ============================================
+  // Project Capabilities (MCP)
+  // ============================================
+
+  /**
+   * Get enabled MCP capability IDs for a project, or `undefined` if no
+   * explicit value has been stored (caller should fall back to defaults).
+   */
+  getProjectCapabilities(projectPath: string): string[] | undefined {
+    const map = this.store.get('projectCapabilities', {});
+    const key = normalizePath(projectPath);
+    return Object.prototype.hasOwnProperty.call(map, key) ? map[key] : undefined;
+  }
+
+  /**
+   * Persist enabled MCP capability IDs for a project.
+   */
+  setProjectCapabilities(projectPath: string, ids: string[]): void {
+    const key = normalizePath(projectPath);
+    const map = this.store.get('projectCapabilities', {});
+    map[key] = ids;
+    this.store.set('projectCapabilities', map);
   }
 
   // ============================================
