@@ -123,6 +123,15 @@ PTY processes use `buildSafeEnv()` from `apps/desktop/src/modules/shared/env-uti
 
 All packages use `createLogger('Name')` from `@omniscribe/shared`. The backend bridges this to NestJS via `NestLoggerAdapter` in `apps/desktop/src/modules/shared/nest-logger.ts`.
 
+### MCP Capabilities
+
+Curated registry of MCP servers Omniscribe ships alongside user-authored entries in `.mcp.json`. Lives in `apps/desktop/src/modules/mcp/capabilities/`. Each capability is an `McpCapability` (id, label, description, optional `preflight`, `buildConfig(ctx) => McpWrittenServerEntry`). Registered in `McpCapabilityRegistryService`. Per-project enabled state lives in `WorkspaceService.projectCapabilities` and is surfaced in Settings → Integrations → AI Capabilities. `McpWriterService` writes a `_omniscribe.managedCapabilities` marker into `.mcp.json` so `removeConfig` can safely strip only capability-owned entries. Adding a capability = one file under `capabilities/` + one `register()` call.
+
+### Dev-only environment flags
+
+- `OMNISCRIBE_ENABLE_CDP=1` — forces Chrome DevTools Protocol on the Electron window (bound to `127.0.0.1:9222`). Auto-enabled in unpackaged dev. Required for the `playwright-electron` MCP capability to attach. Never bind beyond `127.0.0.1`.
+- `OMNISCRIBE_CDP_PORT` — override CDP port (default 9222).
+
 ### Testing
 
 - **Backend:** Jest + `@nestjs/testing` TestingModule. Mock factories in `apps/desktop/test/mocks/` (MockPty, electron-store, child_process).
