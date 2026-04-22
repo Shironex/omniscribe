@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { MCP_SERVER_NAME } from '@omniscribe/shared';
+import { MCP_SERVER_NAME, normalizePath } from '@omniscribe/shared';
 import { McpCapabilityStateService } from './mcp-capability-state.service';
 import { McpCapabilityRegistryService } from './mcp-capability-registry.service';
 import { WorkspaceService } from '../../workspace/workspace.service';
@@ -54,10 +54,7 @@ describe('McpCapabilityStateService', () => {
       workspace.getProjectCapabilities.mockReturnValue(['x']);
       service.getEnabled('/Some/Project');
 
-      const calledWith = workspace.getProjectCapabilities.mock.calls[0][0];
-      // normalizePath should at minimum produce a non-empty string
-      expect(typeof calledWith).toBe('string');
-      expect(calledWith.length).toBeGreaterThan(0);
+      expect(workspace.getProjectCapabilities).toHaveBeenCalledWith(normalizePath('/Some/Project'));
     });
   });
 
@@ -65,7 +62,8 @@ describe('McpCapabilityStateService', () => {
     it('persists to workspace via normalized path', () => {
       service.setEnabled('/proj', ['a', 'b']);
       expect(workspace.setProjectCapabilities).toHaveBeenCalledTimes(1);
-      const [, ids] = workspace.setProjectCapabilities.mock.calls[0];
+      const [pathArg, ids] = workspace.setProjectCapabilities.mock.calls[0];
+      expect(pathArg).toBe(normalizePath('/proj'));
       expect(ids).toEqual(['a', 'b']);
     });
   });
@@ -110,8 +108,7 @@ describe('McpCapabilityStateService', () => {
       service.setElectronCdpPort('/Proj', 9444);
       expect(workspace.setProjectElectronCdpPort).toHaveBeenCalledTimes(1);
       const [key, port] = (workspace.setProjectElectronCdpPort as jest.Mock).mock.calls[0];
-      expect(typeof key).toBe('string');
-      expect(key.length).toBeGreaterThan(0);
+      expect(key).toBe(normalizePath('/Proj'));
       expect(port).toBe(9444);
     });
 
@@ -128,7 +125,8 @@ describe('McpCapabilityStateService', () => {
       expect(service.getEnabled('/proj')).toEqual(['a']);
 
       service.toggle('/proj', 'b', true);
-      expect(service.getEnabled('/proj').sort()).toEqual(['a', 'b']);
+      // Copy before sorting so the test never mutates a store-owned array.
+      expect([...service.getEnabled('/proj')].sort()).toEqual(['a', 'b']);
     });
   });
 });

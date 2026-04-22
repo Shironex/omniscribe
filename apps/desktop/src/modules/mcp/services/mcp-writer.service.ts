@@ -100,14 +100,30 @@ export class McpWriterService implements OnModuleDestroy {
         instanceId: this.statusServer.getInstanceId(),
       };
 
-      // Resolve enabled capabilities and write each one
+      // Resolve enabled capabilities and write each one.
+      // Discovered external servers whose id collides with a managed
+      // capability are filtered out up-front so they can't overwrite a
+      // managed entry — `removeConfig` would otherwise delete the user's
+      // server as if Omniscribe owned it.
       const enabledIds = this.capState.getEnabled(projectPath);
+      const externalIds = new Set(
+        servers
+          .filter(server => server.id !== MCP_SERVER_NAME && server.name !== MCP_SERVER_NAME)
+          .map(server => server.id)
+      );
       let omniscribeRegistered = false;
 
       for (const id of enabledIds) {
         const cap = this.capRegistry.get(id);
         if (!cap) {
           this.logger.warn(`Skipping unknown capability id: ${id}`);
+          continue;
+        }
+
+        if (externalIds.has(cap.id)) {
+          this.logger.warn(
+            `Skipping capability "${cap.id}" — an external MCP server already uses that id`
+          );
           continue;
         }
 
@@ -263,36 +279,42 @@ export class McpWriterService implements OnModuleDestroy {
               ? [MCP_SERVER_NAME]
               : [];
 
-        if (idsToRemove.length === 0) {
+        const metaKey = `_${MCP_SERVER_NAME}`;
+        const hasManagedMetadata = Object.prototype.hasOwnProperty.call(config, metaKey);
+
+        if (idsToRemove.length === 0 && !hasManagedMetadata) {
           return false;
         }
 
-        let removedAny = false;
+        let removedCount = 0;
         for (const id of idsToRemove) {
           if (id in mcpServers) {
             delete mcpServers[id];
-            removedAny = true;
+            removedCount++;
           }
         }
 
-        if (!removedAny) {
+        if (removedCount === 0 && !hasManagedMetadata) {
           return false;
         }
 
-        // Remove our metadata
-        delete config[`_${MCP_SERVER_NAME}`];
+        // Remove our metadata — including when a previous cleanup already
+        // stripped the managed entries but left the marker behind.
+        delete config[metaKey];
         delete config['_metadata']; // Legacy field
 
         // Write back the config with remaining servers
         await fs.promises.writeFile(configPath, JSON.stringify(config, null, 2), 'utf-8');
 
         this.logger.log(
-          `Removed ${idsToRemove.length} managed entr${idsToRemove.length === 1 ? 'y' : 'ies'} from ${configPath}, ` +
+          `Removed ${removedCount} managed entr${removedCount === 1 ? 'y' : 'ies'} from ${configPath}, ` +
             `preserved ${Object.keys(mcpServers).length} other servers`
         );
 
-        // Clean up the mutex — managed entries were successfully removed
-        this.fileLocks.delete(configPath);
+        // NOTE: Do not delete the mutex from fileLocks. Another call to
+        // writeConfig/removeConfig may already be queued on this mutex;
+        // removing it here would let the next getMutex() hand out a fresh
+        // instance and break serialization for that configPath.
         return true;
       } catch (error) {
         this.logger.error('Error removing managed entries from config:', error);

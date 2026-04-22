@@ -44,14 +44,14 @@ import {
 import { InternalSessionEvents } from '../shared/events';
 import { McpStatusServerService } from './mcp-status-server.service';
 import {
+  McpCapabilityRegistryService,
+  McpCapabilityStateService,
   McpDiscoveryService,
-  McpWriterService,
   McpProjectCacheService,
   McpSessionRegistryService,
   McpTrackingService,
+  McpWriterService,
 } from './services';
-import { McpCapabilityRegistryService } from './services/mcp-capability-registry.service';
-import { McpCapabilityStateService } from './services/mcp-capability-state.service';
 import { CORS_CONFIG } from '../shared/cors.config';
 
 /**
@@ -302,6 +302,7 @@ export class McpGateway implements OnGatewayInit {
 
       const enabled = new Set(this.capState.getEnabled(projectPath));
       const electronCdpPort = this.capState.getElectronCdpPort(projectPath);
+      const projectHash = this.writerService.generateProjectHash(projectPath);
 
       const capabilities: McpCapabilityDescriptor[] = await Promise.all(
         this.capRegistry.list().map(async cap => {
@@ -312,7 +313,7 @@ export class McpGateway implements OnGatewayInit {
             sessionId: '',
             workingDir: projectPath,
             projectPath,
-            projectHash: '',
+            projectHash,
             statusUrl: null,
             instanceId: null,
             ...(cap.id === 'playwright-electron' ? { electronCdpPort } : {}),
@@ -368,11 +369,14 @@ export class McpGateway implements OnGatewayInit {
       if (!capabilityId || typeof capabilityId !== 'string') {
         return { success: false, error: 'Invalid capabilityId: must be a non-empty string' };
       }
+      if (typeof enabled !== 'boolean') {
+        return { success: false, error: 'Invalid enabled: must be a boolean' };
+      }
       if (!this.capRegistry.get(capabilityId)) {
         return { success: false, error: `Unknown capability: ${capabilityId}` };
       }
 
-      const enabledIds = this.capState.toggle(projectPath, capabilityId, Boolean(enabled));
+      const enabledIds = this.capState.toggle(projectPath, capabilityId, enabled);
 
       this.server.emit(McpEvents.CAPABILITY_CHANGED, {
         projectPath,

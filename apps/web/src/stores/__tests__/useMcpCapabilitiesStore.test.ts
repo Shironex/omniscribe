@@ -145,18 +145,30 @@ describe('useMcpCapabilitiesStore', () => {
       expect(mockSocket.off).toHaveBeenCalledWith('mcp:capability-changed', expect.any(Function));
     });
 
-    it('reconciles capabilities on CAPABILITY_CHANGED for the active project', () => {
+    it('re-fetches full descriptors on CAPABILITY_CHANGED for the active project', async () => {
       useMcpCapabilitiesStore.setState({ capabilities: caps(), projectPath: '/p' });
       useMcpCapabilitiesStore.getState().initListeners();
+
+      // CAPABILITY_CHANGED triggers a full re-fetch (not just an enabled-flag
+      // flip) so descriptor fields like electronCdpPort/disabledReason stay
+      // fresh for other windows after CAPABILITY_SET_PORT.
+      const refreshed: McpCapabilityDescriptor[] = [
+        { id: 'omniscribe', label: 'Omniscribe', description: 'd1', enabled: false },
+        { id: 'playwright-web', label: 'PW', description: 'd2', enabled: true },
+      ];
+      mockEmitAsync.mockResolvedValue({ capabilities: refreshed });
 
       mockSocket.__simulateEvent('mcp:capability-changed', {
         projectPath: '/p',
         enabledIds: ['playwright-web'],
       });
 
+      await vi.waitFor(() => {
+        expect(mockEmitAsync).toHaveBeenCalledWith('mcp:capability-list', { projectPath: '/p' });
+      });
+
       const updated = useMcpCapabilitiesStore.getState().capabilities;
-      expect(updated.find(c => c.id === 'omniscribe')?.enabled).toBe(false);
-      expect(updated.find(c => c.id === 'playwright-web')?.enabled).toBe(true);
+      expect(updated).toEqual(refreshed);
     });
 
     it('ignores CAPABILITY_CHANGED for a different project', () => {
@@ -169,6 +181,7 @@ describe('useMcpCapabilitiesStore', () => {
         enabledIds: ['playwright-web'],
       });
 
+      expect(mockEmitAsync).not.toHaveBeenCalled();
       expect(useMcpCapabilitiesStore.getState().capabilities).toEqual(before);
     });
   });

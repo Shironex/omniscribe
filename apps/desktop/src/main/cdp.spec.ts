@@ -8,11 +8,39 @@ describe('cdp helpers', () => {
   });
 
   describe('CDP_PORT', () => {
-    it('defaults to 9222', () => {
+    it('defaults to CDP_DEFAULT_PORT', () => {
       expect(CDP_DEFAULT_PORT).toBe(9222);
-      // CDP_PORT is read at module load — in the test env no OMNISCRIBE_CDP_PORT
-      // is set, so it must fall back to the default.
-      expect(CDP_PORT).toBe(9222);
+      // CDP_PORT is read at module load. Assert it equals the default
+      // constant instead of the literal 9222 so a pre-set
+      // OMNISCRIBE_CDP_PORT in the runner env doesn't silently flip the
+      // expectation.
+      expect(CDP_PORT).toBe(CDP_DEFAULT_PORT);
+    });
+
+    it('falls back to the default when OMNISCRIBE_CDP_PORT is invalid', () => {
+      jest.isolateModules(() => {
+        process.env.OMNISCRIBE_CDP_PORT = 'not-a-number';
+        const mod = jest.requireActual<typeof import('./cdp')>('./cdp');
+        expect(mod.CDP_PORT).toBe(mod.CDP_DEFAULT_PORT);
+      });
+      jest.isolateModules(() => {
+        process.env.OMNISCRIBE_CDP_PORT = '0';
+        const mod = jest.requireActual<typeof import('./cdp')>('./cdp');
+        expect(mod.CDP_PORT).toBe(mod.CDP_DEFAULT_PORT);
+      });
+      jest.isolateModules(() => {
+        process.env.OMNISCRIBE_CDP_PORT = '70000';
+        const mod = jest.requireActual<typeof import('./cdp')>('./cdp');
+        expect(mod.CDP_PORT).toBe(mod.CDP_DEFAULT_PORT);
+      });
+    });
+
+    it('accepts a valid custom port', () => {
+      jest.isolateModules(() => {
+        process.env.OMNISCRIBE_CDP_PORT = '9333';
+        const mod = jest.requireActual<typeof import('./cdp')>('./cdp');
+        expect(mod.CDP_PORT).toBe(9333);
+      });
     });
   });
 

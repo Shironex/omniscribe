@@ -36,6 +36,18 @@ function ElectronCdpPortField({
     setValue(String(port));
   }, [port]);
 
+  // Cancel any pending debounced commit if the project or capability
+  // identity changes — otherwise the stale closure would commit the new
+  // input value against the old projectPath/capabilityId.
+  useEffect(() => {
+    return () => {
+      if (timer.current) {
+        clearTimeout(timer.current);
+        timer.current = null;
+      }
+    };
+  }, [projectPath, capabilityId]);
+
   const commit = (raw: string) => {
     const parsed = Number(raw);
     if (!Number.isInteger(parsed) || parsed < 1024 || parsed > 65535) {

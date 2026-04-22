@@ -16,7 +16,20 @@
 
 export const CDP_DEFAULT_PORT = 9222;
 
-export const CDP_PORT = Number(process.env.OMNISCRIBE_CDP_PORT ?? CDP_DEFAULT_PORT);
+// Parse OMNISCRIBE_CDP_PORT and fall back to the default if it is missing,
+// NaN, non-integer, or out of the valid TCP port range. Invalid values
+// would otherwise propagate to `remote-debugging-port` as the literal
+// string "NaN" and silently disable Chromium's devtools endpoint.
+function parseCdpPort(raw: string | undefined): number {
+  if (!raw) return CDP_DEFAULT_PORT;
+  const parsed = Number.parseInt(raw, 10);
+  if (!Number.isInteger(parsed) || parsed < 1 || parsed > 65535) {
+    return CDP_DEFAULT_PORT;
+  }
+  return parsed;
+}
+
+export const CDP_PORT = parseCdpPort(process.env.OMNISCRIBE_CDP_PORT);
 
 /**
  * Env-override-only check. Returns true only when the user explicitly

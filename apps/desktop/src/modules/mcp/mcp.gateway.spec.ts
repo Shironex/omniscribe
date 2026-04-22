@@ -12,6 +12,7 @@ import {
 } from './services';
 import { McpCapabilityRegistryService } from './services/mcp-capability-registry.service';
 import { McpCapabilityStateService } from './services/mcp-capability-state.service';
+import type { McpCapability } from './capabilities/capability.types';
 
 // ---- Helpers ----
 
@@ -691,13 +692,13 @@ describe('McpGateway', () => {
   // handleCapabilityList
   // ================================================================
   describe('handleCapabilityList', () => {
-    const fakeCaps = [
+    const fakeCaps: McpCapability[] = [
       { id: 'omniscribe', label: 'Omniscribe', description: 'd1', buildConfig: jest.fn() },
       { id: 'playwright-web', label: 'PW', description: 'd2', buildConfig: jest.fn() },
     ];
 
     it('returns capabilities merged with per-project enabled state', async () => {
-      capRegistry.list.mockReturnValue(fakeCaps as never);
+      capRegistry.list.mockReturnValue(fakeCaps);
       capState.getEnabled.mockReturnValue(['omniscribe']);
 
       const result = await gateway.handleCapabilityList({ projectPath: '/p' }, mockSocket);
@@ -717,7 +718,7 @@ describe('McpGateway', () => {
     });
 
     it('propagates requiresDev and disabledReason from preflight', async () => {
-      const capWithPreflight = {
+      const capWithPreflight: McpCapability = {
         id: 'playwright-electron',
         label: 'PE',
         description: 'd3',
@@ -725,7 +726,7 @@ describe('McpGateway', () => {
         buildConfig: jest.fn(),
         preflight: jest.fn().mockResolvedValue({ ok: false, reason: 'CDP not enabled' }),
       };
-      capRegistry.list.mockReturnValue([capWithPreflight] as never);
+      capRegistry.list.mockReturnValue([capWithPreflight]);
       capState.getEnabled.mockReturnValue([]);
 
       const result = await gateway.handleCapabilityList({ projectPath: '/p' }, mockSocket);
@@ -745,7 +746,7 @@ describe('McpGateway', () => {
     });
 
     it('omits disabledReason when preflight returns ok', async () => {
-      const capWithPreflight = {
+      const capWithPreflight: McpCapability = {
         id: 'playwright-electron',
         label: 'PE',
         description: 'd3',
@@ -753,7 +754,7 @@ describe('McpGateway', () => {
         buildConfig: jest.fn(),
         preflight: jest.fn().mockResolvedValue({ ok: true }),
       };
-      capRegistry.list.mockReturnValue([capWithPreflight] as never);
+      capRegistry.list.mockReturnValue([capWithPreflight]);
       capState.getEnabled.mockReturnValue([]);
 
       const result = await gateway.handleCapabilityList({ projectPath: '/p' }, mockSocket);
@@ -773,7 +774,7 @@ describe('McpGateway', () => {
         label: 'PW',
         description: '',
         buildConfig: jest.fn(),
-      } as never);
+      } satisfies McpCapability);
       capState.toggle.mockReturnValue(['omniscribe', 'playwright-web']);
 
       const result = gateway.handleCapabilityToggle(
@@ -816,13 +817,13 @@ describe('McpGateway', () => {
     });
 
     it('CAPABILITY_LIST surfaces electronCdpPort on playwright-electron descriptor', async () => {
-      const cap = {
+      const cap: McpCapability = {
         id: 'playwright-electron',
         label: 'PE',
         description: 'd',
         buildConfig: jest.fn(),
       };
-      capRegistry.list.mockReturnValue([cap] as never);
+      capRegistry.list.mockReturnValue([cap]);
       capState.getEnabled.mockReturnValue([]);
       (capState.getElectronCdpPort as jest.Mock).mockReturnValue(9555);
 
@@ -838,7 +839,7 @@ describe('McpGateway', () => {
         label: 'PW',
         description: '',
         buildConfig: jest.fn(),
-      } as never);
+      } satisfies McpCapability);
       capState.toggle.mockImplementation(() => {
         throw new Error('boom');
       });
@@ -863,7 +864,7 @@ describe('McpGateway', () => {
         label: 'PE',
         description: '',
         buildConfig: jest.fn(),
-      } as never);
+      } satisfies McpCapability);
     });
 
     it('persists the port and broadcasts CAPABILITY_CHANGED', () => {
@@ -925,7 +926,7 @@ describe('McpGateway', () => {
         label: 'PW',
         description: '',
         buildConfig: jest.fn(),
-      } as never);
+      } satisfies McpCapability);
       const result = gateway.handleCapabilitySetPort(
         { projectPath: '/p', capabilityId: 'playwright-web', port: 9222 },
         mockSocket

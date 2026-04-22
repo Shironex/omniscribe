@@ -27,7 +27,7 @@ import { CDP_PORT, cdpEnabledForRuntime } from './cdp';
 if (cdpEnabledForRuntime(app.isPackaged)) {
   app.commandLine.appendSwitch('remote-debugging-port', String(CDP_PORT));
   app.commandLine.appendSwitch('remote-debugging-address', '127.0.0.1');
-  console.info(`[cdp] dogfood mode: Omniscribe's own window exposed on 127.0.0.1:${CDP_PORT}`);
+  logger.info(`[cdp] dogfood mode: Omniscribe's own window exposed on 127.0.0.1:${CDP_PORT}`);
 }
 
 // Allow E2E tests to isolate userData by setting ELECTRON_USER_DATA_DIR.

@@ -643,7 +643,8 @@ export class WorkspaceService implements OnModuleInit {
   getProjectCapabilities(projectPath: string): string[] | undefined {
     const map = this.store.get('projectCapabilities', {});
     const key = normalizePath(projectPath);
-    return Object.prototype.hasOwnProperty.call(map, key) ? map[key] : undefined;
+    if (!Object.prototype.hasOwnProperty.call(map, key)) return undefined;
+    return [...map[key]];
   }
 
   /**
@@ -652,7 +653,7 @@ export class WorkspaceService implements OnModuleInit {
   setProjectCapabilities(projectPath: string, ids: string[]): void {
     const key = normalizePath(projectPath);
     const map = this.store.get('projectCapabilities', {});
-    map[key] = ids;
+    map[key] = [...ids];
     this.store.set('projectCapabilities', map);
   }
 

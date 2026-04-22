@@ -61,17 +61,11 @@ export const useMcpCapabilitiesStore = create<McpCapabilitiesStore>()(
                 if (state.projectPath !== event.projectPath) {
                   return;
                 }
-                const enabledSet = new Set(event.enabledIds);
-                set(
-                  s => ({
-                    capabilities: s.capabilities.map(c => ({
-                      ...c,
-                      enabled: enabledSet.has(c.id),
-                    })),
-                  }),
-                  undefined,
-                  'mcpCapabilities/onChanged'
-                );
+                // Re-fetch full descriptors. CAPABILITY_CHANGED is emitted
+                // for toggle AND for port edits via CAPABILITY_SET_PORT, so
+                // flipping `enabled` alone would leave descriptor fields
+                // (electronCdpPort, disabledReason) stale in other windows.
+                void get().fetchCapabilities(event.projectPath);
               },
             },
           ],
@@ -92,16 +86,22 @@ export const useMcpCapabilitiesStore = create<McpCapabilitiesStore>()(
           if (!projectPath) {
             return;
           }
+          // Snapshot the requested path so we can drop late responses when
+          // the active project has already changed.
+          const requestedProjectPath = projectPath;
           set(
-            { isLoading: true, error: null, projectPath },
+            { isLoading: true, error: null, projectPath: requestedProjectPath },
             undefined,
             'mcpCapabilities/fetchStart'
           );
           try {
             const response = await emitAsync<McpCapabilityListPayload, McpCapabilityListResponse>(
               McpEvents.CAPABILITY_LIST,
-              { projectPath }
+              { projectPath: requestedProjectPath }
             );
+            if (get().projectPath !== requestedProjectPath) {
+              return;
+            }
             if (response.error) {
               logger.error('CAPABILITY_LIST failed:', response.error);
               set(
@@ -121,6 +121,9 @@ export const useMcpCapabilitiesStore = create<McpCapabilitiesStore>()(
               'mcpCapabilities/fetchSuccess'
             );
           } catch (err) {
+            if (get().projectPath !== requestedProjectPath) {
+              return;
+            }
             const message = extractErrorMessage(err, 'Failed to load capabilities');
             logger.error('CAPABILITY_LIST exception:', message);
             set({ error: message, isLoading: false }, undefined, 'mcpCapabilities/fetchError');
@@ -130,6 +133,7 @@ export const useMcpCapabilitiesStore = create<McpCapabilitiesStore>()(
         toggleCapability: async (projectPath: string, id: string, enabled: boolean) => {
           // Optimistic update
           const previous = get().capabilities;
+          const isCurrentProject = () => get().projectPath === projectPath;
           set(
             {
               capabilities: previous.map(c => (c.id === id ? { ...c, enabled } : c)),
@@ -146,18 +150,20 @@ export const useMcpCapabilitiesStore = create<McpCapabilitiesStore>()(
             >(McpEvents.CAPABILITY_TOGGLE, { projectPath, capabilityId: id, enabled });
 
             if (!response.success) {
-              // Roll back
+              // Roll back, but only if the user hasn't switched projects.
               logger.error('CAPABILITY_TOGGLE failed:', response.error);
-              set(
-                { capabilities: previous, error: response.error ?? 'Toggle failed' },
-                undefined,
-                'mcpCapabilities/toggleError'
-              );
+              if (isCurrentProject()) {
+                set(
+                  { capabilities: previous, error: response.error ?? 'Toggle failed' },
+                  undefined,
+                  'mcpCapabilities/toggleError'
+                );
+              }
               return;
             }
 
             // Reconcile against authoritative enabledIds (covers add/remove of any cap).
-            if (response.enabledIds) {
+            if (response.enabledIds && isCurrentProject()) {
               const enabledSet = new Set(response.enabledIds);
               set(
                 s => ({
@@ -173,17 +179,20 @@ export const useMcpCapabilitiesStore = create<McpCapabilitiesStore>()(
           } catch (err) {
             const message = extractErrorMessage(err, 'Toggle failed');
             logger.error('CAPABILITY_TOGGLE exception:', message);
-            set(
-              { capabilities: previous, error: message },
-              undefined,
-              'mcpCapabilities/toggleError'
-            );
+            if (isCurrentProject()) {
+              set(
+                { capabilities: previous, error: message },
+                undefined,
+                'mcpCapabilities/toggleError'
+              );
+            }
           }
         },
 
         setElectronCdpPort: async (projectPath: string, id: string, port: number) => {
           // Optimistic update
           const previous = get().capabilities;
+          const isCurrentProject = () => get().projectPath === projectPath;
           set(
             {
               capabilities: previous.map(c => (c.id === id ? { ...c, electronCdpPort: port } : c)),
@@ -201,20 +210,24 @@ export const useMcpCapabilitiesStore = create<McpCapabilitiesStore>()(
 
             if (!response.success) {
               logger.error('CAPABILITY_SET_PORT failed:', response.error);
-              set(
-                { capabilities: previous, error: response.error ?? 'Set port failed' },
-                undefined,
-                'mcpCapabilities/setPortError'
-              );
+              if (isCurrentProject()) {
+                set(
+                  { capabilities: previous, error: response.error ?? 'Set port failed' },
+                  undefined,
+                  'mcpCapabilities/setPortError'
+                );
+              }
             }
           } catch (err) {
             const message = extractErrorMessage(err, 'Set port failed');
             logger.error('CAPABILITY_SET_PORT exception:', message);
-            set(
-              { capabilities: previous, error: message },
-              undefined,
-              'mcpCapabilities/setPortError'
-            );
+            if (isCurrentProject()) {
+              set(
+                { capabilities: previous, error: message },
+                undefined,
+                'mcpCapabilities/setPortError'
+              );
+            }
           }
         },
 
