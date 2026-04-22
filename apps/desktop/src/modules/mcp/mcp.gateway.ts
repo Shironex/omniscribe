@@ -28,6 +28,13 @@ import {
   McpRemoveConfigResponse,
   McpInternalStatusResponse,
   McpStatusServerInfoResponse,
+  McpCapabilityListPayload,
+  McpCapabilityListResponse,
+  McpCapabilityTogglePayload,
+  McpCapabilityToggleResponse,
+  McpCapabilitySetPortPayload,
+  McpCapabilitySetPortResponse,
+  McpCapabilityDescriptor,
   SessionTasksUpdate,
   McpEvents,
   SessionEvents,
@@ -37,11 +44,13 @@ import {
 import { InternalSessionEvents } from '../shared/events';
 import { McpStatusServerService } from './mcp-status-server.service';
 import {
+  McpCapabilityRegistryService,
+  McpCapabilityStateService,
   McpDiscoveryService,
-  McpWriterService,
   McpProjectCacheService,
   McpSessionRegistryService,
   McpTrackingService,
+  McpWriterService,
 } from './services';
 import { CORS_CONFIG } from '../shared/cors.config';
 
@@ -71,7 +80,9 @@ export class McpGateway implements OnGatewayInit {
     private readonly projectCache: McpProjectCacheService,
     private readonly sessionRegistry: McpSessionRegistryService,
     private readonly trackingService: McpTrackingService,
-    private readonly statusServer: McpStatusServerService
+    private readonly statusServer: McpStatusServerService,
+    private readonly capRegistry: McpCapabilityRegistryService,
+    private readonly capState: McpCapabilityStateService
   ) {}
 
   afterInit(): void {
@@ -268,6 +279,165 @@ export class McpGateway implements OnGatewayInit {
       statusUrl: this.statusServer.getStatusUrl(),
       instanceId: this.statusServer.getInstanceId(),
     };
+  }
+
+  /**
+   * List all registered MCP capabilities, merged with the per-project
+   * enabled state. Used by the Settings UI.
+   */
+  @SkipThrottle()
+  @SubscribeMessage(McpEvents.CAPABILITY_LIST)
+  async handleCapabilityList(
+    @MessageBody() payload: McpCapabilityListPayload,
+    @ConnectedSocket() _client: Socket
+  ): Promise<McpCapabilityListResponse> {
+    try {
+      const projectPath = payload?.projectPath;
+      if (!projectPath || typeof projectPath !== 'string') {
+        return {
+          capabilities: [],
+          error: 'Invalid projectPath: must be a non-empty string',
+        };
+      }
+
+      const enabled = new Set(this.capState.getEnabled(projectPath));
+      const electronCdpPort = this.capState.getElectronCdpPort(projectPath);
+      const projectHash = this.writerService.generateProjectHash(projectPath);
+
+      const capabilities: McpCapabilityDescriptor[] = await Promise.all(
+        this.capRegistry.list().map(async cap => {
+          // Preflight context used only when capability.preflight exists;
+          // capabilities that need real session/workingDir context are
+          // invoked through the writer pipeline instead.
+          const preflightCtx = {
+            sessionId: '',
+            workingDir: projectPath,
+            projectPath,
+            projectHash,
+            statusUrl: null,
+            instanceId: null,
+            ...(cap.id === 'playwright-electron' ? { electronCdpPort } : {}),
+          };
+
+          let disabledReason: string | undefined;
+          if (typeof cap.preflight === 'function') {
+            try {
+              const pre = await cap.preflight(preflightCtx);
+              if (!pre.ok) {
+                disabledReason = pre.reason ?? 'Unavailable';
+              }
+            } catch (err) {
+              disabledReason = extractErrorMessage(err, 'Preflight failed');
+            }
+          }
+          const descriptor: McpCapabilityDescriptor = {
+            id: cap.id,
+            label: cap.label,
+            description: cap.description,
+            enabled: enabled.has(cap.id),
+          };
+          if (cap.requiresDev) descriptor.requiresDev = true;
+          if (disabledReason) descriptor.disabledReason = disabledReason;
+          if (cap.id === 'playwright-electron') descriptor.electronCdpPort = electronCdpPort;
+          return descriptor;
+        })
+      );
+
+      return { capabilities };
+    } catch (error) {
+      this.logger.error('Error listing capabilities:', error);
+      return {
+        capabilities: [],
+        error: extractErrorMessage(error, 'Unknown error'),
+      };
+    }
+  }
+
+  /**
+   * Toggle a capability on/off for a project, broadcast the change.
+   */
+  @SubscribeMessage(McpEvents.CAPABILITY_TOGGLE)
+  handleCapabilityToggle(
+    @MessageBody() payload: McpCapabilityTogglePayload,
+    @ConnectedSocket() _client: Socket
+  ): McpCapabilityToggleResponse {
+    try {
+      const { projectPath, capabilityId, enabled } = payload ?? ({} as McpCapabilityTogglePayload);
+      if (!projectPath || typeof projectPath !== 'string') {
+        return { success: false, error: 'Invalid projectPath: must be a non-empty string' };
+      }
+      if (!capabilityId || typeof capabilityId !== 'string') {
+        return { success: false, error: 'Invalid capabilityId: must be a non-empty string' };
+      }
+      if (typeof enabled !== 'boolean') {
+        return { success: false, error: 'Invalid enabled: must be a boolean' };
+      }
+      if (!this.capRegistry.get(capabilityId)) {
+        return { success: false, error: `Unknown capability: ${capabilityId}` };
+      }
+
+      const enabledIds = this.capState.toggle(projectPath, capabilityId, enabled);
+
+      this.server.emit(McpEvents.CAPABILITY_CHANGED, {
+        projectPath,
+        enabledIds,
+      });
+
+      return { success: true, enabledIds };
+    } catch (error) {
+      this.logger.error('Error toggling capability:', error);
+      return {
+        success: false,
+        error: extractErrorMessage(error, 'Unknown error'),
+      };
+    }
+  }
+
+  /**
+   * Set the per-project CDP port for a capability (currently only the
+   * `playwright-electron` capability consumes it). Validates the range
+   * and broadcasts CAPABILITY_CHANGED so other clients re-fetch.
+   */
+  @SubscribeMessage(McpEvents.CAPABILITY_SET_PORT)
+  handleCapabilitySetPort(
+    @MessageBody() payload: McpCapabilitySetPortPayload,
+    @ConnectedSocket() _client: Socket
+  ): McpCapabilitySetPortResponse {
+    try {
+      const { projectPath, capabilityId, port } = payload ?? ({} as McpCapabilitySetPortPayload);
+      if (!projectPath || typeof projectPath !== 'string') {
+        return { success: false, error: 'Invalid projectPath: must be a non-empty string' };
+      }
+      if (!capabilityId || typeof capabilityId !== 'string') {
+        return { success: false, error: 'Invalid capabilityId: must be a non-empty string' };
+      }
+      if (!this.capRegistry.get(capabilityId)) {
+        return { success: false, error: `Unknown capability: ${capabilityId}` };
+      }
+      if (capabilityId !== 'playwright-electron') {
+        return {
+          success: false,
+          error: `Capability "${capabilityId}" does not accept a port setting`,
+        };
+      }
+      if (!Number.isInteger(port) || port < 1024 || port > 65535) {
+        return { success: false, error: 'Invalid port: must be an integer between 1024 and 65535' };
+      }
+
+      this.capState.setElectronCdpPort(projectPath, port);
+
+      // Re-broadcast the current enabled set so listeners re-fetch the
+      // descriptor (which carries the new port + refreshed preflight).
+      this.server.emit(McpEvents.CAPABILITY_CHANGED, {
+        projectPath,
+        enabledIds: this.capState.getEnabled(projectPath),
+      });
+
+      return { success: true, port };
+    } catch (error) {
+      this.logger.error('Error setting capability port:', error);
+      return { success: false, error: extractErrorMessage(error, 'Unknown error') };
+    }
   }
 
   /**

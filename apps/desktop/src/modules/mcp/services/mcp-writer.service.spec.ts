@@ -4,7 +4,14 @@ import { McpInternalService } from './mcp-internal.service';
 import { McpTrackingService } from './mcp-tracking.service';
 import { McpSessionRegistryService } from './mcp-session-registry.service';
 import { McpStatusServerService } from '../mcp-status-server.service';
-import type { McpServerConfig } from '@omniscribe/shared';
+import { McpCapabilityRegistryService } from './mcp-capability-registry.service';
+import { McpCapabilityStateService } from './mcp-capability-state.service';
+import { MCP_SERVER_NAME, type McpServerConfig } from '@omniscribe/shared';
+import { createOmniscribeCapability } from '../capabilities/omniscribe.capability';
+
+// Mock electron-store so we don't pull in Electron via the WorkspaceService
+// transitive import chain (writer -> capability-state -> workspace).
+jest.mock('electron-store', () => ({ __esModule: true, default: class {} }));
 
 // Mock fs module
 jest.mock('fs', () => ({
@@ -27,6 +34,8 @@ describe('McpWriterService', () => {
   let trackingService: jest.Mocked<McpTrackingService>;
   let sessionRegistry: jest.Mocked<McpSessionRegistryService>;
   let statusServer: jest.Mocked<McpStatusServerService>;
+  let capRegistry: jest.Mocked<McpCapabilityRegistryService>;
+  let capState: jest.Mocked<McpCapabilityStateService>;
 
   beforeEach(async () => {
     internalService = {
@@ -56,6 +65,23 @@ describe('McpWriterService', () => {
     readFileMock.mockReset();
     writeFileMock.mockResolvedValue(undefined);
 
+    // Use the real omniscribe capability so writer output matches production
+    const omniscribeCap = createOmniscribeCapability(internalService);
+    capRegistry = {
+      get: jest.fn((id: string) => (id === MCP_SERVER_NAME ? omniscribeCap : undefined)),
+      list: jest.fn().mockReturnValue([omniscribeCap]),
+      register: jest.fn(),
+      defaultEnabledIds: jest.fn().mockReturnValue([MCP_SERVER_NAME]),
+    } as unknown as jest.Mocked<McpCapabilityRegistryService>;
+
+    capState = {
+      getEnabled: jest.fn().mockReturnValue([MCP_SERVER_NAME]),
+      setEnabled: jest.fn(),
+      toggle: jest.fn(),
+      getElectronCdpPort: jest.fn().mockReturnValue(9222),
+      setElectronCdpPort: jest.fn(),
+    } as unknown as jest.Mocked<McpCapabilityStateService>;
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         McpWriterService,
@@ -63,6 +89,8 @@ describe('McpWriterService', () => {
         { provide: McpTrackingService, useValue: trackingService },
         { provide: McpSessionRegistryService, useValue: sessionRegistry },
         { provide: McpStatusServerService, useValue: statusServer },
+        { provide: McpCapabilityRegistryService, useValue: capRegistry },
+        { provide: McpCapabilityStateService, useValue: capState },
       ],
     }).compile();
 
@@ -290,6 +318,56 @@ describe('McpWriterService', () => {
       const writtenConfig = JSON.parse(writeFileMock.mock.calls[0][1]);
       expect(writtenConfig.mcpServers['minimal'].args).toBeUndefined();
       expect(writtenConfig.mcpServers['minimal'].env).toBeUndefined();
+    });
+
+    it('passes electronCdpPort to the playwright-electron capability ctx', async () => {
+      const buildConfig = jest.fn().mockResolvedValue({
+        type: 'stdio',
+        command: 'npx',
+        args: ['-y', '@playwright/mcp@latest'],
+      });
+      const pwElectronCap = {
+        id: 'playwright-electron',
+        label: 'PE',
+        description: '',
+        buildConfig,
+      };
+      capRegistry.get.mockImplementation((id: string) =>
+        id === 'playwright-electron' ? (pwElectronCap as never) : undefined
+      );
+      capState.getEnabled.mockReturnValue(['playwright-electron']);
+      (capState.getElectronCdpPort as jest.Mock).mockReturnValue(9444);
+
+      await service.writeConfig('/work', 'session-1', '/project', []);
+
+      expect(capState.getElectronCdpPort).toHaveBeenCalledWith('/project');
+      expect(buildConfig).toHaveBeenCalledTimes(1);
+      const ctx = buildConfig.mock.calls[0][0];
+      expect(ctx.electronCdpPort).toBe(9444);
+    });
+
+    it('does not populate electronCdpPort for non-electron capabilities', async () => {
+      const buildConfig = jest.fn().mockResolvedValue({
+        type: 'stdio',
+        command: 'npx',
+        args: [],
+      });
+      const pwWebCap = {
+        id: 'playwright-web',
+        label: 'PW',
+        description: '',
+        buildConfig,
+      };
+      capRegistry.get.mockImplementation((id: string) =>
+        id === 'playwright-web' ? (pwWebCap as never) : undefined
+      );
+      capState.getEnabled.mockReturnValue(['playwright-web']);
+
+      await service.writeConfig('/work', 'session-1', '/project', []);
+
+      expect(capState.getElectronCdpPort).not.toHaveBeenCalled();
+      const ctx = buildConfig.mock.calls[0][0];
+      expect(ctx.electronCdpPort).toBeUndefined();
     });
   });
 

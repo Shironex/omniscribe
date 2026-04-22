@@ -191,6 +191,33 @@ export interface TaskItem {
 }
 
 /**
+ * Descriptor for an MCP capability surfaced in the Settings UI.
+ * Combines registry metadata with the per-project enabled flag.
+ */
+export interface McpCapabilityDescriptor {
+  id: string;
+  label: string;
+  description: string;
+  enabled: boolean;
+  /**
+   * If true, this capability only makes sense in dev/local environments
+   * (e.g. drives a dev server). UI may show a "Dev only" badge.
+   */
+  requiresDev?: boolean;
+  /**
+   * If present, the capability is currently unavailable and the UI should
+   * surface this reason (populated from the capability's preflight check).
+   */
+  disabledReason?: string;
+  /**
+   * Per-project CDP port for the user's own Electron app. Only set on the
+   * `playwright-electron` descriptor. Defaults to 9222 when the user
+   * hasn't explicitly configured one.
+   */
+  electronCdpPort?: number;
+}
+
+/**
  * Tasks payload received from MCP server via HTTP POST
  */
 export interface TasksPayload {

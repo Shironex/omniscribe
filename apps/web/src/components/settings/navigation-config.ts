@@ -10,6 +10,7 @@ import {
   Zap,
   Puzzle,
   Bell,
+  Sparkles,
 } from 'lucide-react';
 import type { SettingsSectionId } from '@omniscribe/shared';
 
@@ -34,6 +35,7 @@ export const CORE_NAV_GROUPS: NavigationGroup[] = [
     items: [
       { id: 'github', label: 'GitHub CLI', icon: GitPullRequest },
       { id: 'mcp', label: 'MCP Servers', icon: Server },
+      { id: 'ai-capabilities', label: 'AI Capabilities', icon: Sparkles },
       { id: 'marketplace', label: 'Extensions', icon: Puzzle },
     ],
   },

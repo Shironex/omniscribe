@@ -90,9 +90,13 @@ export const McpEvents = {
   REMOVE_CONFIG: 'mcp:remove-config',
   GET_INTERNAL_STATUS: 'mcp:get-internal-status',
   GET_STATUS_SERVER_INFO: 'mcp:get-status-server-info',
+  CAPABILITY_LIST: 'mcp:capability-list',
+  CAPABILITY_TOGGLE: 'mcp:capability-toggle',
+  CAPABILITY_SET_PORT: 'mcp:capability-set-port',
 
   // Server -> Client (broadcasts)
   ENABLED_CHANGED: 'mcp:enabled-changed',
+  CAPABILITY_CHANGED: 'mcp:capability-changed',
 } as const;
 
 // ============================================

@@ -17,6 +17,18 @@ import { LOCALHOST } from '@omniscribe/shared';
 import { resolveShellPath } from './utils/shell-path';
 import { getThumbnailsDir } from './utils';
 import { setBackendPort } from './backend-port';
+import { CDP_PORT, cdpEnabledForRuntime } from './cdp';
+
+// Dogfood mode: expose CDP on Omniscribe's own window so @playwright/mcp
+// can drive Omniscribe itself for self-testing. Off by default — port
+// 9222 is reserved for the user's own Electron apps launched inside
+// Omniscribe sessions. Opt in via OMNISCRIBE_ENABLE_CDP=1. Must happen
+// before app.whenReady() / any BrowserWindow construction.
+if (cdpEnabledForRuntime(app.isPackaged)) {
+  app.commandLine.appendSwitch('remote-debugging-port', String(CDP_PORT));
+  app.commandLine.appendSwitch('remote-debugging-address', '127.0.0.1');
+  logger.info(`[cdp] dogfood mode: Omniscribe's own window exposed on 127.0.0.1:${CDP_PORT}`);
+}
 
 // Allow E2E tests to isolate userData by setting ELECTRON_USER_DATA_DIR.
 // Must run before app.ready so electron-store and other userData consumers

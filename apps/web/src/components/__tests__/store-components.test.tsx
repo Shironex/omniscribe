@@ -127,6 +127,7 @@ vi.mock('../settings/sections', () => ({
   AppearanceSection: () => <div data-testid="appearance-section" />,
   GithubSection: () => <div data-testid="github-section" />,
   McpSection: () => <div data-testid="mcp-section" />,
+  AiCapabilitiesSection: () => <div data-testid="ai-capabilities-section" />,
   GeneralSection: () => <div data-testid="general-section" />,
   WorktreesSection: () => <div data-testid="worktrees-section" />,
   SessionsSection: () => <div data-testid="sessions-section" />,
