@@ -1,0 +1,173 @@
+---
+title: AI Capabilities
+description: Per-project MCP capabilities — Playwright for web and Electron apps, plus the built-in Omniscribe Status server.
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+import { Step, Steps } from 'fumadocs-ui/components/steps';
+
+<Callout title="Beta">
+  AI Capabilities ship in Omniscribe's beta channel. The registry, the Settings panel, and the
+  Playwright capabilities are stable enough for daily use but the API surface (capability ids,
+  descriptor fields) may still shift.
+</Callout>
+
+Omniscribe ships with a curated **MCP capability registry** — a set of Model Context Protocol servers Omniscribe knows how to configure. Each capability can be toggled per project from **Settings → Integrations → AI Capabilities**, and Omniscribe writes the right `.mcp.json` entries when a session starts.
+
+The goal is to let the AI session actually _do things_ in the project it's working on — drive the web app, drive your Electron app, report status — without you wiring up MCP servers by hand.
+
+## Shipped Capabilities
+
+| Capability                        | What it does                                                                                       | Default |
+| --------------------------------- | -------------------------------------------------------------------------------------------------- | ------- |
+| **Omniscribe Status**             | Built-in status & task reporting server (see [MCP Integration](./mcp-integration))                 | ✅ On   |
+| **Playwright (Web)**              | Attaches `@playwright/mcp` for headless Chromium driving your dev server                           | ⬜ Off  |
+| **Playwright (Electron)**         | Attaches `@playwright/mcp` to a CDP endpoint so the AI can drive _your_ running Electron app       | ⬜ Off  |
+
+<Callout>
+  Capabilities are **per-project** — a Playwright server enabled in one project is not enabled
+  globally. Toggles apply to subsequently launched sessions, not to sessions already running.
+</Callout>
+
+## Managing Capabilities
+
+Open **Settings → Integrations → AI Capabilities** while a project tab is active. Each capability shows:
+
+- A description of what it does and when it applies.
+- A toggle switch — flipping it updates the per-project `.mcp.json` the next session will see.
+- A **Dev only** badge for capabilities that require the app to be running in development.
+- A disabled reason line when a capability's preflight check fails (e.g. Electron app not listening).
+
+Capabilities that fail preflight (for example, Playwright (Electron) with no CDP endpoint reachable) are greyed out but remain togglable so you can disable a previously-enabled capability even if it can't currently run.
+
+## Playwright (Web)
+
+Lets an AI session drive a headless Chromium browser against your dev server via the official `@playwright/mcp`. A per-project profile directory (`<project>/.omniscribe/pw-profile-web`) keeps cookies and storage isolated between projects.
+
+<Steps>
+  <Step>
+    Open your project, then go to **Settings → Integrations → AI Capabilities**.
+  </Step>
+  <Step>
+    Toggle **Playwright (Web)** on.
+  </Step>
+  <Step>
+    Start (or restart) an AI session in that project. Omniscribe writes `@playwright/mcp` into `.mcp.json` and the AI picks it up automatically.
+  </Step>
+</Steps>
+
+<Callout title="First run">
+  `npx -y @playwright/mcp` fetches the package on first invocation. The first session will pause
+  briefly while it downloads; subsequent sessions start instantly.
+</Callout>
+
+## Playwright (Electron)
+
+<Callout title="Beta">
+  The Playwright (Electron) integration is the newest AI capability and is still shaking out in
+  beta. The setup flow is stable, but preflight heuristics and the CDP port UX may change. Please
+  file issues if something trips you up.
+</Callout>
+
+This is the feature worth reading carefully — it lets an AI session drive **your own** Electron app over the Chrome DevTools Protocol (CDP). Useful for end-to-end tests, UI automation during development, or letting Claude Code iterate on a UI change and verify it visually.
+
+### How the connection works
+
+```
+┌─────────────────┐        ┌──────────────────────┐        ┌─────────────────────┐
+│ AI session      │        │ @playwright/mcp      │        │ YOUR Electron app   │
+│ (Claude Code)   │──MCP──▶│ (--cdp-endpoint ...) │──CDP──▶│ (--remote-debugging │
+│                 │        │                      │        │  -port=<PORT>)      │
+└─────────────────┘        └──────────────────────┘        └─────────────────────┘
+```
+
+Omniscribe does **not** launch your app. You launch your Electron app yourself with a CDP port open, and Omniscribe configures `@playwright/mcp` to attach to `127.0.0.1:<PORT>`.
+
+### Setup
+
+<Steps>
+  <Step>
+    **Pick a CDP port.** Default is `9222`. If another app is already using it (another Electron dev session, Chrome, etc.), change it in **Settings → Integrations → AI Capabilities → Playwright (Electron) → CDP port**.
+
+    <Callout type="warn">
+      Port `9222` is the de-facto Chrome/Chromium default — if you also run Omniscribe in _dogfood
+      mode_ (see below) or have another Chromium-based tool using CDP, pick a different port per
+      project.
+    </Callout>
+  </Step>
+  <Step>
+    **Launch your Electron app with the remote debugging switch:**
+
+    ```bash
+    # During development, via your dev command
+    electron . --remote-debugging-port=9222
+
+    # Or as part of your dev script
+    # package.json
+    {
+      "scripts": {
+        "dev:debug": "electron . --remote-debugging-port=9222"
+      }
+    }
+    ```
+
+    For apps using `electron-forge` / `electron-builder` with a wrapper, pass the flag through your runner (most support `--` passthrough):
+
+    ```bash
+    pnpm electron-forge start -- --remote-debugging-port=9222
+    ```
+  </Step>
+  <Step>
+    **Verify the CDP endpoint is alive.** Open `http://127.0.0.1:9222/json/version` in a browser — you should see a JSON blob with your Chromium version. If you don't, the flag didn't reach Electron's main process.
+  </Step>
+  <Step>
+    **Enable the capability.** Back in Omniscribe, toggle **Playwright (Electron)** on. The preflight probes your port — a green toggle means the session can attach.
+  </Step>
+  <Step>
+    **Start an AI session.** In the new session, the AI now has `browser_*` tools (click, snapshot, evaluate, navigate…) that drive your running Electron window.
+  </Step>
+</Steps>
+
+### Security note
+
+CDP is **localhost-only** in Omniscribe — `@playwright/mcp` attaches to `127.0.0.1:<PORT>`, never a public interface. Anything with local process access to your machine could drive the endpoint while your app runs in debug mode, so:
+
+- **Only launch with `--remote-debugging-port` during development**, not in shipped builds.
+- Don't bind CDP to `0.0.0.0` or expose the port externally.
+- If your app handles sensitive data even in dev, consider a separate dev-only fixture.
+
+### Troubleshooting
+
+| Symptom                                                          | Fix                                                                                                |
+| ---------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| Toggle shows _"No Electron app listening on port 9222"_          | Your app isn't running with `--remote-debugging-port=9222`. Check the dev script actually launched. |
+| `http://127.0.0.1:9222/json/version` returns nothing             | The flag didn't reach the main process — if you use a wrapper, make sure it passes `--` through.    |
+| AI says `browser_*` tools aren't available                       | Restart the AI session after enabling the capability — `.mcp.json` is written at session start.    |
+| Port conflict with another Chromium tool                         | Change the per-project CDP port in Settings. Each project stores its own port.                    |
+
+## Dogfood Mode (Omniscribe driving itself)
+
+Developers working on Omniscribe can expose CDP on Omniscribe's **own** window so `@playwright/mcp` can drive the app that's hosting your AI session. This is off by default — otherwise Omniscribe would squat on port `9222` and block every user's Electron-app workflow.
+
+Opt in via an env var before launching Omniscribe:
+
+```bash
+# Run the dev build with Omniscribe's own window debuggable on 127.0.0.1:9222
+OMNISCRIBE_ENABLE_CDP=1 pnpm dev
+
+# Use a different port
+OMNISCRIBE_ENABLE_CDP=1 OMNISCRIBE_CDP_PORT=9333 pnpm dev
+```
+
+<Callout type="warn">
+  Dogfood mode is intended for people hacking on Omniscribe itself. If you also need to drive your
+  own Electron app in the same session, pick different ports (e.g. dogfood on `9333`, your app on
+  `9222`).
+</Callout>
+
+## Under the Hood
+
+- **Registry:** Capabilities live in `apps/desktop/src/modules/mcp/capabilities/`. Each implements `McpCapability` (id, label, description, optional `preflight`, `buildConfig(ctx)`).
+- **Per-project state:** Enabled ids and the per-project CDP port persist via `electron-store` under `projectCapabilities` and `projectElectronCdpPort`.
+- **Config writer:** `McpWriterService` writes a `_omniscribe.managedCapabilities` marker into `.mcp.json` so cleanup only removes capability-owned entries — your user-authored servers are preserved.
+- **Contributing a new capability:** Add one file under `capabilities/` implementing `McpCapability` and register it in `McpCapabilityRegistryService`. That's it — the UI, toggling, and `.mcp.json` plumbing are all driven by the registry.
