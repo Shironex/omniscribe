@@ -2,6 +2,33 @@
 
 All notable changes to this project will be documented in this file.
 
+## 1.6.0-beta.0 (2026-04-22)
+
+First beta of the 1.6 cycle — opens the new **AI Capabilities** surface for feedback.
+
+### Features
+
+- **AI Capabilities registry** — New per-project MCP capability registry with Settings → Integrations → AI Capabilities panel. Ships the internal Omniscribe Status server as the first capability; adding a new MCP integration is now one file under `capabilities/` plus one `register()` call. (#278)
+- **Playwright (Web) capability** — Toggle on per-project to let AI sessions drive a headless Chromium against your dev server via the official `@playwright/mcp`. Profile data is stored under `<project>/.omniscribe/pw-profile-web`. (#278)
+- **Playwright (Electron) capability** — Drive your _own_ running Electron app from an AI session over CDP. Launch your app with `--remote-debugging-port=<port>` and enable the capability — the AI session gets `browser_*` tools attached to the live window. Per-project port is configurable. (#278)
+- **Omniscribe dogfood CDP switch** — Opt in via `OMNISCRIBE_ENABLE_CDP=1` to expose CDP on Omniscribe's own window (bound to 127.0.0.1), enabling self-driving during development. Off by default so port 9222 stays free for the user's own apps. (#278)
+
+### Docs
+
+- New [AI Capabilities](https://omniscribe.dev/docs/features/ai-capabilities) page with full Playwright (Electron) setup walkthrough, security notes, and troubleshooting.
+- Cross-referenced from the existing MCP Integration page.
+
+### Maintenance
+
+- **Dependency bumps** — Patch/minor updates across the monorepo (electron 41.2.2, next 16.2.4, fumadocs 16.8.x, tailwindcss 4.2.4, vitest 4.1.5, @nestjs/schedule 6.1.3, lucide-react 1.8.0, others). Major upgrades (nestjs 11, react 19, vite 8, electron-store 11, typescript 6) deferred to focused migration PRs.
+- **MCP writer hardening** — Mutex lifetime fixed (no longer dropped mid-serialize); `_omniscribe` metadata always stripped on cleanup; external server ids no longer overwrite managed capabilities. (#278)
+- **CDP validation** — `OMNISCRIBE_CDP_PORT` is validated before passing to Electron; invalid values fall back to the default.
+
+### Known limitations (beta)
+
+- Capability descriptor API (ids, `disabledReason`, `electronCdpPort`) may still shift. If you're scripting against the Settings UI or the WebSocket events, pin an exact Omniscribe version.
+- Playwright (Electron) preflight only probes the CDP port — it does not verify the attached target is your app.
+
 ## 1.5.0 (2026-04-08)
 
 ### Features
