@@ -145,11 +145,24 @@ export const UsageEvents = {
 } as const;
 
 // ============================================
-// Claude Code Changelog Events
+// Claude Code Changelog Events (legacy — replaced by ChangelogEvents)
 // ============================================
 export const ClaudeChangelogEvents = {
   FETCH: 'claude-changelog:fetch',
   REFRESH: 'claude-changelog:refresh',
+} as const;
+
+// ============================================
+// Generic Changelog Events
+//
+// Replaces ClaudeChangelogEvents — payloads carry a `sourceId` so a single
+// gateway serves every registered changelog source (Claude, Codex, …).
+// ============================================
+export const ChangelogEvents = {
+  FETCH: 'changelog:fetch',
+  REFRESH: 'changelog:refresh',
+  REGISTER_SOURCE: 'changelog:register-source',
+  UNREGISTER_SOURCE: 'changelog:unregister-source',
 } as const;
 
 // ============================================

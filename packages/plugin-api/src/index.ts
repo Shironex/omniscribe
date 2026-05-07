@@ -57,8 +57,21 @@ export type {
 // ==========================================
 // Provider Plugin Interface
 // ==========================================
-export type { AiProviderPlugin, ProviderPluginContext } from './types/provider';
+export type {
+  AiProviderPlugin,
+  ProviderPluginContext,
+  CustomChangelogFetcher,
+} from './types/provider';
 export { ALLOWED_PROVIDER_INVOKE_METHODS } from './types/provider';
+
+// ==========================================
+// Changelog Types
+// ==========================================
+export type {
+  ChangelogEntry,
+  ChangelogSourceKind,
+  ChangelogSourceRegistration,
+} from './types/changelog';
 
 // ==========================================
 // Frontend Plugin Types

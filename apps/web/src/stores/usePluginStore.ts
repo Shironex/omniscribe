@@ -9,6 +9,7 @@ import type {
   ActionBarItemRegistration,
   MoreMenuItemRegistration,
   ThemeRegistration,
+  ChangelogSourceRegistration,
   Disposable,
 } from '@omniscribe/plugin-api';
 import { ALL_THEMES, PluginEvents, createLogger, type ProviderInfo } from '@omniscribe/shared';
@@ -65,6 +66,9 @@ interface PluginState extends SocketStoreState {
   /** Theme registrations keyed by `${pluginId}:${reg.id}` */
   themes: Map<string, WithPluginId<ThemeRegistration>>;
 
+  /** Changelog source registrations keyed by `${pluginId}:${reg.id}` */
+  changelogSources: Map<string, WithPluginId<ChangelogSourceRegistration>>;
+
   /** Tracks which plugins have had activateFrontend() called */
   frontendPluginsActivated: Set<string>;
 }
@@ -98,6 +102,7 @@ interface PluginActions extends SocketStoreActions {
   registerActionBarItem: (pluginId: string, reg: ActionBarItemRegistration) => Disposable;
   registerMoreMenuItem: (pluginId: string, reg: MoreMenuItemRegistration) => Disposable;
   registerTheme: (pluginId: string, reg: ThemeRegistration) => Disposable;
+  registerChangelogSource: (pluginId: string, reg: ChangelogSourceRegistration) => Disposable;
 
   /** Initialize socket listeners */
   initListeners: () => void;
@@ -139,6 +144,7 @@ const REGISTRATION_MAP_KEYS = [
   'actionBarItems',
   'moreMenuItems',
   'themes',
+  'changelogSources',
 ] as const satisfies ReadonlyArray<keyof PluginState>;
 
 /**
@@ -295,6 +301,7 @@ export const usePluginStore = create<PluginStore>()(
         actionBarItems: new Map(),
         moreMenuItems: new Map(),
         themes: new Map(),
+        changelogSources: new Map(),
         frontendPluginsActivated: new Set(),
 
         // ==========================================
@@ -476,6 +483,13 @@ export const usePluginStore = create<PluginStore>()(
           'moreMenuItems',
           'id',
           'MoreMenuItem'
+        ),
+
+        registerChangelogSource: createRegistration<ChangelogSourceRegistration>(
+          set,
+          'changelogSources',
+          'id',
+          'ChangelogSource'
         ),
 
         registerTheme: (pluginId: string, reg: ThemeRegistration): Disposable => {

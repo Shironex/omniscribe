@@ -21,8 +21,12 @@ import type {
   ActionBarItemRegistration,
   MoreMenuItemRegistration,
   ThemeRegistration,
+  ChangelogSourceRegistration,
 } from '@omniscribe/plugin-api';
-import { createLogger } from '@omniscribe/shared';
+import { ChangelogEvents, createLogger } from '@omniscribe/shared';
+import { Newspaper } from 'lucide-react';
+import { ChangelogSection } from '@/components/changelog/ChangelogSection';
+import { emitAsync } from '@/lib/socket';
 import type { usePluginStore as UsePluginStoreType } from '@/stores/usePluginStore';
 
 /**
@@ -93,6 +97,67 @@ export function createFrontendPluginContext(
 
     registerTheme(reg: ThemeRegistration): Disposable {
       return store.getState().registerTheme(pluginId, reg);
+    },
+
+    registerChangelogSource(reg: ChangelogSourceRegistration): Disposable {
+      // Auto-register a settings section under the plugin's category. The
+      // bare changelog source registration AND the synthesised section are
+      // bundled into one composite Disposable so deactivating the plugin
+      // tears both down atomically.
+      const Icon = reg.icon ?? Newspaper;
+      const inferredCategory =
+        reg.categoryId ?? pluginId.replace(/^provider-/, '') ?? 'integrations';
+      const sectionId = `changelog:${reg.id}`;
+      const label = reg.label;
+      const viewUrl = reg.source.viewUrl;
+
+      const SectionComponent = () => (
+        <ChangelogSection sourceId={reg.id} label={label} icon={Icon} viewUrl={viewUrl} />
+      );
+
+      const sourceDisposable = store.getState().registerChangelogSource(pluginId, reg);
+
+      const sectionDisposable = store.getState().registerSettingsSection(pluginId, {
+        categoryId: inferredCategory,
+        sectionId,
+        label,
+        icon: Icon,
+        component: SectionComponent,
+        order: reg.order ?? 50,
+      });
+
+      // Push the source declaration over the wire so the backend can
+      // dispatch fetches. Function-shaped fields (e.g. a 'custom' fetcher
+      // implementation) are intentionally not transmitted — those live in
+      // ProviderPluginContext.registerCustomChangelogFetcher instead.
+      void emitAsync<
+        {
+          id: string;
+          source: ChangelogSourceRegistration['source'];
+          cacheTtlMs?: number;
+          viewUrl?: string;
+        },
+        { success: boolean; message?: string }
+      >(ChangelogEvents.REGISTER_SOURCE, {
+        id: reg.id,
+        source: reg.source,
+        cacheTtlMs: reg.cacheTtlMs,
+        viewUrl: reg.source.viewUrl,
+      }).catch(err => {
+        logger.warn('Failed to register changelog source with backend', err);
+      });
+
+      return {
+        dispose: () => {
+          sectionDisposable.dispose();
+          sourceDisposable.dispose();
+          void emitAsync<{ id: string }, { success: boolean }>(ChangelogEvents.UNREGISTER_SOURCE, {
+            id: reg.id,
+          }).catch(err => {
+            logger.warn('Failed to unregister changelog source with backend', err);
+          });
+        },
+      };
     },
   };
 }

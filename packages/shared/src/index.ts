@@ -28,8 +28,11 @@ export * from './types/usage';
 // Updater types
 export * from './types/updater';
 
-// Claude Code changelog types
+// Claude Code changelog types (legacy — replaced by ./types/changelog)
 export * from './types/claude-changelog';
+
+// Generic changelog types (used by registerChangelogSource extension point)
+export * from './types/changelog';
 
 // Utilities
 export * from './utils';

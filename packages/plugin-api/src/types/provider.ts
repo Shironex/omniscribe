@@ -11,11 +11,22 @@
 
 import type { ProviderCapabilities } from './capabilities';
 import type { CliCommandConfig, CliDetectionResult } from './cli';
-import type { OmniscribePlugin, PluginContext } from './plugin';
+import type { OmniscribePlugin, PluginContext, Disposable } from './plugin';
+import type { ChangelogEntry } from './changelog';
 import type { LaunchContext, McpConfigContribution, ProviderSessionEntry } from './session';
 import type { ProviderSessionStatus } from './status';
 import type { ProviderUsageData } from './usage';
 import type { PluginActivation } from './activation';
+
+/**
+ * Backend-side callback that produces parsed changelog entries for a
+ * `'custom'` ChangelogSourceKind. Runs in the Electron main process and
+ * may use any Node API (auth-gated HTTP, child processes, etc.). The host
+ * wraps the result in the same TTL cache as the built-in fetcher kinds.
+ *
+ * @param signal AbortSignal honoured by the host on shutdown / refresh.
+ */
+export type CustomChangelogFetcher = (signal?: AbortSignal) => Promise<ChangelogEntry[]>;
 
 /**
  * AI Provider Plugin interface.
@@ -211,10 +222,24 @@ export interface AiProviderPlugin extends OmniscribePlugin {
 /**
  * Extended plugin context for AI provider plugins.
  * Inherits the base PluginContext with provider-specific additions.
- * Currently identical to PluginContext but provides a dedicated type
- * for future provider-specific context extensions.
  */
-export type ProviderPluginContext = PluginContext;
+export interface ProviderPluginContext extends PluginContext {
+  /**
+   * Register a backend-side fetcher for a `'custom'` ChangelogSourceKind.
+   * The frontend `registerChangelogSource(...)` declaration must reference
+   * the same `token`. Function references can't cross the WebSocket wire,
+   * so the frontend declaration carries the token only and the backend
+   * supplies the implementation here.
+   *
+   * Optional method — only providers that need the `'custom'` escape hatch
+   * are required to implement it. Hosts that don't yet support custom
+   * fetchers may omit this method entirely; plugins should treat it as a
+   * capability check.
+   *
+   * @returns Disposable that removes the fetcher registration.
+   */
+  registerCustomChangelogFetcher?(token: string, fetcher: CustomChangelogFetcher): Disposable;
+}
 
 /**
  * Provider-specific method names from `AiProviderPlugin`, excluding

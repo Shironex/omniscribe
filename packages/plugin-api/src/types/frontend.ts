@@ -16,6 +16,7 @@ import type { ComponentType, SVGProps } from 'react';
 import type { OmniscribePlugin, PluginContext, Disposable } from './plugin';
 import type { PluginActivation } from './activation';
 import type { ThemeRegistration } from './theme';
+import type { ChangelogSourceRegistration } from './changelog';
 
 // ==========================================
 // Component Types (React-typed)
@@ -183,6 +184,22 @@ export interface FrontendPluginContext extends PluginContext {
    * @returns Disposable that removes this theme registration
    */
   registerTheme(registration: ThemeRegistration): Disposable;
+
+  /**
+   * Register a release-notes source. The host:
+   *   1. Auto-registers a settings section under the plugin's category
+   *      (or `categoryId` if provided). Section id is `changelog:${id}`.
+   *   2. Wires the backend fetcher (cache + ETag + IPC) keyed by source id.
+   *   3. Mounts a generic ChangelogSection that consumes the keyed
+   *      frontend store entry.
+   *
+   * Plugins do not register a separate settings section — this method
+   * IS the settings section registration.
+   *
+   * @returns Disposable that removes the source registration AND its
+   *   auto-registered settings section in one call.
+   */
+  registerChangelogSource(registration: ChangelogSourceRegistration): Disposable;
 }
 
 // ==========================================
