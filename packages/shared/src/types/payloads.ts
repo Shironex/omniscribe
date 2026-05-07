@@ -971,24 +971,6 @@ export interface ContinueLastSessionPayload {
 }
 
 /**
- * Request to get the active sessions snapshot for auto-resume on restart
- */
-export interface RestoreSnapshotResponse {
-  sessions: ActiveSessionSnapshot[];
-  autoResumeEnabled: boolean;
-}
-
-/**
- * Snapshot of an active session for auto-resume on restart
- */
-export interface ActiveSessionSnapshot {
-  claudeSessionId: string;
-  projectPath: string;
-  branch?: string;
-  name: string;
-}
-
-/**
  * Event payload when a Claude Code session hook ends
  */
 export interface SessionHookEndedPayload {

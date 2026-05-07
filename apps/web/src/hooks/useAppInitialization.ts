@@ -1,14 +1,8 @@
 import { useEffect } from 'react';
-import {
-  createLogger,
-  extractErrorMessage,
-  SessionEvents,
-  type RestoreSnapshotResponse,
-} from '@omniscribe/shared';
+import { createLogger } from '@omniscribe/shared';
 import { useUpdateStore } from '@/stores/useUpdateStore';
 import { useSettingsStore } from '@/stores/useSettingsStore';
-import { connectSocket, getSocket, initializeSocket } from '@/lib/socket';
-import { resumeSession } from '@/lib/session';
+import { connectSocket, initializeSocket } from '@/lib/socket';
 import { useStoreListeners } from './useStoreListeners';
 import { usePluginInitialization } from './usePluginInitialization';
 
@@ -27,50 +21,6 @@ async function detectClaudeCliStatus(): Promise<void> {
     }
   } catch (error) {
     logger.warn('Failed to detect Claude CLI status:', error);
-  }
-}
-
-/**
- * Check if auto-resume is enabled and resume any sessions that were active when Omniscribe last closed.
- * Called once on startup after the socket connection is established.
- */
-async function autoResumeOnRestart(): Promise<void> {
-  try {
-    const response = await new Promise<RestoreSnapshotResponse>((resolve, reject) => {
-      const timeout = setTimeout(() => reject(new Error('Timeout')), 5000);
-      getSocket().emit(SessionEvents.GET_RESTORE_SNAPSHOT, {}, (res: RestoreSnapshotResponse) => {
-        clearTimeout(timeout);
-        resolve(res);
-      });
-    });
-
-    if (!response.autoResumeEnabled) {
-      logger.debug('Auto-resume disabled in preferences, skipping');
-      return;
-    }
-    if (response.sessions.length === 0) {
-      logger.debug('No sessions in restore snapshot, skipping auto-resume');
-      return;
-    }
-
-    logger.info(`Auto-resuming ${response.sessions.length} sessions from previous run`);
-
-    for (const snapshot of response.sessions) {
-      try {
-        await resumeSession(
-          snapshot.claudeSessionId,
-          snapshot.projectPath,
-          snapshot.branch,
-          snapshot.name
-        );
-        logger.info(`Auto-resumed session: ${snapshot.name}`);
-      } catch (err) {
-        const msg = extractErrorMessage(err);
-        logger.warn(`Failed to auto-resume session ${snapshot.name}: ${msg}`);
-      }
-    }
-  } catch (error) {
-    logger.warn('Failed to check auto-resume snapshot:', error);
   }
 }
 
@@ -118,8 +68,6 @@ export function useAppInitialization(): void {
         fetchInternalMcpStatus();
         // Detect Claude CLI status early so pre-launch slots use the correct default AI mode
         detectClaudeCliStatus().catch(() => {}); // internal try/catch handles logging
-        // Auto-resume sessions from previous run if enabled
-        autoResumeOnRestart().catch(() => {}); // internal try/catch handles logging
         // Init updater listeners (IPC-based, not socket)
         cleanupUpdateListeners = initUpdateListeners();
       } catch (error) {

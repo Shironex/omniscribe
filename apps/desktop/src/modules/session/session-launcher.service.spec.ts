@@ -13,7 +13,6 @@ import { McpWriterService, McpDiscoveryService } from '../mcp';
 import { GitBaseService } from '../git';
 import { PluginRegistryService } from '../plugin';
 import { CliCommandService } from './cli-command.service';
-import { ClaudeSessionTrackerService } from './claude-session-tracker.service';
 import type { BackendSessionConfig } from './types';
 import { InternalSessionEvents } from '../shared/events';
 
@@ -65,7 +64,6 @@ describe('SessionLauncherService', () => {
   let mcpWriterService: jest.Mocked<McpWriterService>;
   let mcpDiscoveryService: jest.Mocked<McpDiscoveryService>;
   let cliCommandService: jest.Mocked<CliCommandService>;
-  let claudeSessionTracker: jest.Mocked<ClaudeSessionTrackerService>;
   let eventEmitter: jest.Mocked<EventEmitter2>;
 
   beforeEach(async () => {
@@ -99,10 +97,6 @@ describe('SessionLauncherService', () => {
       getAiModeName: jest.fn().mockReturnValue('Claude'),
     } as unknown as jest.Mocked<CliCommandService>;
 
-    claudeSessionTracker = {
-      refreshActiveSessionsSnapshot: jest.fn(),
-    } as unknown as jest.Mocked<ClaudeSessionTrackerService>;
-
     eventEmitter = {
       emit: jest.fn(),
     } as unknown as jest.Mocked<EventEmitter2>;
@@ -133,7 +127,6 @@ describe('SessionLauncherService', () => {
           useValue: { execGit: jest.fn().mockResolvedValue({ stdout: 'abc123\n', stderr: '' }) },
         },
         { provide: CliCommandService, useValue: cliCommandService },
-        { provide: ClaudeSessionTrackerService, useValue: claudeSessionTracker },
         { provide: PluginRegistryService, useValue: mockPluginRegistry },
         { provide: EventEmitter2, useValue: eventEmitter },
       ],
@@ -304,7 +297,7 @@ describe('SessionLauncherService', () => {
       expect(mockPluginRegistry.getProvider).toHaveBeenCalledWith('claude');
     });
 
-    it('should emit CLAUDE_ID_CAPTURED and refresh snapshot when tracker finds new session', async () => {
+    it('should emit CLAUDE_ID_CAPTURED when tracker finds new session', async () => {
       const session = createMockSession();
       sessionService.get.mockReturnValue(session);
       mockProvider.readSessionHistory.mockResolvedValue([
@@ -328,9 +321,6 @@ describe('SessionLauncherService', () => {
           sessionId: session.id,
           claudeSessionId: 'new-session-id',
         })
-      );
-      expect(claudeSessionTracker.refreshActiveSessionsSnapshot).toHaveBeenCalledWith(
-        'claude-id-captured'
       );
     });
 

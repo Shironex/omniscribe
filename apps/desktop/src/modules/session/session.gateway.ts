@@ -34,7 +34,6 @@ import {
   ResumeSessionPayload,
   ForkSessionPayload,
   ContinueLastSessionPayload,
-  RestoreSnapshotResponse,
   SessionHookEndedPayload,
   WorktreeSettings,
   DEFAULT_WORKTREE_SETTINGS,
@@ -512,29 +511,5 @@ export class SessionGateway implements OnGatewayInit {
     }
 
     return result;
-  }
-
-  /**
-   * Handle request to get the restore snapshot for auto-resume on restart.
-   * Returns saved active sessions snapshot and the autoResume preference.
-   */
-  @SkipThrottle()
-  @SubscribeMessage(SessionEvents.GET_RESTORE_SNAPSHOT)
-  handleGetRestoreSnapshot(): RestoreSnapshotResponse {
-    this.logger.debug('[session:get-restore-snapshot] called');
-    const preferences = this.workspaceService.getPreferences();
-    const sessionSettings: SessionSettings = preferences.session ?? DEFAULT_SESSION_SETTINGS;
-    const autoResumeEnabled = sessionSettings.autoResumeOnRestart ?? false;
-    const sessions = this.workspaceService.getActiveSessionsSnapshot();
-
-    // Clear snapshot after reading to prevent stale re-consumption on crash
-    if (sessions.length > 0) {
-      this.workspaceService.clearActiveSessionsSnapshot();
-    }
-
-    return {
-      sessions,
-      autoResumeEnabled,
-    };
   }
 }

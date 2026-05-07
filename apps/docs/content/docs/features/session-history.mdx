@@ -3,8 +3,6 @@ title: Session History
 description: Browse, search, and resume past AI coding sessions.
 ---
 
-import { Callout } from 'fumadocs-ui/components/callout';
-
 Session History lets you browse, search, and resume past AI coding sessions. Every session you run is recorded with metadata, so you can pick up where you left off days or weeks later.
 
 ## Opening Session History
@@ -41,14 +39,3 @@ Forking is useful when a session went in one direction but you want to explore a
 ### Continue Last Session
 
 The **Continue Last** button at the top of the history panel resumes the most recent session with a single click. This uses the `--continue` flag to pick up the conversation where it ended.
-
-## Auto-Resume on Restart
-
-<Callout type="warn" title="Experimental">
-  This feature is experimental and may not restore all sessions perfectly. Sessions that were in the
-  middle of a long-running operation may need to be manually restarted.
-</Callout>
-
-When enabled, Omniscribe automatically resumes any sessions that were active when you quit the app. Toggle this in **Settings > Sessions > Auto-Resume on Restart**.
-
-This is useful if you restart Omniscribe frequently and want to avoid manually relaunching your sessions each time.

@@ -20,7 +20,6 @@ export const SessionEvents = {
   RESUME: 'session:resume',
   FORK: 'session:fork',
   CONTINUE_LAST: 'session:continue-last',
-  GET_RESTORE_SNAPSHOT: 'session:get-restore-snapshot',
 
   // Server -> Client (broadcasts)
   CREATED: 'session:created',

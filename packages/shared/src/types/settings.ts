@@ -294,8 +294,6 @@ export interface SessionSettings {
   skipPermissions?: boolean;
   /** Quick action execution mode */
   quickActionMode?: QuickActionMode;
-  /** Whether to auto-resume active sessions when Omniscribe restarts */
-  autoResumeOnRestart?: boolean;
 }
 
 /**
@@ -305,7 +303,6 @@ export const DEFAULT_SESSION_SETTINGS: SessionSettings = {
   defaultMode: 'claude',
   skipPermissions: false,
   quickActionMode: 'paste-only',
-  autoResumeOnRestart: false,
 };
 
 /**

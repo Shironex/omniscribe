@@ -6,7 +6,6 @@ import { McpWriterService, McpDiscoveryService } from '../mcp';
 import { GitBaseService } from '../git';
 import { PluginRegistryService } from '../plugin';
 import { CliCommandService } from './cli-command.service';
-import { ClaudeSessionTrackerService } from './claude-session-tracker.service';
 import { SessionService } from './session.service';
 import { InternalSessionEvents } from '../shared/events';
 import { hasProviderMethod } from '../shared/provider-guards';
@@ -22,7 +21,6 @@ export class SessionLauncherService {
     private readonly mcpDiscoveryService: McpDiscoveryService,
     private readonly gitBase: GitBaseService,
     private readonly cliCommandService: CliCommandService,
-    private readonly claudeSessionTracker: ClaudeSessionTrackerService,
     private readonly pluginRegistry: PluginRegistryService,
     private readonly eventEmitter: EventEmitter2
   ) {}
@@ -233,9 +231,6 @@ export class SessionLauncherService {
                   sessionId,
                   claudeSessionId: newSessionId,
                 });
-
-                // Eagerly update the active sessions snapshot
-                this.claudeSessionTracker.refreshActiveSessionsSnapshot('claude-id-captured');
               }
             },
             (error: Error) => {

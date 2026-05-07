@@ -77,7 +77,6 @@ vi.mock('@/stores/useWorkspaceStore', () => ({
           defaultMode: 'claude',
           skipPermissions: false,
           quickActionMode: 'paste-only',
-          autoResumeOnRestart: false,
         },
       },
       updatePreference: vi.fn(),
@@ -152,7 +151,6 @@ vi.mock('@/stores', () => ({
           defaultMode: 'claude',
           skipPermissions: false,
           quickActionMode: 'paste-only',
-          autoResumeOnRestart: false,
         },
       },
       updatePreference: vi.fn(),
@@ -409,12 +407,10 @@ describe('SessionsSection', () => {
     expect(screen.getByText('Plain Terminal')).toBeTruthy();
   });
 
-  it('shows Skip Permissions and Auto-Resume toggle sections', () => {
+  it('shows Skip Permissions toggle section', () => {
     render(<SessionsSection />);
     expect(screen.getByText('Skip Permissions')).toBeTruthy();
     expect(screen.getByText('Allow skip-permissions mode')).toBeTruthy();
-    expect(screen.getByText('Auto-Resume')).toBeTruthy();
-    expect(screen.getByText('Resume sessions on restart')).toBeTruthy();
   });
 });
 

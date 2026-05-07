@@ -63,7 +63,6 @@ Omniscribe is a desktop application for managing multiple AI coding assistant se
 | **Session History**    | Browse, search, and filter past Claude Code sessions with branch filtering and sort controls         |
 | **Resume & Fork**      | Resume any previous session or fork it into a new conversation branch                                |
 | **Continue Last**      | One-click button to continue the most recent Claude Code conversation                                |
-| **Auto-Resume**        | Optionally restore active sessions automatically when Omniscribe restarts                            |
 | **Drag & Drop**        | Rearrange terminals by dragging; resizable panels with drag dividers                                 |
 | **Terminal Search**    | Ctrl+Shift+F search bar with regex and case-sensitive modes                                          |
 | **12 Terminal Themes** | dracula, nord, gruvbox, and more                                                                     |

@@ -104,8 +104,6 @@ const mockGitService = {
 
 const mockWorkspaceService = {
   getPreferences: jest.fn(),
-  getActiveSessionsSnapshot: jest.fn().mockReturnValue([]),
-  clearActiveSessionsSnapshot: jest.fn(),
 };
 
 const mockPluginRegistry = {
@@ -885,69 +883,6 @@ describe('SessionGateway', () => {
       const result = await gateway.handleContinueLast(basePayload, client);
 
       expect(result).toEqual({ error: 'CLI not found' });
-    });
-  });
-
-  // ========================================================================
-  // handleGetRestoreSnapshot
-  // ========================================================================
-
-  describe('handleGetRestoreSnapshot', () => {
-    it('should return snapshot with autoResume disabled by default', () => {
-      mockWorkspaceService.getPreferences.mockReturnValue({});
-
-      const result = gateway.handleGetRestoreSnapshot();
-
-      expect(result.autoResumeEnabled).toBe(false);
-      expect(result.sessions).toEqual([]);
-      expect(mockWorkspaceService.clearActiveSessionsSnapshot).not.toHaveBeenCalled();
-    });
-
-    it('should return snapshot with autoResume enabled when configured', () => {
-      mockWorkspaceService.getPreferences.mockReturnValue({
-        session: { defaultMode: 'claude', autoResumeOnRestart: true },
-      });
-      mockWorkspaceService.getActiveSessionsSnapshot.mockReturnValue([
-        {
-          claudeSessionId: 'claude-123',
-          projectPath: '/project',
-          name: 'Session 1',
-        },
-      ]);
-
-      const result = gateway.handleGetRestoreSnapshot();
-
-      expect(result.autoResumeEnabled).toBe(true);
-      expect(result.sessions).toHaveLength(1);
-      expect(result.sessions[0].claudeSessionId).toBe('claude-123');
-    });
-
-    it('should clear snapshot after returning sessions to prevent stale re-consumption', () => {
-      mockWorkspaceService.getPreferences.mockReturnValue({
-        session: { defaultMode: 'claude', autoResumeOnRestart: true },
-      });
-      mockWorkspaceService.getActiveSessionsSnapshot.mockReturnValue([
-        {
-          claudeSessionId: 'claude-123',
-          projectPath: '/project',
-          name: 'Session 1',
-        },
-      ]);
-
-      gateway.handleGetRestoreSnapshot();
-
-      expect(mockWorkspaceService.clearActiveSessionsSnapshot).toHaveBeenCalledTimes(1);
-    });
-
-    it('should not clear snapshot when no sessions exist', () => {
-      mockWorkspaceService.getPreferences.mockReturnValue({
-        session: { defaultMode: 'claude', autoResumeOnRestart: true },
-      });
-      mockWorkspaceService.getActiveSessionsSnapshot.mockReturnValue([]);
-
-      gateway.handleGetRestoreSnapshot();
-
-      expect(mockWorkspaceService.clearActiveSessionsSnapshot).not.toHaveBeenCalled();
     });
   });
 

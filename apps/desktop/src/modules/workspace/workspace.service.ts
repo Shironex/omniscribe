@@ -6,7 +6,6 @@ import {
   UserPreferences,
   WorkspaceStateResponse,
   SessionHistoryEntry,
-  ActiveSessionSnapshot,
   DEFAULT_PREFERENCES,
   createLogger,
   normalizePath,
@@ -24,7 +23,6 @@ interface StoreSchema {
   quickActions: QuickAction[];
   preferences: UserPreferences;
   sessionHistory: SessionHistoryEntry[];
-  activeSessionsSnapshot: ActiveSessionSnapshot[];
   /** Maps normalized project path → thumbnail filename (persists across tab close/reopen) */
   projectThumbnails: Record<string, string>;
   /** Maps normalized project path → enabled MCP capability IDs */
@@ -196,7 +194,6 @@ export class WorkspaceService implements OnModuleInit {
           quickActions: DEFAULT_QUICK_ACTIONS,
           preferences: DEFAULT_PREFERENCES,
           sessionHistory: [],
-          activeSessionsSnapshot: [],
           projectThumbnails: {},
           projectCapabilities: {},
           projectElectronCdpPort: {},
@@ -216,7 +213,6 @@ export class WorkspaceService implements OnModuleInit {
             quickActions: DEFAULT_QUICK_ACTIONS,
             preferences: DEFAULT_PREFERENCES,
             sessionHistory: [],
-            activeSessionsSnapshot: [],
             projectThumbnails: {},
             projectCapabilities: {},
             projectElectronCdpPort: {},
@@ -604,32 +600,6 @@ export class WorkspaceService implements OnModuleInit {
     history[index] = { ...history[index], ...updates };
     this.store.set('sessionHistory', history);
     this.logger.debug(`Updated session history entry for ${claudeSessionId}`);
-  }
-
-  // ============================================
-  // Active Sessions Snapshot (Auto-Resume)
-  // ============================================
-
-  /**
-   * Save a snapshot of currently active sessions for auto-resume on restart.
-   */
-  saveActiveSessionsSnapshot(sessions: ActiveSessionSnapshot[]): void {
-    this.store.set('activeSessionsSnapshot', sessions);
-    this.logger.debug(`Saved active sessions snapshot (${sessions.length} sessions)`);
-  }
-
-  /**
-   * Get the saved active sessions snapshot.
-   */
-  getActiveSessionsSnapshot(): ActiveSessionSnapshot[] {
-    return this.store.get('activeSessionsSnapshot', []);
-  }
-
-  /**
-   * Clear the active sessions snapshot (called after restore).
-   */
-  clearActiveSessionsSnapshot(): void {
-    this.store.set('activeSessionsSnapshot', []);
   }
 
   // ============================================

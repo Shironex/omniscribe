@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Monitor, AlertTriangle, RotateCcw, FlaskConical } from 'lucide-react';
+import { Monitor, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { SectionHeader } from '@/components/shared/SectionHeader';
 import { useWorkspaceStore } from '@/stores/useWorkspaceStore';
@@ -31,7 +31,6 @@ export function SessionsSection() {
 
   const sessionSettings: SessionSettings = preferences.session ?? DEFAULT_SESSION_SETTINGS;
   const skipPermissions = sessionSettings.skipPermissions ?? false;
-  const autoResume = sessionSettings.autoResumeOnRestart ?? false;
 
   const handleModeChange = (mode: AiMode) => {
     updatePreference('session', {
@@ -44,13 +43,6 @@ export function SessionsSection() {
     updatePreference('session', {
       ...sessionSettings,
       skipPermissions: !skipPermissions,
-    });
-  };
-
-  const handleAutoResumeToggle = () => {
-    updatePreference('session', {
-      ...sessionSettings,
-      autoResumeOnRestart: !autoResume,
     });
   };
 
@@ -146,59 +138,6 @@ export function SessionsSection() {
                 edit files, and make changes without asking for confirmation. Only enable this if
                 you trust your prompts and understand the risks. This applies to new sessions only —
                 existing sessions are not affected.
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Auto-Resume on Restart */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-2">
-          <h3 className="text-sm font-medium text-foreground">Auto-Resume</h3>
-          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-status-warning-bg text-status-warning border border-status-warning/20">
-            <FlaskConical className="w-3 h-3" />
-            Experimental
-          </span>
-        </div>
-
-        <div className="rounded-xl border border-border/50 bg-card/50 p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <div id="auto-resume-label" className="text-sm font-medium text-foreground">
-                Resume sessions on restart
-              </div>
-              <div className="text-xs text-muted-foreground">
-                Automatically restore active sessions when Omniscribe restarts
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={handleAutoResumeToggle}
-              className={cn(
-                'relative w-11 h-6 rounded-full transition-colors duration-200',
-                autoResume ? 'bg-primary' : 'bg-border'
-              )}
-              role="switch"
-              aria-checked={autoResume}
-              aria-labelledby="auto-resume-label"
-            >
-              <div
-                className={cn(
-                  'absolute top-1 w-4 h-4 rounded-full bg-white transition-transform duration-200',
-                  autoResume ? 'translate-x-6' : 'translate-x-1'
-                )}
-              />
-            </button>
-          </div>
-
-          {autoResume && (
-            <div className="flex items-start gap-2 p-2 rounded-lg bg-primary/10 border border-primary/20 mt-3">
-              <RotateCcw className="w-4 h-4 text-primary mt-0.5 shrink-0" />
-              <div className="text-xs text-muted-foreground">
-                Sessions that were running when Omniscribe closed will be automatically resumed
-                using Claude's <code className="text-foreground">--resume</code> flag on next
-                launch.
               </div>
             </div>
           )}
