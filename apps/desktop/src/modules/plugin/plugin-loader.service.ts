@@ -10,6 +10,7 @@ import { PluginRegistryService } from './plugin-registry.service';
 import { PluginStorageService } from './plugin-storage.service';
 import { createPluginContext, disposePluginContext } from './plugin-context.factory';
 import { InternalPluginEvents } from '../shared/events';
+import { ChangelogRegistryService } from '../changelog/changelog-registry.service';
 
 /**
  * Plugin discovery, activation, and lifecycle management.
@@ -29,7 +30,8 @@ export class PluginLoaderService implements OnModuleInit, OnModuleDestroy {
     @Inject('PLUGIN_DEFINITIONS') private readonly definitions: PluginDefinition[],
     private readonly registry: PluginRegistryService,
     private readonly storageService: PluginStorageService,
-    private readonly eventEmitter: EventEmitter2
+    private readonly eventEmitter: EventEmitter2,
+    private readonly changelogRegistry: ChangelogRegistryService
   ) {}
 
   /**
@@ -83,7 +85,8 @@ export class PluginLoaderService implements OnModuleInit, OnModuleDestroy {
       const context = createPluginContext(
         entry.manifest.id,
         this.eventEmitter,
-        this.storageService
+        this.storageService,
+        this.changelogRegistry
       );
       await entry.plugin.activate(context);
       this.registry.markActivated(aiMode, context);

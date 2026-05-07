@@ -1,12 +1,19 @@
-import type { PluginContext, PluginLogger, Disposable } from '@omniscribe/plugin-api';
+import type {
+  PluginContext,
+  PluginLogger,
+  Disposable,
+  CustomChangelogFetcher,
+} from '@omniscribe/plugin-api';
 import { createLogger } from '@omniscribe/shared';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PluginStorageService } from './plugin-storage.service';
 import { createPluginEventInterface } from './plugin-events';
+import { ChangelogRegistryService } from '../changelog/changelog-registry.service';
 
 /**
  * Extended plugin context with backend-specific capabilities.
- * Adds storage and event interface beyond the base PluginContext.
+ * Adds storage, event interface, and changelog fetcher registration beyond
+ * the base PluginContext.
  */
 export interface BackendPluginContext extends PluginContext {
   /** Isolated key-value storage for this plugin */
@@ -22,16 +29,24 @@ export interface BackendPluginContext extends PluginContext {
     on: (event: string, handler: (data: unknown) => void) => () => void;
     off: (event: string, handler: (data: unknown) => void) => void;
   };
+  /**
+   * Register a backend-side fetcher for a `'custom'` ChangelogSourceKind.
+   * Forwards to ChangelogRegistryService and returns a Disposable that
+   * unregisters the fetcher.
+   */
+  registerCustomChangelogFetcher(token: string, fetcher: CustomChangelogFetcher): Disposable;
 }
 
 /**
  * Create a full backend plugin context for activation.
- * Includes logger, subscriptions, storage, and event interface.
+ * Includes logger, subscriptions, storage, event interface, and
+ * changelog fetcher registration.
  */
 export function createPluginContext(
   pluginId: string,
   eventEmitter: EventEmitter2,
-  storageService: PluginStorageService
+  storageService: PluginStorageService,
+  changelogRegistry: ChangelogRegistryService
 ): BackendPluginContext {
   const logger = createLogger(`Plugin:${pluginId}`);
   const subscriptions: Disposable[] = [];
@@ -49,6 +64,14 @@ export function createPluginContext(
     subscriptions,
     storage: storageService.createStorageInterface(pluginId),
     events: createPluginEventInterface(eventEmitter, pluginId),
+    registerCustomChangelogFetcher(token: string, fetcher: CustomChangelogFetcher): Disposable {
+      changelogRegistry.registerCustomFetcher(token, fetcher);
+      return {
+        dispose() {
+          changelogRegistry.unregisterCustomFetcher(token);
+        },
+      };
+    },
   };
 }
 

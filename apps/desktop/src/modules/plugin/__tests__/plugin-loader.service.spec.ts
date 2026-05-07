@@ -3,6 +3,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PluginLoaderService } from '../plugin-loader.service';
 import { PluginRegistryService } from '../plugin-registry.service';
 import { PluginStorageService } from '../plugin-storage.service';
+import { ChangelogRegistryService } from '../../changelog/changelog-registry.service';
 import type { PluginDefinition } from '../types';
 import type {
   PluginManifest,
@@ -119,6 +120,7 @@ describe('PluginLoaderService', () => {
         PluginLoaderService,
         PluginRegistryService,
         PluginStorageService,
+        ChangelogRegistryService,
         {
           provide: EventEmitter2,
           useValue: {
