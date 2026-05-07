@@ -65,12 +65,12 @@ interface SettingsActions {
   closeSettings: () => void;
   /** Navigate to a section */
   navigateToSection: (section: SettingsSectionId) => void;
-  /** Set theme */
-  setTheme: (theme: Theme) => void;
+  /** Set theme. Accepts curated `Theme` or arbitrary plugin/legacy id string. */
+  setTheme: (theme: Theme | string) => void;
   /** Set preview theme (for hover) */
   setPreviewTheme: (theme: Theme | null) => void;
   /** Apply theme to DOM */
-  applyTheme: (theme: Theme) => void;
+  applyTheme: (theme: Theme | string) => void;
   /** Set Claude CLI status */
   setClaudeCliStatus: (status: ClaudeCliStatus | null) => void;
   /** Set Claude CLI loading state */
@@ -228,15 +228,15 @@ export const useSettingsStore = create<SettingsStore>()(
           set({ activeSection: section }, undefined, 'settings/navigateToSection');
         },
 
-        setTheme: (theme: Theme) => {
+        setTheme: (theme: Theme | string) => {
           logger.debug('setTheme', theme);
           set(
-            { theme, previewTheme: null, lastSavedAt: Date.now() },
+            { theme: theme as Theme, previewTheme: null, lastSavedAt: Date.now() },
             undefined,
             'settings/setTheme'
           );
-          applyThemeToDOM(theme);
-          persistTheme(theme);
+          applyThemeToDOM(theme as Theme);
+          persistTheme(theme as Theme);
         },
 
         setPreviewTheme: (theme: Theme | null) => {
@@ -251,8 +251,8 @@ export const useSettingsStore = create<SettingsStore>()(
           }
         },
 
-        applyTheme: (theme: Theme) => {
-          applyThemeToDOM(theme);
+        applyTheme: (theme: Theme | string) => {
+          applyThemeToDOM(theme as Theme);
         },
 
         setClaudeCliStatus: (status: ClaudeCliStatus | null) => {
@@ -311,12 +311,21 @@ export const useSettingsStore = create<SettingsStore>()(
           logger.debug('setChromeToggle', key, value);
           const current = get().chrome;
           const next = { ...current, [key]: value };
+          let persisted = false;
           try {
             localStorage.setItem(CHROME_STORAGE_KEY, JSON.stringify(next));
+            persisted = true;
           } catch {
-            /* ignore */
+            logger.warn('setChromeToggle: failed to persist chrome settings');
           }
-          set({ chrome: next, lastSavedAt: Date.now() }, undefined, 'settings/setChromeToggle');
+          // Only stamp lastSavedAt when persistence actually succeeded — otherwise
+          // the status bar would falsely report "Saved Ns ago" for state that
+          // won't survive a reload.
+          set(
+            { chrome: next, ...(persisted ? { lastSavedAt: Date.now() } : {}) },
+            undefined,
+            'settings/setChromeToggle'
+          );
         },
       };
     },

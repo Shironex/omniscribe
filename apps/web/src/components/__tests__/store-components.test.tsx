@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
+import type { ReactNode } from 'react';
 
 // ─── Socket mock ───────────────────────────────────────────────────────────────
 vi.mock('@/lib/socket', () => {
@@ -141,7 +142,7 @@ vi.mock('../plugin/PluginMarketplace', () => ({
 }));
 
 vi.mock('../plugin/PluginErrorBoundary', () => ({
-  PluginErrorBoundary: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  PluginErrorBoundary: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
 
 vi.mock('../settings/SettingsStatusBar', () => ({

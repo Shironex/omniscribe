@@ -17,7 +17,7 @@ import {
 type SettingsCardTone = 'primary' | 'green' | 'gold' | 'blue' | 'orange' | 'muted' | 'destructive';
 
 interface SettingsCardProps {
-  children?: React.ReactNode;
+  children?: ReactNode;
   className?: string;
   /** Icon for the section header */
   icon?: LucideIcon;
@@ -100,7 +100,9 @@ export function SettingsCard({
               {title}
             </h3>
             {subtitle && (
-              <p className="mt-0.5 text-[12px] text-muted-foreground leading-snug">{subtitle}</p>
+              <div className="mt-0.5 text-[12px] text-muted-foreground leading-snug">
+                {subtitle}
+              </div>
             )}
           </div>
           {headerAccessory && (

@@ -12,7 +12,8 @@ interface ThemeGridProps {
   /** Optional icon prefix for the editorial label. */
   icon?: LucideIcon;
   activeTheme: string;
-  onSelect: (theme: Theme) => void;
+  /** Receives a curated `Theme` for built-ins or an arbitrary string for plugin themes. */
+  onSelect: (theme: Theme | string) => void;
   /** Optional trailing element in the header (count badge, action, etc.). */
   action?: ReactNode;
   className?: string;

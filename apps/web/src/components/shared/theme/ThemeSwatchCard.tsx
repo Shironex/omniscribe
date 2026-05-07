@@ -6,7 +6,8 @@ import type { Theme } from '@omniscribe/shared';
 interface ThemeSwatchCardProps {
   option: ThemeOption;
   isActive: boolean;
-  onSelect: (theme: Theme) => void;
+  /** Receives a curated `Theme` for built-ins or an arbitrary string for plugin themes. */
+  onSelect: (theme: Theme | string) => void;
 }
 
 /**

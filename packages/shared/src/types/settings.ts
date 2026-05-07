@@ -97,7 +97,7 @@ export const DEFAULT_BUILT_IN_THEME: Theme = 'forge';
  * Used by the renderer's persistence shim to silently migrate users on
  * retired themes without resetting them to the default.
  */
-export const LEGACY_THEME_MIGRATION: Readonly<Record<string, Theme>> = {
+export const LEGACY_THEME_MIGRATION = {
   // ── Dark legacy → Forge family ────────────────────────────────────
   dark: 'forge',
   midnight: 'forge',
@@ -141,7 +141,12 @@ export const LEGACY_THEME_MIGRATION: Readonly<Record<string, Theme>> = {
   sky: 'paper',
   snow: 'paper',
   solarizedlight: 'paper',
-};
+} as const satisfies Record<string, Theme>;
+
+/**
+ * Union of every retired legacy theme ID handled by {@link LEGACY_THEME_MIGRATION}.
+ */
+export type LegacyThemeId = keyof typeof LEGACY_THEME_MIGRATION;
 
 /**
  * Chrome (window decoration & layout) toggles.
@@ -355,17 +360,21 @@ export const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
 /**
  * Dark themes list — derived from the curated catalog.
  */
-export const DARK_THEMES: Theme[] = BUILT_IN_THEMES.filter(t => t.isDark).map(t => t.value);
+export const DARK_THEMES: readonly Theme[] = BUILT_IN_THEMES.filter(t => t.isDark).map(
+  t => t.value
+);
 
 /**
  * Light themes list — derived from the curated catalog.
  */
-export const LIGHT_THEMES: Theme[] = BUILT_IN_THEMES.filter(t => !t.isDark).map(t => t.value);
+export const LIGHT_THEMES: readonly Theme[] = BUILT_IN_THEMES.filter(t => !t.isDark).map(
+  t => t.value
+);
 
 /**
  * All themes list — every built-in theme value, in catalog order.
  */
-export const ALL_THEMES: Theme[] = BUILT_IN_THEMES.map(t => t.value);
+export const ALL_THEMES: readonly Theme[] = BUILT_IN_THEMES.map(t => t.value);
 
 /**
  * Editor protocol identifier for file path links

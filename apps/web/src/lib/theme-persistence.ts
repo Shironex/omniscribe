@@ -65,8 +65,8 @@ export function getPersistedTheme(): string {
     }
 
     // Retired legacy theme → migrate, persist the new ID, return it
-    const migrated = LEGACY_THEME_MIGRATION[stored];
-    if (migrated) {
+    if (isLegacyTheme(stored)) {
+      const migrated = LEGACY_THEME_MIGRATION[stored];
       persistTheme(migrated);
       return migrated;
     }
@@ -96,5 +96,6 @@ export function isLegacyTheme(theme: string): theme is keyof typeof LEGACY_THEME
  */
 export function migrateLegacyTheme(theme: string): Theme {
   if (builtInThemeSet.has(theme)) return theme as Theme;
-  return LEGACY_THEME_MIGRATION[theme] ?? DEFAULT_BUILT_IN_THEME;
+  if (isLegacyTheme(theme)) return LEGACY_THEME_MIGRATION[theme];
+  return DEFAULT_BUILT_IN_THEME;
 }

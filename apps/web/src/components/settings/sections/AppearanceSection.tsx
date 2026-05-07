@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { Palette, LayoutGrid, Puzzle } from 'lucide-react';
 import { APP_NAME } from '@omniscribe/shared';
-import type { Theme, ChromeSettings } from '@omniscribe/shared';
+import type { ChromeSettings } from '@omniscribe/shared';
 import { themeOptions, type ThemeOption } from '@/lib/theme';
 import { useSettingsStore } from '@/stores/useSettingsStore';
 import { usePluginStore } from '@/stores/usePluginStore';
@@ -18,7 +18,9 @@ function pluginThemeToOption(plugin: {
   const bg = plugin.isDark ? '#0e0e0e' : '#f8f8f8';
   const surface = plugin.isDark ? '#1a1a1a' : '#eeeeee';
   return {
-    value: plugin.id as Theme,
+    // Plugin id is an arbitrary string — `ThemeOption.value` is widened to
+    // `Theme | (string & {})` so we don't have to launder it as `Theme`.
+    value: plugin.id,
     label: plugin.label,
     Icon: Puzzle,
     testId: `plugin-theme-${plugin.id}`,
@@ -56,7 +58,7 @@ export function AppearanceSection() {
 
   const handleThemeChange = useCallback(
     (newTheme: string) => {
-      setTheme(newTheme as Theme);
+      setTheme(newTheme);
     },
     [setTheme]
   );

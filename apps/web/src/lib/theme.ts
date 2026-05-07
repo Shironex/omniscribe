@@ -7,7 +7,8 @@ import { BUILT_IN_THEMES, type Theme, type ThemeMeta } from '@omniscribe/shared'
  * test-id are renderer concerns; identity / colour / dark-mode is shared.
  */
 export interface ThemeOption {
-  value: Theme;
+  /** Built-in `Theme` for curated entries; arbitrary string for plugin-registered themes. */
+  value: Theme | (string & {});
   label: string;
   Icon: LucideIcon;
   testId: string;
