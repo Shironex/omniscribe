@@ -38,16 +38,16 @@ export function frontendActivate(context: FrontendPluginContext): void {
           categoryId: 'claude',
           sectionId: 'claude-settings',
           label: 'Claude Code',
-          icon: ClaudeIcon as any,
-          component: ClaudeSettingsSection as any,
+          icon: ClaudeIcon,
+          component: ClaudeSettingsSection,
           order: 10,
         },
         {
           categoryId: 'claude',
           sectionId: 'claude-changelog',
           label: 'Changelog',
-          icon: Newspaper as any,
-          component: ClaudeChangelogSection as any,
+          icon: Newspaper,
+          component: ClaudeChangelogSection,
           order: 20,
         },
       ],
@@ -60,9 +60,9 @@ export function frontendActivate(context: FrontendPluginContext): void {
     context.registerUsagePanel({
       id: 'claude-usage',
       aiMode: 'claude',
-      component: ClaudeUsagePanel as any,
+      component: ClaudeUsagePanel,
       label: 'Claude',
-      icon: ClaudeIcon as any,
+      icon: ClaudeIcon,
     })
   );
 
@@ -71,7 +71,7 @@ export function frontendActivate(context: FrontendPluginContext): void {
     context.registerSessionStatusRenderer({
       id: 'claude-status',
       aiMode: 'claude',
-      component: ClaudeStatusRenderer as any,
+      component: ClaudeStatusRenderer,
     })
   );
 }

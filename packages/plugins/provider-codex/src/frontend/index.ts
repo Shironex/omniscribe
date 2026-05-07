@@ -37,8 +37,8 @@ export function frontendActivate(context: FrontendPluginContext): void {
           categoryId: 'codex',
           sectionId: 'codex-settings',
           label: 'Codex',
-          icon: CodexIcon as any,
-          component: CodexSettingsSection as any,
+          icon: CodexIcon,
+          component: CodexSettingsSection,
           order: 10,
         },
       ],
@@ -51,9 +51,9 @@ export function frontendActivate(context: FrontendPluginContext): void {
     context.registerUsagePanel({
       id: 'codex-usage',
       aiMode: 'codex',
-      component: CodexUsagePanel as any,
+      component: CodexUsagePanel,
       label: 'Codex',
-      icon: CodexIcon as any,
+      icon: CodexIcon,
     })
   );
 
@@ -62,7 +62,7 @@ export function frontendActivate(context: FrontendPluginContext): void {
     context.registerSessionStatusRenderer({
       id: 'codex-status',
       aiMode: 'codex',
-      component: CodexStatusRenderer as any,
+      component: CodexStatusRenderer,
     })
   );
 
