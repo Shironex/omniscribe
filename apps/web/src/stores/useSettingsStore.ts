@@ -6,8 +6,9 @@ import type {
   ClaudeCliStatus,
   GhCliStatus,
   ClaudeVersionCheckResult,
+  ChromeSettings,
 } from '@omniscribe/shared';
-import { createLogger } from '@omniscribe/shared';
+import { createLogger, DEFAULT_BUILT_IN_THEME, DEFAULT_CHROME_SETTINGS } from '@omniscribe/shared';
 import { themeOptions } from '@/lib/theme';
 import { persistTheme, getPersistedTheme } from '@/lib/theme-persistence';
 import { usePluginStore, getPluginTheme } from '@/stores/usePluginStore';
@@ -48,6 +49,10 @@ interface SettingsState extends SettingsModalState {
   isGithubCliLoading: boolean;
   /** Preview theme (for hover preview) */
   previewTheme: Theme | null;
+  /** Chrome (window decoration & layout) toggles. */
+  chrome: ChromeSettings;
+  /** Timestamp (ms) of last persisted setting mutation, for the status bar. */
+  lastSavedAt: number | null;
 }
 
 /**
@@ -82,6 +87,8 @@ interface SettingsActions {
   setGithubCliStatus: (status: GhCliStatus | null) => void;
   /** Set GitHub CLI loading state */
   setGithubCliLoading: (loading: boolean) => void;
+  /** Set a single chrome toggle */
+  setChromeToggle: <K extends keyof ChromeSettings>(key: K, value: ChromeSettings[K]) => void;
 }
 
 /**
@@ -134,8 +141,21 @@ function applyThemeToDOM(theme: Theme) {
   currentThemeClass = theme;
 }
 
-// Default theme
-const DEFAULT_THEME: Theme = 'dark';
+// Default theme — Omniscribe's flagship Forge palette
+const DEFAULT_THEME: Theme = DEFAULT_BUILT_IN_THEME;
+
+const CHROME_STORAGE_KEY = 'omniscribe-chrome';
+
+function readChrome(): ChromeSettings {
+  try {
+    const raw = localStorage.getItem(CHROME_STORAGE_KEY);
+    if (!raw) return DEFAULT_CHROME_SETTINGS;
+    const parsed = JSON.parse(raw) as Partial<ChromeSettings>;
+    return { ...DEFAULT_CHROME_SETTINGS, ...parsed };
+  } catch {
+    return DEFAULT_CHROME_SETTINGS;
+  }
+}
 
 /**
  * Settings store using Zustand
@@ -147,6 +167,9 @@ export const useSettingsStore = create<SettingsStore>()(
       const initialTheme = (
         typeof document !== 'undefined' ? getPersistedTheme() : DEFAULT_THEME
       ) as Theme;
+
+      // Resolve initial chrome from localStorage
+      const initialChrome = readChrome();
 
       // Apply initial theme on store initialization
       if (typeof document !== 'undefined') {
@@ -167,6 +190,8 @@ export const useSettingsStore = create<SettingsStore>()(
         githubCliStatus: null,
         isGithubCliLoading: false,
         previewTheme: null,
+        chrome: initialChrome,
+        lastSavedAt: null,
 
         // Actions
         openSettings: (section?: SettingsSectionId) => {
@@ -205,7 +230,11 @@ export const useSettingsStore = create<SettingsStore>()(
 
         setTheme: (theme: Theme) => {
           logger.debug('setTheme', theme);
-          set({ theme, previewTheme: null }, undefined, 'settings/setTheme');
+          set(
+            { theme, previewTheme: null, lastSavedAt: Date.now() },
+            undefined,
+            'settings/setTheme'
+          );
           applyThemeToDOM(theme);
           persistTheme(theme);
         },
@@ -276,6 +305,18 @@ export const useSettingsStore = create<SettingsStore>()(
 
         setGithubCliLoading: (loading: boolean) => {
           set({ isGithubCliLoading: loading }, undefined, 'settings/setGithubCliLoading');
+        },
+
+        setChromeToggle: (key, value) => {
+          logger.debug('setChromeToggle', key, value);
+          const current = get().chrome;
+          const next = { ...current, [key]: value };
+          try {
+            localStorage.setItem(CHROME_STORAGE_KEY, JSON.stringify(next));
+          } catch {
+            /* ignore */
+          }
+          set({ chrome: next, lastSavedAt: Date.now() }, undefined, 'settings/setChromeToggle');
         },
       };
     },

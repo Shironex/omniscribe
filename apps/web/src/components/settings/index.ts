@@ -1,3 +1,11 @@
-export { SettingsModal } from './SettingsModal';
+export { SettingsView } from './SettingsView';
 export { SettingsNavigation } from './SettingsNavigation';
-// Note: sections are not exported to avoid naming conflicts (e.g., McpSection exists in sidebar)
+export { SettingsStatusBar } from './SettingsStatusBar';
+export {
+  SettingsCard,
+  SettingsRow,
+  SettingsRowLabel,
+  SettingsToggleRow,
+  SettingsSelectRow,
+} from './SettingsCard';
+// Note: sections are not exported to avoid naming conflicts.

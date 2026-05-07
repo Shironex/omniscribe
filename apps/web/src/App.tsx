@@ -25,11 +25,8 @@ import { DEFAULT_WORKTREE_SETTINGS } from '@omniscribe/shared';
 import { IS_ELECTRON } from '@/lib/platform';
 import { cn } from '@/lib/utils';
 
-import { SettingsModalShell } from '@/components/settings/SettingsModalShell';
-import { SettingsModalSkeleton } from '@/components/settings/SettingsModalSkeleton';
-
-const SettingsModalContent = lazy(() =>
-  import('@/components/settings/SettingsModal').then(m => ({ default: m.SettingsModal }))
+const SettingsView = lazy(() =>
+  import('@/components/settings/SettingsView').then(m => ({ default: m.SettingsView }))
 );
 const LaunchPresetsModal = lazy(() =>
   import('@/components/terminal/LaunchPresetsModal').then(m => ({
@@ -58,12 +55,25 @@ function App() {
     tabs,
     activeTabId,
     activeProjectPath,
-    handleSelectTab,
+    handleSelectTab: handleSelectTabRaw,
     handleCloseTab,
     handleNewTab,
     handleSelectDirectory,
     handleReorderTabs,
   } = useWorkspaceTabs();
+
+  // Selecting a project from the sidebar should always return the user to
+  // the workspace view — close the Settings overlay if it's open.
+  const handleSelectTab = useCallback(
+    (tabId: string) => {
+      const settings = useSettingsStore.getState();
+      if (settings.isOpen) {
+        settings.closeSettings();
+      }
+      handleSelectTabRaw(tabId);
+    },
+    [handleSelectTabRaw]
+  );
 
   const { branches, currentBranch } = useProjectGit(activeProjectPath);
 
@@ -277,6 +287,14 @@ function App() {
                 onSelectProject={handleSelectTab}
               />
             )}
+
+            {/* Settings view replaces the workspace pane while open. Mounted
+                here so the project rail + top toolbar stay visible. */}
+            {isSettingsOpen && (
+              <Suspense fallback={null}>
+                <SettingsView />
+              </Suspense>
+            )}
           </div>
 
           {/* Session History Panel */}
@@ -294,14 +312,6 @@ function App() {
           )}
         </main>
       </div>
-
-      {isSettingsOpen && (
-        <SettingsModalShell>
-          <Suspense fallback={<SettingsModalSkeleton />}>
-            <SettingsModalContent />
-          </Suspense>
-        </SettingsModalShell>
-      )}
 
       {isLaunchModalOpen && (
         <Suspense fallback={null}>

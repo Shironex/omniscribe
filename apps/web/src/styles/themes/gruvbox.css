@@ -66,6 +66,12 @@
   /* Running indicator - Yellow */
   --running-indicator: oklch(0.7 0.18 55);
   --running-indicator-text: oklch(0.75 0.16 55);
+
+  /* Swatch quartet exposed for the appearance grid */
+  --swatch-1: #282828;
+  --swatch-2: #3c3836;
+  --swatch-3: #d79921;
+  --swatch-4: #fabd2f;
 }
 
 /* ========================================

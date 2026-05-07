@@ -5,53 +5,154 @@
 import type { AiMode } from './session';
 
 /**
- * Theme - All available color themes
- * 21 dark themes + 20 light themes = 41 total
+ * Theme - Curated set of built-in color themes.
+ *
+ * The catalog was simplified from 41 alphabetical themes (21 dark + 20 light)
+ * down to 8 hand-tuned palettes. Persisted IDs from the old catalog are
+ * remapped via {@link LEGACY_THEME_MIGRATION} on first load.
  */
 export type Theme =
-  // Dark themes (21)
-  | 'dark'
-  | 'ayu-dark'
-  | 'ayu-mirage'
-  | 'catppuccin'
-  | 'dracula'
+  | 'forge'
+  | 'carbon'
   | 'ember'
-  | 'forest'
-  | 'gray'
-  | 'gruvbox'
-  | 'matcha'
-  | 'midnight'
-  | 'monokai'
-  | 'nord'
-  | 'ocean'
-  | 'onedark'
-  | 'red'
-  | 'retro'
-  | 'solarized'
-  | 'sunset'
-  | 'synthwave'
-  | 'tokyonight'
-  // Light themes (20)
-  | 'light'
-  | 'ayu-light'
-  | 'blossom'
-  | 'bluloco'
-  | 'cream'
-  | 'feather'
-  | 'github'
-  | 'gruvboxlight'
-  | 'lavender'
-  | 'mint'
-  | 'nordlight'
-  | 'onelight'
+  | 'iceberg'
   | 'paper'
-  | 'peach'
-  | 'rose'
-  | 'sand'
-  | 'sepia'
-  | 'sky'
-  | 'snow'
-  | 'solarizedlight';
+  | 'nord'
+  | 'gruvbox'
+  | 'dracula';
+
+/**
+ * Theme metadata used by both the renderer (gradient swatches) and any
+ * surface that needs to look up a theme without parsing CSS at runtime.
+ */
+export interface ThemeMeta {
+  value: Theme;
+  label: string;
+  isDark: boolean;
+  /** Four-tile palette quartet shown in the appearance grid. */
+  swatch: { bg: string; surface: string; primary: string; accent: string };
+}
+
+/**
+ * The single curated catalog. Order is the order shown in the appearance grid.
+ */
+export const BUILT_IN_THEMES: readonly ThemeMeta[] = [
+  {
+    value: 'forge',
+    label: 'Forge',
+    isDark: true,
+    swatch: { bg: '#0f0e0d', surface: '#1a1714', primary: '#e89143', accent: '#5b9cf2' },
+  },
+  {
+    value: 'carbon',
+    label: 'Carbon',
+    isDark: true,
+    swatch: { bg: '#0a0a0c', surface: '#15161a', primary: '#3b8df0', accent: '#6e7782' },
+  },
+  {
+    value: 'ember',
+    label: 'Ember',
+    isDark: true,
+    swatch: { bg: '#1a0e0a', surface: '#241410', primary: '#e88a52', accent: '#d96d6d' },
+  },
+  {
+    value: 'iceberg',
+    label: 'Iceberg',
+    isDark: true,
+    swatch: { bg: '#0c1422', surface: '#142036', primary: '#7aa6e8', accent: '#8de0d0' },
+  },
+  {
+    value: 'paper',
+    label: 'Paper',
+    isDark: false,
+    swatch: { bg: '#faf6ee', surface: '#f1ebdf', primary: '#c75a40', accent: '#3f7a4d' },
+  },
+  {
+    value: 'nord',
+    label: 'Nord',
+    isDark: true,
+    swatch: { bg: '#2e3440', surface: '#3b4252', primary: '#88c0d0', accent: '#a3be8c' },
+  },
+  {
+    value: 'gruvbox',
+    label: 'Gruvbox',
+    isDark: true,
+    swatch: { bg: '#282828', surface: '#3c3836', primary: '#d79921', accent: '#fabd2f' },
+  },
+  {
+    value: 'dracula',
+    label: 'Dracula',
+    isDark: true,
+    swatch: { bg: '#282a36', surface: '#383a4a', primary: '#50fa7b', accent: '#ff79c6' },
+  },
+];
+
+/**
+ * The default theme — Omniscribe's flagship "Forge" warm-charcoal × ember palette.
+ */
+export const DEFAULT_BUILT_IN_THEME: Theme = 'forge';
+
+/**
+ * Legacy theme IDs (pre-curation) and the closest match in the new catalog.
+ * Used by the renderer's persistence shim to silently migrate users on
+ * retired themes without resetting them to the default.
+ */
+export const LEGACY_THEME_MIGRATION: Readonly<Record<string, Theme>> = {
+  // ── Dark legacy → Forge family ────────────────────────────────────
+  dark: 'forge',
+  midnight: 'forge',
+  retro: 'forge',
+  // ── Carbon-ish neutrals ───────────────────────────────────────────
+  gray: 'carbon',
+  onedark: 'carbon',
+  tokyonight: 'iceberg',
+  // ── Warm / red palettes → Ember ───────────────────────────────────
+  red: 'ember',
+  sunset: 'ember',
+  monokai: 'dracula',
+  synthwave: 'dracula',
+  // ── Cool / blue palettes → Iceberg ────────────────────────────────
+  ocean: 'iceberg',
+  'ayu-mirage': 'iceberg',
+  catppuccin: 'iceberg',
+  solarized: 'iceberg',
+  // ── Greens → Nord ─────────────────────────────────────────────────
+  forest: 'nord',
+  matcha: 'nord',
+  // ── Yellow/orange dark → Gruvbox ──────────────────────────────────
+  'ayu-dark': 'gruvbox',
+  // ── Light themes → Paper ──────────────────────────────────────────
+  light: 'paper',
+  'ayu-light': 'paper',
+  blossom: 'paper',
+  bluloco: 'paper',
+  cream: 'paper',
+  feather: 'paper',
+  github: 'paper',
+  gruvboxlight: 'paper',
+  lavender: 'paper',
+  mint: 'paper',
+  nordlight: 'paper',
+  onelight: 'paper',
+  peach: 'paper',
+  rose: 'paper',
+  sand: 'paper',
+  sepia: 'paper',
+  sky: 'paper',
+  snow: 'paper',
+  solarizedlight: 'paper',
+};
+
+/**
+ * Chrome (window decoration & layout) toggles.
+ */
+export interface ChromeSettings {
+  showStatusBar: boolean;
+}
+
+export const DEFAULT_CHROME_SETTINGS: ChromeSettings = {
+  showStatusBar: true,
+};
 
 /**
  * Claude CLI Status
@@ -109,20 +210,30 @@ export interface ClaudeInstallCommand {
 
 /**
  * Settings section IDs for navigation.
- * Accepts core IDs and dynamic plugin-registered section IDs.
+ *
+ * Includes new IA introduced by the v2 redesign (Agents bucket, Keymap)
+ * and legacy IDs retained for backwards compatibility with persisted
+ * `activeSection` values, plugin SDKs, and external `openSettings()`
+ * call sites that pin to the old names.
  */
 export type SettingsSectionId =
-  | 'appearance'
+  // ── Integrations ──────────────────────────────────────────────────
   | 'integrations'
   | 'github'
   | 'mcp'
-  | 'general'
-  | 'worktrees'
-  | 'sessions'
-  | 'terminal'
-  | 'quickActions'
-  | 'notifications'
+  | 'ai-capabilities'
   | 'marketplace'
+  // ── Workflow ──────────────────────────────────────────────────────
+  | 'sessions'
+  | 'quickActions'
+  | 'worktrees'
+  | 'notifications'
+  // ── Interface ─────────────────────────────────────────────────────
+  | 'appearance'
+  | 'terminal'
+  // ── Retained for backwards compatibility ─────────────────────────
+  /** @deprecated Routed to 'appearance'. Retained for one minor version. */
+  | 'general'
   | (string & {});
 
 /**
@@ -242,62 +353,19 @@ export const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
 };
 
 /**
- * Dark themes list
+ * Dark themes list — derived from the curated catalog.
  */
-export const DARK_THEMES: Theme[] = [
-  'dark',
-  'ayu-dark',
-  'ayu-mirage',
-  'catppuccin',
-  'dracula',
-  'ember',
-  'forest',
-  'gray',
-  'gruvbox',
-  'matcha',
-  'midnight',
-  'monokai',
-  'nord',
-  'ocean',
-  'onedark',
-  'red',
-  'retro',
-  'solarized',
-  'sunset',
-  'synthwave',
-  'tokyonight',
-];
+export const DARK_THEMES: Theme[] = BUILT_IN_THEMES.filter(t => t.isDark).map(t => t.value);
 
 /**
- * Light themes list
+ * Light themes list — derived from the curated catalog.
  */
-export const LIGHT_THEMES: Theme[] = [
-  'light',
-  'ayu-light',
-  'blossom',
-  'bluloco',
-  'cream',
-  'feather',
-  'github',
-  'gruvboxlight',
-  'lavender',
-  'mint',
-  'nordlight',
-  'onelight',
-  'paper',
-  'peach',
-  'rose',
-  'sand',
-  'sepia',
-  'sky',
-  'snow',
-  'solarizedlight',
-];
+export const LIGHT_THEMES: Theme[] = BUILT_IN_THEMES.filter(t => !t.isDark).map(t => t.value);
 
 /**
- * All themes list
+ * All themes list — every built-in theme value, in catalog order.
  */
-export const ALL_THEMES: Theme[] = [...DARK_THEMES, ...LIGHT_THEMES];
+export const ALL_THEMES: Theme[] = BUILT_IN_THEMES.map(t => t.value);
 
 /**
  * Editor protocol identifier for file path links

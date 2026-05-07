@@ -81,7 +81,7 @@ Located in `apps/web/src/`:
 - **hooks/** - Custom hooks for app initialization, session lifecycle, terminal operations, workspace management
 - **lib/** - Socket.io client, emit helpers, terminal utilities, theme system, layout calculations
 
-**UI stack:** Radix UI primitives + shadcn/ui pattern, Tailwind CSS, Lucide icons, `cn()` utility for class merging. 40+ CSS themes with runtime switching via CSS custom properties.
+**UI stack:** Radix UI primitives + shadcn/ui pattern, Tailwind CSS, Lucide icons, `cn()` utility for class merging. 8 curated CSS themes (Forge, Carbon, Ember, Iceberg, Nord, Gruvbox, Dracula, Paper) with runtime switching via CSS custom properties. Forge is the default dark theme. Legacy theme IDs are migrated automatically via `LEGACY_THEME_MIGRATION` in `packages/shared/src/types/settings.ts`.
 
 **No routing library** — tab-based navigation via workspace store state.
 

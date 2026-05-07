@@ -66,6 +66,12 @@
   /* Running indicator - Frost blue */
   --running-indicator: oklch(0.7 0.12 220);
   --running-indicator-text: oklch(0.75 0.1 220);
+
+  /* Swatch quartet exposed for the appearance grid */
+  --swatch-1: #2e3440;
+  --swatch-2: #3b4252;
+  --swatch-3: #88c0d0;
+  --swatch-4: #a3be8c;
 }
 
 /* ========================================

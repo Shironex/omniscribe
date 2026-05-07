@@ -1,3 +1,9 @@
+import {
+  ALL_THEMES,
+  DEFAULT_BUILT_IN_THEME,
+  LEGACY_THEME_MIGRATION,
+  type Theme,
+} from '@omniscribe/shared';
 import { themeOptions } from '@/lib/theme';
 
 /**
@@ -6,11 +12,16 @@ import { themeOptions } from '@/lib/theme';
 export const THEME_STORAGE_KEY = 'omniscribe-theme';
 
 /**
- * Set of dark theme values, derived from the single source of truth in theme.ts.
+ * Set of dark theme values, derived from the curated catalog.
  */
 const darkThemeSet: Set<string> = new Set(themeOptions.filter(t => t.isDark).map(t => t.value));
 
-/** Matches valid CSS class names: starts with a letter, only alphanumeric/hyphens/underscores, max 100 chars. */
+/**
+ * Set of all built-in theme IDs from the curated catalog.
+ */
+const builtInThemeSet: Set<string> = new Set(ALL_THEMES);
+
+/** Matches valid CSS class names: starts with a letter, only alphanumeric/hyphens/underscores. */
 const VALID_THEME_ID = /^[a-zA-Z][a-zA-Z0-9_-]{0,100}$/;
 
 /**
@@ -26,27 +37,64 @@ export function persistTheme(theme: string): void {
 }
 
 /**
- * Read the persisted theme from localStorage.
- * Returns 'dark' as a safe fallback if nothing is stored or localStorage is unavailable.
+ * Read the persisted theme from localStorage, applying the legacy-theme migration.
  *
- * Accepts any non-empty stored value (not just built-in themes) because plugin
- * themes use arbitrary string IDs that aren't known until plugins load later.
+ * The catalog was simplified from 41 themes to 8. Users who had a retired theme
+ * (e.g. `monokai`, `solarized`, `gruvboxlight`) are silently remapped to the
+ * closest match in the new catalog via {@link LEGACY_THEME_MIGRATION}, and the
+ * migrated value is rewritten to localStorage so the migration runs at most once.
+ *
+ * Plugin themes (arbitrary IDs registered at runtime) are passed through so they
+ * can hydrate after the plugin store loads.
+ *
+ * Returns {@link DEFAULT_BUILT_IN_THEME} (`'forge'`) when nothing is stored or
+ * localStorage is unavailable.
  */
 export function getPersistedTheme(): string {
   try {
     const stored = localStorage.getItem(THEME_STORAGE_KEY);
-    // Accept non-empty values that look like valid CSS class names
-    // (plugin themes use arbitrary IDs not known until plugins load)
-    return stored && VALID_THEME_ID.test(stored) ? stored : 'dark';
+
+    // Empty / invalid → default
+    if (!stored || !VALID_THEME_ID.test(stored)) {
+      return DEFAULT_BUILT_IN_THEME;
+    }
+
+    // Already a valid built-in theme → keep
+    if (builtInThemeSet.has(stored)) {
+      return stored;
+    }
+
+    // Retired legacy theme → migrate, persist the new ID, return it
+    const migrated = LEGACY_THEME_MIGRATION[stored];
+    if (migrated) {
+      persistTheme(migrated);
+      return migrated;
+    }
+
+    // Otherwise — assume plugin theme ID; pass through unchanged.
+    return stored;
   } catch {
-    return 'dark';
+    return DEFAULT_BUILT_IN_THEME;
   }
 }
 
 /**
  * Check whether a given theme name corresponds to a dark theme.
- * Uses the dark theme set derived from themeOptions.
+ * Uses the dark theme set derived from the curated catalog.
  */
 export function isPersistedThemeDark(theme: string): boolean {
   return darkThemeSet.has(theme);
+}
+
+export function isLegacyTheme(theme: string): theme is keyof typeof LEGACY_THEME_MIGRATION {
+  return Object.prototype.hasOwnProperty.call(LEGACY_THEME_MIGRATION, theme);
+}
+
+/**
+ * Resolve any (possibly retired) theme ID to a built-in theme.
+ * Returns {@link DEFAULT_BUILT_IN_THEME} if no migration applies.
+ */
+export function migrateLegacyTheme(theme: string): Theme {
+  if (builtInThemeSet.has(theme)) return theme as Theme;
+  return LEGACY_THEME_MIGRATION[theme] ?? DEFAULT_BUILT_IN_THEME;
 }

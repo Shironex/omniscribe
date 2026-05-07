@@ -28,13 +28,18 @@ interface ProjectTabBase {
 }
 
 /**
- * Project tab for frontend (uses Date for timestamps and Theme type)
+ * Project tab for frontend (uses Date for timestamps and Theme type).
+ *
+ * `theme` is typed as `Theme | string` rather than just `Theme` because
+ * plugins can register their own theme IDs at runtime (the renderer
+ * applies them as `<themeId>` classes on `:root`), and also to keep
+ * legacy persisted IDs from breaking typecheck while they migrate.
  */
 export interface ProjectTab extends ProjectTabBase {
   /** Last accessed timestamp */
   lastAccessedAt: Date;
   /** Per-project theme */
-  theme?: Theme;
+  theme?: Theme | string;
 }
 
 /**
@@ -48,11 +53,15 @@ export interface ProjectTabDTO extends ProjectTabBase {
 }
 
 /**
- * User preferences for workspace
+ * User preferences for workspace.
+ *
+ * `theme` accepts the curated built-in `Theme` IDs as well as plugin-contributed
+ * theme IDs (arbitrary strings registered at runtime) and legacy IDs that the
+ * persistence layer migrates lazily on read.
  */
 export interface UserPreferences {
-  /** Theme preference - supports all 40 themes */
-  theme: Theme;
+  /** Theme preference (built-in or plugin-contributed). */
+  theme: Theme | string;
   /** Worktree settings */
   worktree?: WorktreeSettings;
   /** Session settings */

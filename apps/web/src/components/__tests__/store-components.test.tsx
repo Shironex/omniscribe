@@ -122,7 +122,7 @@ vi.mock('@/stores/useWorkspaceStore', () => ({
   }),
 }));
 
-// ─── Settings section mocks (simplify SettingsModal) ───────────────────────────
+// ─── Settings section mocks (simplify SettingsView) ────────────────────────────
 vi.mock('../settings/sections', () => ({
   AppearanceSection: () => <div data-testid="appearance-section" />,
   GithubSection: () => <div data-testid="github-section" />,
@@ -134,6 +134,18 @@ vi.mock('../settings/sections', () => ({
   QuickActionsSection: () => <div data-testid="quick-actions-section" />,
   NotificationsSection: () => <div data-testid="notifications-section" />,
   TerminalSection: () => <div data-testid="terminal-section" />,
+}));
+
+vi.mock('../plugin/PluginMarketplace', () => ({
+  PluginMarketplace: () => <div data-testid="plugin-marketplace" />,
+}));
+
+vi.mock('../plugin/PluginErrorBoundary', () => ({
+  PluginErrorBoundary: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
+vi.mock('../settings/SettingsStatusBar', () => ({
+  SettingsStatusBar: () => <div data-testid="settings-status-bar" />,
 }));
 
 vi.mock('../settings/SettingsNavigation', () => ({
@@ -157,8 +169,7 @@ vi.mock('../settings/SettingsNavigation', () => ({
 import { ReconnectionOverlay } from '../terminal/ReconnectionOverlay';
 import { BackpressureOverlay } from '../terminal/BackpressureOverlay';
 import { TaskListPopover } from '../terminal/TaskListPopover';
-import { SettingsModal } from '../settings/SettingsModal';
-import { SettingsModalShell } from '../settings/SettingsModalShell';
+import { SettingsView } from '../settings/SettingsView';
 import { UsagePopover } from '../shared/UsagePopover';
 import { TooltipProvider } from '@/components/ui/tooltip';
 
@@ -299,9 +310,9 @@ describe('TaskListPopover', () => {
 });
 
 // =============================================================================
-//  SettingsModal
+//  SettingsView
 // =============================================================================
-describe('SettingsModal', () => {
+describe('SettingsView', () => {
   const closeFn = vi.fn();
   const navigateFn = vi.fn();
 
@@ -309,50 +320,40 @@ describe('SettingsModal', () => {
     closeFn.mockClear();
     navigateFn.mockClear();
     mockSettingsState = {
-      isOpen: false,
+      isOpen: true,
       activeSection: 'appearance',
       closeSettings: closeFn,
       navigateToSection: navigateFn,
     };
   });
 
-  it('renders nothing when modal is closed', () => {
-    render(
-      <SettingsModalShell>
-        <SettingsModal />
-      </SettingsModalShell>
-    );
-    // Dialog should not render content when closed
-    expect(screen.queryByText('Settings')).toBeNull();
-  });
-
-  it('renders modal with Settings title when open', () => {
-    mockSettingsState = { ...mockSettingsState, isOpen: true };
-    render(
-      <SettingsModalShell>
-        <SettingsModal />
-      </SettingsModalShell>
-    );
+  it('renders the Settings header', () => {
+    render(<SettingsView />);
     expect(screen.getByText('Settings')).toBeTruthy();
   });
 
-  it('renders the active section content', () => {
-    mockSettingsState = { ...mockSettingsState, isOpen: true, activeSection: 'appearance' };
-    render(<SettingsModal />);
+  it('renders the active section component', () => {
+    mockSettingsState = { ...mockSettingsState, activeSection: 'appearance' };
+    render(<SettingsView />);
     expect(screen.getByTestId('appearance-section')).toBeTruthy();
   });
 
-  it('renders general section when activeSection is general', () => {
-    mockSettingsState = { ...mockSettingsState, isOpen: true, activeSection: 'general' };
-    render(<SettingsModal />);
-    expect(screen.getByTestId('general-section')).toBeTruthy();
+  it('falls back to the Appearance section when activeSection is the legacy "general"', () => {
+    mockSettingsState = { ...mockSettingsState, activeSection: 'general' };
+    render(<SettingsView />);
+    expect(screen.getByTestId('appearance-section')).toBeTruthy();
   });
 
-  it('calls navigateToSection when navigation button is clicked', () => {
-    mockSettingsState = { ...mockSettingsState, isOpen: true };
-    render(<SettingsModal />);
+  it('routes navigation clicks through navigateToSection', () => {
+    render(<SettingsView />);
     fireEvent.click(screen.getByTestId('nav-general'));
     expect(navigateFn).toHaveBeenCalledWith('general');
+  });
+
+  it('calls closeSettings when the close button is clicked', () => {
+    render(<SettingsView />);
+    fireEvent.click(screen.getByLabelText('Close settings'));
+    expect(closeFn).toHaveBeenCalledTimes(1);
   });
 });
 

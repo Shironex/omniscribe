@@ -27,60 +27,40 @@ function NavButton({
   const Icon = item.icon;
   const iconElement = (
     <Icon
-      size={16}
+      size={14}
       className={cn(
-        'w-4 h-4 shrink-0 transition-all duration-200',
-        isActive ? 'text-primary' : 'group-hover:text-primary group-hover:scale-110'
+        'w-3.5 h-3.5 shrink-0 transition-colors duration-200',
+        isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground'
       )}
     />
   );
 
   return (
     <button
-      key={item.id}
+      type="button"
       onClick={() => onNavigate(item.id)}
       className={cn(
-        'group w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ease-out text-left relative overflow-hidden',
+        'group relative w-full flex items-center gap-2.5 px-3 py-1.5 rounded-md text-[13px] text-left transition-colors duration-200',
         isActive
-          ? ['text-foreground']
-          : [
-              'text-muted-foreground hover:text-foreground',
-              'hover:bg-muted/50',
-              'border border-transparent hover:border-border/40',
-            ],
-        'hover:scale-[1.01] active:scale-[0.98]'
+          ? 'text-foreground bg-primary/10'
+          : 'text-muted-foreground hover:text-foreground hover:bg-muted/40'
       )}
     >
-      {/* Animated active indicator background */}
+      {/* Active left bar (3px wide rounded indicator) */}
       {isActive && (
-        <motion.div
-          layoutId="settings-active-indicator"
-          className="absolute inset-0 rounded-xl bg-linear-to-r from-primary/15 via-primary/10 to-brand-600/5 border border-primary/25 shadow-xs shadow-primary/5"
-          transition={transitions.springSmooth}
-        />
-      )}
-      {/* Active indicator bar */}
-      {isActive && (
-        <motion.div
+        <motion.span
           layoutId="settings-active-bar"
-          className="absolute inset-y-0 left-0 w-0.5 bg-linear-to-b from-primary via-primary to-brand-600 rounded-r-full"
+          className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r-full bg-primary"
           transition={transitions.springSmooth}
         />
       )}
-      <span className="relative z-10 flex items-center gap-2.5">
+      <span className="flex items-center gap-2.5 relative z-10">
         {pluginId ? (
           <PluginErrorBoundary pluginId={pluginId}>{iconElement}</PluginErrorBoundary>
         ) : (
           iconElement
         )}
-        <span
-          className={cn(
-            'truncate',
-            isActive ? 'text-foreground' : 'text-muted-foreground group-hover:text-foreground'
-          )}
-        >
-          {item.label}
-        </span>
+        <span className={cn('truncate', isActive ? 'font-medium' : '')}>{item.label}</span>
       </span>
     </button>
   );
@@ -95,7 +75,6 @@ export function SettingsNavigation({ activeSection, onNavigate }: SettingsNaviga
     const pluginGroups: Array<NavigationGroup & { order: number; pluginId: string }> = [];
 
     for (const [, cat] of settingsCategories) {
-      // Find all sections for this category
       const catSections: Array<{
         sectionId: string;
         label: string;
@@ -103,6 +82,7 @@ export function SettingsNavigation({ activeSection, onNavigate }: SettingsNaviga
         order?: number;
         pluginId: string;
       }> = [];
+
       for (const [, section] of settingsSections) {
         if (section.categoryId === cat.categoryId) {
           catSections.push({
@@ -115,7 +95,6 @@ export function SettingsNavigation({ activeSection, onNavigate }: SettingsNaviga
         }
       }
 
-      // Sort sections by order
       const sortedSections = catSections.toSorted((a, b) => (a.order ?? 100) - (b.order ?? 100));
 
       const items: NavigationItem[] = sortedSections.map(s => ({
@@ -134,7 +113,6 @@ export function SettingsNavigation({ activeSection, onNavigate }: SettingsNaviga
       }
     }
 
-    // Sort plugin groups by order
     const sortedGroups = pluginGroups.toSorted((a, b) => a.order - b.order);
 
     // Plugin categories appear above core groups
@@ -151,18 +129,22 @@ export function SettingsNavigation({ activeSection, onNavigate }: SettingsNaviga
   }, [settingsSections]);
 
   return (
-    <nav className={cn('w-56 shrink-0 overflow-y-auto', 'border-r border-border/50', 'bg-muted')}>
-      <div className="p-4 space-y-1">
-        {/* Navigation Groups */}
+    <nav
+      aria-label="Settings navigation"
+      className="w-[220px] shrink-0 overflow-y-auto border-r border-border-glass/60 bg-background/40 backdrop-blur-sm"
+    >
+      <div className="px-3 pt-5 pb-8 space-y-5">
         {mergedGroups.map(group => (
-          <div key={group.label}>
-            {/* Group Label */}
-            <div className="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground opacity-70">
-              {group.label}
+          <div key={group.label} className="space-y-1">
+            {/* Mono uppercase group label with thin rule */}
+            <div className="flex items-center gap-2 px-3 pb-1.5">
+              <span className="font-mono text-[10px] uppercase tracking-[0.18em] font-semibold text-muted-foreground/80">
+                {group.label}
+              </span>
+              <span className="flex-1 h-px bg-border-glass/60" />
             </div>
 
-            {/* Group Items */}
-            <div className="space-y-1">
+            <div className="space-y-0.5">
               {group.items.map(item => (
                 <NavButton
                   key={item.id}
