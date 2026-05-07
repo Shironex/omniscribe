@@ -10,8 +10,10 @@
  */
 
 import type { FrontendPluginContext } from '@omniscribe/plugin-api';
+import { Newspaper } from 'lucide-react';
 import { ClaudeIcon } from './ClaudeIcon';
 import { ClaudeSettingsSection } from './ClaudeSettingsSection';
+import { ClaudeChangelogSection } from './ClaudeChangelogSection';
 import { ClaudeUsagePanel } from './ClaudeUsagePanel';
 import { ClaudeStatusRenderer } from './ClaudeStatusRenderer';
 
@@ -39,6 +41,14 @@ export function frontendActivate(context: FrontendPluginContext): void {
           icon: ClaudeIcon as any,
           component: ClaudeSettingsSection as any,
           order: 10,
+        },
+        {
+          categoryId: 'claude',
+          sectionId: 'claude-changelog',
+          label: 'Changelog',
+          icon: Newspaper as any,
+          component: ClaudeChangelogSection as any,
+          order: 20,
         },
       ],
       order: 5, // Before core groups
@@ -69,5 +79,6 @@ export function frontendActivate(context: FrontendPluginContext): void {
 // Re-export components for direct use if needed
 export { ClaudeIcon } from './ClaudeIcon';
 export { ClaudeSettingsSection } from './ClaudeSettingsSection';
+export { ClaudeChangelogSection } from './ClaudeChangelogSection';
 export { ClaudeUsagePanel } from './ClaudeUsagePanel';
 export { ClaudeStatusRenderer } from './ClaudeStatusRenderer';

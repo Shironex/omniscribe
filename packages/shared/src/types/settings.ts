@@ -227,6 +227,7 @@ export type SettingsSectionId =
   | 'github'
   | 'mcp'
   | 'ai-capabilities'
+  | 'claude-changelog'
   | 'marketplace'
   // ── Workflow ──────────────────────────────────────────────────────
   | 'sessions'

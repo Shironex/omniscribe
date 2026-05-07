@@ -28,6 +28,9 @@ export * from './types/usage';
 // Updater types
 export * from './types/updater';
 
+// Claude Code changelog types
+export * from './types/claude-changelog';
+
 // Utilities
 export * from './utils';
 

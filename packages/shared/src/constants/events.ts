@@ -145,6 +145,14 @@ export const UsageEvents = {
 } as const;
 
 // ============================================
+// Claude Code Changelog Events
+// ============================================
+export const ClaudeChangelogEvents = {
+  FETCH: 'claude-changelog:fetch',
+  REFRESH: 'claude-changelog:refresh',
+} as const;
+
+// ============================================
 // Zombie Events
 // ============================================
 export const ZombieEvents = {

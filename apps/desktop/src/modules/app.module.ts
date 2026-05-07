@@ -7,6 +7,7 @@ import { SessionModule } from './session';
 import { GitModule } from './git';
 import { McpModule } from './mcp';
 import { UsageModule } from './usage';
+import { ClaudeChangelogModule } from './claude-changelog';
 import { HealthModule } from './health';
 import { NotificationModule } from './notification';
 import { PluginModule } from './plugin';
@@ -71,6 +72,7 @@ import { CodexProviderPlugin } from '@omniscribe/provider-codex';
     GitModule,
     McpModule,
     UsageModule,
+    ClaudeChangelogModule,
     HealthModule,
     NotificationModule,
   ],
