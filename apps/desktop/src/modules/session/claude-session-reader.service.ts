@@ -1,7 +1,6 @@
 import { Injectable, OnModuleDestroy } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
-import * as readline from 'readline';
 import {
   ClaudeSessionEntry,
   ClaudeSessionsIndex,
@@ -20,6 +19,7 @@ interface JsonlLineData {
   type?: string;
   isSidechain?: boolean;
   cwd?: string;
+  customTitle?: string;
   message?: { role?: string; content?: string | Array<{ type: string; text?: string }> };
 }
 
@@ -39,6 +39,9 @@ export class ClaudeSessionReaderService implements OnModuleDestroy {
 
   /** Active file watchers keyed by project path, for cleanup on destroy */
   private watchers = new Map<string, fs.FSWatcher>();
+
+  /** Cache of customTitle keyed by "<sessionId>:<fileMtime>" to avoid re-reads */
+  private customTitleCache = new Map<string, string>();
 
   onModuleDestroy(): void {
     // Close all active file watchers
@@ -86,8 +89,14 @@ export class ClaudeSessionReaderService implements OnModuleDestroy {
       this.logger.warn(`Failed to scan .jsonl files: ${errorMessage}`);
     }
 
-    // Step 3: Merge and return
-    const allEntries = [...indexEntries, ...scannedEntries];
+    // Step 3: Merge — scanned entries already have customTitle from JSONL scan.
+    // For index entries (which come from sessions-index.json and never carry customTitle),
+    // do a lazy single-pass JSONL read to populate the field.
+    const populatedIndexEntries = await Promise.all(
+      indexEntries.map(entry => this.populateCustomTitle(entry, sessionsDir))
+    );
+
+    const allEntries = [...populatedIndexEntries, ...scannedEntries];
     return this.filterAndSort(allEntries);
   }
 
@@ -272,22 +281,24 @@ export class ClaudeSessionReaderService implements OnModuleDestroy {
     const sessionId = filename.replace('.jsonl', '');
 
     try {
-      const fileStream = fs.createReadStream(filePath, { encoding: 'utf-8' });
-      const rl = readline.createInterface({ input: fileStream, crlfDelay: Infinity });
+      // Read all lines but only keep the first 50 and last 50 to bound memory
+      const content = await fs.promises.readFile(filePath, 'utf-8');
+      const allLines = content.split(/\r?\n/).filter(l => l.trim());
+      const HEAD = 50;
+      const TAIL = 50;
+      const lines =
+        allLines.length <= HEAD + TAIL
+          ? allLines
+          : [...allLines.slice(0, HEAD), ...allLines.slice(-TAIL)];
 
-      let lineCount = 0;
       let extractedSessionId: string | undefined;
       let gitBranch = '';
       let firstTimestamp: string | undefined;
       let firstPrompt = '';
       let isSidechain = false;
+      let customTitle = '';
 
-      for await (const line of rl) {
-        if (lineCount >= 20) break; // Only read first 20 lines
-        lineCount++;
-
-        if (!line.trim()) continue;
-
+      for (const line of lines) {
         try {
           const data: JsonlLineData = JSON.parse(line);
 
@@ -303,6 +314,11 @@ export class ClaudeSessionReaderService implements OnModuleDestroy {
           }
           if (data.timestamp && !firstTimestamp) {
             firstTimestamp = data.timestamp;
+          }
+
+          // Track last custom-title entry — /rename can fire multiple times
+          if (data.type === 'custom-title' && typeof data.customTitle === 'string') {
+            customTitle = data.customTitle;
           }
 
           // Extract first user prompt
@@ -322,7 +338,21 @@ export class ClaudeSessionReaderService implements OnModuleDestroy {
         }
       }
 
-      rl.close();
+      // Count messages across all lines (not just the head+tail window)
+      let messageCount = 0;
+      for (const line of allLines) {
+        try {
+          const data = JSON.parse(line) as JsonlLineData;
+          if (
+            (data.type === 'user' && data.message?.role === 'user') ||
+            data.type === 'assistant'
+          ) {
+            messageCount++;
+          }
+        } catch {
+          // skip unparseable lines
+        }
+      }
 
       // Must have at least a session ID (from filename or content)
       const finalSessionId = extractedSessionId ?? sessionId;
@@ -335,17 +365,63 @@ export class ClaudeSessionReaderService implements OnModuleDestroy {
         fileMtime: mtimeMs,
         firstPrompt: firstPrompt || 'No prompt',
         summary: '', // Summary requires full file analysis; leave empty for scanned entries
-        messageCount: 0, // Unknown without full scan
+        messageCount,
         created,
         modified: new Date(mtimeMs).toISOString(), // Use file mtime as most accurate modified time
         gitBranch,
         projectPath,
         isSidechain,
+        ...(customTitle ? { customTitle } : {}),
       };
     } catch (error) {
       const msg = extractErrorMessage(error);
       this.logger.debug(`Failed to extract entry from ${filename}: ${msg}`);
       return null;
+    }
+  }
+
+  /**
+   * Populate customTitle for a sessions-index.json entry by scanning its JSONL.
+   * Results are cached by sessionId+fileMtime to avoid repeated disk reads.
+   */
+  private async populateCustomTitle(
+    entry: ClaudeSessionEntry,
+    sessionsDir: string
+  ): Promise<ClaudeSessionEntry> {
+    const cacheKey = `${entry.sessionId}:${entry.fileMtime}`;
+    if (this.customTitleCache.has(cacheKey)) {
+      const cached = this.customTitleCache.get(cacheKey)!;
+      return cached ? { ...entry, customTitle: cached } : entry;
+    }
+
+    const filePath = path.join(sessionsDir, `${entry.sessionId}.jsonl`);
+    try {
+      const content = await fs.promises.readFile(filePath, 'utf-8');
+      const allLines = content.split(/\r?\n/).filter(l => l.trim());
+      const HEAD = 50;
+      const TAIL = 50;
+      const lines =
+        allLines.length <= HEAD + TAIL
+          ? allLines
+          : [...allLines.slice(0, HEAD), ...allLines.slice(-TAIL)];
+
+      let customTitle = '';
+      for (const line of lines) {
+        try {
+          const data = JSON.parse(line) as { type?: string; customTitle?: string };
+          if (data.type === 'custom-title' && typeof data.customTitle === 'string') {
+            customTitle = data.customTitle;
+          }
+        } catch {
+          // skip unparseable lines
+        }
+      }
+
+      this.customTitleCache.set(cacheKey, customTitle);
+      return customTitle ? { ...entry, customTitle } : entry;
+    } catch {
+      this.customTitleCache.set(cacheKey, '');
+      return entry;
     }
   }
 

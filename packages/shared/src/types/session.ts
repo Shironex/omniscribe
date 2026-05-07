@@ -112,6 +112,8 @@ export interface ClaudeSessionEntry {
   gitBranch: string;
   projectPath: string;
   isSidechain: boolean;
+  /** User-set title from Claude Code's /rename command */
+  customTitle?: string;
 }
 
 /** Claude Code's sessions-index.json format */

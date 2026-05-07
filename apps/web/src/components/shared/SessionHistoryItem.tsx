@@ -20,7 +20,7 @@ export const SessionHistoryItem = React.memo(function SessionHistoryItem({
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
           <p className="text-xs text-foreground-secondary truncate">
-            {entry.summary || entry.firstPrompt || 'Untitled session'}
+            {entry.customTitle || entry.summary || entry.firstPrompt || 'Untitled session'}
           </p>
           <div className="flex items-center gap-2 mt-1">
             {entry.gitBranch && (

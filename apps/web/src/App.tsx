@@ -276,6 +276,7 @@ function App() {
               !hasContent && (
                 <div className="absolute inset-0 z-20">
                   <IdleLandingView
+                    projectPath={activeProjectPath}
                     onAddSession={handleAddSession}
                     onOpenLaunchModal={openLaunchModal}
                   />

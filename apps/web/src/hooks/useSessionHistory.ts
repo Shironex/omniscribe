@@ -80,6 +80,7 @@ export function useSessionHistory({
       const lower = debouncedSearch.toLowerCase();
       result = result.filter(
         s =>
+          (s.customTitle && s.customTitle.toLowerCase().includes(lower)) ||
           (s.summary && s.summary.toLowerCase().includes(lower)) ||
           (s.firstPrompt && s.firstPrompt.toLowerCase().includes(lower))
       );
@@ -106,7 +107,7 @@ export function useSessionHistory({
           entry.sessionId,
           projectPath,
           entry.gitBranch,
-          entry.summary || entry.firstPrompt?.slice(0, 50)
+          entry.customTitle || entry.summary || entry.firstPrompt?.slice(0, 50)
         );
         if (session.terminalSessionId !== undefined) {
           updateSession(session.id, { terminalSessionId: session.terminalSessionId });
@@ -129,7 +130,7 @@ export function useSessionHistory({
           entry.sessionId,
           projectPath,
           entry.gitBranch,
-          `Fork: ${(entry.summary || entry.firstPrompt || 'session').slice(0, 40)}`
+          `Fork: ${(entry.customTitle || entry.summary || entry.firstPrompt || 'session').slice(0, 40)}`
         );
         if (session.terminalSessionId !== undefined) {
           updateSession(session.id, { terminalSessionId: session.terminalSessionId });

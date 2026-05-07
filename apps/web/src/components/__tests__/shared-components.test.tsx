@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
 
 import { StatusLegend, StatusDot } from '../shared/StatusLegend';
 import { ProgressBar } from '../shared/ProgressBar';
@@ -7,6 +7,47 @@ import { UsageCard } from '../shared/UsageCard';
 import { TaskBadge } from '../terminal/TaskBadge';
 import { ErrorBoundary } from '../shared/ErrorBoundary';
 import { IdleLandingView } from '../shared/IdleLandingView';
+import type { ClaudeSessionEntry } from '@omniscribe/shared';
+
+// ─── Mocks for IdleLandingView ────────────────────────────────────────────────
+
+const mockFetchHistory = vi.fn();
+const mockContinueLastSession = vi.fn().mockResolvedValue({ id: 's1' });
+const mockResumeSession = vi.fn().mockResolvedValue({ id: 's1' });
+const mockUpdateSession = vi.fn();
+
+// Mutable state object shared between the vi.mock factory and individual tests.
+// Tests mutate historyMockState.sessions to control what the store returns.
+const historyMockState = {
+  sessions: [] as ClaudeSessionEntry[],
+  isLoading: false,
+  error: null as string | null,
+  fetchHistory: mockFetchHistory,
+};
+
+vi.mock('@/stores/useSessionHistoryStore', () => ({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  useSessionHistoryStore: vi.fn((selector: (s: any) => unknown) => selector(historyMockState)),
+}));
+
+vi.mock('@/stores/useSessionStore', () => ({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  useSessionStore: vi.fn((selector: (s: any) => unknown) =>
+    selector({ updateSession: mockUpdateSession })
+  ),
+}));
+
+vi.mock('@/lib/session', () => ({
+  continueLastSession: (...args: unknown[]) => mockContinueLastSession(...args),
+  resumeSession: (...args: unknown[]) => mockResumeSession(...args),
+}));
+
+vi.mock('@/lib/platform', () => ({
+  IS_MAC: false,
+  IS_WINDOWS: true,
+  IS_LINUX: false,
+  IS_ELECTRON: false,
+}));
 
 // ─── StatusLegend ────────────────────────────────────────────────────────────
 
@@ -209,29 +250,117 @@ describe('ErrorBoundary', () => {
 
 // ─── IdleLandingView ─────────────────────────────────────────────────────────
 
+function makeMockSession(overrides: Partial<ClaudeSessionEntry> = {}): ClaudeSessionEntry {
+  return {
+    sessionId: `sess-${Math.random().toString(36).slice(2, 7)}`,
+    summary: 'Test summary',
+    firstPrompt: 'First prompt',
+    messageCount: 4,
+    gitBranch: 'main',
+    modified: '',
+    created: '',
+    projectPath: '/p',
+    fullPath: '',
+    fileMtime: 0,
+    isSidechain: false,
+    ...overrides,
+  };
+}
+
 describe('IdleLandingView', () => {
+  beforeEach(() => {
+    mockFetchHistory.mockClear();
+    mockContinueLastSession.mockClear();
+    mockResumeSession.mockClear();
+    mockUpdateSession.mockClear();
+    // Reset shared history state to empty
+    historyMockState.sessions = [];
+    historyMockState.isLoading = false;
+    historyMockState.error = null;
+  });
+
   it('renders without crashing with required props', () => {
-    const { container } = render(<IdleLandingView onAddSession={vi.fn()} />);
+    const { container } = render(<IdleLandingView projectPath={null} onAddSession={vi.fn()} />);
     expect(container).toBeTruthy();
   });
 
-  it('displays heading and description text', () => {
-    render(<IdleLandingView onAddSession={vi.fn()} />);
-    expect(screen.getByText('No Active Sessions')).toBeTruthy();
-    expect(
-      screen.getByText('Add sessions to start orchestrating your AI coding assistants')
-    ).toBeTruthy();
+  it('renders headline and subtitle copy', () => {
+    const { container } = render(<IdleLandingView projectPath={null} onAddSession={vi.fn()} />);
+    expect(container.textContent).toContain('Orchestrate a fleet of agents.');
+    expect(container.textContent).toContain(
+      'Run Claude Code, Codex, and plain shells side by side'
+    );
   });
 
-  it('displays keyboard shortcut hints', () => {
-    const { container } = render(<IdleLandingView onAddSession={vi.fn()} />);
-    expect(container.textContent).toContain('Shift+N');
-    expect(container.textContent).toContain('to add one');
+  it('renders Launch a fleet primary CTA', () => {
+    const { container } = render(<IdleLandingView projectPath={null} onAddSession={vi.fn()} />);
+    expect(container.textContent).toContain('Launch a fleet');
   });
 
-  it('renders the add session button with correct aria-label', () => {
-    render(<IdleLandingView onAddSession={vi.fn()} />);
-    const button = screen.getByRole('button', { name: 'Set up sessions' });
-    expect(button).toBeTruthy();
+  it('renders New session ghost CTA', () => {
+    const { container } = render(<IdleLandingView projectPath={null} onAddSession={vi.fn()} />);
+    expect(container.textContent).toContain('New session');
+  });
+
+  it('calls onOpenLaunchModal when primary CTA clicked and modal handler provided', () => {
+    const onOpenLaunchModal = vi.fn();
+    render(
+      <IdleLandingView
+        projectPath={null}
+        onAddSession={vi.fn()}
+        onOpenLaunchModal={onOpenLaunchModal}
+      />
+    );
+    const primaryBtn = screen.getByRole('button', { name: /launch a fleet/i });
+    fireEvent.click(primaryBtn);
+    expect(onOpenLaunchModal).toHaveBeenCalledTimes(1);
+  });
+
+  it('calls fetchHistory with projectPath on mount when projectPath provided', () => {
+    render(<IdleLandingView projectPath="/some/project" onAddSession={vi.fn()} />);
+    expect(mockFetchHistory).toHaveBeenCalledWith('/some/project');
+  });
+
+  it('omits Recent panel when sessions list is empty', () => {
+    const { container } = render(
+      <IdleLandingView projectPath="/some/project" onAddSession={vi.fn()} />
+    );
+    expect(container.textContent).not.toContain('Resume last');
+  });
+
+  it('renders up to 3 Recent rows when sessions are present', () => {
+    historyMockState.sessions = [
+      makeMockSession({ sessionId: 'a', summary: 'Fix auth bug' }),
+      makeMockSession({ sessionId: 'b', summary: 'Add tests' }),
+      makeMockSession({ sessionId: 'c', summary: 'Refactor module' }),
+      makeMockSession({ sessionId: 'd', summary: 'Should not appear' }),
+    ];
+
+    const { container } = render(<IdleLandingView projectPath="/p" onAddSession={vi.fn()} />);
+    expect(container.textContent).toContain('Fix auth bug');
+    expect(container.textContent).toContain('Add tests');
+    expect(container.textContent).toContain('Refactor module');
+    expect(container.textContent).not.toContain('Should not appear');
+  });
+
+  it('calls resumeSession with entry when Recent row clicked', () => {
+    historyMockState.sessions = [
+      makeMockSession({
+        sessionId: 'sess-1',
+        summary: 'Fix login',
+        gitBranch: 'main',
+        projectPath: '/p',
+      }),
+    ];
+
+    render(<IdleLandingView projectPath="/p" onAddSession={vi.fn()} />);
+    fireEvent.click(screen.getByLabelText('Resume session: Fix login'));
+    expect(mockResumeSession).toHaveBeenCalledWith('sess-1', '/p', 'main', 'Fix login');
+  });
+
+  it('Resume Last button is absent when no sessions (panel not rendered)', () => {
+    // historyMockState.sessions is [] from beforeEach — panel is hidden
+    render(<IdleLandingView projectPath="/p" onAddSession={vi.fn()} />);
+    expect(screen.queryByText('Resume last')).toBeNull();
   });
 });

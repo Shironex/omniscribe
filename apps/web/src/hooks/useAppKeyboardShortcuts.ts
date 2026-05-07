@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { PRELAUNCH_SHORTCUT_KEYS } from '@/lib/prelaunch-shortcuts';
 import { useAppUIStore } from '@/stores/useAppUIStore';
+import { continueLastSession } from '@/lib/session';
 import type { PreLaunchSlot } from '@/components/terminal/TerminalGrid';
 
 interface UseAppKeyboardShortcutsParams {
@@ -87,6 +88,19 @@ export function useAppKeyboardShortcuts({
       if (isMod && e.shiftKey && key === 'h') {
         e.preventDefault();
         useAppUIStore.getState().toggleHistory();
+        return;
+      }
+
+      // Cmd/Ctrl + Shift + R - Resume last session (idle view convenience)
+      if (isMod && e.shiftKey && key === 'r') {
+        const projectPath = activeProjectPathRef.current;
+        if (projectPath && !hasActiveSessionsRef.current) {
+          e.preventDefault();
+          continueLastSession(projectPath).catch(() => {
+            // error is surfaced via toast inside IdleLandingView's handler;
+            // swallow here so an unhandled rejection doesn't surface in console
+          });
+        }
         return;
       }
 
