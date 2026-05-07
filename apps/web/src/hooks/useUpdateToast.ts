@@ -47,7 +47,7 @@ export function useUpdateToast(): void {
           description: 'A new version of Omniscribe is ready to download.',
           action: {
             label: 'View',
-            onClick: () => openSettings('appearance'),
+            onClick: () => openSettings('general'),
           },
           duration: TOAST_DURATION_NORMAL,
         });
@@ -85,7 +85,7 @@ export function useUpdateToast(): void {
           description: 'The release is still being built. Check back in 5–10 minutes.',
           action: {
             label: 'View',
-            onClick: () => openSettings('appearance'),
+            onClick: () => openSettings('general'),
           },
           duration: TOAST_DURATION_NORMAL,
         });

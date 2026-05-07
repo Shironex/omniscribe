@@ -10,6 +10,7 @@ import {
   Bell,
   Sparkles,
   Palette,
+  Info,
 } from 'lucide-react';
 import type { SettingsSectionId } from '@omniscribe/shared';
 
@@ -54,6 +55,7 @@ export const CORE_NAV_GROUPS: NavigationGroup[] = [
     items: [
       { id: 'appearance', label: 'Appearance', icon: Palette },
       { id: 'terminal', label: 'Terminal', icon: TerminalSquare },
+      { id: 'general', label: 'About', icon: Info },
     ],
   },
 ];

@@ -14,6 +14,7 @@ import {
   GithubSection,
   McpSection,
   AiCapabilitiesSection,
+  GeneralSection,
   WorktreesSection,
   SessionsSection,
   QuickActionsSection,
@@ -23,10 +24,6 @@ import {
 
 /**
  * Map of built-in section IDs to their components.
- *
- * Legacy IDs (`general`) remain wired to their nearest replacement so any
- * external `openSettings('general')` call sites (e.g. update-toast deep
- * links) keep landing on a sensible surface during the deprecation window.
  */
 const coreSections: Record<string, ComponentType> = {
   // ── Integrations ──────────────────────────────────────────────────
@@ -42,8 +39,7 @@ const coreSections: Record<string, ComponentType> = {
   // ── Interface ─────────────────────────────────────────────────────
   appearance: AppearanceSection,
   terminal: TerminalSection,
-  // ── Backwards compatibility ──────────────────────────────────────
-  general: AppearanceSection,
+  general: GeneralSection,
 };
 
 /**

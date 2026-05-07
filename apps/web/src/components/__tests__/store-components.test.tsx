@@ -339,10 +339,10 @@ describe('SettingsView', () => {
     expect(screen.getByTestId('appearance-section')).toBeTruthy();
   });
 
-  it('falls back to the Appearance section when activeSection is the legacy "general"', () => {
+  it('renders the About (GeneralSection) when activeSection is "general"', () => {
     mockSettingsState = { ...mockSettingsState, activeSection: 'general' };
     render(<SettingsView />);
-    expect(screen.getByTestId('appearance-section')).toBeTruthy();
+    expect(screen.getByTestId('general-section')).toBeTruthy();
   });
 
   it('routes navigation clicks through navigateToSection', () => {

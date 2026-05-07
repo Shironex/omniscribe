@@ -11,6 +11,10 @@ Promotes the 1.6 cycle out of beta. The **AI Capabilities** surface (Playwright 
 - **Idle view redesign** — Replace the single-button welcome state with a full hero composition: muted icon cluster, eyebrow label, editorial headline, dual CTAs, and a Recent Sessions panel wired to existing per-project history. Adds `Mod+Shift+R` shortcut for "resume last" (gated to idle state). Claude `/rename` custom-title events are now read from session JSONL and surfaced as `customTitle` (precedence: customTitle > summary > firstPrompt); message counts are computed from real user+assistant lines instead of hardcoded 0. (#300)
 - **Settings as a full view + curated theme catalog** — Promote settings from a modal to a full app view and curate the theme list down to 8 production themes (Forge, Carbon, Ember, Iceberg, Nord, Gruvbox, Dracula, Paper) with automatic migration of legacy theme IDs via `LEGACY_THEME_MIGRATION`. Tighter typing for `Theme`, `ThemeOption.value`, and the plugin theme path. (#299)
 
+### Bug Fixes
+
+- **Restore About section in new Settings view** — The settings-view promotion in #299 dropped the About entry from the navigation and rerouted `general` to the Appearance pane, leaving the version display, update channel toggle, "Check for Updates" button, release-notes viewer, macOS download fallback, View Logs, and Open Log Folder all orphaned. All underlying components, stores, and IPC handlers were intact — only the view-layer wiring was lost. Restored before v1.6.0 shipped.
+
 ### Maintenance
 
 - **Remove auto-resume on restart** — The toggle never delivered: PTYs cannot survive process death, so restoration could only re-open Claude in a fresh PTY without scrollback or in-flight state, with silent failure modes. Session History already covers the realistic "resume a past session" path more discoverably. Removes the setting, snapshot persistence, gateway handler, frontend wiring, and Settings UI block. The Session History persistence path inside `ClaudeSessionTrackerService` is retained.

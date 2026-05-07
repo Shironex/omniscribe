@@ -14,7 +14,7 @@ const SECTION_LABELS: Record<string, string> = {
   notifications: 'Notifications',
   appearance: 'Appearance',
   terminal: 'Terminal',
-  general: 'Appearance',
+  general: 'About',
 };
 
 function formatRelative(ms: number | null, now: number): string {

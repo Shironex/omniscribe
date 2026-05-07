@@ -236,8 +236,6 @@ export type SettingsSectionId =
   // ── Interface ─────────────────────────────────────────────────────
   | 'appearance'
   | 'terminal'
-  // ── Retained for backwards compatibility ─────────────────────────
-  /** @deprecated Routed to 'appearance'. Retained for one minor version. */
   | 'general'
   | (string & {});
 
