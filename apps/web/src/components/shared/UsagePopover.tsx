@@ -1,4 +1,4 @@
-import { type ComponentType, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -8,7 +8,7 @@ import { useWorkspaceStore } from '@/stores/useWorkspaceStore';
 import { useSessionStore } from '@/stores/useSessionStore';
 import { usePluginStore, type ProviderInfo } from '@/stores/usePluginStore';
 import { PluginErrorBoundary } from '@/components/plugin/PluginErrorBoundary';
-import type { UsagePanelProps, UsagePanelRegistration } from '@omniscribe/plugin-api';
+import type { UsagePanelRegistration } from '@omniscribe/plugin-api';
 
 type WithPluginId<T> = T & { pluginId: string };
 
@@ -85,9 +85,7 @@ function MultiProviderPopover({
           <div className="px-3 pt-3 pb-0">
             <TabsList className="w-full">
               {panels.map(({ aiMode, registration }) => {
-                const Icon = registration.icon as
-                  | ComponentType<{ size?: number; className?: string }>
-                  | undefined;
+                const Icon = registration.icon;
                 const label =
                   registration.label ?? aiMode.charAt(0).toUpperCase() + aiMode.slice(1);
                 return (
@@ -100,7 +98,7 @@ function MultiProviderPopover({
             </TabsList>
           </div>
           {panels.map(({ aiMode, registration }) => {
-            const PanelComponent = registration.component as ComponentType<UsagePanelProps>;
+            const PanelComponent = registration.component;
             return (
               <TabsContent key={aiMode} value={aiMode} className="mt-0">
                 <PluginErrorBoundary pluginId={registration.pluginId}>
@@ -178,7 +176,7 @@ export function UsagePopover() {
   // Single provider: render standalone (panel manages its own Popover)
   if (resolvedPanels.length === 1) {
     const { registration } = resolvedPanels[0];
-    const PanelComponent = registration.component as ComponentType<UsagePanelProps>;
+    const PanelComponent = registration.component;
     return (
       <PluginErrorBoundary pluginId={registration.pluginId}>
         <PanelComponent workingDir={projectPath} />

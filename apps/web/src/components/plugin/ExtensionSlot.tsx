@@ -1,5 +1,12 @@
 import { useMemo, Fragment, type ComponentType } from 'react';
 import { createLogger } from '@omniscribe/shared';
+import type {
+  ActionBarItemRegistration,
+  MoreMenuItemRegistration,
+  SessionStatusRendererRegistration,
+  TerminalHeaderActionRegistration,
+  UsagePanelRegistration,
+} from '@omniscribe/plugin-api';
 import { usePluginStore, matchesShowFor } from '@/stores/usePluginStore';
 import { PluginErrorBoundary } from './PluginErrorBoundary';
 
@@ -28,18 +35,51 @@ interface ExtensionSlotProps {
   className?: string;
 }
 
-/** Internal registration entry with normalized component type */
+/** Plugin-store entries are decorated with the owning plugin's id. */
+type WithPluginId<T> = T & { pluginId: string };
+
+/** Registrations whose `showFor` filter is consulted (icon-driven slots). */
+type ShowForRegistration = WithPluginId<
+  ActionBarItemRegistration | MoreMenuItemRegistration | TerminalHeaderActionRegistration
+>;
+
+/** Registrations whose `aiMode` filter is consulted (component-driven slots). */
+type AiModeRegistration = WithPluginId<SessionStatusRendererRegistration | UsagePanelRegistration>;
+
+/**
+ * Internal registration entry with normalized component type.
+ *
+ * Different slots project different fields (`icon` vs `component`) onto a
+ * single render-time component, and each slot's render-time props are
+ * provided by the host via `context`. ExtensionSlot is intentionally
+ * generic over slot shape, so the unified component type accepts any props
+ * the host hands over at render time.
+ */
 interface SlotRegistration {
   id: string;
   pluginId: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  component: ComponentType<any>;
+  component: ComponentType<Record<string, unknown>>;
   order?: number;
 }
 
-/** Picks the registration Map relevant to a given slot name */
+/**
+ * Widen a registration's `icon` or `component` field (each strictly typed
+ * in the plugin store, e.g. `ComponentType<UsagePanelProps>`) to
+ * ExtensionSlot's intentionally-generic slot type. The host is responsible
+ * for passing the right `context` props per slot, so the cast is
+ * deliberately weaker than the per-registration types in the plugin store.
+ */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function selectMapForSlot(name: string): (s: any) => Map<string, any> | undefined {
+function asSlotComponent(component: ComponentType<any>): ComponentType<Record<string, unknown>> {
+  return component as unknown as ComponentType<Record<string, unknown>>;
+}
+
+/** Picks the registration Map relevant to a given slot name */
+function selectMapForSlot(
+  name: string
+): (
+  s: ReturnType<typeof usePluginStore.getState>
+) => Map<string, ShowForRegistration | AiModeRegistration> | undefined {
   switch (name) {
     case 'terminal-header-actions':
       return s => s.terminalHeaderActions;
@@ -58,16 +98,17 @@ function selectMapForSlot(name: string): (s: any) => Map<string, any> | undefine
 }
 
 /** Collect registrations filtered by showFor (used by terminal-header-actions, action-bar, more-menu) */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function resolveShowForSlot(map: Map<string, any>, aiMode?: string): SlotRegistration[] {
+function resolveShowForSlot(
+  map: Map<string, ShowForRegistration | AiModeRegistration>,
+  aiMode?: string
+): SlotRegistration[] {
   const matches: SlotRegistration[] = [];
   for (const [, reg] of map) {
-    if (matchesShowFor(reg.showFor, aiMode)) {
+    if ('showFor' in reg && matchesShowFor(reg.showFor, aiMode)) {
       matches.push({
         id: reg.id,
         pluginId: reg.pluginId,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        component: reg.icon as ComponentType<any>,
+        component: asSlotComponent(reg.icon),
         order: reg.order,
       });
     }
@@ -76,16 +117,17 @@ function resolveShowForSlot(map: Map<string, any>, aiMode?: string): SlotRegistr
 }
 
 /** Collect registrations filtered by exact aiMode match, returning only highest priority (used by status-display, usage-panel) */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function resolveAiModeSlot(map: Map<string, any>, aiMode?: string): SlotRegistration[] {
+function resolveAiModeSlot(
+  map: Map<string, ShowForRegistration | AiModeRegistration>,
+  aiMode?: string
+): SlotRegistration[] {
   const matches: SlotRegistration[] = [];
   for (const [, reg] of map) {
-    if (reg.aiMode === (aiMode ?? '')) {
+    if ('aiMode' in reg && reg.aiMode === (aiMode ?? '')) {
       matches.push({
         id: reg.id,
         pluginId: reg.pluginId,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        component: reg.component as ComponentType<any>,
+        component: asSlotComponent(reg.component),
         order: reg.order,
       });
     }

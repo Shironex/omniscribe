@@ -1,4 +1,3 @@
-import type { ComponentType } from 'react';
 import {
   Server,
   GitBranch,
@@ -13,11 +12,12 @@ import {
   Info,
 } from 'lucide-react';
 import type { SettingsSectionId } from '@omniscribe/shared';
+import type { PluginIconComponent } from '@omniscribe/plugin-api';
 
 export interface NavigationItem {
   id: SettingsSectionId;
   label: string;
-  icon: ComponentType<{ className?: string; size?: string | number }>;
+  icon: PluginIconComponent;
 }
 
 export interface NavigationGroup {

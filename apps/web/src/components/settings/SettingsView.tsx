@@ -78,7 +78,7 @@ export function SettingsView() {
     for (const [, registration] of settingsSections) {
       if (registration.sectionId === activeSection) {
         return {
-          Component: registration.component as ComponentType,
+          Component: registration.component,
           pluginId: registration.pluginId,
         };
       }

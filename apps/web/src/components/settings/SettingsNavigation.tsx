@@ -88,7 +88,7 @@ export function SettingsNavigation({ activeSection, onNavigate }: SettingsNaviga
           catSections.push({
             sectionId: section.sectionId,
             label: section.label,
-            icon: section.icon as NavigationItem['icon'],
+            icon: section.icon,
             order: section.order,
             pluginId: section.pluginId,
           });
