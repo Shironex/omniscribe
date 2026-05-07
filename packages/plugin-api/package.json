@@ -20,9 +20,22 @@
     "test:cov": "jest --coverage",
     "test:watch": "jest --watch"
   },
+  "peerDependencies": {
+    "@types/react": ">=18.0.0",
+    "react": ">=18.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@types/react": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    }
+  },
   "devDependencies": {
     "@types/jest": "^30.0.0",
     "@types/node": "^25.6.0",
+    "@types/react": "^18.3.28",
     "jest": "^30.3.0",
     "ts-jest": "^29.4.9",
     "typescript": "^5.9.3"

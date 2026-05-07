@@ -5,33 +5,56 @@
  * Frontend plugins register components for settings sections, status renderers,
  * usage panels, terminal actions, and themes.
  *
- * All component types use PluginComponentType<P> which is React-compatible
- * without importing React, keeping this package zero-dependency.
+ * Component types alias React's `ComponentType<P>`, which accepts function
+ * components, class components, and `forwardRef` / `memo` / `lazy` wrappers
+ * (e.g. every `lucide-react` icon). React is declared as an optional peer
+ * dependency — `import type` is erased at build time, so backend-only plugins
+ * pay zero runtime cost for these types.
  */
 
+import type { ComponentType, SVGProps } from 'react';
 import type { OmniscribePlugin, PluginContext, Disposable } from './plugin';
 import type { PluginActivation } from './activation';
 import type { ThemeRegistration } from './theme';
 
 // ==========================================
-// Component Type (React-compatible, no React import)
+// Component Types (React-typed)
 // ==========================================
 
 /**
- * A component type that is compatible with React components without importing React.
- * Plugin authors will use actual React components; this type is the API contract.
+ * Any React component (function, class, `forwardRef`, `memo`, `lazy`) the
+ * plugin host can render. Aliased to React's `ComponentType<P>` so all the
+ * usual component shapes are accepted without casts.
  *
  * @typeParam P - Props type for the component
  *
  * @example
  * ```tsx
- * // In plugin code (which DOES import React):
- * const MySettingsPanel: PluginComponentType<{ value: string }> = ({ value }) => {
- *   return <div>{value}</div>;
- * };
+ * const MySettingsPanel: PluginComponentType<{ value: string }> = ({ value }) => (
+ *   <div>{value}</div>
+ * );
  * ```
  */
-export type PluginComponentType<P = Record<string, never>> = (props: P) => unknown;
+export type PluginComponentType<P = Record<string, never>> = ComponentType<P>;
+
+/**
+ * Props shared by every icon contribution. Deliberately narrow — matches the
+ * subset of `lucide-react` icon props plugins typically need to forward, while
+ * staying assignable from any `ComponentType` whose props are a superset.
+ */
+export type PluginIconProps = { size?: number | string; className?: string };
+
+/**
+ * Icon contribution type. `lucide-react` icons (`ForwardRefExoticComponent`)
+ * and custom SVG components both satisfy this contract.
+ */
+export type PluginIconComponent = ComponentType<PluginIconProps>;
+
+/**
+ * Escape hatch for plugins that ship raw SVG components and need the full
+ * `SVGProps<SVGSVGElement>` surface area instead of the narrowed icon props.
+ */
+export type PluginSvgComponent = ComponentType<SVGProps<SVGSVGElement>>;
 
 // ==========================================
 // Frontend Plugin Interface
@@ -192,10 +215,10 @@ export interface SettingsSectionRegistration {
   label: string;
 
   /** Icon component for the sidebar navigation item */
-  icon: PluginComponentType;
+  icon: PluginIconComponent;
 
   /** Component to render when this section is selected */
-  component: PluginComponentType;
+  component: ComponentType;
 
   /** Sort order within the category (lower = higher, default: 100) */
   order?: number;
@@ -239,7 +262,7 @@ export interface SessionStatusRendererRegistration {
   aiMode: string;
 
   /** Component that renders the session status */
-  component: PluginComponentType<SessionStatusProps>;
+  component: ComponentType<SessionStatusProps>;
 
   /** Sort order when multiple renderers match (lower = higher priority) */
   order?: number;
@@ -270,13 +293,13 @@ export interface UsagePanelRegistration {
   aiMode: string;
 
   /** Component that renders the usage information */
-  component: PluginComponentType<UsagePanelProps>;
+  component: ComponentType<UsagePanelProps>;
 
   /** Display label for tab headers in multi-provider mode (defaults to aiMode capitalized) */
   label?: string;
 
   /** Icon component for tab headers in multi-provider mode */
-  icon?: PluginComponentType<{ size?: number; className?: string }>;
+  icon?: PluginIconComponent;
 
   /** Sort order when multiple panels match (lower = higher priority) */
   order?: number;
@@ -325,7 +348,7 @@ export interface TerminalHeaderActionRegistration {
   label: string;
 
   /** Icon component for the button */
-  icon: PluginComponentType;
+  icon: PluginIconComponent;
 
   /**
    * AI modes this action appears for.
@@ -351,7 +374,7 @@ export interface ActionBarItemRegistration {
   label: string;
 
   /** Icon component for the action */
-  icon: PluginComponentType;
+  icon: PluginIconComponent;
 
   /**
    * AI modes this item appears for.
@@ -377,7 +400,7 @@ export interface MoreMenuItemRegistration {
   label: string;
 
   /** Icon component for the menu item */
-  icon: PluginComponentType;
+  icon: PluginIconComponent;
 
   /**
    * AI modes this menu item appears for.

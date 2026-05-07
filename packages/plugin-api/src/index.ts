@@ -65,6 +65,9 @@ export { ALLOWED_PROVIDER_INVOKE_METHODS } from './types/provider';
 // ==========================================
 export type {
   PluginComponentType,
+  PluginIconProps,
+  PluginIconComponent,
+  PluginSvgComponent,
   FrontendPlugin,
   FrontendPluginContext,
   SettingsSectionRegistration,
