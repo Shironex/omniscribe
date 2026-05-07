@@ -120,7 +120,7 @@ export function createFrontendPluginContext(
       const sectionDisposable = store.getState().registerSettingsSection(pluginId, {
         categoryId: inferredCategory,
         sectionId,
-        label,
+        label: 'Changelog',
         icon: Icon,
         component: SectionComponent,
         order: reg.order ?? 50,
