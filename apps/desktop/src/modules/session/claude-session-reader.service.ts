@@ -50,6 +50,7 @@ export class ClaudeSessionReaderService implements OnModuleDestroy {
       watcher.close();
     }
     this.watchers.clear();
+    this.customTitleCache.clear();
   }
 
   /**
@@ -268,7 +269,90 @@ export class ClaudeSessionReaderService implements OnModuleDestroy {
   }
 
   /**
-   * Extract a ClaudeSessionEntry from a .jsonl file by reading the first few lines.
+   * Single-pass parse of all JSONL lines, returning every metadata field
+   * the reader cares about. Used by both `extractEntryFromJsonl` (for files
+   * not in the index) and `populateCustomTitle` (for index entries that
+   * need a customTitle/messageCount lookup).
+   *
+   * One pass over `allLines` — no head/tail window, so `/rename` events
+   * landing mid-session are never missed.
+   */
+  private parseJsonlMeta(allLines: string[]): {
+    sessionId?: string;
+    gitBranch: string;
+    firstTimestamp?: string;
+    firstPrompt: string;
+    isSidechain: boolean;
+    customTitle: string;
+    messageCount: number;
+  } {
+    let sessionId: string | undefined;
+    let gitBranch = '';
+    let firstTimestamp: string | undefined;
+    let firstPrompt = '';
+    let isSidechain = false;
+    let customTitle = '';
+    let messageCount = 0;
+
+    for (const line of allLines) {
+      let data: JsonlLineData;
+      try {
+        data = JSON.parse(line);
+      } catch {
+        this.logger.debug(`Skipping unparseable JSONL line: ${line.slice(0, 100)}`);
+        continue;
+      }
+
+      if (data.sessionId && !sessionId) {
+        sessionId = data.sessionId;
+      }
+      if (data.gitBranch && !gitBranch) {
+        gitBranch = data.gitBranch;
+      }
+      if (data.isSidechain) {
+        isSidechain = true;
+      }
+      if (data.timestamp && !firstTimestamp) {
+        firstTimestamp = data.timestamp;
+      }
+
+      // Track last custom-title entry — /rename can fire multiple times
+      if (data.type === 'custom-title' && typeof data.customTitle === 'string') {
+        customTitle = data.customTitle;
+      }
+
+      // Extract first user prompt
+      if (data.type === 'user' && data.message?.role === 'user' && !firstPrompt) {
+        const content = data.message.content;
+        if (typeof content === 'string') {
+          firstPrompt = content.slice(0, 200);
+        } else if (Array.isArray(content)) {
+          const textPart = content.find(p => p.type === 'text' && p.text);
+          if (textPart?.text) {
+            firstPrompt = textPart.text.slice(0, 200);
+          }
+        }
+      }
+
+      // Count user/assistant messages
+      if ((data.type === 'user' && data.message?.role === 'user') || data.type === 'assistant') {
+        messageCount++;
+      }
+    }
+
+    return {
+      sessionId,
+      gitBranch,
+      firstTimestamp,
+      firstPrompt,
+      isSidechain,
+      customTitle,
+      messageCount,
+    };
+  }
+
+  /**
+   * Extract a ClaudeSessionEntry from a .jsonl file via a single full-pass scan.
    * Returns null if the file can't be parsed.
    */
   private async extractEntryFromJsonl(
@@ -281,97 +365,27 @@ export class ClaudeSessionReaderService implements OnModuleDestroy {
     const sessionId = filename.replace('.jsonl', '');
 
     try {
-      // Read all lines but only keep the first 50 and last 50 to bound memory
       const content = await fs.promises.readFile(filePath, 'utf-8');
       const allLines = content.split(/\r?\n/).filter(l => l.trim());
-      const HEAD = 50;
-      const TAIL = 50;
-      const lines =
-        allLines.length <= HEAD + TAIL
-          ? allLines
-          : [...allLines.slice(0, HEAD), ...allLines.slice(-TAIL)];
-
-      let extractedSessionId: string | undefined;
-      let gitBranch = '';
-      let firstTimestamp: string | undefined;
-      let firstPrompt = '';
-      let isSidechain = false;
-      let customTitle = '';
-
-      for (const line of lines) {
-        try {
-          const data: JsonlLineData = JSON.parse(line);
-
-          // Extract session metadata from any line that has it
-          if (data.sessionId && !extractedSessionId) {
-            extractedSessionId = data.sessionId;
-          }
-          if (data.gitBranch && !gitBranch) {
-            gitBranch = data.gitBranch;
-          }
-          if (data.isSidechain) {
-            isSidechain = true;
-          }
-          if (data.timestamp && !firstTimestamp) {
-            firstTimestamp = data.timestamp;
-          }
-
-          // Track last custom-title entry — /rename can fire multiple times
-          if (data.type === 'custom-title' && typeof data.customTitle === 'string') {
-            customTitle = data.customTitle;
-          }
-
-          // Extract first user prompt
-          if (data.type === 'user' && data.message?.role === 'user' && !firstPrompt) {
-            const content = data.message.content;
-            if (typeof content === 'string') {
-              firstPrompt = content.slice(0, 200);
-            } else if (Array.isArray(content)) {
-              const textPart = content.find(p => p.type === 'text' && p.text);
-              if (textPart?.text) {
-                firstPrompt = textPart.text.slice(0, 200);
-              }
-            }
-          }
-        } catch {
-          this.logger.debug(`Skipping unparseable JSONL line: ${line.slice(0, 100)}`);
-        }
-      }
-
-      // Count messages across all lines (not just the head+tail window)
-      let messageCount = 0;
-      for (const line of allLines) {
-        try {
-          const data = JSON.parse(line) as JsonlLineData;
-          if (
-            (data.type === 'user' && data.message?.role === 'user') ||
-            data.type === 'assistant'
-          ) {
-            messageCount++;
-          }
-        } catch {
-          // skip unparseable lines
-        }
-      }
+      const meta = this.parseJsonlMeta(allLines);
 
       // Must have at least a session ID (from filename or content)
-      const finalSessionId = extractedSessionId ?? sessionId;
-
-      const created = firstTimestamp ?? new Date(mtimeMs).toISOString();
+      const finalSessionId = meta.sessionId ?? sessionId;
+      const created = meta.firstTimestamp ?? new Date(mtimeMs).toISOString();
 
       return {
         sessionId: finalSessionId,
         fullPath: filePath,
         fileMtime: mtimeMs,
-        firstPrompt: firstPrompt || 'No prompt',
+        firstPrompt: meta.firstPrompt || 'No prompt',
         summary: '', // Summary requires full file analysis; leave empty for scanned entries
-        messageCount,
+        messageCount: meta.messageCount,
         created,
         modified: new Date(mtimeMs).toISOString(), // Use file mtime as most accurate modified time
-        gitBranch,
+        gitBranch: meta.gitBranch,
         projectPath,
-        isSidechain,
-        ...(customTitle ? { customTitle } : {}),
+        isSidechain: meta.isSidechain,
+        ...(meta.customTitle ? { customTitle: meta.customTitle } : {}),
       };
     } catch (error) {
       const msg = extractErrorMessage(error);
@@ -383,6 +397,8 @@ export class ClaudeSessionReaderService implements OnModuleDestroy {
   /**
    * Populate customTitle for a sessions-index.json entry by scanning its JSONL.
    * Results are cached by sessionId+fileMtime to avoid repeated disk reads.
+   * Stale entries for the same session (older mtimes) are evicted before
+   * each write so the cache cannot grow without bound on repeated writes.
    */
   private async populateCustomTitle(
     entry: ClaudeSessionEntry,
@@ -398,28 +414,23 @@ export class ClaudeSessionReaderService implements OnModuleDestroy {
     try {
       const content = await fs.promises.readFile(filePath, 'utf-8');
       const allLines = content.split(/\r?\n/).filter(l => l.trim());
-      const HEAD = 50;
-      const TAIL = 50;
-      const lines =
-        allLines.length <= HEAD + TAIL
-          ? allLines
-          : [...allLines.slice(0, HEAD), ...allLines.slice(-TAIL)];
+      const { customTitle } = this.parseJsonlMeta(allLines);
 
-      let customTitle = '';
-      for (const line of lines) {
-        try {
-          const data = JSON.parse(line) as { type?: string; customTitle?: string };
-          if (data.type === 'custom-title' && typeof data.customTitle === 'string') {
-            customTitle = data.customTitle;
-          }
-        } catch {
-          // skip unparseable lines
+      const sessionPrefix = `${entry.sessionId}:`;
+      for (const k of this.customTitleCache.keys()) {
+        if (k.startsWith(sessionPrefix) && k !== cacheKey) {
+          this.customTitleCache.delete(k);
         }
       }
-
       this.customTitleCache.set(cacheKey, customTitle);
       return customTitle ? { ...entry, customTitle } : entry;
     } catch {
+      const sessionPrefix = `${entry.sessionId}:`;
+      for (const k of this.customTitleCache.keys()) {
+        if (k.startsWith(sessionPrefix) && k !== cacheKey) {
+          this.customTitleCache.delete(k);
+        }
+      }
       this.customTitleCache.set(cacheKey, '');
       return entry;
     }

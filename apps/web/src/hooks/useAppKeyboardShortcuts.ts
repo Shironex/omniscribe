@@ -1,4 +1,6 @@
 import { useEffect, useRef } from 'react';
+import { toast } from 'sonner';
+import { extractErrorMessage } from '@omniscribe/shared';
 import { PRELAUNCH_SHORTCUT_KEYS } from '@/lib/prelaunch-shortcuts';
 import { useAppUIStore } from '@/stores/useAppUIStore';
 import { continueLastSession } from '@/lib/session';
@@ -93,12 +95,11 @@ export function useAppKeyboardShortcuts({
 
       // Cmd/Ctrl + Shift + R - Resume last session (idle view convenience)
       if (isMod && e.shiftKey && key === 'r') {
+        e.preventDefault();
         const projectPath = activeProjectPathRef.current;
         if (projectPath && !hasActiveSessionsRef.current) {
-          e.preventDefault();
-          continueLastSession(projectPath).catch(() => {
-            // error is surfaced via toast inside IdleLandingView's handler;
-            // swallow here so an unhandled rejection doesn't surface in console
+          continueLastSession(projectPath).catch(err => {
+            toast.error(extractErrorMessage(err, 'Failed to resume last session'));
           });
         }
         return;

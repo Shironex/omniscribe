@@ -248,7 +248,7 @@ function IdleRecentPanel({
         <button
           type="button"
           onClick={onResumeLast}
-          disabled={!sessions.length || isLoading}
+          disabled={!projectPath || !sessions.length || isLoading}
           aria-keyshortcuts={`${IS_MAC ? 'Meta' : 'Control'}+Shift+R`}
           className="flex items-center gap-2 text-2xs uppercase tracking-[0.18em] font-mono text-muted-foreground hover:text-foreground disabled:opacity-40 transition-colors"
         >
