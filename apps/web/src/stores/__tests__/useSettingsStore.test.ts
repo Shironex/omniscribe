@@ -9,15 +9,15 @@ import type {
 
 vi.mock('@/lib/theme', () => ({
   themeOptions: [
-    { value: 'dark', label: 'Dark' },
-    { value: 'light', label: 'Light' },
-    { value: 'dracula', label: 'Dracula' },
+    { value: 'forge', label: 'Forge', isDark: true },
+    { value: 'paper', label: 'Paper', isDark: false },
+    { value: 'dracula', label: 'Dracula', isDark: true },
   ],
 }));
 
 vi.mock('@/lib/theme-persistence', () => ({
   persistTheme: vi.fn(),
-  getPersistedTheme: vi.fn(() => 'dark'),
+  getPersistedTheme: vi.fn(() => 'forge'),
 }));
 
 import {
@@ -41,7 +41,7 @@ import { persistTheme } from '@/lib/theme-persistence';
 const initialState = {
   isOpen: false,
   activeSection: 'appearance' as const,
-  theme: 'dark' as const,
+  theme: 'forge' as const,
   claudeCliStatus: null,
   isClaudeCliLoading: false,
   claudeVersionCheck: null,
@@ -51,6 +51,10 @@ const initialState = {
   githubCliStatus: null,
   isGithubCliLoading: false,
   previewTheme: null,
+  chrome: {
+    showStatusBar: true,
+  },
+  lastSavedAt: null,
 };
 
 describe('useSettingsStore', () => {
@@ -71,7 +75,7 @@ describe('useSettingsStore', () => {
     });
 
     it('has theme from getPersistedTheme', () => {
-      expect(useSettingsStore.getState().theme).toBe('dark');
+      expect(useSettingsStore.getState().theme).toBe('forge');
     });
 
     it('has null claudeCliStatus', () => {
@@ -161,7 +165,7 @@ describe('useSettingsStore', () => {
     it('restores actual theme to DOM when a preview was active', () => {
       useSettingsStore.setState({
         isOpen: true,
-        theme: 'dark' as Theme,
+        theme: 'forge' as Theme,
         previewTheme: 'dracula' as Theme,
       });
       // Simulate that the DOM has the preview theme
@@ -169,23 +173,23 @@ describe('useSettingsStore', () => {
 
       useSettingsStore.getState().closeSettings();
 
-      expect(document.documentElement.classList.contains('dark')).toBe(true);
+      expect(document.documentElement.classList.contains('forge')).toBe(true);
       expect(document.documentElement.classList.contains('dracula')).toBe(false);
     });
 
     it('does not re-apply theme to DOM when no preview was active', () => {
       useSettingsStore.setState({
         isOpen: true,
-        theme: 'dark' as Theme,
+        theme: 'forge' as Theme,
         previewTheme: null,
       });
       // DOM already has the correct theme
-      document.documentElement.classList.add('dark');
+      document.documentElement.classList.add('forge');
 
       useSettingsStore.getState().closeSettings();
 
       // Theme should still be dark, no unnecessary DOM manipulation issues
-      expect(document.documentElement.classList.contains('dark')).toBe(true);
+      expect(document.documentElement.classList.contains('forge')).toBe(true);
     });
   });
 
@@ -230,11 +234,11 @@ describe('useSettingsStore', () => {
     });
 
     it('removes previous theme classes from the DOM', () => {
-      document.documentElement.classList.add('dark');
+      document.documentElement.classList.add('forge');
 
       useSettingsStore.getState().setTheme('dracula');
 
-      expect(document.documentElement.classList.contains('dark')).toBe(false);
+      expect(document.documentElement.classList.contains('forge')).toBe(false);
       expect(document.documentElement.classList.contains('dracula')).toBe(true);
     });
 
@@ -245,7 +249,7 @@ describe('useSettingsStore', () => {
     });
 
     it('clears previewTheme', () => {
-      useSettingsStore.setState({ previewTheme: 'light' as Theme });
+      useSettingsStore.setState({ previewTheme: 'paper' as Theme });
 
       useSettingsStore.getState().setTheme('dracula');
 
@@ -253,12 +257,12 @@ describe('useSettingsStore', () => {
     });
 
     it('persists and applies when switching between themes', () => {
-      useSettingsStore.getState().setTheme('light');
-      expect(document.documentElement.classList.contains('light')).toBe(true);
-      expect(persistTheme).toHaveBeenCalledWith('light');
+      useSettingsStore.getState().setTheme('paper');
+      expect(document.documentElement.classList.contains('paper')).toBe(true);
+      expect(persistTheme).toHaveBeenCalledWith('paper');
 
       useSettingsStore.getState().setTheme('dracula');
-      expect(document.documentElement.classList.contains('light')).toBe(false);
+      expect(document.documentElement.classList.contains('paper')).toBe(false);
       expect(document.documentElement.classList.contains('dracula')).toBe(true);
       expect(persistTheme).toHaveBeenCalledWith('dracula');
     });
@@ -286,21 +290,21 @@ describe('useSettingsStore', () => {
     it('does not change the actual theme', () => {
       useSettingsStore.getState().setPreviewTheme('dracula');
 
-      expect(useSettingsStore.getState().theme).toBe('dark');
+      expect(useSettingsStore.getState().theme).toBe('forge');
     });
 
     it('restores actual theme to DOM when set to null', () => {
-      useSettingsStore.setState({ theme: 'dark' as Theme });
-      document.documentElement.classList.add('dark');
+      useSettingsStore.setState({ theme: 'forge' as Theme });
+      document.documentElement.classList.add('forge');
 
       // Apply preview
       useSettingsStore.getState().setPreviewTheme('dracula');
       expect(document.documentElement.classList.contains('dracula')).toBe(true);
-      expect(document.documentElement.classList.contains('dark')).toBe(false);
+      expect(document.documentElement.classList.contains('forge')).toBe(false);
 
       // Clear preview
       useSettingsStore.getState().setPreviewTheme(null);
-      expect(document.documentElement.classList.contains('dark')).toBe(true);
+      expect(document.documentElement.classList.contains('forge')).toBe(true);
       expect(document.documentElement.classList.contains('dracula')).toBe(false);
     });
 
@@ -314,18 +318,18 @@ describe('useSettingsStore', () => {
 
   describe('applyTheme', () => {
     it('applies the given theme to the DOM', () => {
-      useSettingsStore.getState().applyTheme('light');
+      useSettingsStore.getState().applyTheme('paper');
 
-      expect(document.documentElement.classList.contains('light')).toBe(true);
+      expect(document.documentElement.classList.contains('paper')).toBe(true);
     });
 
     it('removes other theme classes from the DOM', () => {
-      document.documentElement.classList.add('dark');
+      document.documentElement.classList.add('forge');
 
-      useSettingsStore.getState().applyTheme('light');
+      useSettingsStore.getState().applyTheme('paper');
 
-      expect(document.documentElement.classList.contains('dark')).toBe(false);
-      expect(document.documentElement.classList.contains('light')).toBe(true);
+      expect(document.documentElement.classList.contains('forge')).toBe(false);
+      expect(document.documentElement.classList.contains('paper')).toBe(true);
     });
 
     it('does not change store state', () => {
@@ -566,9 +570,9 @@ describe('useSettingsStore', () => {
     });
 
     it('selectPreviewTheme returns previewTheme', () => {
-      useSettingsStore.setState({ previewTheme: 'light' as Theme });
+      useSettingsStore.setState({ previewTheme: 'paper' as Theme });
 
-      expect(selectPreviewTheme(useSettingsStore.getState())).toBe('light');
+      expect(selectPreviewTheme(useSettingsStore.getState())).toBe('paper');
     });
 
     it('selectPreviewTheme returns null when no preview is set', () => {
@@ -577,7 +581,7 @@ describe('useSettingsStore', () => {
 
     it('selectEffectiveTheme returns previewTheme when set', () => {
       useSettingsStore.setState({
-        theme: 'dark' as Theme,
+        theme: 'forge' as Theme,
         previewTheme: 'dracula' as Theme,
       });
 
@@ -586,11 +590,11 @@ describe('useSettingsStore', () => {
 
     it('selectEffectiveTheme returns actual theme when no preview is set', () => {
       useSettingsStore.setState({
-        theme: 'dark' as Theme,
+        theme: 'forge' as Theme,
         previewTheme: null,
       });
 
-      expect(selectEffectiveTheme(useSettingsStore.getState())).toBe('dark');
+      expect(selectEffectiveTheme(useSettingsStore.getState())).toBe('forge');
     });
 
     it('selectClaudeCliStatus returns claudeCliStatus', () => {

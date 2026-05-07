@@ -77,6 +77,12 @@
   /* Running indicator - Orange */
   --running-indicator: oklch(0.75 0.18 60);
   --running-indicator-text: oklch(0.8 0.16 60);
+
+  /* Swatch quartet exposed for the appearance grid */
+  --swatch-1: #1a0e0a;
+  --swatch-2: #241410;
+  --swatch-3: #e88a52;
+  --swatch-4: #d96d6d;
 }
 
 /* Theme-specific overrides */

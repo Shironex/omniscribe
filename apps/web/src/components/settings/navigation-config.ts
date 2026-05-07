@@ -1,8 +1,6 @@
 import type { ComponentType } from 'react';
 import {
-  Palette,
   Server,
-  Info,
   GitBranch,
   GitPullRequest,
   Monitor,
@@ -11,6 +9,7 @@ import {
   Puzzle,
   Bell,
   Sparkles,
+  Palette,
 } from 'lucide-react';
 import type { SettingsSectionId } from '@omniscribe/shared';
 
@@ -27,15 +26,17 @@ export interface NavigationGroup {
 
 /**
  * Core navigation groups for the settings sidebar.
- * Plugin-registered categories are merged dynamically in SettingsNavigation.
+ * Order and labels match the redesign screenshots (Agents / Integrations /
+ * Workflow / Interface). Plugin-registered categories are merged dynamically
+ * in `SettingsNavigation`.
  */
 export const CORE_NAV_GROUPS: NavigationGroup[] = [
   {
     label: 'Integrations',
     items: [
       { id: 'github', label: 'GitHub CLI', icon: GitPullRequest },
-      { id: 'mcp', label: 'MCP Servers', icon: Server },
-      { id: 'ai-capabilities', label: 'AI Capabilities', icon: Sparkles },
+      { id: 'mcp', label: 'MCP servers', icon: Server },
+      { id: 'ai-capabilities', label: 'AI capabilities', icon: Sparkles },
       { id: 'marketplace', label: 'Extensions', icon: Puzzle },
     ],
   },
@@ -43,7 +44,7 @@ export const CORE_NAV_GROUPS: NavigationGroup[] = [
     label: 'Workflow',
     items: [
       { id: 'sessions', label: 'Sessions', icon: Monitor },
-      { id: 'quickActions', label: 'Quick Actions', icon: Zap },
+      { id: 'quickActions', label: 'Quick actions', icon: Zap },
       { id: 'worktrees', label: 'Worktrees', icon: GitBranch },
       { id: 'notifications', label: 'Notifications', icon: Bell },
     ],
@@ -53,7 +54,6 @@ export const CORE_NAV_GROUPS: NavigationGroup[] = [
     items: [
       { id: 'appearance', label: 'Appearance', icon: Palette },
       { id: 'terminal', label: 'Terminal', icon: TerminalSquare },
-      { id: 'general', label: 'About', icon: Info },
     ],
   },
 ];

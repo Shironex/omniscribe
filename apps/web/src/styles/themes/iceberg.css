@@ -1,0 +1,103 @@
+/* Iceberg Theme — Iceberg.nvim-inspired, cool blue × mint teal */
+
+:root.iceberg {
+  /* Backgrounds */
+  --background: oklch(0.18 0.03 250);
+  --background-50: oklch(0.18 0.03 250 / 0.5);
+  --background-80: oklch(0.18 0.03 250 / 0.8);
+
+  /* Text */
+  --foreground: oklch(0.92 0.018 230);
+  --foreground-secondary: oklch(0.7 0.02 230);
+  --foreground-muted: oklch(0.55 0.025 230);
+
+  /* Surfaces */
+  --card: oklch(0.22 0.035 250);
+  --card-foreground: oklch(0.92 0.018 230);
+  --popover: oklch(0.16 0.03 250);
+  --popover-foreground: oklch(0.92 0.018 230);
+
+  /* Brand — cool blue */
+  --primary: oklch(0.7 0.13 240);
+  --primary-foreground: oklch(0.16 0.03 250);
+  --brand-400: oklch(0.74 0.12 240);
+  --brand-500: oklch(0.7 0.13 240);
+  --brand-600: oklch(0.65 0.15 245);
+
+  /* Muted/secondary */
+  --secondary: oklch(0.25 0.035 250);
+  --secondary-foreground: oklch(0.92 0.018 230);
+  --muted: oklch(0.27 0.03 250);
+  --muted-foreground: oklch(0.6 0.025 230);
+  --accent: oklch(0.78 0.1 175);
+  --accent-foreground: oklch(0.16 0.03 250);
+
+  /* Borders */
+  --destructive: oklch(0.6 0.22 25);
+  --border: oklch(0.3 0.03 250);
+  --border-glass: oklch(1 0 0 / 0.08);
+  --input: oklch(0.2 0.03 250);
+  --ring: oklch(0.7 0.13 240);
+
+  /* Charts */
+  --chart-1: oklch(0.7 0.13 240);
+  --chart-2: oklch(0.78 0.1 175);
+  --chart-3: oklch(0.7 0.18 140);
+  --chart-4: oklch(0.65 0.18 30);
+  --chart-5: oklch(0.7 0.18 320);
+
+  /* Sidebar */
+  --sidebar: oklch(0.16 0.03 250 / 0.6);
+  --sidebar-foreground: oklch(0.92 0.018 230);
+  --sidebar-primary: oklch(0.7 0.13 240);
+  --sidebar-primary-foreground: oklch(0.16 0.03 250);
+  --sidebar-accent: oklch(1 0 0 / 0.05);
+  --sidebar-accent-foreground: oklch(0.92 0.018 230);
+  --sidebar-border: oklch(1 0 0 / 0.08);
+  --sidebar-ring: oklch(0.7 0.13 240);
+
+  /* Actions */
+  --action-view: oklch(0.7 0.13 240);
+  --action-view-hover: oklch(0.65 0.15 245);
+  --action-followup: oklch(0.78 0.1 175);
+  --action-followup-hover: oklch(0.72 0.12 175);
+  --action-commit: oklch(0.65 0.18 140);
+  --action-commit-hover: oklch(0.6 0.2 140);
+  --action-verify: oklch(0.65 0.18 140);
+  --action-verify-hover: oklch(0.6 0.2 140);
+
+  --running-indicator: oklch(0.7 0.13 240);
+  --running-indicator-text: oklch(0.74 0.12 240);
+
+  /* Status */
+  --status-success: oklch(0.7 0.18 140);
+  --status-success-bg: oklch(0.7 0.18 140 / 0.2);
+  --status-warning: oklch(0.75 0.15 70);
+  --status-warning-bg: oklch(0.75 0.15 70 / 0.2);
+  --status-error: oklch(0.65 0.22 25);
+  --status-error-bg: oklch(0.65 0.22 25 / 0.2);
+  --status-info: oklch(0.7 0.13 240);
+  --status-info-bg: oklch(0.7 0.13 240 / 0.2);
+  --status-pending: oklch(0.7 0.16 55);
+  --status-pending-bg: oklch(0.7 0.16 55 / 0.2);
+  --status-accent: oklch(0.78 0.1 175);
+  --status-accent-bg: oklch(0.78 0.1 175 / 0.2);
+  --status-backlog: oklch(0.6 0.02 230);
+  --status-in-progress: oklch(0.75 0.15 70);
+  --status-waiting: oklch(0.7 0.18 50);
+
+  /* Swatch quartet exposed for the appearance grid */
+  --swatch-1: #0c1422;
+  --swatch-2: #142036;
+  --swatch-3: #7aa6e8;
+  --swatch-4: #8de0d0;
+}
+
+.iceberg .content-bg {
+  background: linear-gradient(
+    135deg,
+    oklch(0.18 0.03 250),
+    oklch(0.22 0.035 250),
+    oklch(0.18 0.03 250)
+  );
+}

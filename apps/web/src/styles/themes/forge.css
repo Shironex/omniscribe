@@ -1,0 +1,110 @@
+/* Forge Theme — Omniscribe's flagship warm-charcoal × ember orange palette */
+
+:root.forge {
+  /* Backgrounds */
+  --background: oklch(0.12 0.012 50);
+  --background-50: oklch(0.12 0.012 50 / 0.5);
+  --background-80: oklch(0.12 0.012 50 / 0.8);
+
+  /* Text */
+  --foreground: oklch(0.95 0.018 70);
+  --foreground-secondary: oklch(0.7 0.015 60);
+  --foreground-muted: oklch(0.55 0.015 55);
+
+  /* Surfaces */
+  --card: oklch(0.16 0.015 45);
+  --card-foreground: oklch(0.95 0.018 70);
+  --popover: oklch(0.1 0.012 50);
+  --popover-foreground: oklch(0.95 0.018 70);
+
+  /* Brand — ember orange */
+  --primary: oklch(0.74 0.16 55);
+  --primary-foreground: oklch(0.1 0.012 50);
+  --brand-400: oklch(0.78 0.14 55);
+  --brand-500: oklch(0.74 0.16 55);
+  --brand-600: oklch(0.66 0.18 50);
+
+  /* Muted/secondary */
+  --secondary: oklch(0.18 0.012 50);
+  --secondary-foreground: oklch(0.95 0.018 70);
+  --muted: oklch(0.22 0.012 45);
+  --muted-foreground: oklch(0.62 0.018 55);
+  --accent: oklch(0.66 0.13 250);
+  --accent-foreground: oklch(0.97 0.012 50);
+
+  /* Borders */
+  --destructive: oklch(0.6 0.25 25);
+  --border: oklch(0.24 0.012 45);
+  --border-glass: oklch(1 0 0 / 0.08);
+  --input: oklch(0.14 0.012 50);
+  --ring: oklch(0.74 0.16 55);
+
+  /* Charts */
+  --chart-1: oklch(0.74 0.16 55);
+  --chart-2: oklch(0.66 0.13 250);
+  --chart-3: oklch(0.65 0.2 140);
+  --chart-4: oklch(0.7 0.15 30);
+  --chart-5: oklch(0.6 0.18 300);
+
+  /* Sidebar */
+  --sidebar: oklch(0.1 0.012 50 / 0.6);
+  --sidebar-foreground: oklch(0.95 0.018 70);
+  --sidebar-primary: oklch(0.74 0.16 55);
+  --sidebar-primary-foreground: oklch(0.1 0.012 50);
+  --sidebar-accent: oklch(1 0 0 / 0.05);
+  --sidebar-accent-foreground: oklch(0.95 0.018 70);
+  --sidebar-border: oklch(1 0 0 / 0.08);
+  --sidebar-ring: oklch(0.74 0.16 55);
+
+  /* Actions */
+  --action-view: oklch(0.74 0.16 55);
+  --action-view-hover: oklch(0.7 0.18 55);
+  --action-followup: oklch(0.66 0.13 250);
+  --action-followup-hover: oklch(0.62 0.15 250);
+  --action-commit: oklch(0.6 0.18 145);
+  --action-commit-hover: oklch(0.55 0.2 145);
+  --action-verify: oklch(0.6 0.18 145);
+  --action-verify-hover: oklch(0.55 0.2 145);
+
+  --running-indicator: oklch(0.74 0.16 55);
+  --running-indicator-text: oklch(0.78 0.14 55);
+
+  /* Status */
+  --status-success: oklch(0.65 0.2 140);
+  --status-success-bg: oklch(0.65 0.2 140 / 0.2);
+  --status-warning: oklch(0.75 0.15 70);
+  --status-warning-bg: oklch(0.75 0.15 70 / 0.2);
+  --status-error: oklch(0.65 0.22 25);
+  --status-error-bg: oklch(0.65 0.22 25 / 0.2);
+  --status-info: oklch(0.66 0.13 250);
+  --status-info-bg: oklch(0.66 0.13 250 / 0.2);
+  --status-pending: oklch(0.74 0.16 55);
+  --status-pending-bg: oklch(0.74 0.16 55 / 0.2);
+  --status-accent: oklch(0.7 0.15 190);
+  --status-accent-bg: oklch(0.7 0.15 190 / 0.2);
+  --status-backlog: oklch(0.6 0.012 50);
+  --status-in-progress: oklch(0.75 0.15 70);
+  --status-waiting: oklch(0.7 0.18 50);
+
+  /* Shadows */
+  --shadow-xs: 0 1px 2px rgba(20, 14, 8, 0.35);
+  --shadow-sm: 0 1px 3px rgba(20, 14, 8, 0.4), 0 1px 2px rgba(20, 14, 8, 0.3);
+  --shadow-md: 0 4px 6px -1px rgba(20, 14, 8, 0.4), 0 2px 4px -1px rgba(20, 14, 8, 0.3);
+  --shadow-lg: 0 10px 15px -3px rgba(20, 14, 8, 0.45), 0 4px 6px -2px rgba(20, 14, 8, 0.25);
+  --shadow-xl: 0 20px 25px -5px rgba(20, 14, 8, 0.5), 0 10px 10px -5px rgba(20, 14, 8, 0.3);
+
+  /* Swatch quartet exposed for the appearance grid */
+  --swatch-1: #0f0e0d;
+  --swatch-2: #1a1714;
+  --swatch-3: #e89143;
+  --swatch-4: #5b9cf2;
+}
+
+.forge .content-bg {
+  background: linear-gradient(
+    135deg,
+    oklch(0.12 0.012 50),
+    oklch(0.16 0.015 45),
+    oklch(0.12 0.012 50)
+  );
+}

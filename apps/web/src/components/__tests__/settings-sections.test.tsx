@@ -8,10 +8,14 @@ import { render, screen } from '@testing-library/react';
 vi.mock('@/stores/useSettingsStore', () => ({
   useSettingsStore: vi.fn((sel: (s: Record<string, unknown>) => unknown) =>
     sel({
-      theme: 'dark',
+      theme: 'forge',
       previewTheme: null,
       setTheme: vi.fn(),
       setPreviewTheme: vi.fn(),
+      chrome: {
+        showStatusBar: true,
+      },
+      setChromeToggle: vi.fn(),
       githubCliStatus: {
         installed: true,
         version: '2.40.0',
@@ -112,10 +116,14 @@ vi.mock('@/stores/useMcpStore', () => ({
 vi.mock('@/stores', () => ({
   useSettingsStore: vi.fn((sel: (s: Record<string, unknown>) => unknown) =>
     sel({
-      theme: 'dark',
+      theme: 'forge',
       previewTheme: null,
       setTheme: vi.fn(),
       setPreviewTheme: vi.fn(),
+      chrome: {
+        showStatusBar: true,
+      },
+      setChromeToggle: vi.fn(),
       githubCliStatus: {
         installed: true,
         version: '2.40.0',
@@ -294,20 +302,14 @@ describe('AppearanceSection', () => {
     expect(container).toBeTruthy();
   });
 
-  it('displays the Appearance heading', () => {
+  it('displays the Themes card title', () => {
     render(<AppearanceSection />);
-    expect(screen.getByText('Appearance')).toBeTruthy();
+    expect(screen.getByText('Themes')).toBeTruthy();
   });
 
-  it('shows the Dark Themes and Light Themes tab buttons', () => {
+  it('shows the chrome toggles', () => {
     render(<AppearanceSection />);
-    expect(screen.getByText('Dark Themes')).toBeTruthy();
-    expect(screen.getByText('Light Themes')).toBeTruthy();
-  });
-
-  it('shows the Theme sub-heading', () => {
-    render(<AppearanceSection />);
-    expect(screen.getByText('Theme')).toBeTruthy();
+    expect(screen.getByText('Show status bar')).toBeTruthy();
   });
 });
 

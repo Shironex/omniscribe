@@ -66,6 +66,12 @@
   /* Running indicator - Purple */
   --running-indicator: oklch(0.7 0.2 320);
   --running-indicator-text: oklch(0.75 0.18 320);
+
+  /* Swatch quartet exposed for the appearance grid */
+  --swatch-1: #282a36;
+  --swatch-2: #383a4a;
+  --swatch-3: #50fa7b;
+  --swatch-4: #ff79c6;
 }
 
 /* ========================================

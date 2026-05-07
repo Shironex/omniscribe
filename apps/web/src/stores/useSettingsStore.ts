@@ -6,8 +6,9 @@ import type {
   ClaudeCliStatus,
   GhCliStatus,
   ClaudeVersionCheckResult,
+  ChromeSettings,
 } from '@omniscribe/shared';
-import { createLogger } from '@omniscribe/shared';
+import { createLogger, DEFAULT_BUILT_IN_THEME, DEFAULT_CHROME_SETTINGS } from '@omniscribe/shared';
 import { themeOptions } from '@/lib/theme';
 import { persistTheme, getPersistedTheme } from '@/lib/theme-persistence';
 import { usePluginStore, getPluginTheme } from '@/stores/usePluginStore';
@@ -48,6 +49,10 @@ interface SettingsState extends SettingsModalState {
   isGithubCliLoading: boolean;
   /** Preview theme (for hover preview) */
   previewTheme: Theme | null;
+  /** Chrome (window decoration & layout) toggles. */
+  chrome: ChromeSettings;
+  /** Timestamp (ms) of last persisted setting mutation, for the status bar. */
+  lastSavedAt: number | null;
 }
 
 /**
@@ -60,12 +65,12 @@ interface SettingsActions {
   closeSettings: () => void;
   /** Navigate to a section */
   navigateToSection: (section: SettingsSectionId) => void;
-  /** Set theme */
-  setTheme: (theme: Theme) => void;
+  /** Set theme. Accepts curated `Theme` or arbitrary plugin/legacy id string. */
+  setTheme: (theme: Theme | string) => void;
   /** Set preview theme (for hover) */
   setPreviewTheme: (theme: Theme | null) => void;
   /** Apply theme to DOM */
-  applyTheme: (theme: Theme) => void;
+  applyTheme: (theme: Theme | string) => void;
   /** Set Claude CLI status */
   setClaudeCliStatus: (status: ClaudeCliStatus | null) => void;
   /** Set Claude CLI loading state */
@@ -82,6 +87,8 @@ interface SettingsActions {
   setGithubCliStatus: (status: GhCliStatus | null) => void;
   /** Set GitHub CLI loading state */
   setGithubCliLoading: (loading: boolean) => void;
+  /** Set a single chrome toggle */
+  setChromeToggle: <K extends keyof ChromeSettings>(key: K, value: ChromeSettings[K]) => void;
 }
 
 /**
@@ -134,8 +141,21 @@ function applyThemeToDOM(theme: Theme) {
   currentThemeClass = theme;
 }
 
-// Default theme
-const DEFAULT_THEME: Theme = 'dark';
+// Default theme — Omniscribe's flagship Forge palette
+const DEFAULT_THEME: Theme = DEFAULT_BUILT_IN_THEME;
+
+const CHROME_STORAGE_KEY = 'omniscribe-chrome';
+
+function readChrome(): ChromeSettings {
+  try {
+    const raw = localStorage.getItem(CHROME_STORAGE_KEY);
+    if (!raw) return DEFAULT_CHROME_SETTINGS;
+    const parsed = JSON.parse(raw) as Partial<ChromeSettings>;
+    return { ...DEFAULT_CHROME_SETTINGS, ...parsed };
+  } catch {
+    return DEFAULT_CHROME_SETTINGS;
+  }
+}
 
 /**
  * Settings store using Zustand
@@ -147,6 +167,9 @@ export const useSettingsStore = create<SettingsStore>()(
       const initialTheme = (
         typeof document !== 'undefined' ? getPersistedTheme() : DEFAULT_THEME
       ) as Theme;
+
+      // Resolve initial chrome from localStorage
+      const initialChrome = readChrome();
 
       // Apply initial theme on store initialization
       if (typeof document !== 'undefined') {
@@ -167,6 +190,8 @@ export const useSettingsStore = create<SettingsStore>()(
         githubCliStatus: null,
         isGithubCliLoading: false,
         previewTheme: null,
+        chrome: initialChrome,
+        lastSavedAt: null,
 
         // Actions
         openSettings: (section?: SettingsSectionId) => {
@@ -203,11 +228,15 @@ export const useSettingsStore = create<SettingsStore>()(
           set({ activeSection: section }, undefined, 'settings/navigateToSection');
         },
 
-        setTheme: (theme: Theme) => {
+        setTheme: (theme: Theme | string) => {
           logger.debug('setTheme', theme);
-          set({ theme, previewTheme: null }, undefined, 'settings/setTheme');
-          applyThemeToDOM(theme);
-          persistTheme(theme);
+          set(
+            { theme: theme as Theme, previewTheme: null, lastSavedAt: Date.now() },
+            undefined,
+            'settings/setTheme'
+          );
+          applyThemeToDOM(theme as Theme);
+          persistTheme(theme as Theme);
         },
 
         setPreviewTheme: (theme: Theme | null) => {
@@ -222,8 +251,8 @@ export const useSettingsStore = create<SettingsStore>()(
           }
         },
 
-        applyTheme: (theme: Theme) => {
-          applyThemeToDOM(theme);
+        applyTheme: (theme: Theme | string) => {
+          applyThemeToDOM(theme as Theme);
         },
 
         setClaudeCliStatus: (status: ClaudeCliStatus | null) => {
@@ -276,6 +305,27 @@ export const useSettingsStore = create<SettingsStore>()(
 
         setGithubCliLoading: (loading: boolean) => {
           set({ isGithubCliLoading: loading }, undefined, 'settings/setGithubCliLoading');
+        },
+
+        setChromeToggle: (key, value) => {
+          logger.debug('setChromeToggle', key, value);
+          const current = get().chrome;
+          const next = { ...current, [key]: value };
+          let persisted = false;
+          try {
+            localStorage.setItem(CHROME_STORAGE_KEY, JSON.stringify(next));
+            persisted = true;
+          } catch {
+            logger.warn('setChromeToggle: failed to persist chrome settings');
+          }
+          // Only stamp lastSavedAt when persistence actually succeeded — otherwise
+          // the status bar would falsely report "Saved Ns ago" for state that
+          // won't survive a reload.
+          set(
+            { chrome: next, ...(persisted ? { lastSavedAt: Date.now() } : {}) },
+            undefined,
+            'settings/setChromeToggle'
+          );
         },
       };
     },

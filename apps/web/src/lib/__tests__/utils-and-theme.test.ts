@@ -82,8 +82,8 @@ describe('theme options', () => {
     expect(themeOptions.length).toBeGreaterThan(0);
   });
 
-  it('contains exactly 41 themes (21 dark + 20 light)', () => {
-    expect(themeOptions.length).toBe(41);
+  it('contains exactly 8 curated themes (7 dark + 1 light)', () => {
+    expect(themeOptions.length).toBe(8);
   });
 
   it('every theme option has required properties', () => {
@@ -109,10 +109,10 @@ describe('theme options', () => {
     expect(new Set(testIds).size).toBe(testIds.length);
   });
 
-  it('includes the default "dark" and "light" themes', () => {
+  it('includes the curated "forge" and "paper" themes', () => {
     const values = themeOptions.map(t => t.value);
-    expect(values).toContain('dark');
-    expect(values).toContain('light');
+    expect(values).toContain('forge');
+    expect(values).toContain('paper');
   });
 });
 
@@ -124,12 +124,12 @@ describe('darkThemes', () => {
     }
   });
 
-  it('has exactly 21 dark themes', () => {
-    expect(darkThemes.length).toBe(21);
+  it('has exactly 7 dark themes', () => {
+    expect(darkThemes.length).toBe(7);
   });
 
-  it('starts with the default "dark" theme', () => {
-    expect(darkThemes[0].value).toBe('dark');
+  it('starts with the default Forge theme', () => {
+    expect(darkThemes[0].value).toBe('forge');
   });
 });
 
@@ -141,12 +141,12 @@ describe('lightThemes', () => {
     }
   });
 
-  it('has exactly 20 light themes', () => {
-    expect(lightThemes.length).toBe(20);
+  it('has exactly 1 light theme (Paper)', () => {
+    expect(lightThemes.length).toBe(1);
   });
 
-  it('starts with the default "light" theme', () => {
-    expect(lightThemes[0].value).toBe('light');
+  it('starts with the curated "paper" theme', () => {
+    expect(lightThemes[0].value).toBe('paper');
   });
 });
 
@@ -165,9 +165,9 @@ describe('getThemeOption', () => {
   });
 
   it('returns the correct option for a known light theme', () => {
-    const opt = getThemeOption('github');
+    const opt = getThemeOption('paper');
     expect(opt).toBeDefined();
-    expect(opt!.label).toBe('GitHub');
+    expect(opt!.label).toBe('Paper');
     expect(opt!.isDark).toBe(false);
   });
 
@@ -177,17 +177,17 @@ describe('getThemeOption', () => {
     expect(opt).toBeUndefined();
   });
 
-  it('returns the default dark theme', () => {
-    const opt = getThemeOption('dark');
+  it('returns the default dark theme (Forge)', () => {
+    const opt = getThemeOption('forge');
     expect(opt).toBeDefined();
-    expect(opt!.value).toBe('dark');
+    expect(opt!.value).toBe('forge');
     expect(opt!.isDark).toBe(true);
   });
 
-  it('returns the default light theme', () => {
-    const opt = getThemeOption('light');
+  it('returns the curated light theme (Paper)', () => {
+    const opt = getThemeOption('paper');
     expect(opt).toBeDefined();
-    expect(opt!.value).toBe('light');
+    expect(opt!.value).toBe('paper');
     expect(opt!.isDark).toBe(false);
   });
 });
@@ -229,11 +229,11 @@ describe('theme-persistence', () => {
   });
 
   describe('getPersistedTheme', () => {
-    it('returns "dark" when nothing is stored', () => {
-      expect(getPersistedTheme()).toBe('dark');
+    it('returns the default ("forge") when nothing is stored', () => {
+      expect(getPersistedTheme()).toBe('forge');
     });
 
-    it('returns the stored theme when it is a valid value', () => {
+    it('returns the stored theme when it is a valid built-in', () => {
       localStorage.setItem(THEME_STORAGE_KEY, 'nord');
       expect(getPersistedTheme()).toBe('nord');
     });
@@ -243,35 +243,50 @@ describe('theme-persistence', () => {
       expect(getPersistedTheme()).toBe('my-plugin-theme');
     });
 
-    it('returns "dark" when stored value is not a valid CSS class name', () => {
+    it('returns the default when stored value is not a valid CSS class name', () => {
       localStorage.setItem(THEME_STORAGE_KEY, 'has spaces');
-      expect(getPersistedTheme()).toBe('dark');
+      expect(getPersistedTheme()).toBe('forge');
     });
 
-    it('returns "dark" when localStorage throws', () => {
+    it('returns the default when localStorage throws', () => {
       const original = Storage.prototype.getItem;
       Storage.prototype.getItem = () => {
         throw new Error('SecurityError');
       };
-      expect(getPersistedTheme()).toBe('dark');
+      expect(getPersistedTheme()).toBe('forge');
       Storage.prototype.getItem = original;
+    });
+
+    it('migrates retired theme IDs to their nearest curated match', () => {
+      // monokai is retired → maps to dracula
+      localStorage.setItem(THEME_STORAGE_KEY, 'monokai');
+      expect(getPersistedTheme()).toBe('dracula');
+      // and the migration is persisted so subsequent reads are stable
+      expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe('dracula');
+    });
+
+    it('migrates retired light theme IDs to Paper', () => {
+      localStorage.setItem(THEME_STORAGE_KEY, 'gruvboxlight');
+      expect(getPersistedTheme()).toBe('paper');
+    });
+
+    it('migrates the legacy default "dark" to "forge"', () => {
+      localStorage.setItem(THEME_STORAGE_KEY, 'dark');
+      expect(getPersistedTheme()).toBe('forge');
     });
   });
 
   describe('isPersistedThemeDark', () => {
     it('returns true for known dark themes', () => {
-      expect(isPersistedThemeDark('dark')).toBe(true);
+      expect(isPersistedThemeDark('forge')).toBe(true);
       expect(isPersistedThemeDark('dracula')).toBe(true);
       expect(isPersistedThemeDark('nord')).toBe(true);
-      expect(isPersistedThemeDark('tokyonight')).toBe(true);
-      expect(isPersistedThemeDark('catppuccin')).toBe(true);
+      expect(isPersistedThemeDark('iceberg')).toBe(true);
+      expect(isPersistedThemeDark('carbon')).toBe(true);
     });
 
-    it('returns false for known light themes', () => {
-      expect(isPersistedThemeDark('light')).toBe(false);
-      expect(isPersistedThemeDark('github')).toBe(false);
-      expect(isPersistedThemeDark('snow')).toBe(false);
-      expect(isPersistedThemeDark('solarizedlight')).toBe(false);
+    it('returns false for the curated light theme', () => {
+      expect(isPersistedThemeDark('paper')).toBe(false);
     });
 
     it('returns false for unknown theme names', () => {
