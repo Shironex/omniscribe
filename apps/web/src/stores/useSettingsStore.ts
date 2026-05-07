@@ -8,7 +8,12 @@ import type {
   ClaudeVersionCheckResult,
   ChromeSettings,
 } from '@omniscribe/shared';
-import { createLogger, DEFAULT_BUILT_IN_THEME, DEFAULT_CHROME_SETTINGS } from '@omniscribe/shared';
+import {
+  createLogger,
+  DEFAULT_BUILT_IN_THEME,
+  DEFAULT_CHROME_SETTINGS,
+  migrateSettingsSectionId,
+} from '@omniscribe/shared';
 import { themeOptions } from '@/lib/theme';
 import { persistTheme, getPersistedTheme } from '@/lib/theme-persistence';
 import { usePluginStore, getPluginTheme } from '@/stores/usePluginStore';
@@ -196,10 +201,14 @@ export const useSettingsStore = create<SettingsStore>()(
         // Actions
         openSettings: (section?: SettingsSectionId) => {
           logger.debug('openSettings', section ?? '(default)');
+          // Migrate retired section IDs (e.g. 'claude-changelog' →
+          // 'changelog:claude') so external `openSettings()` callers and
+          // any persisted activeSection still resolve.
+          const resolved = section ? migrateSettingsSectionId(section) : get().activeSection;
           set(
             {
               isOpen: true,
-              activeSection: section ?? get().activeSection,
+              activeSection: resolved,
             },
             undefined,
             'settings/openSettings'
@@ -224,8 +233,9 @@ export const useSettingsStore = create<SettingsStore>()(
         },
 
         navigateToSection: (section: SettingsSectionId) => {
-          logger.debug('navigateToSection', section);
-          set({ activeSection: section }, undefined, 'settings/navigateToSection');
+          const resolved = migrateSettingsSectionId(section);
+          logger.debug('navigateToSection', resolved);
+          set({ activeSection: resolved }, undefined, 'settings/navigateToSection');
         },
 
         setTheme: (theme: Theme | string) => {

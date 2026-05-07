@@ -220,6 +220,11 @@ export interface ClaudeInstallCommand {
  * and legacy IDs retained for backwards compatibility with persisted
  * `activeSection` values, plugin SDKs, and external `openSettings()`
  * call sites that pin to the old names.
+ *
+ * Plugin-contributed section IDs follow `<plugin-shorthand>:<short-name>`
+ * (e.g. `'changelog:claude'`, `'changelog:codex'`) — those typecheck via
+ * the `(string & {})` fallback below. Retired section IDs (e.g. the old
+ * `'claude-changelog'`) live in {@link LEGACY_SETTINGS_SECTION_MIGRATION}.
  */
 export type SettingsSectionId =
   // ── Integrations ──────────────────────────────────────────────────
@@ -227,7 +232,6 @@ export type SettingsSectionId =
   | 'github'
   | 'mcp'
   | 'ai-capabilities'
-  | 'claude-changelog'
   | 'marketplace'
   // ── Workflow ──────────────────────────────────────────────────────
   | 'sessions'
@@ -239,6 +243,27 @@ export type SettingsSectionId =
   | 'terminal'
   | 'general'
   | (string & {});
+
+/**
+ * Retired settings section IDs (mapped to their replacement IDs). Used
+ * by the renderer's persistence shim to silently migrate users whose
+ * persisted `activeSection` (or any external `openSettings(legacy)` call
+ * site) still references an old name.
+ *
+ * Pattern matches {@link LEGACY_THEME_MIGRATION}.
+ */
+export const LEGACY_SETTINGS_SECTION_MIGRATION: Record<string, string> = {
+  // 2026-05 — claude-changelog moved under the generic registerChangelogSource
+  'claude-changelog': 'changelog:claude',
+};
+
+/**
+ * Resolve a settings section ID through {@link LEGACY_SETTINGS_SECTION_MIGRATION}.
+ * Returns the input verbatim when no migration applies.
+ */
+export function migrateSettingsSectionId(id: SettingsSectionId): SettingsSectionId {
+  return (LEGACY_SETTINGS_SECTION_MIGRATION[id as string] ?? id) as SettingsSectionId;
+}
 
 /**
  * Worktree creation mode

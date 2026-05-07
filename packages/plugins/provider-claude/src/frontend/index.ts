@@ -2,8 +2,9 @@
  * Claude Provider Plugin - Frontend Barrel
  *
  * Exports the frontendActivate function that registers all Claude UI
- * contributions (settings category, usage panel, status renderer) with
- * the Omniscribe plugin system via FrontendPluginContext.
+ * contributions (settings category, changelog source, usage panel,
+ * status renderer) with the Omniscribe plugin system via
+ * FrontendPluginContext.
  *
  * This barrel is imported by the web app's plugin initialization code,
  * NOT by the plugin's backend index.ts.
@@ -13,7 +14,6 @@ import type { FrontendPluginContext } from '@omniscribe/plugin-api';
 import { Newspaper } from 'lucide-react';
 import { ClaudeIcon } from './ClaudeIcon';
 import { ClaudeSettingsSection } from './ClaudeSettingsSection';
-import { ClaudeChangelogSection } from './ClaudeChangelogSection';
 import { ClaudeUsagePanel } from './ClaudeUsagePanel';
 import { ClaudeStatusRenderer } from './ClaudeStatusRenderer';
 
@@ -42,16 +42,26 @@ export function frontendActivate(context: FrontendPluginContext): void {
           component: ClaudeSettingsSection,
           order: 10,
         },
-        {
-          categoryId: 'claude',
-          sectionId: 'claude-changelog',
-          label: 'Changelog',
-          icon: Newspaper,
-          component: ClaudeChangelogSection,
-          order: 20,
-        },
       ],
       order: 5, // Before core groups
+    })
+  );
+
+  // Register the upstream Claude Code CHANGELOG.md as a changelog source.
+  // The host auto-registers a "Changelog" settings section under the
+  // "Claude Code" category — no separate registerSettingsSection call.
+  context.subscriptions.push(
+    context.registerChangelogSource({
+      id: 'claude',
+      label: 'Claude Code',
+      categoryId: 'claude',
+      icon: Newspaper,
+      order: 20,
+      source: {
+        kind: 'github-markdown',
+        url: 'https://raw.githubusercontent.com/anthropics/claude-code/main/CHANGELOG.md',
+        viewUrl: 'https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md',
+      },
     })
   );
 
@@ -79,6 +89,5 @@ export function frontendActivate(context: FrontendPluginContext): void {
 // Re-export components for direct use if needed
 export { ClaudeIcon } from './ClaudeIcon';
 export { ClaudeSettingsSection } from './ClaudeSettingsSection';
-export { ClaudeChangelogSection } from './ClaudeChangelogSection';
 export { ClaudeUsagePanel } from './ClaudeUsagePanel';
 export { ClaudeStatusRenderer } from './ClaudeStatusRenderer';
