@@ -1,7 +1,6 @@
 import { Injectable, OnModuleDestroy } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
-import * as readline from 'readline';
 import {
   ClaudeSessionEntry,
   ClaudeSessionsIndex,
@@ -20,6 +19,7 @@ interface JsonlLineData {
   type?: string;
   isSidechain?: boolean;
   cwd?: string;
+  customTitle?: string;
   message?: { role?: string; content?: string | Array<{ type: string; text?: string }> };
 }
 
@@ -40,6 +40,9 @@ export class ClaudeSessionReaderService implements OnModuleDestroy {
   /** Active file watchers keyed by project path, for cleanup on destroy */
   private watchers = new Map<string, fs.FSWatcher>();
 
+  /** Cache of customTitle keyed by "<sessionId>:<fileMtime>" to avoid re-reads */
+  private customTitleCache = new Map<string, string>();
+
   onModuleDestroy(): void {
     // Close all active file watchers
     for (const [projectPath, watcher] of this.watchers.entries()) {
@@ -47,6 +50,7 @@ export class ClaudeSessionReaderService implements OnModuleDestroy {
       watcher.close();
     }
     this.watchers.clear();
+    this.customTitleCache.clear();
   }
 
   /**
@@ -86,8 +90,14 @@ export class ClaudeSessionReaderService implements OnModuleDestroy {
       this.logger.warn(`Failed to scan .jsonl files: ${errorMessage}`);
     }
 
-    // Step 3: Merge and return
-    const allEntries = [...indexEntries, ...scannedEntries];
+    // Step 3: Merge — scanned entries already have customTitle from JSONL scan.
+    // For index entries (which come from sessions-index.json and never carry customTitle),
+    // do a lazy single-pass JSONL read to populate the field.
+    const populatedIndexEntries = await Promise.all(
+      indexEntries.map(entry => this.populateCustomTitle(entry, sessionsDir))
+    );
+
+    const allEntries = [...populatedIndexEntries, ...scannedEntries];
     return this.filterAndSort(allEntries);
   }
 
@@ -259,7 +269,90 @@ export class ClaudeSessionReaderService implements OnModuleDestroy {
   }
 
   /**
-   * Extract a ClaudeSessionEntry from a .jsonl file by reading the first few lines.
+   * Single-pass parse of all JSONL lines, returning every metadata field
+   * the reader cares about. Used by both `extractEntryFromJsonl` (for files
+   * not in the index) and `populateCustomTitle` (for index entries that
+   * need a customTitle/messageCount lookup).
+   *
+   * One pass over `allLines` — no head/tail window, so `/rename` events
+   * landing mid-session are never missed.
+   */
+  private parseJsonlMeta(allLines: string[]): {
+    sessionId?: string;
+    gitBranch: string;
+    firstTimestamp?: string;
+    firstPrompt: string;
+    isSidechain: boolean;
+    customTitle: string;
+    messageCount: number;
+  } {
+    let sessionId: string | undefined;
+    let gitBranch = '';
+    let firstTimestamp: string | undefined;
+    let firstPrompt = '';
+    let isSidechain = false;
+    let customTitle = '';
+    let messageCount = 0;
+
+    for (const line of allLines) {
+      let data: JsonlLineData;
+      try {
+        data = JSON.parse(line);
+      } catch {
+        this.logger.debug(`Skipping unparseable JSONL line: ${line.slice(0, 100)}`);
+        continue;
+      }
+
+      if (data.sessionId && !sessionId) {
+        sessionId = data.sessionId;
+      }
+      if (data.gitBranch && !gitBranch) {
+        gitBranch = data.gitBranch;
+      }
+      if (data.isSidechain) {
+        isSidechain = true;
+      }
+      if (data.timestamp && !firstTimestamp) {
+        firstTimestamp = data.timestamp;
+      }
+
+      // Track last custom-title entry — /rename can fire multiple times
+      if (data.type === 'custom-title' && typeof data.customTitle === 'string') {
+        customTitle = data.customTitle;
+      }
+
+      // Extract first user prompt
+      if (data.type === 'user' && data.message?.role === 'user' && !firstPrompt) {
+        const content = data.message.content;
+        if (typeof content === 'string') {
+          firstPrompt = content.slice(0, 200);
+        } else if (Array.isArray(content)) {
+          const textPart = content.find(p => p.type === 'text' && p.text);
+          if (textPart?.text) {
+            firstPrompt = textPart.text.slice(0, 200);
+          }
+        }
+      }
+
+      // Count user/assistant messages
+      if ((data.type === 'user' && data.message?.role === 'user') || data.type === 'assistant') {
+        messageCount++;
+      }
+    }
+
+    return {
+      sessionId,
+      gitBranch,
+      firstTimestamp,
+      firstPrompt,
+      isSidechain,
+      customTitle,
+      messageCount,
+    };
+  }
+
+  /**
+   * Extract a ClaudeSessionEntry from a .jsonl file via a single full-pass scan.
    * Returns null if the file can't be parsed.
    */
   private async extractEntryFromJsonl(
@@ -272,80 +365,74 @@ export class ClaudeSessionReaderService implements OnModuleDestroy {
     const sessionId = filename.replace('.jsonl', '');
 
     try {
-      const fileStream = fs.createReadStream(filePath, { encoding: 'utf-8' });
-      const rl = readline.createInterface({ input: fileStream, crlfDelay: Infinity });
-
-      let lineCount = 0;
-      let extractedSessionId: string | undefined;
-      let gitBranch = '';
-      let firstTimestamp: string | undefined;
-      let firstPrompt = '';
-      let isSidechain = false;
-
-      for await (const line of rl) {
-        if (lineCount >= 20) break; // Only read first 20 lines
-        lineCount++;
-
-        if (!line.trim()) continue;
-
-        try {
-          const data: JsonlLineData = JSON.parse(line);
-
-          // Extract session metadata from any line that has it
-          if (data.sessionId && !extractedSessionId) {
-            extractedSessionId = data.sessionId;
-          }
-          if (data.gitBranch && !gitBranch) {
-            gitBranch = data.gitBranch;
-          }
-          if (data.isSidechain) {
-            isSidechain = true;
-          }
-          if (data.timestamp && !firstTimestamp) {
-            firstTimestamp = data.timestamp;
-          }
-
-          // Extract first user prompt
-          if (data.type === 'user' && data.message?.role === 'user' && !firstPrompt) {
-            const content = data.message.content;
-            if (typeof content === 'string') {
-              firstPrompt = content.slice(0, 200);
-            } else if (Array.isArray(content)) {
-              const textPart = content.find(p => p.type === 'text' && p.text);
-              if (textPart?.text) {
-                firstPrompt = textPart.text.slice(0, 200);
-              }
-            }
-          }
-        } catch {
-          this.logger.debug(`Skipping unparseable JSONL line: ${line.slice(0, 100)}`);
-        }
-      }
-
-      rl.close();
+      const content = await fs.promises.readFile(filePath, 'utf-8');
+      const allLines = content.split(/\r?\n/).filter(l => l.trim());
+      const meta = this.parseJsonlMeta(allLines);
 
       // Must have at least a session ID (from filename or content)
-      const finalSessionId = extractedSessionId ?? sessionId;
-
-      const created = firstTimestamp ?? new Date(mtimeMs).toISOString();
+      const finalSessionId = meta.sessionId ?? sessionId;
+      const created = meta.firstTimestamp ?? new Date(mtimeMs).toISOString();
 
       return {
         sessionId: finalSessionId,
         fullPath: filePath,
         fileMtime: mtimeMs,
-        firstPrompt: firstPrompt || 'No prompt',
+        firstPrompt: meta.firstPrompt || 'No prompt',
         summary: '', // Summary requires full file analysis; leave empty for scanned entries
-        messageCount: 0, // Unknown without full scan
+        messageCount: meta.messageCount,
         created,
         modified: new Date(mtimeMs).toISOString(), // Use file mtime as most accurate modified time
-        gitBranch,
+        gitBranch: meta.gitBranch,
         projectPath,
-        isSidechain,
+        isSidechain: meta.isSidechain,
+        ...(meta.customTitle ? { customTitle: meta.customTitle } : {}),
       };
     } catch (error) {
       const msg = extractErrorMessage(error);
       this.logger.debug(`Failed to extract entry from ${filename}: ${msg}`);
       return null;
+    }
+  }
+
+  /**
+   * Populate customTitle for a sessions-index.json entry by scanning its JSONL.
+   * Results are cached by sessionId+fileMtime to avoid repeated disk reads.
+   * Stale entries for the same session (older mtimes) are evicted before
+   * each write so the cache cannot grow without bound on repeated writes.
+   */
+  private async populateCustomTitle(
+    entry: ClaudeSessionEntry,
+    sessionsDir: string
+  ): Promise<ClaudeSessionEntry> {
+    const cacheKey = `${entry.sessionId}:${entry.fileMtime}`;
+    if (this.customTitleCache.has(cacheKey)) {
+      const cached = this.customTitleCache.get(cacheKey)!;
+      return cached ? { ...entry, customTitle: cached } : entry;
+    }
+
+    const filePath = path.join(sessionsDir, `${entry.sessionId}.jsonl`);
+    try {
+      const content = await fs.promises.readFile(filePath, 'utf-8');
+      const allLines = content.split(/\r?\n/).filter(l => l.trim());
+      const { customTitle } = this.parseJsonlMeta(allLines);
+
+      const sessionPrefix = `${entry.sessionId}:`;
+      for (const k of this.customTitleCache.keys()) {
+        if (k.startsWith(sessionPrefix) && k !== cacheKey) {
+          this.customTitleCache.delete(k);
+        }
+      }
+      this.customTitleCache.set(cacheKey, customTitle);
+      return customTitle ? { ...entry, customTitle } : entry;
+    } catch {
+      const sessionPrefix = `${entry.sessionId}:`;
+      for (const k of this.customTitleCache.keys()) {
+        if (k.startsWith(sessionPrefix) && k !== cacheKey) {
+          this.customTitleCache.delete(k);
+        }
+      }
+      this.customTitleCache.set(cacheKey, '');
+      return entry;
     }
   }
 

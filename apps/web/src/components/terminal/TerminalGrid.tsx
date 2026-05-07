@@ -24,6 +24,8 @@ interface TerminalGridProps {
   preLaunchSlots: PreLaunchSlot[];
   launchingSlotIds?: Set<string>;
   branches: Branch[];
+  /** Project path — forwarded to IdleLandingView for the Recent panel */
+  projectPath?: string | null;
   /** Whether Claude CLI is available (controls Claude mode option) */
   claudeAvailable?: boolean;
   /** Worktree mode — hides branch selector when 'never' */
@@ -49,6 +51,7 @@ export function TerminalGrid({
   preLaunchSlots,
   launchingSlotIds,
   branches,
+  projectPath,
   claudeAvailable,
   worktreeMode,
   isActive = true,
@@ -113,6 +116,7 @@ export function TerminalGrid({
   if (sessionCount === 0 && preLaunchSlots.length === 0) {
     return (
       <IdleLandingView
+        projectPath={projectPath ?? null}
         onAddSession={onAddSlot}
         onOpenLaunchModal={onOpenLaunchModal}
         className={className}

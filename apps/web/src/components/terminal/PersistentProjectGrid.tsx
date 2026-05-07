@@ -2,6 +2,7 @@ import { useMemo, useState, useCallback } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { cn } from '@/lib/utils';
 import { useSessionStore } from '@/stores/useSessionStore';
+import { useSessionHistoryStore } from '@/stores/useSessionHistoryStore';
 import { useTerminalStore } from '@/stores/useTerminalStore';
 import { useAppUIStore } from '@/stores/useAppUIStore';
 import { mapToTerminalSessions } from '@/lib/session-mappers';
@@ -73,7 +74,7 @@ export function PersistentProjectGrid({
   const projectSessions = useSessionStore(
     useShallow(state => state.sessions.filter(s => s.projectPath === projectPath))
   );
-  const customTitles = useSessionStore(
+  const localCustomTitles = useSessionStore(
     useShallow(state => {
       const titles: Record<string, string> = {};
       for (const s of state.sessions) {
@@ -84,6 +85,32 @@ export function PersistentProjectGrid({
       return titles;
     })
   );
+
+  // Build a map from claudeSessionId -> customTitle for history entries
+  const claudeCustomTitlesByClaudeId = useSessionHistoryStore(
+    useShallow(state => {
+      const map: Record<string, string> = {};
+      for (const entry of state.sessions) {
+        if (entry.customTitle) {
+          map[entry.sessionId] = entry.customTitle;
+        }
+      }
+      return map;
+    })
+  );
+
+  // Merge: Omniscribe-local > Claude customTitle > nothing (downstream fallback handles rest)
+  const customTitles = useMemo(() => {
+    const titles: Record<string, string> = {};
+    for (const s of projectSessions) {
+      if (localCustomTitles[s.id]) {
+        titles[s.id] = localCustomTitles[s.id];
+      } else if (s.claudeSessionId && claudeCustomTitlesByClaudeId[s.claudeSessionId]) {
+        titles[s.id] = claudeCustomTitlesByClaudeId[s.claudeSessionId];
+      }
+    }
+    return titles;
+  }, [projectSessions, localCustomTitles, claudeCustomTitlesByClaudeId]);
   const sessionOrder = useTerminalStore(state => state.sessionOrder);
   const setSessionOrder = useTerminalStore(state => state.setSessionOrder);
 
@@ -172,6 +199,7 @@ export function PersistentProjectGrid({
           preLaunchSlots={effectivePreLaunchSlots}
           launchingSlotIds={isActive ? launchingSlotIds : undefined}
           branches={effectiveBranches}
+          projectPath={projectPath}
           worktreeMode={isActive ? worktreeMode : undefined}
           focusedSessionId={focusedSessionId}
           onFocusSession={handleFocusSession}

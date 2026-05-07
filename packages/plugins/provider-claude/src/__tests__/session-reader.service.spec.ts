@@ -192,6 +192,7 @@ describe('ClaudeSessionReaderService', () => {
         sessionId: 'indexed-session',
         modified: '2025-01-01T00:00:00Z',
       });
+      // Call 1: sessions-index.json
       mockFsPromises.readFile.mockResolvedValueOnce(
         JSON.stringify({ version: 1, entries: [indexedEntry] })
       );
@@ -203,13 +204,16 @@ describe('ClaudeSessionReaderService', () => {
 
       mockFsPromises.stat.mockResolvedValueOnce({ mtimeMs: 3000 });
 
-      mockLines.push(
+      // Call 2: extractEntryFromJsonl for new-session.jsonl
+      mockFsPromises.readFile.mockResolvedValueOnce(
         JSON.stringify({
           sessionId: 'new-session',
           timestamp: '2025-01-10T00:00:00Z',
           gitBranch: 'feature/test',
         })
       );
+      // Call 3: populateCustomTitle for indexed-session (no customTitle found)
+      mockFsPromises.readFile.mockResolvedValueOnce('');
 
       const entries = await service.readSessionsIndex('/project');
 
@@ -366,23 +370,30 @@ describe('ClaudeSessionReaderService', () => {
   // extractEntryFromJsonl (tested indirectly)
   // ==================================================================
   describe('extractEntryFromJsonl (via readSessionsIndex)', () => {
-    function setupSingleJsonlScan() {
+    /**
+     * Sets up a scan of a single JSONL file with the given lines as content.
+     * Call this AFTER setting up the JSONL lines so the readFile mock order is correct:
+     *   1. sessions-index.json → EMPTY_INDEX
+     *   2. test-session.jsonl  → provided lines joined by newline
+     */
+    function setupSingleJsonlScan(jsonlLines: string[] = []) {
       mockFsPromises.readFile.mockResolvedValueOnce(EMPTY_INDEX);
       mockFsPromises.readdir.mockResolvedValueOnce([
         { name: 'test-session.jsonl', isFile: () => true },
       ]);
       mockFsPromises.stat.mockResolvedValueOnce({ mtimeMs: 5000 });
+      mockFsPromises.readFile.mockResolvedValueOnce(jsonlLines.join('\n'));
     }
 
     it('should extract sessionId, gitBranch, and timestamp from jsonl lines', async () => {
-      mockLines.push(
+      const lines = [
         JSON.stringify({
           sessionId: 'extracted-id',
           gitBranch: 'feature/branch',
           timestamp: '2025-06-01T12:00:00Z',
-        })
-      );
-      setupSingleJsonlScan();
+        }),
+      ];
+      setupSingleJsonlScan(lines);
 
       const entries = await service.readSessionsIndex('/project');
 
@@ -393,14 +404,14 @@ describe('ClaudeSessionReaderService', () => {
     });
 
     it('should extract first user prompt from string content', async () => {
-      mockLines.push(
+      const lines = [
         JSON.stringify({ sessionId: 'sess-1', timestamp: '2025-01-01T00:00:00Z' }),
         JSON.stringify({
           type: 'user',
           message: { role: 'user', content: 'Fix the login bug' },
-        })
-      );
-      setupSingleJsonlScan();
+        }),
+      ];
+      setupSingleJsonlScan(lines);
 
       const entries = await service.readSessionsIndex('/project');
 
@@ -409,7 +420,7 @@ describe('ClaudeSessionReaderService', () => {
     });
 
     it('should extract first user prompt from array content', async () => {
-      mockLines.push(
+      const lines = [
         JSON.stringify({ sessionId: 'sess-1', timestamp: '2025-01-01T00:00:00Z' }),
         JSON.stringify({
           type: 'user',
@@ -417,9 +428,9 @@ describe('ClaudeSessionReaderService', () => {
             role: 'user',
             content: [{ type: 'text', text: 'Help me refactor' }],
           },
-        })
-      );
-      setupSingleJsonlScan();
+        }),
+      ];
+      setupSingleJsonlScan(lines);
 
       const entries = await service.readSessionsIndex('/project');
 
@@ -428,14 +439,14 @@ describe('ClaudeSessionReaderService', () => {
     });
 
     it('should detect sidechain sessions and filter them out', async () => {
-      mockLines.push(
+      const lines = [
         JSON.stringify({
           sessionId: 'sidechain-sess',
           timestamp: '2025-01-01T00:00:00Z',
           isSidechain: true,
-        })
-      );
-      setupSingleJsonlScan();
+        }),
+      ];
+      setupSingleJsonlScan(lines);
 
       const entries = await service.readSessionsIndex('/project');
 
@@ -443,8 +454,8 @@ describe('ClaudeSessionReaderService', () => {
     });
 
     it('should use filename as sessionId when content has no sessionId', async () => {
-      mockLines.push(JSON.stringify({ timestamp: '2025-01-01T00:00:00Z' }));
-      setupSingleJsonlScan();
+      const lines = [JSON.stringify({ timestamp: '2025-01-01T00:00:00Z' })];
+      setupSingleJsonlScan(lines);
 
       const entries = await service.readSessionsIndex('/project');
 
@@ -453,8 +464,8 @@ describe('ClaudeSessionReaderService', () => {
     });
 
     it('should use file mtime as created date when no timestamp in content', async () => {
-      mockLines.push(JSON.stringify({ sessionId: 'no-ts-session' }));
-      setupSingleJsonlScan();
+      const lines = [JSON.stringify({ sessionId: 'no-ts-session' })];
+      setupSingleJsonlScan(lines);
 
       const entries = await service.readSessionsIndex('/project');
 
@@ -463,8 +474,8 @@ describe('ClaudeSessionReaderService', () => {
     });
 
     it('should default firstPrompt to "No prompt" when none found', async () => {
-      mockLines.push(JSON.stringify({ sessionId: 'no-prompt' }));
-      setupSingleJsonlScan();
+      const lines = [JSON.stringify({ sessionId: 'no-prompt' })];
+      setupSingleJsonlScan(lines);
 
       const entries = await service.readSessionsIndex('/project');
 
@@ -473,11 +484,11 @@ describe('ClaudeSessionReaderService', () => {
     });
 
     it('should skip unparseable lines without failing', async () => {
-      mockLines.push(
+      const lines = [
         'not json at all',
-        JSON.stringify({ sessionId: 'good-session', timestamp: '2025-01-01T00:00:00Z' })
-      );
-      setupSingleJsonlScan();
+        JSON.stringify({ sessionId: 'good-session', timestamp: '2025-01-01T00:00:00Z' }),
+      ];
+      setupSingleJsonlScan(lines);
 
       const entries = await service.readSessionsIndex('/project');
 
@@ -485,11 +496,9 @@ describe('ClaudeSessionReaderService', () => {
       expect(entries[0].sessionId).toBe('good-session');
     });
 
-    it('should only read first 20 lines', async () => {
-      for (let i = 0; i < 25; i++) {
-        mockLines.push(JSON.stringify({ line: i }));
-      }
-      setupSingleJsonlScan();
+    it('should handle files with many lines and still return an entry', async () => {
+      const lines = Array.from({ length: 25 }, (_, i) => JSON.stringify({ line: i }));
+      setupSingleJsonlScan(lines);
 
       const entries = await service.readSessionsIndex('/project');
 
@@ -499,18 +508,57 @@ describe('ClaudeSessionReaderService', () => {
 
     it('should truncate firstPrompt to 200 characters', async () => {
       const longPrompt = 'A'.repeat(300);
-      mockLines.push(
+      const lines = [
         JSON.stringify({ sessionId: 'sess-1', timestamp: '2025-01-01T00:00:00Z' }),
         JSON.stringify({
           type: 'user',
           message: { role: 'user', content: longPrompt },
-        })
-      );
-      setupSingleJsonlScan();
+        }),
+      ];
+      setupSingleJsonlScan(lines);
 
       const entries = await service.readSessionsIndex('/project');
 
       expect(entries[0].firstPrompt).toHaveLength(200);
+    });
+
+    it('should compute messageCount from user and assistant lines', async () => {
+      const lines = [
+        JSON.stringify({ sessionId: 'msg-count-session', timestamp: '2025-01-01T00:00:00Z' }),
+        JSON.stringify({ type: 'user', message: { role: 'user', content: 'First prompt' } }),
+        JSON.stringify({
+          type: 'assistant',
+          message: { role: 'assistant', content: 'Response 1' },
+        }),
+        JSON.stringify({ type: 'user', message: { role: 'user', content: 'Follow-up' } }),
+        JSON.stringify({
+          type: 'assistant',
+          message: { role: 'assistant', content: 'Response 2' },
+        }),
+        // tool_result user line — should NOT be counted (no role check for these)
+        JSON.stringify({ type: 'user', message: { role: 'tool', content: 'tool result' } }),
+        // system line — should not be counted
+        JSON.stringify({ type: 'system', message: { content: 'system prompt' } }),
+      ];
+      setupSingleJsonlScan(lines);
+
+      const entries = await service.readSessionsIndex('/project');
+
+      expect(entries).toHaveLength(1);
+      expect(entries[0].messageCount).toBe(4);
+    });
+
+    it('should return messageCount 0 when no user or assistant lines present', async () => {
+      const lines = [
+        JSON.stringify({ sessionId: 'no-msgs', timestamp: '2025-01-01T00:00:00Z' }),
+        JSON.stringify({ type: 'system', message: { content: 'setup' } }),
+      ];
+      setupSingleJsonlScan(lines);
+
+      const entries = await service.readSessionsIndex('/project');
+
+      expect(entries).toHaveLength(1);
+      expect(entries[0].messageCount).toBe(0);
     });
   });
 

@@ -1,6 +1,9 @@
 import { useEffect, useRef } from 'react';
+import { toast } from 'sonner';
+import { extractErrorMessage } from '@omniscribe/shared';
 import { PRELAUNCH_SHORTCUT_KEYS } from '@/lib/prelaunch-shortcuts';
 import { useAppUIStore } from '@/stores/useAppUIStore';
+import { continueLastSession } from '@/lib/session';
 import type { PreLaunchSlot } from '@/components/terminal/TerminalGrid';
 
 interface UseAppKeyboardShortcutsParams {
@@ -87,6 +90,18 @@ export function useAppKeyboardShortcuts({
       if (isMod && e.shiftKey && key === 'h') {
         e.preventDefault();
         useAppUIStore.getState().toggleHistory();
+        return;
+      }
+
+      // Cmd/Ctrl + Shift + R - Resume last session (idle view convenience)
+      if (isMod && e.shiftKey && key === 'r') {
+        e.preventDefault();
+        const projectPath = activeProjectPathRef.current;
+        if (projectPath && !hasActiveSessionsRef.current) {
+          continueLastSession(projectPath).catch(err => {
+            toast.error(extractErrorMessage(err, 'Failed to resume last session'));
+          });
+        }
         return;
       }
 

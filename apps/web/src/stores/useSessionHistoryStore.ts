@@ -89,7 +89,13 @@ export const useSessionHistoryStore = create<SessionHistoryStore>()(
 
         fetchHistory: (projectPath: string) => {
           logger.debug('fetchHistory', projectPath);
-          set({ isLoading: true }, undefined, 'sessionHistory/fetchHistory');
+          // Reset sessions synchronously so a project switch doesn't briefly
+          // render the previous project's history while the new fetch is in flight.
+          set(
+            { isLoading: true, sessions: [], error: null },
+            undefined,
+            'sessionHistory/fetchHistory'
+          );
 
           const timeout = setTimeout(() => {
             set(
