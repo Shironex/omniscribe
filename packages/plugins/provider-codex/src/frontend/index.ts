@@ -10,6 +10,7 @@
  */
 
 import type { FrontendPluginContext } from '@omniscribe/plugin-api';
+import { Newspaper } from 'lucide-react';
 import { CodexIcon } from './CodexIcon';
 import { CodexSettingsSection } from './CodexSettingsSection';
 import { CodexUsagePanel } from './CodexUsagePanel';
@@ -63,6 +64,27 @@ export function frontendActivate(context: FrontendPluginContext): void {
       id: 'codex-status',
       aiMode: 'codex',
       component: CodexStatusRenderer,
+    })
+  );
+
+  // 3a. Register the upstream Codex release notes as a changelog source.
+  // The host auto-registers a "Changelog" settings section under the
+  // Codex category. Codex publishes Rust + Node releases under one repo;
+  // we strip the `rust-v` tag prefix so versions render as `0.129.0`
+  // rather than `rust-v0.129.0`.
+  context.subscriptions.push(
+    context.registerChangelogSource({
+      id: 'codex',
+      label: 'Codex',
+      categoryId: 'codex',
+      icon: Newspaper,
+      order: 20,
+      source: {
+        kind: 'github-releases',
+        repo: 'openai/codex',
+        tagPrefix: 'rust-v',
+        viewUrl: 'https://github.com/openai/codex/releases',
+      },
     })
   );
 
