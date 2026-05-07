@@ -71,7 +71,7 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "concurrently": "^9.2.1",
-    "eslint": "^10.2.1",
+    "eslint": "^10.3.0",
     "eslint-config-prettier": "^10.1.8",
     "globals": "^17.5.0",
     "husky": "^9.1.7",
