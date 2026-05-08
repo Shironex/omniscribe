@@ -69,7 +69,6 @@ Omniscribe is a desktop application for managing multiple AI coding assistant se
 | **8 UI Themes**        | Forge (default, dark), Carbon, Ember, Iceberg, Nord, Gruvbox, Dracula, Paper (light)                 |
 | **Terminal Settings**  | Font family/size, cursor style, scrollback, theme — all applied live                                 |
 | **Smart Copy/Paste**   | Ctrl+C copies selection or sends ^C; Ctrl+V pastes from clipboard                                    |
-| **File Path Links**    | Clickable file paths in terminal output open directly in VS Code                                     |
 | **Quick Actions**      | AI-powered shortcuts for git workflows (commit, push, pull, resolve conflicts) and development tasks |
 | **Git Worktrees**      | Isolate each session in its own git worktree for parallel development                                |
 | **MCP Integration**    | Configure Model Context Protocol servers per session                                                 |

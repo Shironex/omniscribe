@@ -9,7 +9,6 @@ let capturedWebLinksHandler: ((event: MouseEvent, uri: string) => void) | undefi
 const mockTerminal = {
   loadAddon: vi.fn(),
   open: vi.fn(),
-  registerLinkProvider: vi.fn(),
   onData: vi.fn(),
   dispose: vi.fn(),
 };
@@ -54,10 +53,6 @@ vi.mock('@/lib/terminal', () => ({
 
 vi.mock('@/lib/terminal-themes', () => ({
   getTerminalTheme: vi.fn(() => ({})),
-}));
-
-vi.mock('@/lib/terminal-link-provider', () => ({
-  FilePathLinkProvider: vi.fn(),
 }));
 
 vi.mock('../useTerminalResize', () => ({

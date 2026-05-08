@@ -3,9 +3,7 @@ import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import { SearchAddon } from '@xterm/addon-search';
 import { WebglAddon } from '@xterm/addon-webgl';
-import { createLogger, DEFAULT_EDITOR_PROTOCOL } from '@omniscribe/shared';
-import type { EditorProtocol } from '@omniscribe/shared';
-import { FilePathLinkProvider } from '@/lib/terminal-link-provider';
+import { createLogger } from '@omniscribe/shared';
 
 const logger = createLogger('TerminalInit');
 
@@ -16,16 +14,14 @@ export interface LoadedAddons {
 
 /**
  * Load all addons onto a Terminal instance and open it in the container.
- * Includes FitAddon, WebLinksAddon, SearchAddon, WebGL (with canvas fallback),
- * and FilePathLinkProvider.
+ * Includes FitAddon, WebLinksAddon, SearchAddon, and WebGL (with canvas fallback).
  *
  * Factory function — no React hooks. Performs terminal DOM setup as a side effect.
  */
 export function loadTerminalAddons(
   terminal: Terminal,
   container: HTMLElement,
-  sessionId: number,
-  getEditorProtocol?: () => EditorProtocol
+  sessionId: number
 ): LoadedAddons {
   const fitAddon = new FitAddon();
   // URI is validated by Electron's setWindowOpenHandler in the main process
@@ -53,10 +49,6 @@ export function loadTerminalAddons(
   } catch {
     logger.debug('WebGL addon failed, using canvas fallback');
   }
-
-  // Register file path link provider with dynamic editor protocol
-  const protocolGetter = getEditorProtocol ?? (() => DEFAULT_EDITOR_PROTOCOL);
-  terminal.registerLinkProvider(new FilePathLinkProvider(terminal, protocolGetter));
 
   return { fitAddon, searchAddon };
 }
