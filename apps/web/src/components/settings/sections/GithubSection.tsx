@@ -1,7 +1,5 @@
 import { useEffect, useCallback } from 'react';
 import { createLogger } from '@omniscribe/shared';
-
-const logger = createLogger('GithubSection');
 import {
   GitPullRequest,
   CheckCircle2,
@@ -13,8 +11,11 @@ import {
   User,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { SectionHeader } from '@/components/shared/SectionHeader';
 import { useSettingsStore } from '@/stores/useSettingsStore';
+import { SettingsCard } from '@/components/settings/SettingsCard';
+import { StatusPill } from '@/components/shared/StatusPill';
+
+const logger = createLogger('GithubSection');
 
 export function GithubSection() {
   const githubCliStatus = useSettingsStore(state => state.githubCliStatus);
@@ -43,87 +44,89 @@ export function GithubSection() {
     }
   }, [setGithubCliStatus, setGithubCliLoading]);
 
-  // Fetch status on mount
   useEffect(() => {
     if (!githubCliStatus && !isLoading) {
       refreshStatus();
     }
   }, [githubCliStatus, isLoading, refreshStatus]);
 
-  return (
-    <div className="space-y-6">
-      <SectionHeader
-        icon={GitPullRequest}
-        title="GitHub CLI"
-        description="GitHub CLI (gh) for PRs, issues, and more"
-      >
-        <button
-          type="button"
-          aria-label="Refresh GitHub CLI status"
-          onClick={refreshStatus}
-          disabled={isLoading}
-          className={cn(
-            'p-2 rounded-lg transition-colors',
-            'hover:bg-muted text-muted-foreground hover:text-foreground',
-            'disabled:opacity-50 disabled:cursor-not-allowed'
-          )}
-          title="Refresh status"
-        >
-          {isLoading ? (
-            <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-          ) : (
-            <RefreshCw className="w-4 h-4" />
-          )}
-        </button>
-      </SectionHeader>
+  const refreshButton = (
+    <button
+      type="button"
+      aria-label="Refresh GitHub CLI status"
+      onClick={refreshStatus}
+      disabled={isLoading}
+      className={cn(
+        'p-2 rounded-lg transition-colors',
+        'hover:bg-muted text-muted-foreground hover:text-foreground',
+        'disabled:opacity-50 disabled:cursor-not-allowed',
+        'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1'
+      )}
+      title="Refresh status"
+    >
+      {isLoading ? (
+        <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+      ) : (
+        <RefreshCw className="w-4 h-4" />
+      )}
+    </button>
+  );
 
-      {/* Loading State */}
-      {isLoading && !githubCliStatus && (
-        <div className="rounded-xl border border-border/50 bg-card/50 p-6">
-          <div className="flex items-center justify-center gap-3 text-muted-foreground">
-            <Loader2 className="w-5 h-5 animate-spin" />
+  return (
+    <div className="space-y-4">
+      <SettingsCard
+        icon={GitPullRequest}
+        tone="muted"
+        title="GitHub CLI"
+        subtitle="GitHub CLI (gh) for PRs, issues, and more."
+        headerAccessory={refreshButton}
+      >
+        {isLoading && !githubCliStatus && (
+          <div className="flex items-center justify-center gap-3 text-muted-foreground text-sm py-4">
+            <Loader2 className="w-4 h-4 animate-spin" />
             <span>Detecting GitHub CLI...</span>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Status Cards */}
-      {githubCliStatus && (
-        <div className="space-y-4">
-          {/* CLI Status Card */}
-          <div className="rounded-xl border border-border/50 bg-card/50 p-4">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center">
+        {githubCliStatus && (
+          <>
+            {/* CLI Installation row */}
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center shrink-0">
                 <Terminal className="w-4 h-4 text-muted-foreground" />
               </div>
-              <div className="flex-1">
-                <h3 className="text-sm font-medium text-foreground">CLI Installation</h3>
-                <p className="text-xs text-muted-foreground">GitHub command-line interface</p>
+              <div className="flex-1 min-w-0">
+                <p className="text-[13px] font-semibold leading-snug text-foreground">
+                  CLI Installation
+                </p>
+                <p className="text-[12px] text-muted-foreground/85 leading-snug">
+                  GitHub command-line interface
+                </p>
               </div>
               {githubCliStatus.installed ? (
-                <span className="flex items-center gap-1.5 text-xs font-medium text-primary bg-primary/10 px-2 py-1 rounded-full">
-                  <CheckCircle2 className="w-3 h-3" />
+                <StatusPill tone="ready" icon={CheckCircle2}>
                   Installed
-                </span>
+                </StatusPill>
               ) : (
-                <span className="flex items-center gap-1.5 text-xs font-medium text-status-warning bg-status-warning-bg px-2 py-1 rounded-full">
-                  <XCircle className="w-3 h-3" />
+                <StatusPill tone="warning" icon={XCircle}>
                   Not Found
-                </span>
+                </StatusPill>
               )}
             </div>
 
             {githubCliStatus.installed ? (
-              <div className="space-y-2 text-sm">
+              <div className="space-y-1 text-sm pl-11">
                 {githubCliStatus.version && (
-                  <div className="flex items-center justify-between py-2 border-b border-border/30">
-                    <span className="text-muted-foreground">Version</span>
-                    <span className="text-foreground font-mono">{githubCliStatus.version}</span>
+                  <div className="flex items-center justify-between py-1.5 border-b border-border-glass/60">
+                    <span className="text-muted-foreground text-xs">Version</span>
+                    <span className="text-foreground font-mono text-xs">
+                      {githubCliStatus.version}
+                    </span>
                   </div>
                 )}
                 {githubCliStatus.path && (
-                  <div className="flex items-center justify-between py-2 border-b border-border/30">
-                    <span className="text-muted-foreground">Path</span>
+                  <div className="flex items-center justify-between py-1.5 border-b border-border-glass/60">
+                    <span className="text-muted-foreground text-xs">Path</span>
                     <span
                       className="text-foreground font-mono text-xs max-w-[300px] truncate"
                       title={githubCliStatus.path}
@@ -132,15 +135,15 @@ export function GithubSection() {
                     </span>
                   </div>
                 )}
-                <div className="flex items-center justify-between py-2">
-                  <span className="text-muted-foreground">Detection Method</span>
-                  <span className="text-foreground capitalize">
+                <div className="flex items-center justify-between py-1.5">
+                  <span className="text-muted-foreground text-xs">Detection method</span>
+                  <span className="text-foreground capitalize text-xs">
                     {githubCliStatus.method === 'path' ? 'System PATH' : 'Local Installation'}
                   </span>
                 </div>
               </div>
             ) : (
-              <div className="p-3 rounded-lg bg-muted/50 text-sm text-muted-foreground">
+              <div className="p-3 rounded-lg bg-muted/40 text-sm text-muted-foreground">
                 <p>GitHub CLI is not installed or not found in your PATH.</p>
                 <p className="mt-2">
                   Install it from:{' '}
@@ -155,33 +158,33 @@ export function GithubSection() {
                 </p>
               </div>
             )}
-          </div>
 
-          {/* Authentication Card */}
-          <div className="rounded-xl border border-border/50 bg-card/50 p-4">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center">
+            {/* Authentication row */}
+            <div className="border-t border-border-glass/60 pt-3.5 flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center shrink-0">
                 <Shield className="w-4 h-4 text-muted-foreground" />
               </div>
-              <div className="flex-1">
-                <h3 className="text-sm font-medium text-foreground">Authentication</h3>
-                <p className="text-xs text-muted-foreground">GitHub account sign-in</p>
+              <div className="flex-1 min-w-0">
+                <p className="text-[13px] font-semibold leading-snug text-foreground">
+                  Authentication
+                </p>
+                <p className="text-[12px] text-muted-foreground/85 leading-snug">
+                  GitHub account sign-in
+                </p>
               </div>
               {githubCliStatus.auth.authenticated ? (
-                <span className="flex items-center gap-1.5 text-xs font-medium text-primary bg-primary/10 px-2 py-1 rounded-full">
-                  <CheckCircle2 className="w-3 h-3" />
+                <StatusPill tone="ready" icon={CheckCircle2}>
                   Signed In
-                </span>
+                </StatusPill>
               ) : (
-                <span className="flex items-center gap-1.5 text-xs font-medium text-status-warning bg-status-warning-bg px-2 py-1 rounded-full">
-                  <XCircle className="w-3 h-3" />
+                <StatusPill tone="warning" icon={XCircle}>
                   Not Signed In
-                </span>
+                </StatusPill>
               )}
             </div>
 
             {githubCliStatus.auth.authenticated ? (
-              <div className="space-y-2">
+              <div className="space-y-2 pl-11">
                 {githubCliStatus.auth.username && (
                   <div className="flex items-center gap-2 p-3 rounded-lg bg-primary/10 text-sm text-primary">
                     <User className="w-4 h-4" />
@@ -191,7 +194,7 @@ export function GithubSection() {
                   </div>
                 )}
                 {githubCliStatus.auth.scopes && githubCliStatus.auth.scopes.length > 0 && (
-                  <div className="p-3 rounded-lg bg-muted/50 text-sm">
+                  <div className="p-3 rounded-lg bg-muted/40 text-sm">
                     <span className="text-muted-foreground">Token scopes: </span>
                     <span className="text-foreground font-mono text-xs">
                       {githubCliStatus.auth.scopes.join(', ')}
@@ -200,7 +203,7 @@ export function GithubSection() {
                 )}
               </div>
             ) : (
-              <div className="p-3 rounded-lg bg-muted/50 text-sm text-muted-foreground">
+              <div className="p-3 rounded-lg bg-muted/40 text-sm text-muted-foreground">
                 <p>You need to sign in to use GitHub features.</p>
                 <p className="mt-2">
                   Run{' '}
@@ -211,14 +214,13 @@ export function GithubSection() {
                 </p>
               </div>
             )}
-          </div>
 
-          {/* System Info */}
-          <div className="text-xs text-muted-foreground text-center">
-            Platform: {githubCliStatus.platform} ({githubCliStatus.arch})
-          </div>
-        </div>
-      )}
+            <div className="text-xs text-muted-foreground/70 text-center border-t border-border-glass/60 pt-3">
+              Platform: {githubCliStatus.platform} ({githubCliStatus.arch})
+            </div>
+          </>
+        )}
+      </SettingsCard>
     </div>
   );
 }

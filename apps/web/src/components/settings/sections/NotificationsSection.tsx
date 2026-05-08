@@ -1,29 +1,9 @@
 import { Bell, Send } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Switch } from '@/components/ui/switch';
-import { SectionHeader } from '@/components/shared/SectionHeader';
 import { useWorkspaceStore } from '@/stores/useWorkspaceStore';
 import type { NotificationSettings } from '@omniscribe/shared';
 import { DEFAULT_NOTIFICATION_SETTINGS } from '@omniscribe/shared';
-
-interface ToggleRowProps {
-  label: string;
-  description: string;
-  checked: boolean;
-  onChange: () => void;
-}
-
-function ToggleRow({ label, description, checked, onChange }: ToggleRowProps) {
-  return (
-    <div className="flex items-center justify-between">
-      <div>
-        <div className="text-sm font-medium text-foreground">{label}</div>
-        <div className="text-xs text-muted-foreground">{description}</div>
-      </div>
-      <Switch checked={checked} onCheckedChange={onChange} aria-label={label} />
-    </div>
-  );
-}
+import { SettingsCard, SettingsToggleRow } from '@/components/settings/SettingsCard';
 
 const EVENT_TOGGLES: Array<{
   key: keyof NotificationSettings['events'];
@@ -69,7 +49,7 @@ export function NotificationsSection() {
   const settings: NotificationSettings = preferences.notifications ?? DEFAULT_NOTIFICATION_SETTINGS;
 
   // Read latest settings at call time to avoid stale-closure overwrites
-  // when two toggles are clicked in quick succession
+  // when two toggles are clicked in quick succession.
   const getLatestSettings = (): NotificationSettings =>
     (useWorkspaceStore.getState().preferences.notifications as NotificationSettings) ??
     DEFAULT_NOTIFICATION_SETTINGS;
@@ -96,90 +76,78 @@ export function NotificationsSection() {
   };
 
   return (
-    <div className="space-y-6">
-      <SectionHeader
+    <div className="space-y-4">
+      <SettingsCard
         icon={Bell}
+        tone="gold"
         title="Notifications"
-        description="Configure desktop notification preferences"
-      />
+        subtitle="Configure desktop notification preferences."
+      >
+        <SettingsToggleRow
+          title="Enable desktop notifications"
+          description="Show OS-level notifications for session events"
+          checked={settings.enabled}
+          onCheckedChange={value => update({ enabled: value })}
+        />
+        {settings.enabled && (
+          <>
+            <SettingsToggleRow
+              divider
+              title="Play sound"
+              description="Play the system notification sound"
+              checked={settings.sound}
+              onCheckedChange={value => update({ sound: value })}
+            />
+            <SettingsToggleRow
+              divider
+              title="Only when app is unfocused"
+              description="Skip notifications when Omniscribe is in the foreground"
+              checked={settings.onlyWhenUnfocused}
+              onCheckedChange={value => update({ onlyWhenUnfocused: value })}
+            />
+          </>
+        )}
+      </SettingsCard>
 
-      {/* Master Toggles */}
-      <div className="space-y-4">
-        <h3 className="text-sm font-medium text-foreground">General</h3>
+      {settings.enabled && (
+        <SettingsCard
+          icon={Bell}
+          tone="muted"
+          title="Notify me when"
+          subtitle="Pick which events should fire a notification."
+        >
+          {EVENT_TOGGLES.map((toggle, index) => (
+            <SettingsToggleRow
+              key={toggle.key}
+              divider={index > 0}
+              title={toggle.label}
+              description={toggle.description}
+              checked={settings.events[toggle.key]}
+              onCheckedChange={() => updateEvent(toggle.key)}
+            />
+          ))}
+        </SettingsCard>
+      )}
 
-        <div className="rounded-xl border border-border/50 bg-card/50 p-4 space-y-4">
-          <ToggleRow
-            label="Enable desktop notifications"
-            description="Show OS-level notifications for session events"
-            checked={settings.enabled}
-            onChange={() => update({ enabled: !settings.enabled })}
-          />
-
-          {settings.enabled && (
-            <>
-              <div className="border-t border-border/30" />
-              <ToggleRow
-                label="Play sound"
-                description="Play the system notification sound"
-                checked={settings.sound}
-                onChange={() => update({ sound: !settings.sound })}
-              />
-
-              <div className="border-t border-border/30" />
-              <ToggleRow
-                label="Only when app is unfocused"
-                description="Skip notifications when Omniscribe is in the foreground"
-                checked={settings.onlyWhenUnfocused}
-                onChange={() => update({ onlyWhenUnfocused: !settings.onlyWhenUnfocused })}
-              />
-            </>
+      {settings.enabled && (
+        <button
+          type="button"
+          onClick={handleTestNotification}
+          className={cn(
+            'inline-flex items-center gap-2 px-4 py-2 rounded-lg',
+            'text-sm font-medium',
+            'bg-primary/10 text-primary hover:bg-primary/20',
+            'border border-primary/20',
+            'transition-colors duration-200',
+            'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1'
           )}
-        </div>
-      </div>
-
-      {/* Event Type Toggles */}
-      {settings.enabled && (
-        <div className="space-y-4">
-          <h3 className="text-sm font-medium text-foreground">Notify me when</h3>
-
-          <div className="rounded-xl border border-border/50 bg-card/50 p-4 space-y-4">
-            {EVENT_TOGGLES.map((toggle, index) => (
-              <div key={toggle.key}>
-                {index > 0 && <div className="border-t border-border/30" />}
-                <ToggleRow
-                  label={toggle.label}
-                  description={toggle.description}
-                  checked={settings.events[toggle.key]}
-                  onChange={() => updateEvent(toggle.key)}
-                />
-              </div>
-            ))}
-          </div>
-        </div>
+        >
+          <Send className="w-4 h-4" />
+          Send Test Notification
+        </button>
       )}
 
-      {/* Test Notification */}
-      {settings.enabled && (
-        <div className="space-y-4">
-          <button
-            type="button"
-            onClick={handleTestNotification}
-            className={cn(
-              'inline-flex items-center gap-2 px-4 py-2 rounded-lg',
-              'text-sm font-medium',
-              'bg-primary/10 text-primary hover:bg-primary/20',
-              'border border-primary/20',
-              'transition-colors duration-200'
-            )}
-          >
-            <Send className="w-4 h-4" />
-            Send Test Notification
-          </button>
-        </div>
-      )}
-
-      {/* Info Box */}
-      <div className="rounded-xl border border-border/50 bg-muted/30 p-4">
+      <div className="rounded-xl border border-border-glass bg-muted/20 p-4">
         <div className="text-xs text-muted-foreground space-y-2">
           <p>
             <strong className="text-foreground">How it works</strong>

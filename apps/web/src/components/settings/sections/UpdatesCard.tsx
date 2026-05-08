@@ -7,6 +7,7 @@ import {
   Clock,
   RotateCcw,
   ExternalLink,
+  CloudDownload,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -20,6 +21,8 @@ import { Progress } from '@/components/ui/progress';
 import { useUpdateStore } from '@/stores/useUpdateStore';
 import { useAppVersion } from '@/hooks/useAppVersion';
 import { IS_MAC } from '@/lib/platform';
+import { SettingsCard } from '@/components/settings/SettingsCard';
+import { ButtonGroup } from '@/components/shared/ButtonGroup';
 
 function MacDownloadFallback({ message }: { message: string }) {
   return (
@@ -60,64 +63,54 @@ export function UpdatesCard() {
     checkForUpdates();
   };
 
-  return (
-    <div className="rounded-xl border border-border/50 bg-card/50 p-6 space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium text-foreground">Updates</h3>
-        {status !== 'downloading' && status !== 'ready' && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleCheckForUpdates}
-            disabled={status === 'checking'}
-          >
-            <RefreshCw className={cn('w-3.5 h-3.5', status === 'checking' && 'animate-spin')} />
-            {status === 'checking' ? 'Checking...' : 'Check for Updates'}
-          </Button>
-        )}
-      </div>
+  const checkButton = status !== 'downloading' && status !== 'ready' && (
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={handleCheckForUpdates}
+      disabled={status === 'checking'}
+    >
+      <RefreshCw className={cn('w-3.5 h-3.5', status === 'checking' && 'animate-spin')} />
+      {status === 'checking' ? 'Checking...' : 'Check for Updates'}
+    </Button>
+  );
 
-      {/* Channel Selector */}
+  const channelDisabled = status === 'checking' || status === 'downloading' || isChannelSwitching;
+
+  return (
+    <SettingsCard
+      icon={CloudDownload}
+      tone="blue"
+      title="Updates"
+      subtitle="Stay on the latest stable release or opt into beta."
+      headerAccessory={checkButton}
+    >
       <div className="space-y-2">
         <div className="flex items-center gap-2">
-          <Button
-            variant={channel === 'stable' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setChannel('stable')}
-            disabled={
-              channel === 'stable' ||
-              status === 'checking' ||
-              status === 'downloading' ||
-              isChannelSwitching
-            }
-          >
-            Stable
-          </Button>
-          <Button
-            variant={channel === 'beta' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setChannel('beta')}
-            disabled={
-              channel === 'beta' ||
-              status === 'checking' ||
-              status === 'downloading' ||
-              isChannelSwitching
-            }
-          >
-            Beta
-          </Button>
+          <ButtonGroup
+            ariaLabel="Update channel"
+            value={channel}
+            onChange={value => setChannel(value as 'stable' | 'beta')}
+            options={[
+              {
+                value: 'stable',
+                label: 'Stable',
+                disabled: channel === 'stable' || channelDisabled,
+              },
+              { value: 'beta', label: 'Beta', disabled: channel === 'beta' || channelDisabled },
+            ]}
+          />
           {isChannelSwitching && (
             <RefreshCw className="w-3.5 h-3.5 animate-spin text-muted-foreground" />
           )}
         </div>
         <p className="text-xs text-muted-foreground">
           {channel === 'beta'
-            ? 'Receive pre-release updates with new features'
-            : 'Receive stable, tested releases only'}
+            ? 'Receive pre-release updates with new features.'
+            : 'Receive stable, tested releases only.'}
         </p>
       </div>
 
-      {/* Status: Up to date */}
       {status === 'idle' && hasChecked && (
         <div className="flex items-center gap-2 text-sm text-status-success">
           <CheckCircle className="w-4 h-4" />
@@ -125,7 +118,6 @@ export function UpdatesCard() {
         </div>
       )}
 
-      {/* Status: Update available */}
       {status === 'available' && updateInfo && (
         <div className="space-y-3">
           <div className="flex items-center gap-2">
@@ -151,7 +143,7 @@ export function UpdatesCard() {
             )}
           </div>
           {updateInfo.releaseNotes && (
-            <div className="rounded-lg border border-border/50 bg-background/50 p-3 max-h-48 overflow-y-auto">
+            <div className="rounded-lg border border-border-glass bg-background/50 p-3 max-h-48 overflow-y-auto">
               <Markdown>{updateInfo.releaseNotes}</Markdown>
             </div>
           )}
@@ -166,7 +158,6 @@ export function UpdatesCard() {
         </div>
       )}
 
-      {/* Status: Downloading (non-macOS only) */}
       {status === 'downloading' && (
         <div className="space-y-3">
           <div className="space-y-1.5">
@@ -187,7 +178,6 @@ export function UpdatesCard() {
         </div>
       )}
 
-      {/* Status: Ready to install */}
       {status === 'ready' && (
         <div className="space-y-3">
           {IS_MAC ? (
@@ -213,7 +203,6 @@ export function UpdatesCard() {
         </div>
       )}
 
-      {/* Status: Release still building */}
       {status === 'error' && error === UPDATE_ERROR_RELEASE_PENDING && (
         <div className="space-y-2">
           <div className="flex items-start gap-2 text-sm text-status-warning">
@@ -231,7 +220,6 @@ export function UpdatesCard() {
         </div>
       )}
 
-      {/* Status: Error */}
       {status === 'error' && error && error !== UPDATE_ERROR_RELEASE_PENDING && (
         <div className="space-y-2">
           <div className="flex items-start gap-2 text-sm text-destructive">
@@ -246,6 +234,6 @@ export function UpdatesCard() {
           )}
         </div>
       )}
-    </div>
+    </SettingsCard>
   );
 }

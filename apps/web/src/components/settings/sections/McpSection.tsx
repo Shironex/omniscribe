@@ -1,10 +1,11 @@
 import { useCallback, useMemo, useEffect } from 'react';
 import { Server, CheckCircle2, RefreshCw, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { SectionHeader } from '@/components/shared/SectionHeader';
 import { MCP_SERVER_NAME } from '@omniscribe/shared';
 import { useMcpStore, selectInternalMcp } from '@/stores/useMcpStore';
 import { useWorkspaceStore, selectActiveTab } from '@/stores/useWorkspaceStore';
+import { SettingsCard } from '@/components/settings/SettingsCard';
+import { StatusPill, type StatusPillTone } from '@/components/shared/StatusPill';
 
 export function McpSection() {
   const servers = useMcpStore(state => state.servers);
@@ -13,17 +14,14 @@ export function McpSection() {
   const discoverServers = useMcpStore(state => state.discoverServers);
   const internalMcp = useMcpStore(selectInternalMcp);
 
-  // Get active project path for refresh
   const activeTab = useWorkspaceStore(selectActiveTab);
 
-  // Auto-fetch servers when component mounts or project changes
   useEffect(() => {
     if (activeTab?.projectPath) {
       discoverServers(activeTab.projectPath);
     }
   }, [activeTab?.projectPath, discoverServers]);
 
-  // Count connected servers from serverStates map
   const connectedCount = useMemo(() => {
     return Object.values(serverStates).filter(state => state.status === 'connected').length;
   }, [serverStates]);
@@ -32,181 +30,192 @@ export function McpSection() {
     discoverServers(activeTab?.projectPath);
   }, [discoverServers, activeTab?.projectPath]);
 
-  return (
-    <div className="space-y-6">
-      <SectionHeader
-        icon={Server}
-        title="MCP Servers"
-        description="Model Context Protocol server connections"
-      >
-        <button
-          type="button"
-          aria-label="Refresh MCP servers"
-          onClick={handleRefresh}
-          disabled={isLoading}
-          className={cn(
-            'p-2 rounded-lg transition-colors',
-            'hover:bg-muted text-muted-foreground hover:text-foreground',
-            'disabled:opacity-50 disabled:cursor-not-allowed'
-          )}
-          title="Refresh servers"
-        >
-          {isLoading ? (
-            <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-          ) : (
-            <RefreshCw className="w-4 h-4" />
-          )}
-        </button>
-      </SectionHeader>
+  // Header summary pill: prefers "all active", falls back to "N active",
+  // then "Ready" (configured but none active), then "None".
+  const headerPill = (() => {
+    if (servers.length === 0) {
+      return <StatusPill tone="idle">None</StatusPill>;
+    }
+    if (connectedCount === servers.length) {
+      return (
+        <StatusPill tone="ready" icon={CheckCircle2}>
+          All Active
+        </StatusPill>
+      );
+    }
+    if (connectedCount > 0) {
+      return (
+        <StatusPill tone="warning" icon={CheckCircle2}>
+          {connectedCount} Active
+        </StatusPill>
+      );
+    }
+    return (
+      <StatusPill tone="ready" icon={CheckCircle2}>
+        Ready
+      </StatusPill>
+    );
+  })();
 
-      {/* Internal MCP Status */}
-      <div className="rounded-xl border border-border/50 bg-card/50 p-4">
+  const refreshButton = (
+    <button
+      type="button"
+      aria-label="Refresh MCP servers"
+      onClick={handleRefresh}
+      disabled={isLoading}
+      className={cn(
+        'p-2 rounded-lg transition-colors',
+        'hover:bg-muted text-muted-foreground hover:text-foreground',
+        'disabled:opacity-50 disabled:cursor-not-allowed',
+        'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1'
+      )}
+      title="Refresh servers"
+    >
+      {isLoading ? (
+        <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+      ) : (
+        <RefreshCw className="w-4 h-4" />
+      )}
+    </button>
+  );
+
+  const subtitle = (
+    <span>
+      {servers.length} server{servers.length !== 1 ? 's' : ''} configured
+      {connectedCount > 0 && `, ${connectedCount} active`}. Connections occur when a session starts.
+    </span>
+  );
+
+  return (
+    <div className="space-y-4">
+      <SettingsCard
+        icon={Server}
+        tone="blue"
+        title="MCP Servers"
+        subtitle={subtitle}
+        headerAccessory={
+          <div className="flex items-center gap-2">
+            {headerPill}
+            {refreshButton}
+          </div>
+        }
+      >
+        {/* Internal MCP Status */}
         <div className="flex items-center gap-3">
-          <div
+          <span
             className={cn(
-              'w-3 h-3 rounded-full',
+              'w-2.5 h-2.5 rounded-full',
               internalMcp.available ? 'bg-primary' : 'bg-status-error'
             )}
+            aria-hidden="true"
           />
-          <div className="flex-1">
-            <h3 className="text-sm font-medium text-foreground">Internal MCP Server</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">
+          <div className="flex-1 min-w-0">
+            <p className="text-[13px] font-semibold leading-snug text-foreground">
+              Internal MCP Server
+            </p>
+            <p className="text-[12px] text-muted-foreground/85 leading-snug truncate">
               {internalMcp.available
                 ? internalMcp.path?.split(/[/\\]/).slice(-2).join('/')
                 : 'Not available'}
             </p>
           </div>
-          <span
-            className={cn(
-              'text-xs font-medium px-2 py-1 rounded-full',
-              internalMcp.available
-                ? 'bg-primary/10 text-primary'
-                : 'bg-status-error-bg text-status-error'
-            )}
-          >
+          <StatusPill tone={internalMcp.available ? 'ready' : 'error'}>
             {internalMcp.available ? 'Ready' : 'Unavailable'}
-          </span>
+          </StatusPill>
         </div>
-      </div>
 
-      {/* Status Summary */}
-      <div className="rounded-xl border border-border/50 bg-card/50 p-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-sm font-medium text-foreground">Server Status</h3>
-            <p className="text-xs text-muted-foreground mt-1">
-              {servers.length} server{servers.length !== 1 ? 's' : ''} configured
-              {connectedCount > 0 && `, ${connectedCount} active`}
-            </p>
-          </div>
-          {connectedCount === servers.length && servers.length > 0 ? (
-            <span className="flex items-center gap-1.5 text-xs font-medium text-primary bg-primary/10 px-2 py-1 rounded-full">
-              <CheckCircle2 className="w-3 h-3" />
-              All Active
-            </span>
-          ) : connectedCount > 0 ? (
-            <span className="flex items-center gap-1.5 text-xs font-medium text-status-warning bg-status-warning-bg px-2 py-1 rounded-full">
-              <CheckCircle2 className="w-3 h-3" />
-              {connectedCount} Active
-            </span>
-          ) : servers.length > 0 ? (
-            <span className="flex items-center gap-1.5 text-xs font-medium text-primary bg-primary/10 px-2 py-1 rounded-full">
-              <CheckCircle2 className="w-3 h-3" />
-              Ready
-            </span>
-          ) : (
-            <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground bg-muted px-2 py-1 rounded-full">
-              None
-            </span>
-          )}
-        </div>
-      </div>
-
-      {/* Loading State */}
-      {isLoading && servers.length === 0 && (
-        <div className="rounded-xl border border-border/50 bg-card/50 p-6">
-          <div className="flex items-center justify-center gap-3 text-muted-foreground">
-            <Loader2 className="w-5 h-5 animate-spin" />
+        {/* Loading State */}
+        {isLoading && servers.length === 0 && (
+          <div className="border-t border-border-glass/60 pt-3.5 flex items-center justify-center gap-3 text-muted-foreground text-sm">
+            <Loader2 className="w-4 h-4 animate-spin" />
             <span>Loading MCP servers...</span>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Server List */}
-      {servers.length > 0 && (
-        <div className="space-y-3">
-          <h3 className="text-sm font-medium text-foreground">Configured Servers</h3>
-          <p className="text-xs text-muted-foreground">
-            These servers will connect when you start a session
-          </p>
-          <div className="space-y-2">
+        {/* Server List */}
+        {servers.length > 0 && (
+          <div className="border-t border-border-glass/60 pt-3.5 space-y-2">
+            <p className="text-[11px] font-mono uppercase tracking-[0.18em] font-semibold text-muted-foreground">
+              Configured servers
+            </p>
             {servers.map(server => {
               const serverState = serverStates[server.id];
               const hasActiveState = serverState?.status && serverState.status !== 'disconnected';
               const status = hasActiveState ? serverState.status : 'ready';
               const toolCount = serverState?.tools?.length;
 
-              // Status display config
-              const statusConfig: { color: string; label: string } = {
-                connected: { color: 'bg-primary', label: 'Connected' },
-                connecting: { color: 'bg-status-warning animate-pulse', label: 'Connecting' },
-                disconnected: { color: 'bg-muted-foreground', label: 'Idle' },
-                error: { color: 'bg-status-error', label: 'Error' },
-                ready: { color: 'bg-primary', label: 'Ready' },
-              }[status] ?? { color: 'bg-muted-foreground', label: status };
+              const statusConfigMap: Record<
+                string,
+                { dotColor: string; tone: StatusPillTone; label: string }
+              > = {
+                connected: { dotColor: 'bg-primary', tone: 'ready', label: 'Connected' },
+                connecting: {
+                  dotColor: 'bg-status-warning animate-pulse',
+                  tone: 'warning',
+                  label: 'Connecting',
+                },
+                disconnected: { dotColor: 'bg-muted-foreground', tone: 'idle', label: 'Idle' },
+                error: { dotColor: 'bg-status-error', tone: 'error', label: 'Error' },
+                ready: { dotColor: 'bg-primary', tone: 'ready', label: 'Ready' },
+              };
+              const statusConfig = statusConfigMap[status] ?? {
+                dotColor: 'bg-muted-foreground',
+                tone: 'idle' as StatusPillTone,
+                label: status,
+              };
 
-              // Check if this is the internal omniscribe MCP
               const isInternalMcp =
                 server.id === MCP_SERVER_NAME || server.name === MCP_SERVER_NAME;
 
               return (
-                <div key={server.id} className="rounded-lg border border-border/50 bg-card/30 p-3">
-                  <div className="flex items-center gap-3">
-                    <div className={cn('w-2.5 h-2.5 rounded-full', statusConfig.color)} />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-foreground truncate">
-                          {server.name}
+                <div
+                  key={server.id}
+                  className="flex items-center gap-3 rounded-lg border border-border-glass bg-card/30 p-3"
+                >
+                  <span
+                    className={cn('w-2.5 h-2.5 rounded-full shrink-0', statusConfig.dotColor)}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-foreground truncate">
+                        {server.name}
+                      </span>
+                      {isInternalMcp && (
+                        <span className="text-[10px] font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded">
+                          Internal
                         </span>
-                        {isInternalMcp && (
-                          <span className="text-[10px] font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded">
-                            Internal
-                          </span>
-                        )}
-                      </div>
-                      {toolCount !== undefined && toolCount > 0 && (
-                        <div className="text-xs text-muted-foreground">
-                          {toolCount} tools available
-                        </div>
-                      )}
-                      {serverState?.errorMessage && (
-                        <div
-                          className="text-xs text-status-error truncate"
-                          title={serverState.errorMessage}
-                        >
-                          {serverState.errorMessage}
-                        </div>
                       )}
                     </div>
-                    <span className="text-xs text-muted-foreground">{statusConfig.label}</span>
+                    {toolCount !== undefined && toolCount > 0 && (
+                      <div className="text-xs text-muted-foreground">
+                        {toolCount} tools available
+                      </div>
+                    )}
+                    {serverState?.errorMessage && (
+                      <div
+                        className="text-xs text-status-error truncate"
+                        title={serverState.errorMessage}
+                      >
+                        {serverState.errorMessage}
+                      </div>
+                    )}
                   </div>
+                  <span className="text-xs text-muted-foreground">{statusConfig.label}</span>
                 </div>
               );
             })}
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Empty State */}
-      {!isLoading && servers.length === 0 && (
-        <div className="rounded-xl border border-border/50 bg-card/50 p-6">
-          <div className="text-center text-muted-foreground">
+        {/* Empty State */}
+        {!isLoading && servers.length === 0 && (
+          <div className="border-t border-border-glass/60 pt-3.5 text-center text-muted-foreground">
             <Server className="w-8 h-8 mx-auto mb-2 opacity-50" />
             <p className="text-sm">No MCP servers discovered</p>
             <p className="text-xs mt-1">MCP servers will appear here when a project is open</p>
           </div>
-        </div>
-      )}
+        )}
+      </SettingsCard>
     </div>
   );
 }

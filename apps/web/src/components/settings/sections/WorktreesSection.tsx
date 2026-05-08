@@ -7,10 +7,16 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { SectionHeader } from '@/components/shared/SectionHeader';
 import { useWorkspaceStore } from '@/stores/useWorkspaceStore';
 import type { WorktreeMode, WorktreeLocation, WorktreeSettings } from '@omniscribe/shared';
 import { DEFAULT_WORKTREE_SETTINGS, USER_DATA_DIR, WORKTREES_DIR } from '@omniscribe/shared';
+import {
+  SettingsCard,
+  SettingsRow,
+  SettingsRowLabel,
+  SettingsToggleRow,
+} from '@/components/settings/SettingsCard';
+import { StatusPill } from '@/components/shared/StatusPill';
 
 const WORKTREE_MODE_OPTIONS: {
   value: WorktreeMode;
@@ -58,159 +64,132 @@ export function WorktreesSection() {
   const preferences = useWorkspaceStore(state => state.preferences);
   const updatePreference = useWorkspaceStore(state => state.updatePreference);
 
-  // Get worktree settings with defaults
   const worktreeSettings: WorktreeSettings = preferences.worktree ?? DEFAULT_WORKTREE_SETTINGS;
 
   const handleModeChange = (mode: WorktreeMode) => {
-    updatePreference('worktree', {
-      ...worktreeSettings,
-      mode,
-    });
+    updatePreference('worktree', { ...worktreeSettings, mode });
   };
 
   const handleLocationChange = (location: WorktreeLocation) => {
-    updatePreference('worktree', {
-      ...worktreeSettings,
-      location,
-    });
+    updatePreference('worktree', { ...worktreeSettings, location });
   };
 
-  const handleAutoCleanupToggle = () => {
-    updatePreference('worktree', {
-      ...worktreeSettings,
-      autoCleanup: !worktreeSettings.autoCleanup,
-    });
+  const handleAutoCleanupToggle = (next: boolean) => {
+    updatePreference('worktree', { ...worktreeSettings, autoCleanup: next });
   };
 
   return (
-    <div className="space-y-6">
-      <SectionHeader
+    <div className="space-y-4">
+      <SettingsCard
         icon={GitBranch}
+        tone="green"
         title="Worktrees"
-        description="Configure Git worktree behavior for sessions"
+        subtitle="Configure Git worktree behavior for sessions."
+        headerAccessory={
+          <StatusPill tone="warning" icon={FlaskConical}>
+            Experimental
+          </StatusPill>
+        }
       >
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-status-warning-bg text-status-warning border border-status-warning/30">
-          <FlaskConical className="w-3 h-3" />
-          Experimental
-        </span>
-      </SectionHeader>
-
-      {/* Worktree Mode */}
-      <div className="space-y-4">
-        <h3 className="text-sm font-medium text-foreground">Worktree Mode</h3>
-
-        <div className="rounded-xl border border-border/50 bg-card/50 p-4 space-y-3">
-          {WORKTREE_MODE_OPTIONS.map(option => (
-            <label
-              key={option.value}
-              className={cn(
-                'flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-colors',
-                worktreeSettings.mode === option.value
-                  ? 'bg-primary/10 border border-primary/30'
-                  : 'hover:bg-muted/50 border border-transparent'
-              )}
-            >
-              <input
-                type="radio"
-                name="worktreeMode"
-                value={option.value}
-                checked={worktreeSettings.mode === option.value}
-                onChange={() => handleModeChange(option.value)}
-                className="mt-1 w-4 h-4 text-primary accent-primary"
-              />
-              <div className="flex-1">
-                <div className="text-sm font-medium text-foreground">{option.label}</div>
-                <div className="text-xs text-muted-foreground mt-0.5">{option.description}</div>
-              </div>
-            </label>
-          ))}
-        </div>
-      </div>
-
-      {/* Worktree Location */}
-      <div className="space-y-4">
-        <h3 className="text-sm font-medium text-foreground">Storage Location</h3>
-
-        <div className="rounded-xl border border-border/50 bg-card/50 p-4 space-y-3">
-          {WORKTREE_LOCATION_OPTIONS.map(option => {
-            const Icon = option.icon;
-            return (
-              <label
-                key={option.value}
-                className={cn(
-                  'flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-colors',
-                  worktreeSettings.location === option.value
-                    ? 'bg-primary/10 border border-primary/30'
-                    : 'hover:bg-muted/50 border border-transparent'
-                )}
-              >
-                <input
-                  type="radio"
-                  name="worktreeLocation"
-                  value={option.value}
-                  checked={worktreeSettings.location === option.value}
-                  onChange={() => handleLocationChange(option.value)}
-                  className="mt-1 w-4 h-4 text-primary accent-primary"
-                />
-                <Icon className="w-4 h-4 mt-0.5 text-muted-foreground" />
-                <div className="flex-1">
-                  <div className="text-sm font-medium text-foreground">{option.label}</div>
-                  <div className="text-xs text-muted-foreground mt-0.5">{option.description}</div>
-                </div>
-              </label>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Auto-cleanup Setting */}
-      <div className="space-y-4">
-        <h3 className="text-sm font-medium text-foreground">Cleanup</h3>
-
-        <div className="rounded-xl border border-border/50 bg-card/50 p-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Trash2 className="w-4 h-4 text-muted-foreground" />
-              <div>
-                <div className="text-sm font-medium text-foreground">Auto-cleanup worktrees</div>
-                <div className="text-xs text-muted-foreground">
-                  Automatically remove worktrees when session ends
-                </div>
-              </div>
-            </div>
-            <button
-              onClick={handleAutoCleanupToggle}
-              className={cn(
-                'relative w-11 h-6 rounded-full transition-colors duration-200',
-                worktreeSettings.autoCleanup ? 'bg-primary' : 'bg-border'
-              )}
-              role="switch"
-              aria-checked={worktreeSettings.autoCleanup}
-            >
-              <div
-                className={cn(
-                  'absolute top-1 w-4 h-4 rounded-full bg-white transition-transform duration-200',
-                  worktreeSettings.autoCleanup ? 'translate-x-6' : 'translate-x-1'
-                )}
-              />
-            </button>
+        <SettingsRow stacked>
+          <SettingsRowLabel
+            title="Worktree mode"
+            description="When should sessions launch into a separate worktree?"
+          />
+          <div className="space-y-2">
+            {WORKTREE_MODE_OPTIONS.map(option => {
+              const isActive = worktreeSettings.mode === option.value;
+              return (
+                <label
+                  key={option.value}
+                  className={cn(
+                    'flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-colors border',
+                    isActive
+                      ? 'bg-primary/10 border-primary/30'
+                      : 'border-transparent hover:bg-muted/40'
+                  )}
+                >
+                  <input
+                    type="radio"
+                    name="worktreeMode"
+                    value={option.value}
+                    checked={isActive}
+                    onChange={() => handleModeChange(option.value)}
+                    className="mt-1 w-4 h-4 text-primary accent-primary"
+                  />
+                  <div className="flex-1">
+                    <div className="text-sm font-medium text-foreground">{option.label}</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">{option.description}</div>
+                  </div>
+                </label>
+              );
+            })}
           </div>
+        </SettingsRow>
 
-          {/* Warning for auto-cleanup */}
-          {worktreeSettings.autoCleanup && (
-            <div className="flex items-start gap-2 p-2 rounded-lg bg-status-warning-bg border border-status-warning/20">
-              <AlertTriangle className="w-4 h-4 text-status-warning mt-0.5 shrink-0" />
-              <div className="text-xs text-status-warning">
-                <strong>Warning:</strong> If the app crashes or terminals close unexpectedly,
-                worktrees and any uncommitted changes may be lost.
-              </div>
+        <SettingsRow stacked divider>
+          <SettingsRowLabel
+            title="Storage location"
+            description="Where worktrees are created on disk."
+          />
+          <div className="space-y-2">
+            {WORKTREE_LOCATION_OPTIONS.map(option => {
+              const Icon = option.icon;
+              const isActive = worktreeSettings.location === option.value;
+              return (
+                <label
+                  key={option.value}
+                  className={cn(
+                    'flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-colors border',
+                    isActive
+                      ? 'bg-primary/10 border-primary/30'
+                      : 'border-transparent hover:bg-muted/40'
+                  )}
+                >
+                  <input
+                    type="radio"
+                    name="worktreeLocation"
+                    value={option.value}
+                    checked={isActive}
+                    onChange={() => handleLocationChange(option.value)}
+                    className="mt-1 w-4 h-4 text-primary accent-primary"
+                  />
+                  <Icon className="w-4 h-4 mt-0.5 text-muted-foreground" />
+                  <div className="flex-1">
+                    <div className="text-sm font-medium text-foreground">{option.label}</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">{option.description}</div>
+                  </div>
+                </label>
+              );
+            })}
+          </div>
+        </SettingsRow>
+
+        <SettingsToggleRow
+          divider
+          title={
+            <span className="flex items-center gap-2">
+              <Trash2 className="w-3.5 h-3.5 text-muted-foreground" />
+              Auto-cleanup worktrees
+            </span>
+          }
+          description="Automatically remove worktrees when session ends"
+          checked={worktreeSettings.autoCleanup}
+          onCheckedChange={handleAutoCleanupToggle}
+        />
+
+        {worktreeSettings.autoCleanup && (
+          <div className="flex items-start gap-2 p-2 rounded-lg bg-status-warning-bg border border-status-warning/20">
+            <AlertTriangle className="w-4 h-4 text-status-warning mt-0.5 shrink-0" />
+            <div className="text-xs text-status-warning">
+              <strong>Warning:</strong> If the app crashes or terminals close unexpectedly,
+              worktrees and any uncommitted changes may be lost.
             </div>
-          )}
-        </div>
-      </div>
+          </div>
+        )}
+      </SettingsCard>
 
-      {/* Info Box */}
-      <div className="rounded-xl border border-border/50 bg-muted/30 p-4">
+      <div className="rounded-xl border border-border-glass bg-muted/20 p-4">
         <div className="text-xs text-muted-foreground space-y-2">
           <p>
             <strong className="text-foreground">What are worktrees?</strong>

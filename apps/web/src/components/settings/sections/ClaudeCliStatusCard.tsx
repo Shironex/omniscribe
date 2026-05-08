@@ -9,6 +9,8 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ClaudeCliStatus, ClaudeVersionCheckResult } from '@omniscribe/shared';
+import { SettingsCard } from '@/components/settings/SettingsCard';
+import { StatusPill } from '@/components/shared/StatusPill';
 
 interface ClaudeCliStatusCardProps {
   claudeCliStatus: ClaudeCliStatus;
@@ -36,42 +38,34 @@ export function ClaudeCliStatusCard({
   onGetInstallCommand,
 }: ClaudeCliStatusCardProps) {
   return (
-    <div className="rounded-xl border border-border/50 bg-card/50 p-4">
-      <div className="flex items-center gap-3 mb-4">
-        <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center">
-          <Terminal className="w-4 h-4 text-muted-foreground" />
-        </div>
-        <div className="flex-1">
-          <h3 className="text-sm font-medium text-foreground">CLI Installation</h3>
-          <p className="text-xs text-muted-foreground">Claude Code command-line interface</p>
-        </div>
+    <SettingsCard
+      icon={Terminal}
+      tone="muted"
+      title="CLI Installation"
+      subtitle="Claude Code command-line interface"
+      headerAccessory={
         <div className="flex items-center gap-2">
-          {/* Update Available Badge */}
           {claudeVersionCheck?.isOutdated && (
-            <span className="flex items-center gap-1 text-xs font-medium text-status-warning bg-status-warning-bg px-2 py-1 rounded-full">
-              <ArrowUpCircle className="w-3 h-3" />
+            <StatusPill tone="warning" icon={ArrowUpCircle}>
               Update Available
-            </span>
+            </StatusPill>
           )}
           {claudeCliStatus.installed ? (
-            <span className="flex items-center gap-1.5 text-xs font-medium text-primary bg-primary/10 px-2 py-1 rounded-full">
-              <CheckCircle2 className="w-3 h-3" />
+            <StatusPill tone="ready" icon={CheckCircle2}>
               Installed
-            </span>
+            </StatusPill>
           ) : (
-            <span className="flex items-center gap-1.5 text-xs font-medium text-status-warning bg-status-warning-bg px-2 py-1 rounded-full">
-              <XCircle className="w-3 h-3" />
+            <StatusPill tone="warning" icon={XCircle}>
               Not Found
-            </span>
+            </StatusPill>
           )}
         </div>
-      </div>
-
+      }
+    >
       {claudeCliStatus.installed ? (
         <div className="space-y-2 text-sm">
-          {/* Version with update indicator */}
           {claudeCliStatus.version && (
-            <div className="flex items-center justify-between py-2 border-b border-border/30">
+            <div className="flex items-center justify-between py-2 border-b border-border-glass/60">
               <span className="text-muted-foreground">Version</span>
               <div className="flex items-center gap-2">
                 <span className="text-foreground font-mono">{claudeCliStatus.version}</span>
@@ -90,7 +84,7 @@ export function ClaudeCliStatusCard({
             </div>
           )}
           {claudeCliStatus.path && (
-            <div className="flex items-center justify-between py-2 border-b border-border/30">
+            <div className="flex items-center justify-between py-2 border-b border-border-glass/60">
               <span className="text-muted-foreground">Path</span>
               <span
                 className="text-foreground font-mono text-xs max-w-[300px] truncate"
@@ -107,8 +101,7 @@ export function ClaudeCliStatusCard({
             </span>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex items-center gap-2 pt-3 border-t border-border/30">
+          <div className="flex items-center gap-2 pt-3 border-t border-border-glass/60">
             {claudeVersionCheck?.isOutdated && (
               <button
                 type="button"
@@ -116,7 +109,8 @@ export function ClaudeCliStatusCard({
                 className={cn(
                   'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium',
                   'bg-primary text-primary-foreground',
-                  'hover:bg-primary/90 transition-colors'
+                  'hover:bg-primary/90 transition-colors',
+                  'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1'
                 )}
               >
                 <ArrowUpCircle className="w-3.5 h-3.5" />
@@ -124,7 +118,6 @@ export function ClaudeCliStatusCard({
               </button>
             )}
 
-            {/* Version Picker */}
             <div className="relative">
               <button
                 type="button"
@@ -134,7 +127,8 @@ export function ClaudeCliStatusCard({
                 className={cn(
                   'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium',
                   'bg-muted text-muted-foreground',
-                  'hover:bg-muted/80 hover:text-foreground transition-colors'
+                  'hover:bg-muted/80 hover:text-foreground transition-colors',
+                  'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1'
                 )}
               >
                 Change Version
@@ -189,7 +183,8 @@ export function ClaudeCliStatusCard({
             className={cn(
               'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium',
               'bg-primary text-primary-foreground',
-              'hover:bg-primary/90 transition-colors'
+              'hover:bg-primary/90 transition-colors',
+              'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1'
             )}
           >
             <Terminal className="w-3.5 h-3.5" />
@@ -197,6 +192,6 @@ export function ClaudeCliStatusCard({
           </button>
         </div>
       )}
-    </div>
+    </SettingsCard>
   );
 }

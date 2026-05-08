@@ -1,12 +1,17 @@
 import { useMemo } from 'react';
 import { Monitor, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { SectionHeader } from '@/components/shared/SectionHeader';
 import { useWorkspaceStore } from '@/stores/useWorkspaceStore';
 import { usePluginStore } from '@/stores/usePluginStore';
 import { getModeIcon, buildAiModeOptions } from '@/lib/ai-mode-utils';
 import type { AiMode, SessionSettings } from '@omniscribe/shared';
 import { DEFAULT_SESSION_SETTINGS } from '@omniscribe/shared';
+import {
+  SettingsCard,
+  SettingsRow,
+  SettingsRowLabel,
+  SettingsToggleRow,
+} from '@/components/settings/SettingsCard';
 
 export function SessionsSection() {
   const preferences = useWorkspaceStore(state => state.preferences);
@@ -33,119 +38,87 @@ export function SessionsSection() {
   const skipPermissions = sessionSettings.skipPermissions ?? false;
 
   const handleModeChange = (mode: AiMode) => {
-    updatePreference('session', {
-      ...sessionSettings,
-      defaultMode: mode,
-    });
+    updatePreference('session', { ...sessionSettings, defaultMode: mode });
   };
 
-  const handleSkipPermissionsToggle = () => {
-    updatePreference('session', {
-      ...sessionSettings,
-      skipPermissions: !skipPermissions,
-    });
+  const handleSkipPermissionsToggle = (next: boolean) => {
+    updatePreference('session', { ...sessionSettings, skipPermissions: next });
   };
 
   return (
-    <div className="space-y-6">
-      <SectionHeader
+    <div className="space-y-4">
+      <SettingsCard
         icon={Monitor}
+        tone="gold"
         title="Sessions"
-        description="Configure default behavior for new sessions"
-      />
-
-      {/* Default AI Mode */}
-      <div className="space-y-4">
-        <h3 className="text-sm font-medium text-foreground">Default Mode</h3>
-
-        <div className="rounded-xl border border-border/50 bg-card/50 p-4 space-y-3">
-          {aiModeOptions.map(option => {
-            const ModeIcon = getModeIcon(option.value, statusRenderers, Monitor);
-            return (
-              <label
-                key={option.value}
-                className={cn(
-                  'flex items-start gap-3 p-3 rounded-lg transition-colors',
-                  option.disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
-                  sessionSettings.defaultMode === option.value
-                    ? 'bg-primary/10 border border-primary/30'
-                    : option.disabled
-                      ? 'border border-transparent'
-                      : 'hover:bg-muted/50 border border-transparent'
-                )}
-              >
-                <input
-                  type="radio"
-                  name="defaultAiMode"
-                  value={option.value}
-                  checked={sessionSettings.defaultMode === option.value}
-                  onChange={() => handleModeChange(option.value)}
-                  disabled={option.disabled}
-                  className="mt-1 w-4 h-4 text-primary accent-primary"
-                />
-                <ModeIcon className="w-4 h-4 mt-0.5 text-muted-foreground" size={16} />
-                <div className="flex-1">
-                  <div className="text-sm font-medium text-foreground">{option.label}</div>
-                  <div className="text-xs text-muted-foreground mt-0.5">
-                    {option.disabled ? option.disabledReason : option.description}
+        subtitle="Configure default behavior for new sessions."
+      >
+        <SettingsRow stacked>
+          <SettingsRowLabel
+            title="Default mode"
+            description="Used when adding new session slots — change per-slot before launch."
+          />
+          <div className="space-y-2">
+            {aiModeOptions.map(option => {
+              const ModeIcon = getModeIcon(option.value, statusRenderers, Monitor);
+              const isActive = sessionSettings.defaultMode === option.value;
+              return (
+                <label
+                  key={option.value}
+                  className={cn(
+                    'flex items-start gap-3 p-3 rounded-lg transition-colors border',
+                    option.disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
+                    isActive
+                      ? 'bg-primary/10 border-primary/30'
+                      : option.disabled
+                        ? 'border-transparent'
+                        : 'border-transparent hover:bg-muted/40'
+                  )}
+                >
+                  <input
+                    type="radio"
+                    name="defaultAiMode"
+                    value={option.value}
+                    checked={isActive}
+                    onChange={() => handleModeChange(option.value)}
+                    disabled={option.disabled}
+                    className="mt-1 w-4 h-4 text-primary accent-primary"
+                  />
+                  <ModeIcon className="w-4 h-4 mt-0.5 text-muted-foreground" size={16} />
+                  <div className="flex-1">
+                    <div className="text-sm font-medium text-foreground">{option.label}</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">
+                      {option.disabled ? option.disabledReason : option.description}
+                    </div>
                   </div>
-                </div>
-              </label>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Skip Permissions */}
-      <div className="space-y-4">
-        <h3 className="text-sm font-medium text-foreground">Skip Permissions</h3>
-
-        <div className="rounded-xl border border-border/50 bg-card/50 p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <div id="skip-permissions-label" className="text-sm font-medium text-foreground">
-                Allow skip-permissions mode
-              </div>
-              <div className="text-xs text-muted-foreground">
-                Launch Claude sessions with --dangerously-skip-permissions flag
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={handleSkipPermissionsToggle}
-              className={cn(
-                'relative w-11 h-6 rounded-full transition-colors duration-200',
-                skipPermissions ? 'bg-primary' : 'bg-border'
-              )}
-              role="switch"
-              aria-checked={skipPermissions}
-              aria-labelledby="skip-permissions-label"
-            >
-              <div
-                className={cn(
-                  'absolute top-1 w-4 h-4 rounded-full bg-white transition-transform duration-200',
-                  skipPermissions ? 'translate-x-6' : 'translate-x-1'
-                )}
-              />
-            </button>
+                </label>
+              );
+            })}
           </div>
+        </SettingsRow>
 
-          {skipPermissions && (
-            <div className="flex items-start gap-2 p-2 rounded-lg bg-status-warning-bg border border-status-warning/20 mt-3">
-              <AlertTriangle className="w-4 h-4 text-status-warning mt-0.5 shrink-0" />
-              <div className="text-xs text-status-warning">
-                <strong>Warning:</strong> Skip-permissions mode allows Claude to execute commands,
-                edit files, and make changes without asking for confirmation. Only enable this if
-                you trust your prompts and understand the risks. This applies to new sessions only —
-                existing sessions are not affected.
-              </div>
+        <SettingsToggleRow
+          divider
+          title="Allow skip-permissions mode"
+          description="Launch Claude sessions with --dangerously-skip-permissions flag"
+          checked={skipPermissions}
+          onCheckedChange={handleSkipPermissionsToggle}
+        />
+
+        {skipPermissions && (
+          <div className="flex items-start gap-2 p-2 rounded-lg bg-status-warning-bg border border-status-warning/20">
+            <AlertTriangle className="w-4 h-4 text-status-warning mt-0.5 shrink-0" />
+            <div className="text-xs text-status-warning">
+              <strong>Warning:</strong> Skip-permissions mode allows Claude to execute commands,
+              edit files, and make changes without asking for confirmation. Only enable this if you
+              trust your prompts and understand the risks. This applies to new sessions only —
+              existing sessions are not affected.
             </div>
-          )}
-        </div>
-      </div>
+          </div>
+        )}
+      </SettingsCard>
 
-      {/* Info Box */}
-      <div className="rounded-xl border border-border/50 bg-muted/30 p-4">
+      <div className="rounded-xl border border-border-glass bg-muted/20 p-4">
         <div className="text-xs text-muted-foreground space-y-2">
           <p>
             <strong className="text-foreground">What does this control?</strong>

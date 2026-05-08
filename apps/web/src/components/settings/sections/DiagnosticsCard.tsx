@@ -3,6 +3,7 @@ import { FileText, FolderOpen, ScrollText } from 'lucide-react';
 import { createLogger } from '@omniscribe/shared';
 import { Button } from '@/components/ui/button';
 import { LogViewerModal } from '@/components/settings/LogViewerModal';
+import { SettingsCard, SettingsRow, SettingsRowLabel } from '@/components/settings/SettingsCard';
 
 const logger = createLogger('DiagnosticsCard');
 
@@ -11,17 +12,17 @@ export function DiagnosticsCard() {
 
   return (
     <>
-      <div className="rounded-xl border border-border/50 bg-card/50 p-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <FileText className="w-4 h-4 text-muted-foreground" />
-            <div>
-              <h3 className="text-sm font-medium text-foreground">Diagnostics</h3>
-              <p className="text-xs text-muted-foreground">
-                View application logs for troubleshooting
-              </p>
-            </div>
-          </div>
+      <SettingsCard
+        icon={FileText}
+        tone="muted"
+        title="Diagnostics"
+        subtitle="View application logs for troubleshooting."
+      >
+        <SettingsRow>
+          <SettingsRowLabel
+            title="Application logs"
+            description="Inspect recent log lines or open the log folder on disk."
+          />
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={() => setLogViewerOpen(true)}>
               <ScrollText className="w-3.5 h-3.5" />
@@ -42,8 +43,8 @@ export function DiagnosticsCard() {
               Open Log Folder
             </Button>
           </div>
-        </div>
-      </div>
+        </SettingsRow>
+      </SettingsCard>
       <LogViewerModal open={logViewerOpen} onOpenChange={setLogViewerOpen} />
     </>
   );
