@@ -1,8 +1,6 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Sparkles, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { SectionHeader } from '@/components/shared/SectionHeader';
-import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
 import { useWorkspaceStore, selectActiveTab } from '@/stores/useWorkspaceStore';
 import {
@@ -11,6 +9,12 @@ import {
   selectMcpCapabilitiesLoading,
   selectMcpCapabilitiesError,
 } from '@/stores/useMcpCapabilitiesStore';
+import {
+  SettingsCard,
+  SettingsRow,
+  SettingsRowLabel,
+  SettingsToggleRow,
+} from '@/components/settings/SettingsCard';
 
 /**
  * Debounced numeric port input for the playwright-electron capability.
@@ -65,10 +69,18 @@ function ElectronCdpPortField({
   };
 
   return (
-    <div className="mt-3 flex items-center gap-3">
-      <label className="text-xs font-medium text-muted-foreground shrink-0" htmlFor="cdp-port">
-        CDP port
-      </label>
+    <SettingsRow stacked divider>
+      <SettingsRowLabel
+        title="CDP port"
+        description={
+          <span>
+            Launch your Electron app with{' '}
+            <code className="rounded bg-muted/50 px-1 py-0.5 text-[11px]">
+              --remote-debugging-port={value || port}
+            </code>
+          </span>
+        }
+      />
       <Input
         id="cdp-port"
         type="number"
@@ -87,14 +99,9 @@ function ElectronCdpPortField({
           commit(value);
         }}
         className="h-8 w-28 text-xs"
+        aria-label="Chrome DevTools Protocol port"
       />
-      <span className="text-xs text-muted-foreground/80">
-        Launch your Electron app with{' '}
-        <code className="rounded bg-muted/50 px-1 py-0.5 text-[11px]">
-          --remote-debugging-port={value || port}
-        </code>
-      </span>
-    </div>
+    </SettingsRow>
   );
 }
 
@@ -125,81 +132,78 @@ export function AiCapabilitiesSection() {
   const disabledAll = !projectPath || isLoading || capabilities.length === 0;
 
   return (
-    <div className="space-y-6">
-      <SectionHeader
+    <div className="space-y-4">
+      <SettingsCard
         icon={Sparkles}
+        tone="primary"
         title="AI Capabilities"
-        description="Enable optional MCP-powered tools for the active project"
-      />
-
-      {!projectPath && (
-        <div className="rounded-xl border border-border/50 bg-card/50 p-6 text-center text-muted-foreground">
-          <p className="text-sm">Open a project to manage its AI capabilities.</p>
-        </div>
-      )}
-
-      {projectPath && isLoading && capabilities.length === 0 && (
-        <div className="rounded-xl border border-border/50 bg-card/50 p-6">
-          <div className="flex items-center justify-center gap-3 text-muted-foreground">
-            <Loader2 className="w-5 h-5 animate-spin" />
-            <span>Loading capabilities...</span>
+        subtitle="Enable optional MCP-powered tools for the active project."
+      >
+        {!projectPath && (
+          <div className="text-center text-muted-foreground py-6">
+            <Sparkles className="w-8 h-8 mx-auto mb-2 opacity-50" />
+            <p className="text-sm">Open a project to manage its AI capabilities.</p>
           </div>
-        </div>
-      )}
+        )}
 
-      {error && (
-        <div className="rounded-lg border border-status-error/40 bg-status-error-bg/30 p-3 text-xs text-status-error">
-          {error}
-        </div>
-      )}
+        {projectPath && isLoading && capabilities.length === 0 && (
+          <div className="flex items-center justify-center gap-3 text-muted-foreground py-6">
+            <Loader2 className="w-5 h-5 animate-spin" />
+            <span className="text-sm">Loading capabilities...</span>
+          </div>
+        )}
 
-      {projectPath && capabilities.length > 0 && (
-        <div className="space-y-3">
-          {capabilities.map(cap => {
+        {error && (
+          <div className="rounded-lg border border-status-error/40 bg-status-error-bg/30 p-3 text-xs text-status-error">
+            {error}
+          </div>
+        )}
+
+        {projectPath &&
+          capabilities.length > 0 &&
+          capabilities.map((cap, index) => {
             // Allow disabling an already-enabled capability even when the
             // preflight now reports it unavailable — otherwise users get
             // stuck with a permanently-on toggle.
             const unavailable = Boolean(cap.disabledReason) && !cap.enabled;
             const isElectron = cap.id === 'playwright-electron';
-            return (
-              <div
-                key={cap.id}
-                className={cn(
-                  'rounded-xl border border-border/50 bg-card/50 p-4',
-                  unavailable && 'opacity-70'
+            const description = (
+              <span className="block space-y-0.5">
+                <span className="block">{cap.description}</span>
+                {cap.disabledReason ? (
+                  <span className="block text-status-warning/90">{cap.disabledReason}</span>
+                ) : (
+                  <span className="block text-muted-foreground/70">
+                    Takes effect on the next session you start.
+                  </span>
                 )}
-              >
-                <div className="flex items-start gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-sm font-medium text-foreground truncate">{cap.label}</h3>
+              </span>
+            );
+
+            return (
+              <div key={cap.id} className={cn(unavailable && 'opacity-70')}>
+                <SettingsToggleRow
+                  divider={index > 0}
+                  title={
+                    <span className="flex items-center gap-2">
+                      <span>{cap.label}</span>
                       {cap.requiresDev && (
                         <span className="text-[10px] font-medium text-status-warning bg-status-warning-bg px-1.5 py-0.5 rounded">
                           Dev only
                         </span>
                       )}
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">{cap.description}</p>
-                    {cap.disabledReason ? (
-                      <p className="text-xs text-status-warning/90 mt-1.5">{cap.disabledReason}</p>
-                    ) : (
-                      <p className="text-xs text-muted-foreground/70 mt-1.5">
-                        Applies to new sessions.
-                      </p>
-                    )}
-                  </div>
-                  <Switch
-                    checked={cap.enabled}
-                    disabled={disabledAll || unavailable}
-                    onCheckedChange={next => {
-                      if (projectPath) {
-                        void toggleCapability(projectPath, cap.id, next);
-                      }
-                    }}
-                    aria-label={`Toggle ${cap.label}`}
-                  />
-                </div>
-                {isElectron && projectPath && (
+                    </span>
+                  }
+                  description={description}
+                  checked={cap.enabled}
+                  disabled={disabledAll || unavailable}
+                  onCheckedChange={next => {
+                    if (projectPath) {
+                      void toggleCapability(projectPath, cap.id, next);
+                    }
+                  }}
+                />
+                {isElectron && cap.enabled && projectPath && (
                   <ElectronCdpPortField
                     projectPath={projectPath}
                     capabilityId={cap.id}
@@ -210,15 +214,14 @@ export function AiCapabilitiesSection() {
               </div>
             );
           })}
-        </div>
-      )}
 
-      {projectPath && !isLoading && capabilities.length === 0 && !error && (
-        <div className="rounded-xl border border-border/50 bg-card/50 p-6 text-center text-muted-foreground">
-          <Sparkles className="w-8 h-8 mx-auto mb-2 opacity-50" />
-          <p className="text-sm">No capabilities registered.</p>
-        </div>
-      )}
+        {projectPath && !isLoading && capabilities.length === 0 && !error && (
+          <div className="text-center text-muted-foreground py-6">
+            <Sparkles className="w-8 h-8 mx-auto mb-2 opacity-50" />
+            <p className="text-sm">No capabilities registered.</p>
+          </div>
+        )}
+      </SettingsCard>
     </div>
   );
 }
