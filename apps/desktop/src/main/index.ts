@@ -13,7 +13,7 @@ import { initializeAutoUpdater } from './updater';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { corsOriginCallback } from '../modules/shared/cors.config';
 import { NestLoggerAdapter } from '../modules/shared/nest-logger';
-import { LOCALHOST } from '@omniscribe/shared';
+import { LOCALHOST, APP_USER_MODEL_ID } from '@omniscribe/shared';
 import { resolveShellPath } from './utils/shell-path';
 import { getThumbnailsDir } from './utils';
 import { setBackendPort } from './backend-port';
@@ -50,6 +50,10 @@ protocol.registerSchemesAsPrivileged([
   },
 ]);
 
+// Must be the first Windows shell registration call so subsequent
+// protocol / notification registrations are tagged with the correct AUMID.
+app.setAppUserModelId(APP_USER_MODEL_ID);
+
 // Register custom protocol for deep linking (notification click-to-navigate)
 if (process.defaultApp) {
   // Dev mode: register with the path to the electron binary
@@ -57,9 +61,6 @@ if (process.defaultApp) {
 } else {
   app.setAsDefaultProtocolClient('omniscribe');
 }
-
-// Set AppUserModelId for Windows notification center integration
-app.setAppUserModelId('com.omniscribe.desktop');
 
 // Ensure single instance — second instances forward protocol URLs to the first
 const gotTheLock = app.requestSingleInstanceLock();

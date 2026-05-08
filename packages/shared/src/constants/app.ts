@@ -18,6 +18,9 @@ export const APP_NAME = 'Omniscribe';
 /** Application name (lowercase, for paths/IDs) */
 export const APP_NAME_LOWER = 'omniscribe';
 
+/** Windows AppUserModelID — must match appId in electron-builder.json */
+export const APP_USER_MODEL_ID = 'com.omniscribe.desktop';
+
 /** MCP server name used in .mcp.json */
 export const MCP_SERVER_NAME = 'omniscribe';
 

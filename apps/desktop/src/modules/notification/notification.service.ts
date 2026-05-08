@@ -4,6 +4,7 @@ import { Notification } from 'electron';
 import {
   createLogger,
   DEFAULT_NOTIFICATION_SETTINGS,
+  APP_USER_MODEL_ID,
   type SessionStatus,
   type SessionStatusUpdate,
   type NotificationSettings,
@@ -182,7 +183,11 @@ export class NotificationService implements OnModuleDestroy {
       title: 'Omniscribe Test Notification',
       body: 'Notifications are working correctly!',
       silent: false,
-    });
+      // appID pins the AUMID so Windows Action Center resolves the correct app
+      // name and icon. Electron 41 types omit this field but it is supported at
+      // runtime on win32 (silently ignored on macOS/Linux).
+      appID: APP_USER_MODEL_ID,
+    } as Electron.NotificationConstructorOptions);
 
     notification.show();
   }
@@ -252,7 +257,11 @@ export class NotificationService implements OnModuleDestroy {
       title: notification.title,
       body,
       silent: !settings.sound,
-    });
+      // appID pins the AUMID so Windows Action Center resolves the correct app
+      // name and icon. Electron 41 types omit this field but it is supported at
+      // runtime on win32 (silently ignored on macOS/Linux).
+      appID: APP_USER_MODEL_ID,
+    } as Electron.NotificationConstructorOptions);
 
     native.on('click', () => {
       this.handleNotificationClick(notification.sessionId, notification.tabId);
