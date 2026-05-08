@@ -480,6 +480,64 @@ describe('McpWriterService', () => {
 
       expect(sessionRegistry.unregisterSession).not.toHaveBeenCalled();
     });
+
+    it('refuses to delete entries listed in the marker but not in the registry', async () => {
+      // A forged or stale managedCapabilities marker lists IDs we don't
+      // own. We must NOT remove them, even when an entry exists under
+      // that id in mcpServers.
+      const existingConfig = {
+        mcpServers: {
+          omniscribe: { type: 'stdio', command: 'node' },
+          'user-server-A': { type: 'stdio', command: 'user-thing' },
+          'user-server-B': { type: 'stdio', command: 'other' },
+        },
+        _omniscribe: {
+          sessionId: 'session-1',
+          managedCapabilities: ['omniscribe', 'user-server-A', 'user-server-B'],
+        },
+      };
+
+      existsSyncMock.mockReturnValue(true);
+      readFileMock.mockResolvedValue(JSON.stringify(existingConfig));
+
+      const result = await service.removeConfig('/work/dir');
+
+      expect(result).toBe(true);
+
+      // Only the legitimate, registry-known omniscribe entry is gone.
+      // The user's own servers remain even though the marker tried to
+      // claim them.
+      const writtenConfig = JSON.parse(writeFileMock.mock.calls[0][1]);
+      expect(writtenConfig.mcpServers['omniscribe']).toBeUndefined();
+      expect(writtenConfig.mcpServers['user-server-A']).toBeDefined();
+      expect(writtenConfig.mcpServers['user-server-B']).toBeDefined();
+      expect(writtenConfig['_omniscribe']).toBeUndefined();
+    });
+
+    it('refuses to delete a forged-only id when no real managed entry remains', async () => {
+      const existingConfig = {
+        mcpServers: {
+          'user-server': { type: 'stdio', command: 'user-thing' },
+        },
+        _omniscribe: {
+          sessionId: 'session-1',
+          // Pretend Omniscribe owns a server it never registered.
+          managedCapabilities: ['user-server'],
+        },
+      };
+
+      existsSyncMock.mockReturnValue(true);
+      readFileMock.mockResolvedValue(JSON.stringify(existingConfig));
+
+      const result = await service.removeConfig('/work/dir');
+
+      // The marker is gone (we always strip our own meta) but the
+      // user's server entry is preserved.
+      expect(result).toBe(true);
+      const writtenConfig = JSON.parse(writeFileMock.mock.calls[0][1]);
+      expect(writtenConfig.mcpServers['user-server']).toBeDefined();
+      expect(writtenConfig['_omniscribe']).toBeUndefined();
+    });
   });
 
   describe('getInternalMcpInfo', () => {
