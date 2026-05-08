@@ -86,6 +86,8 @@ describe('env-utils', () => {
       expect(matches('BASH_ENV')).toBe(true);
       expect(matches('ENV')).toBe(true);
       expect(matches('BASH_FUNC_x')).toBe(true);
+      expect(matches('ZDOTDIR')).toBe(true);
+      expect(matches('zdotdir')).toBe(true);
     });
 
     it('should match NODE_OPTIONS and NODE_EXTRA_CA_CERTS', () => {

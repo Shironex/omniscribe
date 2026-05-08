@@ -113,6 +113,10 @@ export const ENV_BLOCKLIST_PATTERNS: RegExp[] = [
   /^BASH_ENV$/i,
   /^ENV$/i,
   /^BASH_FUNC_/i,
+  // ZDOTDIR redirects zsh startup-file lookup to an arbitrary directory,
+  // letting an attacker run their .zshrc instead of the user's. Block
+  // it on both inheritance and caller-extras paths.
+  /^ZDOTDIR$/i,
 ];
 
 /**

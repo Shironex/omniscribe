@@ -63,22 +63,33 @@ export class TerminalService implements OnModuleDestroy {
   }
 
   /**
-   * Get appropriate shell arguments based on shell type
+   * Get appropriate shell arguments based on shell type.
+   *
+   * Use `-i` (interactive) rather than `--login`. Both VS Code and iTerm
+   * default to interactive shells, which source `~/.bashrc` / `~/.zshrc`
+   * — the files where most users put their PATH and aliases. `--login`
+   * sources `~/.bash_profile` / `~/.zprofile` instead, which is the
+   * convention for true terminal sessions but surprises users who
+   * configured their dev env in the rc-file.
+   *
+   * Release note: users who only put PATH or aliases in `~/.bash_profile`
+   * or `~/.zprofile` will need to add a sourcing line in `~/.bashrc` /
+   * `~/.zshrc` (or move their config), matching VS Code / iTerm behavior.
    */
   private getShellArgs(shell: string): string[] {
     const shellName =
       normalizePath(shell.toLowerCase()).split('/').pop()?.replace('.exe', '') || '';
 
-    // PowerShell and cmd don't need --login
+    // PowerShell and cmd don't take POSIX shell flags.
     if (shellName === 'powershell' || shellName === 'pwsh' || shellName === 'cmd') {
       return [];
     }
-    // sh doesn't support --login in all implementations
+    // sh doesn't honor -i in all implementations and breaks if forced.
     if (shellName === 'sh') {
       return [];
     }
-    // bash, zsh, and other POSIX shells support --login
-    return ['--login'];
+    // bash, zsh, and other POSIX shells.
+    return ['-i'];
   }
 
   /**
