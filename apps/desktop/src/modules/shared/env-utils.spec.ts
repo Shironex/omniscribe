@@ -232,12 +232,64 @@ describe('env-utils', () => {
       expect(result.CUSTOM).toBe('value');
     });
 
-    it('should allow extra vars to override process.env values', () => {
+    it('should let extras override process.env values for non-blocklisted keys', () => {
+      process.env = { LANG: 'en_US.UTF-8' };
+
+      const result = buildSafeEnv({ LANG: 'C.UTF-8' });
+
+      expect(result.LANG).toBe('C.UTF-8');
+    });
+
+    it('should refuse to let extras override PATH inherited from process.env', () => {
       process.env = { PATH: '/usr/bin' };
 
-      const result = buildSafeEnv({ PATH: '/custom/bin' });
+      const result = buildSafeEnv({ PATH: '/malicious/bin' });
 
-      expect(result.PATH).toBe('/custom/bin');
+      // PATH/HOME/SHELL are caller-blocked: callers cannot rewrite the
+      // shell-resolution variables. The host's PATH still flows through.
+      expect(result.PATH).toBe('/usr/bin');
+    });
+
+    it('blocks caller overrides of dev-tool path roots', () => {
+      process.env = { NVM_DIR: '/home/me/.nvm', PNPM_HOME: '/home/me/.local/share/pnpm' };
+
+      const result = buildSafeEnv({
+        PATH: '/atk/bin',
+        HOME: '/atk/home',
+        SHELL: '/atk/bin/sh',
+        NVM_DIR: '/atk/.nvm',
+        PNPM_HOME: '/atk/pnpm',
+        BUN_INSTALL: '/atk/bun',
+        HOMEBREW_PREFIX: '/atk/brew',
+      });
+
+      // Inherited values stand; caller overrides are dropped.
+      expect(result.NVM_DIR).toBe('/home/me/.nvm');
+      expect(result.PNPM_HOME).toBe('/home/me/.local/share/pnpm');
+      expect(result.PATH).toBeUndefined();
+      expect(result.HOME).toBeUndefined();
+      expect(result.SHELL).toBeUndefined();
+      expect(result.BUN_INSTALL).toBeUndefined();
+      expect(result.HOMEBREW_PREFIX).toBeUndefined();
+    });
+
+    it('caller blocklist is case-insensitive', () => {
+      process.env = {};
+      const result = buildSafeEnv({ path: '/atk/bin', Home: '/atk' });
+      expect(result.path).toBeUndefined();
+      expect(result.Home).toBeUndefined();
+    });
+
+    it('drops non-string extras silently', () => {
+      process.env = {};
+      const result = buildSafeEnv({
+        VALID: 'ok',
+        NUMBER: 5 as unknown as string,
+        OBJECT: {} as unknown as string,
+      });
+      expect(result.VALID).toBe('ok');
+      expect(result.NUMBER).toBeUndefined();
+      expect(result.OBJECT).toBeUndefined();
     });
 
     it('should handle empty extra object', () => {

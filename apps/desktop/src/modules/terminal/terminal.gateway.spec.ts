@@ -214,6 +214,37 @@ describe('TerminalGateway', () => {
       expect(terminalService.spawn).toHaveBeenCalledWith(undefined, undefined);
       expect(result).toEqual({ sessionId: 1 });
     });
+
+    it('should reject relative cwd', () => {
+      const client = createMockSocket('c1');
+      gateway.handleConnection(client);
+
+      expect(() => gateway.handleSpawn(client, { cwd: 'not-absolute' })).toThrow(/absolute/);
+      expect(terminalService.spawn).not.toHaveBeenCalled();
+    });
+
+    it('should reject non-string cwd', () => {
+      const client = createMockSocket('c1');
+      gateway.handleConnection(client);
+
+      expect(() => gateway.handleSpawn(client, { cwd: 123 as unknown as string })).toThrow();
+      expect(terminalService.spawn).not.toHaveBeenCalled();
+    });
+
+    it('should reject env that is not an object of string→string entries', () => {
+      const client = createMockSocket('c1');
+      gateway.handleConnection(client);
+
+      expect(() =>
+        gateway.handleSpawn(client, {
+          env: 'string-not-object' as unknown as Record<string, string>,
+        })
+      ).toThrow();
+      expect(() =>
+        gateway.handleSpawn(client, { env: { GOOD: 'ok', BAD: 5 as unknown as string } })
+      ).toThrow();
+      expect(terminalService.spawn).not.toHaveBeenCalled();
+    });
   });
 
   // =========================================================================

@@ -116,9 +116,45 @@ export const ENV_BLOCKLIST_PATTERNS: RegExp[] = [
 ];
 
 /**
+ * Caller-only blocklist (case-insensitive substring matches).
+ *
+ * These names ARE allowed to be inherited from `process.env` — the dev
+ * shell needs them to find tools — but a remote caller providing them
+ * via the `extra` arg of `buildSafeEnv` would let an attacker control
+ * the spawned shell's PATH or runtime configuration. Block them only
+ * on the caller path.
+ */
+const ENV_CALLER_BLOCKLIST = new Set<string>([
+  'PATH',
+  'HOME',
+  'SHELL',
+  'NVM_DIR',
+  'NVM_BIN',
+  'NVM_INC',
+  'PNPM_HOME',
+  'BUN_INSTALL',
+  'HOMEBREW_PREFIX',
+  'HOMEBREW_CELLAR',
+  'HOMEBREW_REPOSITORY',
+  'GOROOT',
+  'GOPATH',
+  'CARGO_HOME',
+  'RUSTUP_HOME',
+]);
+
+function isCallerBlocked(key: string): boolean {
+  return ENV_CALLER_BLOCKLIST.has(key.toUpperCase());
+}
+
+/**
  * Build a sanitized environment for spawned terminal processes.
  * Only allowlisted variables from process.env are included, and all variables
  * (including caller-provided extras) are filtered through the blocklist.
+ *
+ * `extra` (caller-provided overrides) is filtered through both the
+ * primary blocklist and a caller-only blocklist that protects shell-
+ * resolution variables. The caller blocklist does NOT apply to inherited
+ * `process.env` values — the host shell still needs PATH/HOME/etc.
  */
 export function buildSafeEnv(extra?: Record<string, string>): Record<string, string> {
   const safeEnv: Record<string, string> = {};
@@ -129,12 +165,14 @@ export function buildSafeEnv(extra?: Record<string, string>): Record<string, str
     }
   }
   if (extra) {
-    // Extra env vars from callers (e.g., session-specific vars) are passed through
-    // but still filtered by blocklist
+    // Extra env vars from callers (e.g., session-specific vars) are passed
+    // through, but filtered by both the global blocklist AND a caller-only
+    // blocklist that prevents remote callers from rewriting PATH/HOME/etc.
     for (const [key, value] of Object.entries(extra)) {
-      if (!ENV_BLOCKLIST_PATTERNS.some(p => p.test(key))) {
-        safeEnv[key] = value;
-      }
+      if (typeof value !== 'string') continue;
+      if (ENV_BLOCKLIST_PATTERNS.some(p => p.test(key))) continue;
+      if (isCallerBlocked(key)) continue;
+      safeEnv[key] = value;
     }
   }
   return safeEnv;

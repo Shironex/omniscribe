@@ -13,7 +13,7 @@ import { SkipThrottle } from '@nestjs/throttler';
 import { Server, Socket } from 'socket.io';
 import { OnEvent } from '@nestjs/event-emitter';
 import { WsThrottlerGuard } from '../shared/ws-throttler.guard';
-import { isValidSessionId } from '../shared/validation';
+import { isValidSessionId, validatePath } from '../shared/validation';
 import { TerminalService } from './terminal.service';
 import {
   TerminalSpawnPayload,
@@ -123,6 +123,33 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
     @MessageBody() payload: TerminalSpawnPayload
   ): TerminalSpawnResponse {
     this.logger.info(`Spawning terminal for client ${client.id} (cwd: ${payload?.cwd})`);
+
+    // Validate cwd before passing to PTY. An empty/missing cwd falls back
+    // to process.cwd() inside terminal.service, so undefined is allowed.
+    if (payload?.cwd !== undefined) {
+      const cwdError = validatePath(payload.cwd, 'cwd');
+      if (cwdError) {
+        this.logger.warn(`[spawn] Rejecting spawn — ${cwdError}`);
+        throw new Error(cwdError);
+      }
+    }
+
+    // Validate caller-provided env: object of string→string entries only.
+    // Per-key safety (PATH/HOME/etc.) is enforced by buildSafeEnv's
+    // caller blocklist when the values are merged into the spawn env.
+    if (payload?.env !== undefined) {
+      if (typeof payload.env !== 'object' || payload.env === null || Array.isArray(payload.env)) {
+        this.logger.warn(`[spawn] Rejecting spawn — env must be an object`);
+        throw new Error('Invalid env: must be an object of string→string entries');
+      }
+      for (const [key, value] of Object.entries(payload.env)) {
+        if (typeof key !== 'string' || typeof value !== 'string') {
+          this.logger.warn(`[spawn] Rejecting spawn — env entries must be strings`);
+          throw new Error('Invalid env: entries must be strings');
+        }
+      }
+    }
+
     const sessionId = this.terminalService.spawn(payload?.cwd, payload?.env);
 
     // Track session ownership
