@@ -5,7 +5,7 @@
 import type { ProjectTabDTO, UserPreferences } from './project-tab';
 import type { QuickAction } from './workspace';
 import type { CustomCommand, CustomCommandInput, CustomCommandUpdate } from './custom-command';
-import type { BranchInfo, CommitInfo, WorktreeInfo, GitFileDiff } from './git';
+import type { BranchInfo, CommitInfo, WorktreeInfo, GitFileDiff, RemoteInfo } from './git';
 import type {
   TaskItem,
   McpServerConfig,
@@ -93,6 +93,21 @@ export interface GitWorktreesPayload {
 export interface GitWorktreeCleanupPayload {
   projectPath: string;
   worktreePath: string;
+}
+
+/**
+ * Payload for getting remotes
+ */
+export interface GitRemotesPayload {
+  projectPath: string;
+}
+
+/**
+ * Response for remotes query
+ */
+export interface GitRemotesResponse {
+  remotes: Array<Pick<RemoteInfo, 'name' | 'fetchUrl'>>;
+  error?: string;
 }
 
 /**

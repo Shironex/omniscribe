@@ -136,6 +136,71 @@ describe('GitRemoteService', () => {
     });
   });
 
+  describe('getRemoteUrls', () => {
+    it('returns name and fetchUrl for a single remote', async () => {
+      gitBase.execGit.mockResolvedValueOnce({
+        stdout: [
+          'origin\thttps://github.com/user/repo.git (fetch)',
+          'origin\thttps://github.com/user/repo.git (push)',
+        ].join('\n'),
+        stderr: '',
+      });
+
+      const result = await service.getRemoteUrls('/repo');
+
+      expect(result).toHaveLength(1);
+      expect(result[0]).toEqual({ name: 'origin', url: 'https://github.com/user/repo.git' });
+    });
+
+    it('deduplicates by remote name (fetch wins)', async () => {
+      gitBase.execGit.mockResolvedValueOnce({
+        stdout: [
+          'origin\thttps://github.com/user/repo.git (fetch)',
+          'origin\tgit@github.com:user/repo.git (push)',
+        ].join('\n'),
+        stderr: '',
+      });
+
+      const result = await service.getRemoteUrls('/repo');
+
+      expect(result).toHaveLength(1);
+      expect(result[0].url).toBe('https://github.com/user/repo.git');
+    });
+
+    it('returns multiple remotes', async () => {
+      gitBase.execGit.mockResolvedValueOnce({
+        stdout: [
+          'origin\thttps://github.com/user/repo.git (fetch)',
+          'origin\thttps://github.com/user/repo.git (push)',
+          'upstream\thttps://github.com/org/repo.git (fetch)',
+          'upstream\thttps://github.com/org/repo.git (push)',
+        ].join('\n'),
+        stderr: '',
+      });
+
+      const result = await service.getRemoteUrls('/repo');
+
+      expect(result).toHaveLength(2);
+      expect(result.map(r => r.name)).toEqual(['origin', 'upstream']);
+    });
+
+    it('returns empty array when no remotes', async () => {
+      gitBase.execGit.mockResolvedValueOnce({ stdout: '', stderr: '' });
+
+      const result = await service.getRemoteUrls('/repo');
+
+      expect(result).toEqual([]);
+    });
+
+    it('returns empty array when execGit throws (non-repo)', async () => {
+      gitBase.execGit.mockRejectedValueOnce(new Error('not a git repository'));
+
+      const result = await service.getRemoteUrls('/not-a-repo');
+
+      expect(result).toEqual([]);
+    });
+  });
+
   describe('push', () => {
     it('should push to the default remote (origin) without branch', async () => {
       gitBase.execGit.mockResolvedValue({ stdout: '', stderr: '' });

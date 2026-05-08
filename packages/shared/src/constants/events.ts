@@ -61,6 +61,7 @@ export const GitEvents = {
   WORKTREES: 'git:worktrees',
   WORKTREE_CLEANUP: 'git:worktree:cleanup',
   DIFF: 'git:diff',
+  REMOTES: 'git:remotes',
 } as const;
 
 // ============================================

@@ -75,7 +75,7 @@ function App() {
     [handleSelectTabRaw]
   );
 
-  const { branches, currentBranch } = useProjectGit(activeProjectPath);
+  const { branches, currentBranch, gitHubUrl } = useProjectGit(activeProjectPath);
 
   const {
     preLaunchSlots,
@@ -240,6 +240,7 @@ function App() {
           canLaunch={canLaunch}
           isLaunching={isLaunching}
           hasActiveSessions={hasActiveSessions}
+          gitHubUrl={gitHubUrl}
         />
 
         <main className="flex-1 flex overflow-hidden bg-background">

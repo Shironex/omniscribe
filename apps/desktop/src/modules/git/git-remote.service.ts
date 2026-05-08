@@ -67,6 +67,35 @@ export class GitRemoteService {
   }
 
   /**
+   * Get remote names and their fetch URLs without making any network requests.
+   * Runs only `git remote -v` and deduplicates by remote name.
+   * Returns an empty array if the directory is not a git repo or has no remotes.
+   */
+  async getRemoteUrls(repoPath: string): Promise<Array<{ name: string; url: string }>> {
+    this.logger.debug(`Getting remote URLs for ${repoPath}`);
+    try {
+      const { stdout } = await this.gitBase.execGit(repoPath, ['remote', '-v']);
+      const seen = new Set<string>();
+      const remotes: Array<{ name: string; url: string }> = [];
+
+      for (const line of stdout.trim().split('\n')) {
+        if (!line) continue;
+        const match = line.match(/^(\S+)\s+(\S+)\s+\(fetch\)$/);
+        if (!match) continue;
+        const [, name, url] = match;
+        if (!seen.has(name)) {
+          seen.add(name);
+          remotes.push({ name, url });
+        }
+      }
+
+      return remotes;
+    } catch {
+      return [];
+    }
+  }
+
+  /**
    * Push commits to a remote repository
    */
   async push(projectPath: string, remote: string = 'origin', branch?: string): Promise<void> {

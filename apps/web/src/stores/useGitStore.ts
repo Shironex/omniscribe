@@ -1,6 +1,11 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
-import { createLogger, extractErrorMessage, GitEvents } from '@omniscribe/shared';
+import {
+  createLogger,
+  extractErrorMessage,
+  GitEvents,
+  parseGitHubRepoUrl,
+} from '@omniscribe/shared';
 import { createMemoizedSelector } from './utils/createMemoizedSelector';
 import type {
   BranchInfo,
@@ -14,6 +19,8 @@ import type {
   GitCommitsPayload,
   GitCommitsResponse,
   GitBranchUpdateEvent,
+  GitRemotesPayload,
+  GitRemotesResponse,
 } from '@omniscribe/shared';
 import { emitAsync } from '@/lib/socketHelpers';
 
@@ -38,6 +45,8 @@ interface GitState extends SocketStoreState {
   commits: CommitInfo[];
   /** Current project path being tracked */
   projectPath: string | null;
+  /** Remote names and fetch URLs for the current project */
+  remotes: Array<{ name: string; fetchUrl: string }>;
 }
 
 /**
@@ -52,6 +61,8 @@ interface GitActions extends SocketStoreActions {
   checkout: (projectPath: string, branchName: string) => Promise<void>;
   /** Fetch commits for a project */
   fetchCommits: (projectPath: string, limit?: number) => Promise<void>;
+  /** Fetch remotes for a project */
+  fetchRemotes: (projectPath: string) => Promise<void>;
   /** Set branches */
   setBranches: (branches: BranchInfo[]) => void;
   /** Set current branch */
@@ -118,6 +129,7 @@ export const useGitStore = create<GitStore>()(
         currentBranch: null,
         commits: [],
         projectPath: null,
+        remotes: [],
 
         // Common socket actions
         ...socketActions,
@@ -285,6 +297,24 @@ export const useGitStore = create<GitStore>()(
           set({ projectPath }, undefined, 'git/setProjectPath');
         },
 
+        fetchRemotes: async (projectPath: string) => {
+          logger.debug('fetchRemotes', projectPath);
+          try {
+            const response = await emitAsync<GitRemotesPayload, GitRemotesResponse>(
+              GitEvents.REMOTES,
+              { projectPath }
+            );
+
+            if (!response.error) {
+              set({ remotes: response.remotes ?? [] }, undefined, 'git/fetchRemotes');
+            }
+          } catch (err) {
+            const message = extractErrorMessage(err, 'Failed to fetch remotes');
+            logger.error('fetchRemotes error:', message);
+            // Non-fatal — do not surface error to user
+          }
+        },
+
         clear: () => {
           set(
             {
@@ -292,6 +322,7 @@ export const useGitStore = create<GitStore>()(
               currentBranch: null,
               commits: [],
               projectPath: null,
+              remotes: [],
               isLoading: false,
               error: null,
             },
@@ -351,3 +382,23 @@ export const selectGitLoading = (state: GitStore) => state.isLoading;
  * Select error
  */
 export const selectGitError = (state: GitStore) => state.error;
+
+/**
+ * Select the GitHub HTTPS URL for the active project, or null if the project
+ * has no GitHub remote. Prefers 'origin'; falls back to the first parseable
+ * GitHub remote.
+ */
+export const selectGitHubUrl = createMemoizedSelector((state: GitStore): string | null => {
+  const { remotes } = state;
+  if (!remotes.length) return null;
+
+  const origin = remotes.find(r => r.name === 'origin');
+  const candidates = origin ? [origin, ...remotes.filter(r => r.name !== 'origin')] : remotes;
+
+  for (const remote of candidates) {
+    const parsed = parseGitHubRepoUrl(remote.fetchUrl);
+    if (parsed) return parsed.httpsUrl;
+  }
+
+  return null;
+});

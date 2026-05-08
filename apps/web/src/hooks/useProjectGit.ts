@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { createLogger } from '@omniscribe/shared';
-import { useGitStore } from '@/stores/useGitStore';
+import { useGitStore, selectGitHubUrl } from '@/stores/useGitStore';
 import { useMcpStore } from '@/stores/useMcpStore';
 import type { Branch } from '@/components/shared/BranchSelector';
 
@@ -13,6 +13,8 @@ interface UseProjectGitReturn {
   currentBranch: string;
   /** Handler for branch button click (refreshes branches) */
   handleBranchClick: () => void;
+  /** GitHub HTTPS URL for the active project, or null */
+  gitHubUrl: string | null;
 }
 
 /**
@@ -24,7 +26,9 @@ export function useProjectGit(activeProjectPath: string | null): UseProjectGitRe
   const gitBranches = useGitStore(state => state.branches);
   const currentGitBranch = useGitStore(state => state.currentBranch);
   const fetchBranches = useGitStore(state => state.fetchBranches);
+  const fetchRemotes = useGitStore(state => state.fetchRemotes);
   const clearGitState = useGitStore(state => state.clear);
+  const gitHubUrl = useGitStore(selectGitHubUrl);
 
   // MCP store
   const discoverMcpServers = useMcpStore(state => state.discoverServers);
@@ -46,11 +50,12 @@ export function useProjectGit(activeProjectPath: string | null): UseProjectGitRe
         logger.info('Project changed, refreshing git data for', activeProjectPath);
         // Fetch fresh data for the new project
         fetchBranches(activeProjectPath);
+        fetchRemotes(activeProjectPath);
         // Also discover MCP servers for the project
         discoverMcpServers(activeProjectPath);
       }
     }
-  }, [activeProjectPath, clearGitState, fetchBranches, discoverMcpServers]);
+  }, [activeProjectPath, clearGitState, fetchBranches, fetchRemotes, discoverMcpServers]);
 
   // Convert git branches to Branch format
   const branches: Branch[] = useMemo(() => {
@@ -75,5 +80,6 @@ export function useProjectGit(activeProjectPath: string | null): UseProjectGitRe
     branches,
     currentBranch,
     handleBranchClick,
+    gitHubUrl,
   };
 }

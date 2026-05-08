@@ -27,6 +27,7 @@ import {
   selectBranchByName,
   selectGitLoading,
   selectGitError,
+  selectGitHubUrl,
 } from '../useGitStore';
 
 // --- Helpers ---
@@ -61,6 +62,7 @@ const initialState = {
   currentBranch: null,
   commits: [],
   projectPath: null,
+  remotes: [],
   isLoading: false,
   error: null,
   listenersInitialized: false,
@@ -100,6 +102,10 @@ describe('useGitStore', () => {
 
     it('has null projectPath', () => {
       expect(useGitStore.getState().projectPath).toBeNull();
+    });
+
+    it('has empty remotes', () => {
+      expect(useGitStore.getState().remotes).toEqual([]);
     });
 
     it('is not loading', () => {
@@ -199,6 +205,7 @@ describe('useGitStore', () => {
         currentBranch: createBranch({ name: 'main', isCurrent: true }),
         commits: [createCommit()],
         projectPath: '/some/path',
+        remotes: [{ name: 'origin', fetchUrl: 'https://github.com/a/b' }],
         isLoading: true,
         error: 'some error',
       });
@@ -210,8 +217,53 @@ describe('useGitStore', () => {
       expect(state.currentBranch).toBeNull();
       expect(state.commits).toEqual([]);
       expect(state.projectPath).toBeNull();
+      expect(state.remotes).toEqual([]);
       expect(state.isLoading).toBe(false);
       expect(state.error).toBeNull();
+    });
+  });
+
+  // =============================================
+  // fetchRemotes
+  // =============================================
+  describe('fetchRemotes', () => {
+    const projectPath = '/test/project';
+
+    it('stores remotes on success', async () => {
+      mockEmitAsync.mockResolvedValueOnce({
+        remotes: [{ name: 'origin', fetchUrl: 'https://github.com/owner/repo' }],
+      });
+
+      await useGitStore.getState().fetchRemotes(projectPath);
+
+      expect(useGitStore.getState().remotes).toEqual([
+        { name: 'origin', fetchUrl: 'https://github.com/owner/repo' },
+      ]);
+    });
+
+    it('does not set error when response has error (non-fatal)', async () => {
+      mockEmitAsync.mockResolvedValueOnce({ remotes: [], error: 'Not a repo' });
+
+      await useGitStore.getState().fetchRemotes(projectPath);
+
+      expect(useGitStore.getState().remotes).toEqual([]);
+      expect(useGitStore.getState().error).toBeNull();
+    });
+
+    it('does not set error when emitAsync throws (non-fatal)', async () => {
+      mockEmitAsync.mockRejectedValueOnce(new Error('socket error'));
+
+      await useGitStore.getState().fetchRemotes(projectPath);
+
+      expect(useGitStore.getState().error).toBeNull();
+    });
+
+    it('emits the correct event', async () => {
+      mockEmitAsync.mockResolvedValueOnce({ remotes: [] });
+
+      await useGitStore.getState().fetchRemotes(projectPath);
+
+      expect(mockEmitAsync).toHaveBeenCalledWith(GitEvents.REMOTES, { projectPath });
     });
   });
 
@@ -922,6 +974,44 @@ describe('useGitStore', () => {
 
       it('returns null when no error', () => {
         expect(selectGitError(useGitStore.getState())).toBeNull();
+      });
+    });
+
+    describe('selectGitHubUrl', () => {
+      it('returns null when remotes is empty', () => {
+        useGitStore.setState({ remotes: [] });
+        expect(selectGitHubUrl(useGitStore.getState())).toBeNull();
+      });
+
+      it('returns httpsUrl when origin is a GitHub remote', () => {
+        useGitStore.setState({
+          remotes: [{ name: 'origin', fetchUrl: 'https://github.com/owner/repo.git' }],
+        });
+        expect(selectGitHubUrl(useGitStore.getState())).toBe('https://github.com/owner/repo');
+      });
+
+      it('prefers origin over other GitHub remotes', () => {
+        useGitStore.setState({
+          remotes: [
+            { name: 'upstream', fetchUrl: 'https://github.com/org/repo.git' },
+            { name: 'origin', fetchUrl: 'https://github.com/owner/repo.git' },
+          ],
+        });
+        expect(selectGitHubUrl(useGitStore.getState())).toBe('https://github.com/owner/repo');
+      });
+
+      it('falls back to first parseable GitHub remote when origin is absent', () => {
+        useGitStore.setState({
+          remotes: [{ name: 'upstream', fetchUrl: 'git@github.com:org/repo.git' }],
+        });
+        expect(selectGitHubUrl(useGitStore.getState())).toBe('https://github.com/org/repo');
+      });
+
+      it('returns null when no remote is a GitHub URL', () => {
+        useGitStore.setState({
+          remotes: [{ name: 'origin', fetchUrl: 'https://gitlab.com/owner/repo.git' }],
+        });
+        expect(selectGitHubUrl(useGitStore.getState())).toBeNull();
       });
     });
   });

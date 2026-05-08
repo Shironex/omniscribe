@@ -42,3 +42,6 @@ export * from './constants';
 
 // Logger
 export * from './logger';
+
+// GitHub URL utilities
+export * from './github-url';

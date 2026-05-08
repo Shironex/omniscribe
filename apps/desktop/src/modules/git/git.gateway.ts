@@ -23,6 +23,8 @@ import {
   GitWorktreesPayload,
   GitWorktreeCleanupPayload,
   GitDiffPayload,
+  GitRemotesPayload,
+  GitRemotesResponse,
   GitBranchesResponse,
   GitCommitsResponse,
   GitCheckoutResponse,
@@ -33,6 +35,7 @@ import {
   SuccessResponse,
   GitEvents,
   createLogger,
+  parseGitHubRepoUrl,
 } from '@omniscribe/shared';
 import { CORS_CONFIG } from '../shared/cors.config';
 
@@ -269,6 +272,43 @@ export class GitGateway implements OnGatewayInit {
         await this.worktreeService.cleanup(projectPath, worktreePath);
 
         return { success: true };
+      },
+    });
+  }
+
+  @SkipThrottle()
+  @SubscribeMessage(GitEvents.REMOTES)
+  async handleRemotes(
+    @ConnectedSocket() _client: Socket,
+    @MessageBody() payload: GitRemotesPayload
+  ): Promise<GitRemotesResponse> {
+    return handleGatewayRequest({
+      logger: this.logger,
+      action: '[git:remotes]',
+      payload,
+      defaultResult: { remotes: [] },
+      handler: async projectPath => {
+        const rawRemotes = await this.gitService.getRemoteUrls(projectPath);
+
+        // Strip embedded credentials (user:token@host) before sending to renderer
+        const remotes = rawRemotes.map(r => {
+          let url = r.url;
+          try {
+            const parsed = new URL(url);
+            if (parsed.username || parsed.password) {
+              parsed.username = '';
+              parsed.password = '';
+              url = parsed.toString();
+            }
+          } catch {
+            // Non-URL form (SSH shorthand) — no embedded credentials possible
+          }
+          // Validate the URL still parses as a recognizable GitHub URL
+          const parsed = parseGitHubRepoUrl(url);
+          return { name: r.name, fetchUrl: parsed ? parsed.httpsUrl : url };
+        });
+
+        return { remotes };
       },
     });
   }

@@ -4,11 +4,13 @@ import { renderHook, act } from '@testing-library/react';
 // ---- Mocks (must be declared before any imports that use them) ----
 
 const mockFetchBranches = vi.fn();
+const mockFetchRemotes = vi.fn();
 const mockClearGitState = vi.fn();
 const mockDiscoverMcpServers = vi.fn();
 
 let mockGitBranches: Array<{ name: string; isRemote: boolean; isCurrent?: boolean }> = [];
 let mockCurrentGitBranch: { name: string; isRemote: boolean; isCurrent?: boolean } | null = null;
+let mockGitHubUrl: string | null = null;
 
 vi.mock('@/stores/useGitStore', () => ({
   useGitStore: (selector: (state: any) => any) =>
@@ -16,8 +18,11 @@ vi.mock('@/stores/useGitStore', () => ({
       branches: mockGitBranches,
       currentBranch: mockCurrentGitBranch,
       fetchBranches: mockFetchBranches,
+      fetchRemotes: mockFetchRemotes,
       clear: mockClearGitState,
+      remotes: [],
     }),
+  selectGitHubUrl: (_state: any) => mockGitHubUrl,
 }));
 
 vi.mock('@/stores/useMcpStore', () => ({
@@ -38,6 +43,7 @@ describe('useProjectGit', () => {
     vi.clearAllMocks();
     mockGitBranches = [];
     mockCurrentGitBranch = null;
+    mockGitHubUrl = null;
   });
 
   // ================================================================
@@ -73,6 +79,12 @@ describe('useProjectGit', () => {
       renderHook(() => useProjectGit('/project-a'));
       expect(mockFetchBranches).toHaveBeenCalledTimes(1);
       expect(mockFetchBranches).toHaveBeenCalledWith('/project-a');
+    });
+
+    it('fetches remotes for the project on first render', () => {
+      renderHook(() => useProjectGit('/project-a'));
+      expect(mockFetchRemotes).toHaveBeenCalledTimes(1);
+      expect(mockFetchRemotes).toHaveBeenCalledWith('/project-a');
     });
 
     it('discovers MCP servers for the project on first render', () => {
@@ -389,23 +401,28 @@ describe('useProjectGit', () => {
   // 8. Return value structure
   // ================================================================
   describe('return value structure', () => {
-    it('returns an object with branches, currentBranch, and handleBranchClick', () => {
+    it('returns an object with branches, currentBranch, handleBranchClick, and gitHubUrl', () => {
       const { result } = renderHook(() => useProjectGit(null));
 
       expect(result.current).toHaveProperty('branches');
       expect(result.current).toHaveProperty('currentBranch');
       expect(result.current).toHaveProperty('handleBranchClick');
+      expect(result.current).toHaveProperty('gitHubUrl');
       expect(Array.isArray(result.current.branches)).toBe(true);
       expect(typeof result.current.currentBranch).toBe('string');
       expect(typeof result.current.handleBranchClick).toBe('function');
     });
 
-    it('does not return extra properties', () => {
+    it('returns gitHubUrl from the store selector', () => {
+      mockGitHubUrl = 'https://github.com/owner/repo';
       const { result } = renderHook(() => useProjectGit(null));
+      expect(result.current.gitHubUrl).toBe('https://github.com/owner/repo');
+    });
 
-      const keys = Object.keys(result.current);
-      expect(keys).toHaveLength(3);
-      expect(keys.sort()).toEqual(['branches', 'currentBranch', 'handleBranchClick']);
+    it('returns null gitHubUrl when no GitHub remote', () => {
+      mockGitHubUrl = null;
+      const { result } = renderHook(() => useProjectGit(null));
+      expect(result.current.gitHubUrl).toBeNull();
     });
   });
 });

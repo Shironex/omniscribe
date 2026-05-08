@@ -132,6 +132,13 @@ export class GitService {
   }
 
   /**
+   * Get remote names and fetch URLs without making any network requests.
+   */
+  async getRemoteUrls(repoPath: string): Promise<Array<{ name: string; url: string }>> {
+    return this.gitRemote.getRemoteUrls(repoPath);
+  }
+
+  /**
    * Push commits to a remote repository
    */
   async push(projectPath: string, remote: string = 'origin', branch?: string): Promise<void> {
