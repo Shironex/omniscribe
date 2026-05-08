@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Sparkles, Loader2 } from 'lucide-react';
+import { Sparkles, Loader2, Eye } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { useWorkspaceStore, selectActiveTab } from '@/stores/useWorkspaceStore';
@@ -15,6 +15,7 @@ import {
   SettingsRowLabel,
   SettingsToggleRow,
 } from '@/components/settings/SettingsCard';
+import { AiCapabilitiesPreview } from '@/components/settings/previews/AiCapabilitiesPreview';
 
 /**
  * Debounced numeric port input for the playwright-electron capability.
@@ -133,6 +134,15 @@ export function AiCapabilitiesSection() {
 
   return (
     <div className="space-y-4">
+      <SettingsCard
+        icon={Eye}
+        tone="blue"
+        title="Preview"
+        subtitle="Capabilities wired into the active AI session."
+      >
+        <AiCapabilitiesPreview />
+      </SettingsCard>
+
       <SettingsCard
         icon={Sparkles}
         tone="primary"

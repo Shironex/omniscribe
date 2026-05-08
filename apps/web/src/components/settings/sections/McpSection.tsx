@@ -1,11 +1,12 @@
 import { useCallback, useMemo, useEffect } from 'react';
-import { Server, CheckCircle2, RefreshCw, Loader2 } from 'lucide-react';
+import { Server, CheckCircle2, RefreshCw, Loader2, Eye } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { MCP_SERVER_NAME } from '@omniscribe/shared';
 import { useMcpStore, selectInternalMcp } from '@/stores/useMcpStore';
 import { useWorkspaceStore, selectActiveTab } from '@/stores/useWorkspaceStore';
 import { SettingsCard } from '@/components/settings/SettingsCard';
 import { StatusPill, type StatusPillTone } from '@/components/shared/StatusPill';
+import { McpPreview } from '@/components/settings/previews/McpPreview';
 
 export function McpSection() {
   const servers = useMcpStore(state => state.servers);
@@ -88,6 +89,15 @@ export function McpSection() {
 
   return (
     <div className="space-y-4">
+      <SettingsCard
+        icon={Eye}
+        tone="blue"
+        title="Preview"
+        subtitle="Hub-and-spoke view of MCP servers wired to your sessions."
+      >
+        <McpPreview />
+      </SettingsCard>
+
       <SettingsCard
         icon={Server}
         tone="blue"

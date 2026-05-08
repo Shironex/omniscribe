@@ -368,8 +368,10 @@ describe('GeneralSection', () => {
   it('shows the Updates section with channel selector', () => {
     render(<GeneralSection />);
     expect(screen.getByText('Updates')).toBeTruthy();
-    expect(screen.getByText('Stable')).toBeTruthy();
-    expect(screen.getByText('Beta')).toBeTruthy();
+    // "Stable" and "Beta" appear in both the UpdatesPreview channel pill
+    // and the channel ButtonGroup, so allow multiple matches.
+    expect(screen.getAllByText('Stable').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Beta').length).toBeGreaterThan(0);
   });
 
   it('shows the Diagnostics section with View Logs and Open Log Folder buttons', () => {
@@ -404,7 +406,9 @@ describe('SessionsSection', () => {
   it('shows Default Mode options: Claude Code and Plain Terminal', () => {
     render(<SessionsSection />);
     expect(screen.getByText('Default mode')).toBeTruthy();
-    expect(screen.getByText('Claude Code')).toBeTruthy();
+    // The preview labels filled session slots with the default mode name,
+    // so "Claude Code" can appear multiple times alongside the radio option.
+    expect(screen.getAllByText('Claude Code').length).toBeGreaterThan(0);
     expect(screen.getByText('Plain Terminal')).toBeTruthy();
   });
 

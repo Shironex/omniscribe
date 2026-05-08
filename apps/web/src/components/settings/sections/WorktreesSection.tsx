@@ -5,6 +5,7 @@ import {
   HardDrive,
   FlaskConical,
   AlertTriangle,
+  Eye,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useWorkspaceStore } from '@/stores/useWorkspaceStore';
@@ -17,6 +18,7 @@ import {
   SettingsToggleRow,
 } from '@/components/settings/SettingsCard';
 import { StatusPill } from '@/components/shared/StatusPill';
+import { WorktreesPreview } from '@/components/settings/previews/WorktreesPreview';
 
 const WORKTREE_MODE_OPTIONS: {
   value: WorktreeMode;
@@ -80,6 +82,15 @@ export function WorktreesSection() {
 
   return (
     <div className="space-y-4">
+      <SettingsCard
+        icon={Eye}
+        tone="blue"
+        title="Preview"
+        subtitle="Branch tree showing how sessions fork off main."
+      >
+        <WorktreesPreview />
+      </SettingsCard>
+
       <SettingsCard
         icon={GitBranch}
         tone="green"

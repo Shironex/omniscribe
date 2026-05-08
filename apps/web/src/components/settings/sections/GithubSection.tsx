@@ -9,11 +9,13 @@ import {
   Shield,
   Loader2,
   User,
+  Eye,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSettingsStore } from '@/stores/useSettingsStore';
 import { SettingsCard } from '@/components/settings/SettingsCard';
 import { StatusPill } from '@/components/shared/StatusPill';
+import { GithubPreview } from '@/components/settings/previews/GithubPreview';
 
 const logger = createLogger('GithubSection');
 
@@ -74,6 +76,15 @@ export function GithubSection() {
 
   return (
     <div className="space-y-4">
+      <SettingsCard
+        icon={Eye}
+        tone="blue"
+        title="Preview"
+        subtitle="PR card mirroring your gh auth state."
+      >
+        <GithubPreview />
+      </SettingsCard>
+
       <SettingsCard
         icon={GitPullRequest}
         tone="muted"

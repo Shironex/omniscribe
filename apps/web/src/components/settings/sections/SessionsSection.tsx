@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Monitor, AlertTriangle } from 'lucide-react';
+import { Monitor, AlertTriangle, Eye } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useWorkspaceStore } from '@/stores/useWorkspaceStore';
 import { usePluginStore } from '@/stores/usePluginStore';
@@ -12,6 +12,7 @@ import {
   SettingsRowLabel,
   SettingsToggleRow,
 } from '@/components/settings/SettingsCard';
+import { SessionsPreview } from '@/components/settings/previews/SessionsPreview';
 
 export function SessionsSection() {
   const preferences = useWorkspaceStore(state => state.preferences);
@@ -47,6 +48,15 @@ export function SessionsSection() {
 
   return (
     <div className="space-y-4">
+      <SettingsCard
+        icon={Eye}
+        tone="blue"
+        title="Preview"
+        subtitle="Session slots launched with your default mode."
+      >
+        <SessionsPreview />
+      </SettingsCard>
+
       <SettingsCard
         icon={Monitor}
         tone="gold"
@@ -84,9 +94,11 @@ export function SessionsSection() {
                     disabled={option.disabled}
                     className="mt-1 w-4 h-4 text-primary accent-primary"
                   />
-                  <ModeIcon className="w-4 h-4 mt-0.5 text-muted-foreground" size={16} />
-                  <div className="flex-1">
-                    <div className="text-sm font-medium text-foreground">{option.label}</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                      <ModeIcon className="w-4 h-4 text-muted-foreground shrink-0" size={16} />
+                      <span>{option.label}</span>
+                    </div>
                     <div className="text-xs text-muted-foreground mt-0.5">
                       {option.disabled ? option.disabledReason : option.description}
                     </div>

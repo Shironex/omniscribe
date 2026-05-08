@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from 'react';
-import { Palette, LayoutGrid, Puzzle } from 'lucide-react';
+import { Palette, LayoutGrid, Puzzle, Eye } from 'lucide-react';
 import { APP_NAME } from '@omniscribe/shared';
 import type { ChromeSettings } from '@omniscribe/shared';
 import { themeOptions, type ThemeOption } from '@/lib/theme';
@@ -8,6 +8,7 @@ import { usePluginStore } from '@/stores/usePluginStore';
 import { ThemeGrid } from '@/components/shared/theme/ThemeGrid';
 import { ThemeSwatchCard } from '@/components/shared/theme/ThemeSwatchCard';
 import { SettingsCard, SettingsToggleRow } from '@/components/settings/SettingsCard';
+import { AppearancePreview } from '@/components/settings/previews/AppearancePreview';
 
 function pluginThemeToOption(plugin: {
   id: string;
@@ -65,6 +66,15 @@ export function AppearanceSection() {
 
   return (
     <div className="space-y-6">
+      <SettingsCard
+        icon={Eye}
+        tone="blue"
+        title="Preview"
+        subtitle="Mini workspace shell tinted with the active theme."
+      >
+        <AppearancePreview />
+      </SettingsCard>
+
       <SettingsCard
         icon={Palette}
         tone="orange"
