@@ -24,3 +24,9 @@ export { UsageCard, getStatusInfo } from './UsageCard';
 export { SessionHistoryPanel } from './SessionHistoryPanel';
 
 export { SectionHeader } from './SectionHeader';
+
+export { StatusPill } from './StatusPill';
+export type { StatusPillTone } from './StatusPill';
+
+export { ButtonGroup } from './ButtonGroup';
+export type { ButtonGroupOption } from './ButtonGroup';
