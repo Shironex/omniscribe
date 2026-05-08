@@ -18,6 +18,6 @@ import { CliCommandService } from './cli-command.service';
     SessionLauncherService,
     SessionGateway,
   ],
-  exports: [SessionService, CliCommandService],
+  exports: [SessionService, SessionLauncherService, CliCommandService],
 })
 export class SessionModule {}

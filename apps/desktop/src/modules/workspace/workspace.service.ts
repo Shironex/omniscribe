@@ -1,11 +1,15 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import Store from 'electron-store';
+import * as crypto from 'crypto';
 import {
   QuickAction,
   ProjectTabDTO,
   UserPreferences,
   WorkspaceStateResponse,
   SessionHistoryEntry,
+  CustomCommand,
+  CustomCommandInput,
+  CustomCommandUpdate,
   DEFAULT_PREFERENCES,
   createLogger,
   normalizePath,
@@ -29,6 +33,8 @@ interface StoreSchema {
   projectCapabilities: Record<string, string[]>;
   /** Maps normalized project path → user's own Electron app CDP port */
   projectElectronCdpPort: Record<string, number>;
+  /** Maps normalized project path → user-defined custom commands */
+  projectCustomCommands: Record<string, CustomCommand[]>;
   [key: string]: unknown;
 }
 
@@ -197,6 +203,7 @@ export class WorkspaceService implements OnModuleInit {
           projectThumbnails: {},
           projectCapabilities: {},
           projectElectronCdpPort: {},
+          projectCustomCommands: {},
         },
       });
       this.logger.debug(`Store initialized at ${this.store.path}`);
@@ -216,6 +223,7 @@ export class WorkspaceService implements OnModuleInit {
             projectThumbnails: {},
             projectCapabilities: {},
             projectElectronCdpPort: {},
+            projectCustomCommands: {},
           },
         });
       } catch (retryError) {
@@ -645,6 +653,92 @@ export class WorkspaceService implements OnModuleInit {
     const map = this.store.get('projectElectronCdpPort', {});
     map[key] = port;
     this.store.set('projectElectronCdpPort', map);
+  }
+
+  // ============================================
+  // Project Custom Commands
+  // ============================================
+
+  /**
+   * Get all custom commands defined for a project. Returns an empty array when
+   * none have been stored — there are no defaults.
+   */
+  getProjectCustomCommands(projectPath: string): CustomCommand[] {
+    const map = this.store.get('projectCustomCommands', {});
+    const key = normalizePath(projectPath);
+    const list = map[key];
+    return list ? list.map(cmd => ({ ...cmd })) : [];
+  }
+
+  /**
+   * Replace the full custom command list for a project.
+   */
+  setProjectCustomCommands(projectPath: string, commands: CustomCommand[]): void {
+    const key = normalizePath(projectPath);
+    const map = this.store.get('projectCustomCommands', {});
+    map[key] = commands.map(cmd => ({ ...cmd }));
+    this.store.set('projectCustomCommands', map);
+  }
+
+  /**
+   * Append a new custom command to a project's list. Generates a stable id
+   * and createdAt/updatedAt timestamps. Returns the materialized command.
+   */
+  addProjectCustomCommand(projectPath: string, input: CustomCommandInput): CustomCommand {
+    const now = new Date().toISOString();
+    const command: CustomCommand = {
+      id: crypto.randomUUID(),
+      label: input.label,
+      icon: input.icon,
+      command: input.command,
+      createdAt: now,
+      updatedAt: now,
+    };
+    const list = this.getProjectCustomCommands(projectPath);
+    list.push(command);
+    this.setProjectCustomCommands(projectPath, list);
+    return command;
+  }
+
+  /**
+   * Apply a partial update to one custom command in a project. Refreshes
+   * updatedAt. Returns the updated command, or null when the id is unknown.
+   */
+  updateProjectCustomCommand(
+    projectPath: string,
+    id: string,
+    updates: CustomCommandUpdate
+  ): CustomCommand | null {
+    const list = this.getProjectCustomCommands(projectPath);
+    const index = list.findIndex(cmd => cmd.id === id);
+    if (index === -1) return null;
+    const next: CustomCommand = {
+      ...list[index],
+      ...updates,
+      updatedAt: new Date().toISOString(),
+    };
+    list[index] = next;
+    this.setProjectCustomCommands(projectPath, list);
+    return next;
+  }
+
+  /**
+   * Remove a custom command from a project's list by id.
+   * Returns true when a command was removed, false when the id was not found.
+   */
+  removeProjectCustomCommand(projectPath: string, id: string): boolean {
+    const list = this.getProjectCustomCommands(projectPath);
+    const next = list.filter(cmd => cmd.id !== id);
+    if (next.length === list.length) return false;
+    this.setProjectCustomCommands(projectPath, next);
+    return true;
+  }
+
+  /**
+   * Look up a single custom command by id within a project's list.
+   */
+  getProjectCustomCommand(projectPath: string, id: string): CustomCommand | undefined {
+    return this.getProjectCustomCommands(projectPath).find(cmd => cmd.id === id);
   }
 
   // ============================================

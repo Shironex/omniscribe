@@ -364,4 +364,79 @@ describe('WorkspaceService', () => {
       expect(service.getActiveTabId()).toBe('tab-5');
     });
   });
+
+  describe('project custom commands', () => {
+    const projectA = '/Users/me/projectA';
+    const projectB = '/Users/me/projectB';
+
+    it('returns an empty list for an unknown project', () => {
+      expect(service.getProjectCustomCommands(projectA)).toEqual([]);
+    });
+
+    it('adds a command and assigns id + timestamps', () => {
+      const command = service.addProjectCustomCommand(projectA, {
+        label: 'List',
+        icon: 'Folder',
+        command: 'ls -la',
+      });
+      expect(command.id).toBeTruthy();
+      expect(command.createdAt).toBeTruthy();
+      expect(command.updatedAt).toBe(command.createdAt);
+      expect(service.getProjectCustomCommands(projectA)).toHaveLength(1);
+    });
+
+    it('keeps separate lists per project', () => {
+      service.addProjectCustomCommand(projectA, { label: 'A1', icon: 'Play', command: 'a1' });
+      service.addProjectCustomCommand(projectB, { label: 'B1', icon: 'Play', command: 'b1' });
+      service.addProjectCustomCommand(projectB, { label: 'B2', icon: 'Play', command: 'b2' });
+
+      expect(service.getProjectCustomCommands(projectA)).toHaveLength(1);
+      expect(service.getProjectCustomCommands(projectB)).toHaveLength(2);
+    });
+
+    it('updates an existing command and refreshes updatedAt', () => {
+      const created = service.addProjectCustomCommand(projectA, {
+        label: 'Old',
+        icon: 'Play',
+        command: 'old',
+      });
+
+      // Force a measurable difference between createdAt and updatedAt.
+      const later = new Date(Date.parse(created.createdAt) + 1000).toISOString();
+      jest.spyOn(Date.prototype, 'toISOString').mockReturnValueOnce(later);
+
+      const updated = service.updateProjectCustomCommand(projectA, created.id, {
+        label: 'New',
+      });
+
+      expect(updated?.label).toBe('New');
+      expect(updated?.updatedAt).not.toBe(created.createdAt);
+      expect(service.getProjectCustomCommands(projectA)[0].label).toBe('New');
+    });
+
+    it('returns null when updating an unknown command', () => {
+      expect(service.updateProjectCustomCommand(projectA, 'nope', { label: 'x' })).toBeNull();
+    });
+
+    it('removes a command and reports the result', () => {
+      const created = service.addProjectCustomCommand(projectA, {
+        label: 'Drop',
+        icon: 'Play',
+        command: 'rm',
+      });
+      expect(service.removeProjectCustomCommand(projectA, created.id)).toBe(true);
+      expect(service.removeProjectCustomCommand(projectA, created.id)).toBe(false);
+      expect(service.getProjectCustomCommands(projectA)).toEqual([]);
+    });
+
+    it('looks up a single command by id within a project', () => {
+      const created = service.addProjectCustomCommand(projectA, {
+        label: 'Find me',
+        icon: 'Play',
+        command: 'echo',
+      });
+      expect(service.getProjectCustomCommand(projectA, created.id)?.label).toBe('Find me');
+      expect(service.getProjectCustomCommand(projectA, 'missing')).toBeUndefined();
+    });
+  });
 });
