@@ -107,4 +107,35 @@ describe('parseGitHubRepoUrl', () => {
   it('returns null for URL with only owner (no repo)', () => {
     expect(parseGitHubRepoUrl('https://github.com/owner')).toBeNull();
   });
+
+  // ── Strictness — extra path segments must be rejected ─────────────────
+
+  it('returns null for HTTPS URL with /tree/<branch> suffix', () => {
+    expect(parseGitHubRepoUrl('https://github.com/owner/repo/tree/main')).toBeNull();
+  });
+
+  it('returns null for HTTPS URL pointing at an issue', () => {
+    expect(parseGitHubRepoUrl('https://github.com/owner/repo/issues/1')).toBeNull();
+  });
+
+  it('returns null for HTTPS URL pointing at a pull request', () => {
+    expect(parseGitHubRepoUrl('https://github.com/owner/repo/pull/42')).toBeNull();
+  });
+
+  it('returns null for SSH shorthand with extra path segments after the repo', () => {
+    expect(parseGitHubRepoUrl('git@github.com:owner/repo.git/extra/path')).toBeNull();
+  });
+
+  it('returns null for SSH shorthand with a slash inside the repo segment', () => {
+    expect(parseGitHubRepoUrl('git@github.com:owner/repo/sub')).toBeNull();
+  });
+
+  it('accepts HTTPS URL with a trailing slash after owner/repo', () => {
+    const result = parseGitHubRepoUrl('https://github.com/owner/repo/');
+    expect(result).toEqual({
+      httpsUrl: 'https://github.com/owner/repo',
+      owner: 'owner',
+      repo: 'repo',
+    });
+  });
 });
