@@ -74,9 +74,9 @@ describe('IPC:Store', () => {
       );
     });
 
-    it('should allow nested key access via prefix matching', () => {
+    it('should allow nested workspace.* keys via prefix matching', () => {
       handlers['store:set'](mockEvent, 'workspace.tabs', { '0': { name: 'test' } });
-      // workspace.tabs.0.name starts with 'workspace.tabs.' so should be allowed
+      // workspace.tabs.0.name starts with 'workspace.' so should be allowed
       const result = handlers['store:get'](mockEvent, 'workspace.tabs.0.name');
       // MockStore uses a flat Map and doesn't support dot-notation traversal
       // like the real electron-store, so the nested key returns undefined
@@ -100,7 +100,7 @@ describe('IPC:Store', () => {
         'preferences.autoSave',
         'preferences.updateChannel',
         'preferences.worktree',
-        'preferences',
+        'preferences.notifications',
         'recentProjects',
         'mcp.enabledServers',
         'session.defaultModel',
@@ -112,6 +112,24 @@ describe('IPC:Store', () => {
         handlers['store:get'](mockEvent, key);
         expect(mockLogger.warn).not.toHaveBeenCalled();
       }
+    });
+
+    it('rejects bare "preferences" — must use a specific leaf', () => {
+      const result = handlers['store:get'](mockEvent, 'preferences');
+      expect(result).toBeUndefined();
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        'Blocked store:get for unauthorized key: preferences'
+      );
+    });
+
+    it('rejects undeclared preferences.* leaves', () => {
+      // The old implementation accepted preferences.anything via prefix
+      // matching. The hardened allowlist requires every leaf to be
+      // explicitly listed.
+      handlers['store:get'](mockEvent, 'preferences.injected');
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        'Blocked store:get for unauthorized key: preferences.injected'
+      );
     });
   });
 
@@ -132,8 +150,15 @@ describe('IPC:Store', () => {
       );
     });
 
-    it('should allow setting nested keys via prefix matching', () => {
+    it('rejects nested preferences.* leaves not in the allowlist', () => {
       handlers['store:set'](mockEvent, 'preferences.theme.dark', true);
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        'Blocked store:set for unauthorized key: preferences.theme.dark'
+      );
+    });
+
+    it('still allows nested workspace.* writes', () => {
+      handlers['store:set'](mockEvent, 'workspace.tabs.0.name', 'My Tab');
       expect(mockLogger.warn).not.toHaveBeenCalled();
     });
   });
@@ -201,6 +226,9 @@ describe('IPC:Store', () => {
       'random.key.here',
       '',
       'workspace', // Not in the set (only 'workspace.tabs' etc.)
+      'preferences', // bare root no longer allowed
+      'preferences.injected', // not in the curated leaf list
+      'preferences.theme.subkey', // nested under a leaf — still rejected
     ];
 
     it.each(blockedKeys)('should block store:get for "%s"', key => {

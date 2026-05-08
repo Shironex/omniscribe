@@ -6,20 +6,27 @@ const store = new Store();
 const logger = createLogger('IPC:Store');
 
 /**
- * Security: Whitelist of allowed store keys
- * Only these keys can be read/written from the renderer process
+ * Security: exact-match allowlist of store keys.
+ *
+ * The previous implementation allowed bare 'preferences' as a root key
+ * AND used a prefix-match rule. That combination effectively allowed
+ * everything under 'preferences.*', which let the renderer scribble
+ * arbitrary keys into the persisted preferences blob.
+ *
+ * This list is exact-match only. To allow nested writes, list every
+ * accepted leaf path explicitly (or extend ALLOWED_NESTED_PREFIXES).
  */
-const ALLOWED_STORE_KEYS = new Set([
+const ALLOWED_STORE_KEYS = new Set<string>([
   // Workspace state
   'workspace.tabs',
   'workspace.activeTabId',
   'workspace.preferences',
   'workspace.quickActions',
-  'quick-actions', // Legacy key format
+  'quick-actions',
   // Window state
   'window.bounds',
   'window.maximized',
-  // User preferences
+  // Curated user preferences (enumerated, not prefix-matched)
   'preferences.theme',
   'preferences.fontSize',
   'preferences.fontFamily',
@@ -28,7 +35,6 @@ const ALLOWED_STORE_KEYS = new Set([
   'preferences.updateChannel',
   'preferences.worktree',
   'preferences.notifications',
-  'preferences', // Root preferences object
   // Recent projects
   'recentProjects',
   // MCP settings
@@ -39,21 +45,26 @@ const ALLOWED_STORE_KEYS = new Set([
 ]);
 
 /**
- * Check if a key is allowed (exact match or prefix match for nested keys)
+ * Prefixes whose nested paths the renderer is allowed to read/write.
+ * `workspace.*` is broad because the workspace store mirrors a typed
+ * object schema with no secrets. `preferences.*` is explicitly NOT
+ * here — every preference must be enumerated by name above.
+ */
+const ALLOWED_NESTED_PREFIXES = ['workspace.', 'window.'] as const;
+
+/**
+ * Check if a key is allowed.
+ *
+ * Exact match is always preferred. Nested keys (`workspace.tabs.0`,
+ * `window.bounds.width`) are accepted only when they fall under an
+ * explicit prefix in `ALLOWED_NESTED_PREFIXES`.
  */
 function isKeyAllowed(key: string): boolean {
-  // Check exact match
-  if (ALLOWED_STORE_KEYS.has(key)) {
-    return true;
+  if (typeof key !== 'string' || key.length === 0) return false;
+  if (ALLOWED_STORE_KEYS.has(key)) return true;
+  for (const prefix of ALLOWED_NESTED_PREFIXES) {
+    if (key.startsWith(prefix) && key.length > prefix.length) return true;
   }
-
-  // Check if key starts with an allowed prefix (for nested access)
-  for (const allowedKey of ALLOWED_STORE_KEYS) {
-    if (key.startsWith(`${allowedKey}.`)) {
-      return true;
-    }
-  }
-
   return false;
 }
 
