@@ -137,6 +137,21 @@ export const QuickActionEvents = {
 } as const;
 
 // ============================================
+// Custom Command Events (per-project user-defined commands)
+// ============================================
+export const CustomCommandEvents = {
+  // Client -> Server (requests)
+  LIST: 'customcommand:list',
+  CREATE: 'customcommand:create',
+  UPDATE: 'customcommand:update',
+  DELETE: 'customcommand:delete',
+  EXECUTE: 'customcommand:execute',
+
+  // Server -> Client (broadcasts)
+  CHANGED: 'customcommand:changed',
+} as const;
+
+// ============================================
 // Usage Events
 // ============================================
 export const UsageEvents = {

@@ -4,6 +4,7 @@
 
 import type { ProjectTabDTO, UserPreferences } from './project-tab';
 import type { QuickAction } from './workspace';
+import type { CustomCommand, CustomCommandInput, CustomCommandUpdate } from './custom-command';
 import type { BranchInfo, CommitInfo, WorktreeInfo, GitFileDiff } from './git';
 import type {
   TaskItem,
@@ -1005,6 +1006,102 @@ export interface ProviderInfo {
   enabled: boolean;
   activated: boolean;
   cliStatus: CliDetectionStatus;
+}
+
+// ============================================
+// Custom Command Payloads
+// ============================================
+
+/**
+ * Payload for listing per-project custom commands.
+ */
+export interface CustomCommandListPayload {
+  projectPath: string;
+}
+
+/**
+ * Response for listing custom commands.
+ */
+export interface CustomCommandListResponse {
+  commands: CustomCommand[];
+  error?: string;
+}
+
+/**
+ * Payload for creating a custom command for a project.
+ */
+export interface CustomCommandCreatePayload {
+  projectPath: string;
+  command: CustomCommandInput;
+}
+
+/**
+ * Response for creating a custom command.
+ */
+export interface CustomCommandCreateResponse extends SuccessResponse {
+  command?: CustomCommand;
+  commands?: CustomCommand[];
+}
+
+/**
+ * Payload for updating an existing custom command.
+ */
+export interface CustomCommandUpdatePayload {
+  projectPath: string;
+  id: string;
+  updates: CustomCommandUpdate;
+}
+
+/**
+ * Response for updating a custom command.
+ */
+export interface CustomCommandUpdateResponse extends SuccessResponse {
+  command?: CustomCommand;
+  commands?: CustomCommand[];
+}
+
+/**
+ * Payload for deleting a custom command.
+ */
+export interface CustomCommandDeletePayload {
+  projectPath: string;
+  id: string;
+}
+
+/**
+ * Response for deleting a custom command.
+ */
+export interface CustomCommandDeleteResponse extends SuccessResponse {
+  commands?: CustomCommand[];
+}
+
+/**
+ * Payload for executing a custom command (spawns a fresh plain session).
+ */
+export interface CustomCommandExecutePayload {
+  projectPath: string;
+  id: string;
+}
+
+/**
+ * Response for executing a custom command.
+ */
+export interface CustomCommandExecuteResponse extends SuccessResponse {
+  /** ID of the new Omniscribe plain session running the command. */
+  sessionId?: string;
+  /** Terminal (PTY) session ID bound to the new session — needed by the renderer
+   * to populate `session.terminalSessionId`, since the `session:created` broadcast
+   * fires before launch completes and carries a stale (undefined) value. */
+  terminalSessionId?: number;
+}
+
+/**
+ * Broadcast emitted whenever a project's custom command list changes
+ * (create / update / delete). Carries the full updated list for that project.
+ */
+export interface CustomCommandsChangedEvent {
+  projectPath: string;
+  commands: CustomCommand[];
 }
 
 /**

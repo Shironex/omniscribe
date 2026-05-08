@@ -31,6 +31,9 @@ export * from './types/updater';
 // Generic changelog types (used by registerChangelogSource extension point)
 export * from './types/changelog';
 
+// Per-project custom command types
+export * from './types/custom-command';
+
 // Utilities
 export * from './utils';
 
