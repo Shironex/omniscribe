@@ -19,7 +19,9 @@ export type Theme =
   | 'paper'
   | 'nord'
   | 'gruvbox'
-  | 'dracula';
+  | 'dracula'
+  | 'plum'
+  | 'abyss';
 
 /**
  * Theme metadata used by both the renderer (gradient swatches) and any
@@ -84,6 +86,18 @@ export const BUILT_IN_THEMES: readonly ThemeMeta[] = [
     label: 'Dracula',
     isDark: true,
     swatch: { bg: '#282a36', surface: '#383a4a', primary: '#50fa7b', accent: '#ff79c6' },
+  },
+  {
+    value: 'plum',
+    label: 'Plum',
+    isDark: true,
+    swatch: { bg: '#1a161f', surface: '#241d2b', primary: '#d46cb1', accent: '#5b9cf2' },
+  },
+  {
+    value: 'abyss',
+    label: 'Abyss',
+    isDark: true,
+    swatch: { bg: '#0a1d1f', surface: '#0f292c', primary: '#5fc7bf', accent: '#e89143' },
   },
 ];
 

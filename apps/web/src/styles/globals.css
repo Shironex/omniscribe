@@ -1,4 +1,4 @@
-/* Import all theme files (curated 8-theme catalog) */
+/* Import all theme files (curated 10-theme catalog) */
 @import './themes/forge.css';
 @import './themes/carbon.css';
 @import './themes/ember.css';
@@ -7,6 +7,8 @@
 @import './themes/nord.css';
 @import './themes/gruvbox.css';
 @import './themes/dracula.css';
+@import './themes/plum.css';
+@import './themes/abyss.css';
 
 @import 'tailwindcss';
 @import 'tw-animate-css';

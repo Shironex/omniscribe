@@ -1,0 +1,110 @@
+/* Abyss Theme — deep teal shell × cyan primary */
+
+:root.abyss {
+  /* Backgrounds */
+  --background: oklch(0.08 0.025 190);
+  --background-50: oklch(0.08 0.025 190 / 0.5);
+  --background-80: oklch(0.08 0.025 190 / 0.8);
+
+  /* Text */
+  --foreground: oklch(0.97 0.015 185);
+  --foreground-secondary: oklch(0.72 0.03 188);
+  --foreground-muted: oklch(0.55 0.02 190);
+
+  /* Surfaces */
+  --card: oklch(0.12 0.03 190);
+  --card-foreground: oklch(0.97 0.015 185);
+  --popover: oklch(0.06 0.025 190);
+  --popover-foreground: oklch(0.97 0.015 185);
+
+  /* Brand — cyan */
+  --primary: oklch(0.75 0.2 185);
+  --primary-foreground: oklch(0.06 0.025 190);
+  --brand-400: oklch(0.79 0.18 185);
+  --brand-500: oklch(0.75 0.2 185);
+  --brand-600: oklch(0.67 0.22 185);
+
+  /* Muted/secondary */
+  --secondary: oklch(0.14 0.028 190);
+  --secondary-foreground: oklch(0.97 0.015 185);
+  --muted: oklch(0.18 0.022 190);
+  --muted-foreground: oklch(0.62 0.025 188);
+  --accent: oklch(0.74 0.16 55);
+  --accent-foreground: oklch(0.06 0.025 190);
+
+  /* Borders */
+  --destructive: oklch(0.62 0.22 25);
+  --border: oklch(0.2 0.025 190);
+  --border-glass: oklch(1 0 0 / 0.07);
+  --input: oklch(0.1 0.025 190);
+  --ring: oklch(0.75 0.2 185);
+
+  /* Charts */
+  --chart-1: oklch(0.75 0.2 185);
+  --chart-2: oklch(0.74 0.16 55);
+  --chart-3: oklch(0.65 0.2 140);
+  --chart-4: oklch(0.66 0.13 250);
+  --chart-5: oklch(0.72 0.18 300);
+
+  /* Sidebar */
+  --sidebar: oklch(0.06 0.025 190 / 0.6);
+  --sidebar-foreground: oklch(0.97 0.015 185);
+  --sidebar-primary: oklch(0.75 0.2 185);
+  --sidebar-primary-foreground: oklch(0.06 0.025 190);
+  --sidebar-accent: oklch(1 0 0 / 0.05);
+  --sidebar-accent-foreground: oklch(0.97 0.015 185);
+  --sidebar-border: oklch(1 0 0 / 0.07);
+  --sidebar-ring: oklch(0.75 0.2 185);
+
+  /* Actions */
+  --action-view: oklch(0.75 0.2 185);
+  --action-view-hover: oklch(0.71 0.22 185);
+  --action-followup: oklch(0.74 0.16 55);
+  --action-followup-hover: oklch(0.7 0.18 55);
+  --action-commit: oklch(0.6 0.18 145);
+  --action-commit-hover: oklch(0.55 0.2 145);
+  --action-verify: oklch(0.6 0.18 145);
+  --action-verify-hover: oklch(0.55 0.2 145);
+
+  --running-indicator: oklch(0.75 0.2 185);
+  --running-indicator-text: oklch(0.79 0.18 185);
+
+  /* Status */
+  --status-success: oklch(0.65 0.2 140);
+  --status-success-bg: oklch(0.65 0.2 140 / 0.2);
+  --status-warning: oklch(0.78 0.15 70);
+  --status-warning-bg: oklch(0.78 0.15 70 / 0.2);
+  --status-error: oklch(0.65 0.22 25);
+  --status-error-bg: oklch(0.65 0.22 25 / 0.2);
+  --status-info: oklch(0.75 0.2 185);
+  --status-info-bg: oklch(0.75 0.2 185 / 0.2);
+  --status-pending: oklch(0.74 0.16 55);
+  --status-pending-bg: oklch(0.74 0.16 55 / 0.2);
+  --status-accent: oklch(0.7 0.15 300);
+  --status-accent-bg: oklch(0.7 0.15 300 / 0.2);
+  --status-backlog: oklch(0.55 0.02 190);
+  --status-in-progress: oklch(0.75 0.2 185);
+  --status-waiting: oklch(0.74 0.16 55);
+
+  /* Shadows */
+  --shadow-xs: 0 1px 2px rgba(4, 14, 14, 0.4);
+  --shadow-sm: 0 1px 3px rgba(4, 14, 14, 0.45), 0 1px 2px rgba(4, 14, 14, 0.35);
+  --shadow-md: 0 4px 6px -1px rgba(4, 14, 14, 0.45), 0 2px 4px -1px rgba(4, 14, 14, 0.35);
+  --shadow-lg: 0 10px 15px -3px rgba(4, 14, 14, 0.5), 0 4px 6px -2px rgba(4, 14, 14, 0.3);
+  --shadow-xl: 0 20px 25px -5px rgba(4, 14, 14, 0.55), 0 10px 10px -5px rgba(4, 14, 14, 0.35);
+
+  /* Swatch quartet exposed for the appearance grid */
+  --swatch-1: #0a1d1f;
+  --swatch-2: #0f292c;
+  --swatch-3: #5fc7bf;
+  --swatch-4: #e89143;
+}
+
+.abyss .content-bg {
+  background: linear-gradient(
+    135deg,
+    oklch(0.08 0.025 190),
+    oklch(0.12 0.03 190),
+    oklch(0.08 0.025 190)
+  );
+}
