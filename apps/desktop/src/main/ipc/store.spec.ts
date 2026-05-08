@@ -161,6 +161,24 @@ describe('IPC:Store', () => {
       handlers['store:set'](mockEvent, 'workspace.tabs.0.name', 'My Tab');
       expect(mockLogger.warn).not.toHaveBeenCalled();
     });
+
+    it('rejects values that exceed the per-key size cap', () => {
+      // preferences.theme cap is 1 KB; a 4 KB string is way over.
+      const big = 'x'.repeat(4096);
+      handlers['store:set'](mockEvent, 'preferences.theme', big);
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        'Blocked store:set for "preferences.theme" — value exceeds size cap'
+      );
+      // The previous-set value (or nothing) should still be there.
+      expect(handlers['store:get'](mockEvent, 'preferences.theme')).not.toBe(big);
+    });
+
+    it('rejects values that cannot be JSON-serialized', () => {
+      const cyclic: Record<string, unknown> = {};
+      cyclic.self = cyclic;
+      handlers['store:set'](mockEvent, 'preferences.theme', cyclic);
+      expect(mockLogger.warn).toHaveBeenCalled();
+    });
   });
 
   // ================================================================

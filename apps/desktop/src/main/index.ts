@@ -237,6 +237,10 @@ function handleProtocolUrl(url: string): void {
         return;
       }
 
+      // Only focus the window AFTER validation succeeds. A malformed or
+      // hostile omniscribe:// URL — anyone can register that scheme via
+      // app.setAsDefaultProtocolClient — should not be able to wake the
+      // window or steal focus.
       if (mainWindow && !mainWindow.isDestroyed()) {
         if (mainWindow.isMinimized()) mainWindow.restore();
         mainWindow.focus();
@@ -249,17 +253,26 @@ function handleProtocolUrl(url: string): void {
 }
 
 // Windows/Linux: second-instance event fires when another instance is launched
-// (e.g., from a notification protocol click)
+// (e.g., from a notification protocol click). The previous version focused
+// the window unconditionally before checking the URL, so any process could
+// launch Omniscribe with a hostile/garbage `omniscribe://...` arg and
+// steal focus from the user. Now: parse first, focus inside
+// handleProtocolUrl only when the URL passes UUID validation.
 app.on('second-instance', (_event, argv) => {
-  if (mainWindow) {
-    if (mainWindow.isMinimized()) mainWindow.restore();
-    mainWindow.focus();
-  }
-
-  // On Windows, the protocol URL is in argv
+  // On Windows the protocol URL is in argv. Find it BEFORE deciding
+  // whether to wake the window.
   const protocolUrl = argv.find(arg => arg.startsWith('omniscribe://'));
   if (protocolUrl) {
     handleProtocolUrl(protocolUrl);
+    return;
+  }
+
+  // No protocol URL — this is a plain "user double-clicked the icon a
+  // second time" event. Focus the existing window like any normal
+  // single-instance app would.
+  if (mainWindow) {
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.focus();
   }
 });
 

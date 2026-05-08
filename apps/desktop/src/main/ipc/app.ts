@@ -164,6 +164,16 @@ export function registerAppHandlers(): void {
         throw new Error('Invalid folder path');
       }
 
+      // Reject characters that would re-enter shell parsing on Windows.
+      // We always go through cmd.exe on Windows so .cmd wrappers (e.g.
+      // code.cmd) work; cmd.exe interprets &, ^, |, <, >, ", $, `, ; as
+      // separators or expansions, all of which can chain commands. The
+      // path itself never legally contains any of these — reject and
+      // bail early.
+      if (process.platform === 'win32' && /[&^|<>"$`;]/.test(folderPath)) {
+        throw new Error('Folder path contains characters that are unsafe on Windows shell');
+      }
+
       if (!existsSync(folderPath)) {
         throw new Error('Folder path does not exist');
       }

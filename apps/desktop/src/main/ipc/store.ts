@@ -69,6 +69,68 @@ function isKeyAllowed(key: string): boolean {
 }
 
 /**
+ * Per-key max bytes for the JSON-serialized value. Caps prevent the
+ * renderer from filling persistent storage with arbitrarily large
+ * payloads (e.g. via a runaway tab snapshot or quick-action body).
+ *
+ * The default is intentionally generous; tightening per-key as we
+ * learn legitimate sizes.
+ */
+const STORE_SIZE_CAPS_BYTES: Record<string, number> = {
+  // Tabs are tiny metadata; even hundreds of tabs fit easily in 1 MB.
+  'workspace.tabs': 1_048_576,
+  'workspace.activeTabId': 1024,
+  'workspace.preferences': 256_000,
+  'workspace.quickActions': 1_048_576,
+  'quick-actions': 1_048_576,
+  'window.bounds': 4096,
+  'window.maximized': 64,
+  'preferences.theme': 1024,
+  'preferences.fontSize': 64,
+  'preferences.fontFamily': 1024,
+  'preferences.terminalFontSize': 64,
+  'preferences.autoSave': 64,
+  'preferences.updateChannel': 64,
+  'preferences.worktree': 16_384,
+  'preferences.notifications': 16_384,
+  recentProjects: 256_000,
+  'mcp.enabledServers': 1_048_576,
+  'session.defaultModel': 1024,
+  'session.defaultMode': 1024,
+};
+
+const STORE_DEFAULT_CAP_BYTES = 4_194_304; // 4 MB hard ceiling for nested writes
+
+function isWithinSizeCap(key: string, value: unknown): boolean {
+  // Quick path: tiny primitive values never trip the cap.
+  let serialized: string;
+  try {
+    serialized = JSON.stringify(value);
+  } catch {
+    // Non-serializable payloads (cycles, BigInt, etc.) are rejected.
+    return false;
+  }
+  if (serialized === undefined) return true; // value was undefined → store will delete
+  const byteLength = Buffer.byteLength(serialized, 'utf8');
+
+  // Find the most specific cap. Walk the key shorter and shorter
+  // checking for a registered cap; fall back to the default ceiling.
+  let cap = STORE_SIZE_CAPS_BYTES[key];
+  if (cap === undefined) {
+    let probe = key;
+    while (probe.includes('.')) {
+      probe = probe.slice(0, probe.lastIndexOf('.'));
+      if (STORE_SIZE_CAPS_BYTES[probe] !== undefined) {
+        cap = STORE_SIZE_CAPS_BYTES[probe];
+        break;
+      }
+    }
+  }
+  if (cap === undefined) cap = STORE_DEFAULT_CAP_BYTES;
+  return byteLength <= cap;
+}
+
+/**
  * Register electron-store IPC handlers
  */
 export function registerStoreHandlers(): void {
@@ -83,6 +145,10 @@ export function registerStoreHandlers(): void {
   ipcMain.handle('store:set', (_event, key: string, value: unknown) => {
     if (!isKeyAllowed(key)) {
       logger.warn(`Blocked store:set for unauthorized key: ${key}`);
+      return;
+    }
+    if (!isWithinSizeCap(key, value)) {
+      logger.warn(`Blocked store:set for "${key}" — value exceeds size cap`);
       return;
     }
     store.set(key, value);
