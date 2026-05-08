@@ -38,6 +38,12 @@ const MAX_INPUT_SIZE = 1_048_576; // 1MB
 const HIGH_WATER_MARK = 256_000; // ~250KB — pause PTY when this many chars are unacknowledged
 const PAUSE_SAFETY_TIMEOUT_MS = 15_000; // Force-resume after 15s to prevent deadlock
 
+// Ownership cleanup is deferred this long after disconnect to give Socket.io
+// Connection State Recovery (CSR) a chance to resume the same socket.id
+// without losing the per-client session ownership map. Match the CSR window
+// configured in custom-io-adapter.ts (`maxDisconnectionDuration`).
+const OWNERSHIP_CLEANUP_GRACE_MS = 30_000;
+
 @UseGuards(WsThrottlerGuard)
 @WebSocketGateway({
   cors: CORS_CONFIG,
@@ -50,6 +56,10 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
 
   private clientSessions = new Map<string, Set<number>>();
   private connectedClients = new Map<string, Socket>();
+  // Pending ownership-cleanup timers keyed by clientId. A timer is armed on
+  // disconnect and cleared if the same clientId reconnects within the CSR
+  // window (or explicitly rejoins). When the timer fires, ownership is wiped.
+  private pendingOwnershipCleanup = new Map<string, NodeJS.Timeout>();
 
   // Backpressure tracking (per-terminal, independent of each other)
   private pendingWrites = new Map<number, number>();
@@ -64,6 +74,15 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
 
   handleConnection(client: Socket): void {
     this.logger.debug(`Client connected: ${client.id}`);
+    // Cancel any pending ownership cleanup from a recent disconnect.
+    // Without this, a CSR-resumed socket would keep its old ownership map only
+    // if reconnect arrived BEFORE the timer fired — clearing the timer makes
+    // the success path explicit and turns the rare race into a no-op.
+    const pendingCleanup = this.pendingOwnershipCleanup.get(client.id);
+    if (pendingCleanup) {
+      clearTimeout(pendingCleanup);
+      this.pendingOwnershipCleanup.delete(client.id);
+    }
     // Only create a new Set if client doesn't already have sessions registered
     // This prevents clearing sessions on reconnection
     if (!this.clientSessions.has(client.id)) {
@@ -113,8 +132,28 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
       this.resumeTerminal(sessionId);
     }
 
-    this.clientSessions.delete(client.id);
     this.connectedClients.delete(client.id);
+
+    // Defer ownership cleanup until the Socket.io Connection State Recovery
+    // window has expired. With CSR, the same socket.id may resume; if that
+    // happens before the timer fires, handleConnection clears it and the
+    // ownership map is preserved. If not, we wipe ownership here just like
+    // we used to do synchronously. This closes the race where input/resize/
+    // kill events arriving between reconnect and terminal:join would be
+    // silently rejected.
+    const clientId = client.id;
+    const existingTimer = this.pendingOwnershipCleanup.get(clientId);
+    if (existingTimer) clearTimeout(existingTimer);
+    const timer = setTimeout(() => {
+      this.pendingOwnershipCleanup.delete(clientId);
+      // Reconnect already happened — nothing to clean up.
+      if (this.connectedClients.has(clientId)) return;
+      this.clientSessions.delete(clientId);
+    }, OWNERSHIP_CLEANUP_GRACE_MS);
+    // Allow the Node process to exit even if a cleanup is still pending
+    // (test runners and graceful shutdown both expect no lingering handles).
+    timer.unref?.();
+    this.pendingOwnershipCleanup.set(clientId, timer);
   }
 
   @SubscribeMessage(TerminalEvents.SPAWN)

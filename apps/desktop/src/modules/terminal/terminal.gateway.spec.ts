@@ -123,6 +123,15 @@ describe('TerminalGateway', () => {
   // =========================================================================
 
   describe('handleDisconnect', () => {
+    afterEach(() => {
+      // Some tests in this block schedule deferred cleanup timers; clearing
+      // fake timers between tests prevents one test's pending callback from
+      // mutating the next test's state.
+      if (jest.isMockFunction(setTimeout)) {
+        jest.useRealTimers();
+      }
+    });
+
     it('should remove client tracking data', () => {
       const client = createMockSocket('c1');
       gateway.handleConnection(client);
@@ -132,12 +141,31 @@ describe('TerminalGateway', () => {
       expect(gateway.getClientSocket('c1')).toBeUndefined();
     });
 
-    it('should remove the session set for the client', () => {
+    it('should preserve the session set during the CSR grace window', () => {
+      jest.useFakeTimers();
       const client = createMockSocket('c1');
       gateway.handleConnection(client);
       gateway.registerClientSession('c1', 10);
 
       gateway.handleDisconnect(client);
+
+      // Ownership stays for the CSR grace window so a resumed socket.id
+      // can keep input/resize/kill working without waiting for terminal:join.
+      const sessions = (gateway as any).clientSessions.get('c1') as Set<number>;
+      expect(sessions).toBeDefined();
+      expect(sessions.has(10)).toBe(true);
+    });
+
+    it('should wipe the session set after the CSR grace window if no reconnect', () => {
+      jest.useFakeTimers();
+      const client = createMockSocket('c1');
+      gateway.handleConnection(client);
+      gateway.registerClientSession('c1', 10);
+
+      gateway.handleDisconnect(client);
+
+      // Advance past the 30s CSR grace window.
+      jest.advanceTimersByTime(30_001);
 
       const sessions = (gateway as any).clientSessions.get('c1');
       expect(sessions).toBeUndefined();
@@ -154,6 +182,40 @@ describe('TerminalGateway', () => {
 
       // kill should NOT have been called
       expect(terminalService.kill).not.toHaveBeenCalled();
+    });
+
+    // Regression test for the CSR reconnect race (kirei-review I3, 2026-05-08).
+    // Before deferring ownership cleanup, this sequence dropped input silently
+    // because `handleDisconnect` wiped the ownership map immediately and
+    // `terminal:input` arriving on the resumed socket no longer matched any
+    // owned session. With deferred cleanup, the ownership map survives the
+    // disconnect → reconnect transition and input flows through.
+    it('preserves ownership across disconnect → CSR reconnect with same socket.id', () => {
+      jest.useFakeTimers();
+      const client = createMockSocket('c1');
+      gateway.handleConnection(client);
+      gateway.registerClientSession('c1', 1);
+      terminalService.hasSession.mockReturnValue(true);
+
+      // Disconnect (CSR window starts).
+      gateway.handleDisconnect(client);
+
+      // Same socket.id resumes within the grace window (CSR semantics).
+      const resumed = createMockSocket('c1');
+      gateway.handleConnection(resumed);
+
+      // Input arriving on the resumed socket BEFORE the renderer re-emits
+      // terminal:join should still be accepted, because ownership was
+      // preserved across the disconnect.
+      gateway.handleInput(resumed, { sessionId: 1, data: 'still mine\n' });
+
+      expect(terminalService.write).toHaveBeenCalledWith(1, 'still mine\n');
+
+      // Advance past the original grace window — the cleanup timer was
+      // cleared on reconnect, so ownership remains intact.
+      jest.advanceTimersByTime(30_001);
+      const sessions = (gateway as any).clientSessions.get('c1') as Set<number>;
+      expect(sessions?.has(1)).toBe(true);
     });
   });
 
