@@ -62,14 +62,8 @@ export function ChangelogSection({ sourceId, label, icon, viewUrl }: ChangelogSe
         <div
           className={cn(
             'w-10 h-10 rounded-xl flex items-center justify-center',
-            'bg-linear-to-br from-primary/20 to-brand-600/10',
-            'ring-1'
+            'bg-linear-to-br from-primary/18 via-brand-500/10 to-transparent'
           )}
-          style={
-            {
-              '--tw-ring-color': 'color-mix(in oklch, var(--primary), transparent 80%)',
-            } as React.CSSProperties
-          }
         >
           <Icon size={20} className="w-5 h-5 text-primary" />
         </div>

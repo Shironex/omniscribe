@@ -41,8 +41,7 @@ export function ClaudeSettingsSection() {
         <div
           className={cn(
             'w-10 h-10 rounded-xl flex items-center justify-center',
-            'bg-linear-to-br from-orange-500/20 to-orange-600/10',
-            'ring-1 ring-orange-500/20'
+            'bg-linear-to-br from-orange-500/18 via-orange-500/10 to-transparent'
           )}
         >
           <ClaudeIcon size={20} className="text-orange-400" />

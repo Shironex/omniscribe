@@ -44,8 +44,7 @@ export function CodexSettingsSection() {
         <div
           className={cn(
             'w-10 h-10 rounded-xl flex items-center justify-center',
-            'bg-linear-to-br from-[#10A37F]/20 to-[#10A37F]/10',
-            'ring-1 ring-[#10A37F]/20'
+            'bg-linear-to-br from-[#10A37F]/18 via-[#10A37F]/10 to-transparent'
           )}
         >
           <CodexIcon size={20} className="text-[#10A37F]" />
