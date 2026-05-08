@@ -19,7 +19,7 @@ export function InstallCommandDisplay({
   onRunInTerminal,
 }: InstallCommandDisplayProps) {
   return (
-    <div className="rounded-xl border border-border/50 bg-card/50 p-4">
+    <div className="rounded-xl border border-border-glass bg-card/40 p-4">
       <div className="flex items-center justify-between mb-2">
         <span className="text-sm font-medium text-foreground">{installCommand.description}</span>
         <div className="flex items-center gap-2">

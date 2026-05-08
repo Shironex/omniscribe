@@ -329,10 +329,10 @@ describe('TerminalSection', () => {
 
   it('shows font size, cursor style, and scrollback labels', () => {
     render(<TerminalSection />);
-    expect(screen.getByText('Font Size: 13px')).toBeTruthy();
-    expect(screen.getByText('Cursor Style')).toBeTruthy();
-    expect(screen.getByText('Cursor Blink')).toBeTruthy();
-    expect(screen.getByText(/Scrollback:/)).toBeTruthy();
+    expect(screen.getByText(/Font size — 13px/)).toBeTruthy();
+    expect(screen.getByText('Cursor style')).toBeTruthy();
+    expect(screen.getByText('Cursor blink')).toBeTruthy();
+    expect(screen.getByText(/Scrollback —/)).toBeTruthy();
   });
 
   it('shows cursor style options: Block, Underline, Bar', () => {
@@ -344,7 +344,7 @@ describe('TerminalSection', () => {
 
   it('shows Reset to Defaults button', () => {
     render(<TerminalSection />);
-    expect(screen.getByText('Reset to Defaults')).toBeTruthy();
+    expect(screen.getByText('Reset to defaults')).toBeTruthy();
   });
 });
 
@@ -360,7 +360,8 @@ describe('GeneralSection', () => {
 
   it('displays the About heading and app name', () => {
     render(<GeneralSection />);
-    expect(screen.getByText('About')).toBeTruthy();
+    // About heading was removed from GeneralSection — AboutCard renders the
+    // app name directly, no separate heading.
     expect(screen.getByText('Omniscribe')).toBeTruthy();
   });
 
@@ -397,19 +398,18 @@ describe('SessionsSection', () => {
   it('displays the Sessions heading and description', () => {
     render(<SessionsSection />);
     expect(screen.getByText('Sessions')).toBeTruthy();
-    expect(screen.getByText('Configure default behavior for new sessions')).toBeTruthy();
+    expect(screen.getByText('Configure default behavior for new sessions.')).toBeTruthy();
   });
 
   it('shows Default Mode options: Claude Code and Plain Terminal', () => {
     render(<SessionsSection />);
-    expect(screen.getByText('Default Mode')).toBeTruthy();
+    expect(screen.getByText('Default mode')).toBeTruthy();
     expect(screen.getByText('Claude Code')).toBeTruthy();
     expect(screen.getByText('Plain Terminal')).toBeTruthy();
   });
 
   it('shows Skip Permissions toggle section', () => {
     render(<SessionsSection />);
-    expect(screen.getByText('Skip Permissions')).toBeTruthy();
     expect(screen.getByText('Allow skip-permissions mode')).toBeTruthy();
   });
 });
@@ -427,7 +427,7 @@ describe('GithubSection', () => {
   it('displays the GitHub CLI heading', () => {
     render(<GithubSection />);
     expect(screen.getByText('GitHub CLI')).toBeTruthy();
-    expect(screen.getByText('GitHub CLI (gh) for PRs, issues, and more')).toBeTruthy();
+    expect(screen.getByText('GitHub CLI (gh) for PRs, issues, and more.')).toBeTruthy();
   });
 
   it('shows CLI Installation and Authentication status cards', () => {
@@ -457,14 +457,17 @@ describe('McpSection', () => {
   it('displays the MCP Servers heading', () => {
     render(<McpSection />);
     expect(screen.getByText('MCP Servers')).toBeTruthy();
-    expect(screen.getByText('Model Context Protocol server connections')).toBeTruthy();
+    // Subtitle now describes server count + connection note instead of the
+    // generic "Model Context Protocol server connections" string.
+    expect(screen.getByText(/Connections occur when a session starts/)).toBeTruthy();
   });
 
   it('shows internal MCP status and server status sections', () => {
     render(<McpSection />);
     expect(screen.getByText('Internal MCP Server')).toBeTruthy();
-    expect(screen.getByText('Server Status')).toBeTruthy();
-    expect(screen.getByText('Ready')).toBeTruthy();
+    // Header pill replaces the standalone "Server Status" heading;
+    // for an empty server list it renders "None".
+    expect(screen.getByText('None')).toBeTruthy();
   });
 
   it('shows empty state when no servers are configured', () => {
