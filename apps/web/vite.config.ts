@@ -50,7 +50,13 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    sourcemap: true,
+    // 'hidden' emits .map files alongside the bundles but strips the
+    // //# sourceMappingURL= comment from the JS. DevTools won't surface
+    // them automatically — keeping our minified code minified for
+    // anyone poking around the renderer — while crash reporters and
+    // sentry-style backends can still upload the maps for symbolicated
+    // stacks.
+    sourcemap: 'hidden',
     rollupOptions: {
       output: {
         manualChunks(id) {
@@ -58,6 +64,16 @@ export default defineConfig({
           if (id.includes('node_modules/@xterm/')) return 'xterm';
           if (id.includes('node_modules/@dnd-kit/')) return 'dndkit';
           if (id.includes('node_modules/framer-motion/')) return 'framer-motion';
+          if (id.includes('node_modules/@radix-ui/')) return 'radix';
+          if (id.includes('node_modules/@floating-ui/')) return 'floating-ui';
+          if (
+            id.includes('node_modules/socket.io-client/') ||
+            id.includes('node_modules/engine.io-client/') ||
+            id.includes('node_modules/socket.io-parser/')
+          ) {
+            return 'socketio';
+          }
+          if (id.includes('node_modules/sonner/')) return 'sonner';
         },
       },
     },
