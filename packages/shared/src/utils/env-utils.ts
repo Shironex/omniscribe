@@ -144,6 +144,13 @@ const ENV_CALLER_BLOCKLIST = new Set<string>([
   'GOPATH',
   'CARGO_HOME',
   'RUSTUP_HOME',
+  'VOLTA_HOME',
+  'FNM_DIR',
+  'FNM_MULTISHELL_PATH',
+  'ASDF_DIR',
+  'ASDF_DATA_DIR',
+  'PYENV_ROOT',
+  'RBENV_ROOT',
 ]);
 
 function isCallerBlocked(key: string): boolean {

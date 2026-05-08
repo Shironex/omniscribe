@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { existsSync } from 'fs';
-import { resolve } from 'path';
+import { isAbsolute, relative, resolve } from 'path';
 import { BranchInfo, createLogger } from '@omniscribe/shared';
 import type { GitRepoStatus, GitFileChange, GitFileStatus } from '@omniscribe/shared';
 import { GitBaseService } from './git-base.service';
@@ -249,7 +249,7 @@ export class GitStatusService {
       // could in principle point --git-path outside the worktree; we
       // refuse to existsSync() arbitrary paths on the filesystem.
       if (!(await this.isInsideProjectOrGitCommon(projectPath, fullPath))) {
-        this.logger.warn(`Refusing existsSync — path outside project/git-common-dir`);
+        this.logger.warn(`Refusing existsSync — path outside project/git-common-dir: ${fullPath}`);
         return false;
       }
       return existsSync(fullPath);
@@ -268,29 +268,18 @@ export class GitStatusService {
     projectPath: string,
     candidate: string
   ): Promise<boolean> {
-    const normalize = (p: string) => resolve(p);
-    const project = normalize(projectPath);
-    const target = normalize(candidate);
-    if (
-      target === project ||
-      target.startsWith(`${project}/`) ||
-      target.startsWith(`${project}\\`)
-    ) {
-      return true;
-    }
+    const isInside = (dir: string, target: string): boolean => {
+      const rel = relative(dir, target);
+      return rel === '' || (!rel.startsWith('..') && !isAbsolute(rel));
+    };
+    const target = resolve(candidate);
+    if (isInside(resolve(projectPath), target)) return true;
 
     try {
       const { stdout } = await this.gitBase.execGit(projectPath, ['rev-parse', '--git-common-dir']);
       const common = stdout.trim();
       if (!common) return false;
-      const commonDir = normalize(resolve(projectPath, common));
-      if (
-        target === commonDir ||
-        target.startsWith(`${commonDir}/`) ||
-        target.startsWith(`${commonDir}\\`)
-      ) {
-        return true;
-      }
+      if (isInside(resolve(projectPath, common), target)) return true;
     } catch {
       // If git can't resolve the common dir, refuse the path.
     }

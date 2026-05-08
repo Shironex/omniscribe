@@ -263,6 +263,13 @@ describe('env-utils', () => {
         PNPM_HOME: '/atk/pnpm',
         BUN_INSTALL: '/atk/bun',
         HOMEBREW_PREFIX: '/atk/brew',
+        VOLTA_HOME: '/atk/.volta',
+        FNM_DIR: '/atk/.fnm',
+        FNM_MULTISHELL_PATH: '/atk/.fnm-shell',
+        ASDF_DIR: '/atk/.asdf',
+        ASDF_DATA_DIR: '/atk/.asdf-data',
+        PYENV_ROOT: '/atk/.pyenv',
+        RBENV_ROOT: '/atk/.rbenv',
       });
 
       // Inherited values stand; caller overrides are dropped.
@@ -273,6 +280,13 @@ describe('env-utils', () => {
       expect(result.SHELL).toBeUndefined();
       expect(result.BUN_INSTALL).toBeUndefined();
       expect(result.HOMEBREW_PREFIX).toBeUndefined();
+      expect(result.VOLTA_HOME).toBeUndefined();
+      expect(result.FNM_DIR).toBeUndefined();
+      expect(result.FNM_MULTISHELL_PATH).toBeUndefined();
+      expect(result.ASDF_DIR).toBeUndefined();
+      expect(result.ASDF_DATA_DIR).toBeUndefined();
+      expect(result.PYENV_ROOT).toBeUndefined();
+      expect(result.RBENV_ROOT).toBeUndefined();
     });
 
     it('caller blocklist is case-insensitive', () => {

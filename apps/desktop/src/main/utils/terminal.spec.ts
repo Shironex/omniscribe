@@ -193,7 +193,14 @@ describe('terminal utilities', () => {
 
       // The first arg is always the binary name, never a long shell line.
       expect(mockExecFileAsync.mock.calls[0][0]).toBe('osascript');
-      expect(mockExecFileAsync.mock.calls[0][0]).not.toContain('osascript -e');
+      // No argv element should look like a concatenated shell invocation,
+      // and the dangerous payload must remain inside an AppleScript-escaped
+      // -e value rather than be exposed as a separate spawn-style token.
+      const argv = mockExecFileAsync.mock.calls[0][1] as string[];
+      for (const arg of argv) {
+        expect(arg).not.toMatch(/^osascript\s/);
+      }
+      expect(argv).not.toContain('rm -rf "/"; echo done');
     });
   });
 

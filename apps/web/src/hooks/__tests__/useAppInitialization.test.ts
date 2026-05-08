@@ -289,4 +289,46 @@ describe('useAppInitialization', () => {
       expect(mockInitUpdate).not.toHaveBeenCalled();
     });
   });
+
+  describe('socket initialization', () => {
+    it('forwards backend port and ws auth token to initializeSocket', async () => {
+      renderHook(() => useAppInitialization());
+      await act(async () => {
+        await flushPromises();
+      });
+
+      expect(mockInitializeSocket).toHaveBeenCalledWith(12345, 'test-token');
+    });
+  });
+
+  describe('auth token validation', () => {
+    it('does not connect when getWsAuthToken returns an empty string', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (window as any).electronAPI.app.getWsAuthToken = vi.fn().mockResolvedValue('');
+
+      renderHook(() => useAppInitialization());
+      await act(async () => {
+        await flushPromises();
+      });
+
+      expect(mockInitializeSocket).not.toHaveBeenCalled();
+      expect(mockConnectSocket).not.toHaveBeenCalled();
+      expect(mockFetchInternalMcpStatus).not.toHaveBeenCalled();
+    });
+
+    it('does not connect when getWsAuthToken rejects', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (window as any).electronAPI.app.getWsAuthToken = vi
+        .fn()
+        .mockRejectedValue(new Error('IPC failure'));
+
+      renderHook(() => useAppInitialization());
+      await act(async () => {
+        await flushPromises();
+      });
+
+      expect(mockInitializeSocket).not.toHaveBeenCalled();
+      expect(mockConnectSocket).not.toHaveBeenCalled();
+    });
+  });
 });

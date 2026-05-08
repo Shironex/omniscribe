@@ -103,7 +103,7 @@ const STORE_DEFAULT_CAP_BYTES = 4_194_304; // 4 MB hard ceiling for nested write
 
 function isWithinSizeCap(key: string, value: unknown): boolean {
   // Quick path: tiny primitive values never trip the cap.
-  let serialized: string;
+  let serialized: string | undefined;
   try {
     serialized = JSON.stringify(value);
   } catch {

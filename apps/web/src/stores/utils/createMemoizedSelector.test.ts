@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { createMemoizedSelector } from './createMemoizedSelector';
 
 interface State {
@@ -58,7 +58,8 @@ describe('createMemoizedSelector', () => {
   });
 
   it('caches across many invocations as long as the result is shallow-equal', () => {
-    const select = createMemoizedSelector((s: State) => s.items.filter(i => i.enabled));
+    const selectorFn = vi.fn((s: State) => s.items.filter(i => i.enabled));
+    const select = createMemoizedSelector(selectorFn);
 
     const first = select(baseState);
     let last = first;
@@ -68,6 +69,10 @@ describe('createMemoizedSelector', () => {
       last = next;
     }
     expect(Object.is(first, last)).toBe(true);
+    // Selector runs every time the state ref changes (output comparison
+    // can't be skipped), but the cached reference is returned when the
+    // output is shallow-equal — that's the contract.
+    expect(selectorFn).toHaveBeenCalledTimes(51);
   });
 
   it('memoizes object-shaped results too', () => {

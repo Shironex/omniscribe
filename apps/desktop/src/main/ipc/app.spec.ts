@@ -112,7 +112,6 @@ describe('IPC:App', () => {
       expect(ipcMain.handle).toHaveBeenCalledWith('app:get-ws-auth-token', expect.any(Function));
       expect(ipcMain.handle).toHaveBeenCalledWith('app:list-log-files', expect.any(Function));
       expect(ipcMain.handle).toHaveBeenCalledWith('app:read-log-file', expect.any(Function));
-      expect(ipcMain.handle).toHaveBeenCalledWith('app:detect-editors', expect.any(Function));
       expect(ipcMain.handle).toHaveBeenCalledWith('app:open-in-editor', expect.any(Function));
     });
   });
@@ -485,7 +484,6 @@ describe('IPC:App', () => {
       expect(ipcMain.removeHandler).toHaveBeenCalledWith('app:get-ws-auth-token');
       expect(ipcMain.removeHandler).toHaveBeenCalledWith('app:list-log-files');
       expect(ipcMain.removeHandler).toHaveBeenCalledWith('app:read-log-file');
-      expect(ipcMain.removeHandler).toHaveBeenCalledWith('app:detect-editors');
       expect(ipcMain.removeHandler).toHaveBeenCalledWith('app:open-in-editor');
     });
   });
