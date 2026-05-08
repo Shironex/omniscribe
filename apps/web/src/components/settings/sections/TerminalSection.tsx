@@ -1,4 +1,4 @@
-import { TerminalSquare, RotateCcw } from 'lucide-react';
+import { TerminalSquare, RotateCcw, Eye } from 'lucide-react';
 import { useTerminalStore, type CursorStyle } from '@/stores/useTerminalStore';
 import { terminalThemes, type TerminalThemeName } from '@/lib/terminal-themes';
 import { cn } from '@/lib/utils';
@@ -9,6 +9,7 @@ import {
   SettingsToggleRow,
 } from '@/components/settings/SettingsCard';
 import { ButtonGroup } from '@/components/shared/ButtonGroup';
+import { TerminalPreview } from '@/components/settings/previews/TerminalPreview';
 
 const CURSOR_STYLES: ReadonlyArray<{ value: CursorStyle; label: string }> = [
   { value: 'block', label: 'Block' },
@@ -34,6 +35,15 @@ export function TerminalSection() {
 
   return (
     <div className="space-y-4">
+      <SettingsCard
+        icon={Eye}
+        tone="blue"
+        title="Preview"
+        subtitle="Live preview reflecting your current settings."
+      >
+        <TerminalPreview />
+      </SettingsCard>
+
       <SettingsCard
         icon={TerminalSquare}
         tone="muted"

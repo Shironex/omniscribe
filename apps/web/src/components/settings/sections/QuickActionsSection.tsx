@@ -1,9 +1,10 @@
-import { Zap } from 'lucide-react';
+import { Zap, Eye } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useWorkspaceStore } from '@/stores/useWorkspaceStore';
 import type { SessionSettings, QuickActionMode } from '@omniscribe/shared';
 import { DEFAULT_SESSION_SETTINGS } from '@omniscribe/shared';
 import { SettingsCard, SettingsRow, SettingsRowLabel } from '@/components/settings/SettingsCard';
+import { QuickActionPreview } from '@/components/settings/previews/QuickActionPreview';
 
 const EXECUTION_MODE_OPTIONS: {
   value: QuickActionMode;
@@ -35,6 +36,15 @@ export function QuickActionsSection() {
 
   return (
     <div className="space-y-4">
+      <SettingsCard
+        icon={Eye}
+        tone="blue"
+        title="Preview"
+        subtitle="Sample tile reflecting your selected execution mode."
+      >
+        <QuickActionPreview />
+      </SettingsCard>
+
       <SettingsCard
         icon={Zap}
         tone="gold"

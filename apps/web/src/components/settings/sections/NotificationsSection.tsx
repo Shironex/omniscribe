@@ -1,9 +1,10 @@
-import { Bell, Send } from 'lucide-react';
+import { Bell, Send, Eye } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useWorkspaceStore } from '@/stores/useWorkspaceStore';
 import type { NotificationSettings } from '@omniscribe/shared';
 import { DEFAULT_NOTIFICATION_SETTINGS } from '@omniscribe/shared';
 import { SettingsCard, SettingsToggleRow } from '@/components/settings/SettingsCard';
+import { NotificationPreview } from '@/components/settings/previews/NotificationPreview';
 
 const EVENT_TOGGLES: Array<{
   key: keyof NotificationSettings['events'];
@@ -77,6 +78,15 @@ export function NotificationsSection() {
 
   return (
     <div className="space-y-4">
+      <SettingsCard
+        icon={Eye}
+        tone="blue"
+        title="Preview"
+        subtitle="Sample of how a session notification appears."
+      >
+        <NotificationPreview />
+      </SettingsCard>
+
       <SettingsCard
         icon={Bell}
         tone="gold"
