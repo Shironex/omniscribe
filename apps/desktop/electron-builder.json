@@ -48,6 +48,7 @@
     "runAsNode": false,
     "enableNodeCliInspectArguments": false,
     "enableNodeOptionsEnvironmentVariable": false,
-    "onlyLoadAppFromAsar": true
+    "onlyLoadAppFromAsar": true,
+    "embeddedAsarIntegrityValidation": true
   }
 }
