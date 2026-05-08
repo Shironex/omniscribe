@@ -44,6 +44,7 @@ export interface ElectronAPI {
     openLogsFolder: () => Promise<void>;
     clipboardWrite: (text: string) => Promise<void>;
     getBackendPort: () => Promise<number>;
+    getWsAuthToken: () => Promise<string>;
     listLogFiles: () => Promise<Array<{ name: string; size: number; lastModified: number }>>;
     readLogFile: (fileName: string) => Promise<string>;
     openInEditor: (editorId: string, folderPath: string) => Promise<void>;
@@ -126,6 +127,7 @@ const electronAPI: ElectronAPI = {
     openLogsFolder: () => ipcRenderer.invoke('app:open-logs-folder') as Promise<void>,
     clipboardWrite: (text: string) => ipcRenderer.invoke('app:clipboard-write', text),
     getBackendPort: () => ipcRenderer.invoke('app:get-backend-port') as Promise<number>,
+    getWsAuthToken: () => ipcRenderer.invoke('app:get-ws-auth-token') as Promise<string>,
     listLogFiles: () => ipcRenderer.invoke('app:list-log-files'),
     readLogFile: (fileName: string) => ipcRenderer.invoke('app:read-log-file', fileName),
     openInEditor: (editorId: string, folderPath: string) =>

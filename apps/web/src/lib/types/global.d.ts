@@ -46,6 +46,7 @@ interface ElectronAPI {
     openLogsFolder: () => Promise<void>;
     clipboardWrite: (text: string) => Promise<void>;
     getBackendPort: () => Promise<number>;
+    getWsAuthToken: () => Promise<string>;
     listLogFiles: () => Promise<Array<{ name: string; size: number; lastModified: number }>>;
     readLogFile: (fileName: string) => Promise<string>;
     openInEditor: (editorId: string, folderPath: string) => Promise<void>;

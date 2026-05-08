@@ -50,7 +50,7 @@ describe('socket module', () => {
       const mod = await importSocket();
       const { io: ioFn } = await import('socket.io-client');
 
-      mod.initializeSocket(3000);
+      mod.initializeSocket(3000, 'test-token');
 
       expect(ioFn).toHaveBeenCalledWith('ws://127.0.0.1:3000', {
         autoConnect: false,
@@ -61,18 +61,24 @@ describe('socket module', () => {
         randomizationFactor: 0.5,
         timeout: 20000,
         transports: ['websocket', 'polling'],
+        query: { auth: 'test-token' },
       });
+    });
+
+    it('throws when called without an auth token', async () => {
+      const mod = await importSocket();
+      expect(() => (mod.initializeSocket as unknown as (p: number) => unknown)(3000)).toThrow();
     });
 
     it('returns the socket instance', async () => {
       const mod = await importSocket();
-      const result = mod.initializeSocket(3000);
+      const result = mod.initializeSocket(3000, 'test-token');
       expect(result).toBe(mockSocketInstance);
     });
 
     it('registers socket event handlers', async () => {
       const mod = await importSocket();
-      mod.initializeSocket(3000);
+      mod.initializeSocket(3000, 'test-token');
 
       expect(mockSocketInstance.on).toHaveBeenCalledWith('connect', expect.any(Function));
       expect(mockSocketInstance.on).toHaveBeenCalledWith('disconnect', expect.any(Function));
@@ -80,7 +86,7 @@ describe('socket module', () => {
 
     it('registers manager reconnect event handlers', async () => {
       const mod = await importSocket();
-      mod.initializeSocket(3000);
+      mod.initializeSocket(3000, 'test-token');
 
       expect(mockManager.on).toHaveBeenCalledWith('reconnect', expect.any(Function));
       expect(mockManager.on).toHaveBeenCalledWith('reconnect_attempt', expect.any(Function));
@@ -90,7 +96,7 @@ describe('socket module', () => {
 
     it('sets window.__testSocket', async () => {
       const mod = await importSocket();
-      mod.initializeSocket(3000);
+      mod.initializeSocket(3000, 'test-token');
 
       expect((window as unknown as Record<string, unknown>).__testSocket).toBe(mockSocketInstance);
     });
@@ -99,7 +105,7 @@ describe('socket module', () => {
   describe('resetSocket', () => {
     it('removes all listeners, disconnects, and nulls the socket', async () => {
       const mod = await importSocket();
-      mod.initializeSocket(3000);
+      mod.initializeSocket(3000, 'test-token');
 
       mod.resetSocket();
 
@@ -124,7 +130,7 @@ describe('socket module', () => {
 
     it('returns socket after initialization', async () => {
       const mod = await importSocket();
-      mod.initializeSocket(3000);
+      mod.initializeSocket(3000, 'test-token');
       expect(mod.getSocket()).toBe(mockSocketInstance);
     });
   });
@@ -132,7 +138,7 @@ describe('socket module', () => {
   describe('connectSocket', () => {
     it('resolves immediately if already connected', async () => {
       const mod = await importSocket();
-      mod.initializeSocket(3000);
+      mod.initializeSocket(3000, 'test-token');
       mockSocketInstance.connected = true;
 
       await mod.connectSocket();
@@ -141,7 +147,7 @@ describe('socket module', () => {
 
     it('calls socket.connect() and resolves on connect event', async () => {
       const mod = await importSocket();
-      mod.initializeSocket(3000);
+      mod.initializeSocket(3000, 'test-token');
 
       // Simulate connect event when connect() is called
       mockSocketInstance.connect.mockImplementation(() => {
@@ -157,7 +163,7 @@ describe('socket module', () => {
 
     it('rejects on connect_error event', async () => {
       const mod = await importSocket();
-      mod.initializeSocket(3000);
+      mod.initializeSocket(3000, 'test-token');
 
       const testError = new Error('Connection refused');
       mockSocketInstance.connect.mockImplementation(() => {
@@ -172,7 +178,7 @@ describe('socket module', () => {
 
     it('queues concurrent callers and resolves all on connect', async () => {
       const mod = await importSocket();
-      mod.initializeSocket(3000);
+      mod.initializeSocket(3000, 'test-token');
 
       // Don't resolve connect immediately — let multiple callers queue up
       mockSocketInstance.connect.mockImplementation(() => {});
@@ -193,7 +199,7 @@ describe('socket module', () => {
 
     it('cleans up event listeners after connect', async () => {
       const mod = await importSocket();
-      mod.initializeSocket(3000);
+      mod.initializeSocket(3000, 'test-token');
 
       mockSocketInstance.connect.mockImplementation(() => {
         const lastConnectCall = mockSocketInstance.on.mock.calls
@@ -212,7 +218,7 @@ describe('socket module', () => {
   describe('disconnectSocket', () => {
     it('calls socket.disconnect() when connected', async () => {
       const mod = await importSocket();
-      mod.initializeSocket(3000);
+      mod.initializeSocket(3000, 'test-token');
       mockSocketInstance.connected = true;
 
       mod.disconnectSocket();
@@ -221,7 +227,7 @@ describe('socket module', () => {
 
     it('does not call disconnect when not connected', async () => {
       const mod = await importSocket();
-      mod.initializeSocket(3000);
+      mod.initializeSocket(3000, 'test-token');
       mockSocketInstance.connected = false;
 
       mod.disconnectSocket();

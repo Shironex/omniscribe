@@ -17,6 +17,7 @@ import { LOCALHOST, APP_USER_MODEL_ID } from '@omniscribe/shared';
 import { resolveShellPath } from './utils/shell-path';
 import { getThumbnailsDir } from './utils';
 import { setBackendPort } from './backend-port';
+import { initializeWsAuthToken } from './ws-auth';
 import { CDP_PORT, cdpEnabledForRuntime } from './cdp';
 
 // Dogfood mode: expose CDP on Omniscribe's own window so @playwright/mcp
@@ -128,6 +129,10 @@ function isValidThumbnailFilename(name: string): boolean {
 }
 
 async function bootstrap(): Promise<void> {
+  // Generate the per-window WS auth token before any gateway can accept
+  // connections. CustomIoAdapter validates this on every handshake.
+  initializeWsAuthToken();
+
   // Resolve the user's full shell PATH before any child processes are spawned.
   // macOS/Linux GUI apps inherit a minimal PATH that's missing dev tools.
   resolveShellPath();

@@ -12,6 +12,7 @@ import {
 import { CLI_TOOLS, checkCliAvailable, type CLITool } from '../utils';
 import { getLogsDir } from '../logger';
 import { getBackendPort } from '../backend-port';
+import { getWsAuthToken } from '../ws-auth';
 import type { ProjectValidationResult } from './types';
 
 const logger = createLogger('IPC:App');
@@ -73,6 +74,13 @@ export function registerAppHandlers(): void {
   ipcMain.handle('app:get-backend-port', () => {
     logger.debug('app:get-backend-port invoked');
     return getBackendPort();
+  });
+
+  ipcMain.handle('app:get-ws-auth-token', () => {
+    // Per-window token used by Socket.io allowRequest. Logged at debug
+    // only — never include the token value in logs.
+    logger.debug('app:get-ws-auth-token invoked');
+    return getWsAuthToken();
   });
 
   ipcMain.handle('app:list-log-files', async () => {
@@ -186,6 +194,7 @@ export function cleanupAppHandlers(): void {
   ipcMain.removeHandler('app:open-logs-folder');
   ipcMain.removeHandler('app:clipboard-write');
   ipcMain.removeHandler('app:get-backend-port');
+  ipcMain.removeHandler('app:get-ws-auth-token');
   ipcMain.removeHandler('app:list-log-files');
   ipcMain.removeHandler('app:read-log-file');
   ipcMain.removeHandler('app:open-in-editor');
