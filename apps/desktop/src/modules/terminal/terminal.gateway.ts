@@ -137,10 +137,22 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
     return { sessionId };
   }
 
+  /**
+   * Confirm the socket has been registered as an owner of `sessionId`.
+   * Sessions become owned via:
+   *   - terminal:spawn (the spawner owns the session it just created)
+   *   - terminal:join (a client explicitly joining a session it knows)
+   *   - registerClientSession (called from SessionGateway when sessions
+   *     are spawned through a higher-level launcher)
+   */
+  private isSessionOwner(clientId: string, sessionId: number): boolean {
+    return this.clientSessions.get(clientId)?.has(sessionId) === true;
+  }
+
   @SkipThrottle()
   @SubscribeMessage(TerminalEvents.INPUT)
   handleInput(
-    @ConnectedSocket() _client: Socket,
+    @ConnectedSocket() client: Socket,
     @MessageBody() payload: TerminalInputPayload
   ): void {
     const { sessionId, data } = payload;
@@ -163,8 +175,11 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
       return;
     }
 
-    // Simplified pattern from automaker: if client is in the terminal room, allow input
-    // No ownership checking - if you're connected to the session, you can write to it
+    if (!this.isSessionOwner(client.id, sessionId)) {
+      this.logger.warn(`[input] Client ${client.id} is not owner of session ${sessionId}`);
+      return;
+    }
+
     if (this.terminalService.hasSession(sessionId)) {
       this.terminalService.write(sessionId, data);
     }
@@ -194,7 +209,7 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
   @SkipThrottle()
   @SubscribeMessage(TerminalEvents.RESIZE)
   handleResize(
-    @ConnectedSocket() _client: Socket,
+    @ConnectedSocket() client: Socket,
     @MessageBody() payload: TerminalResizePayload
   ): void {
     const { sessionId, cols, rows } = payload;
@@ -211,7 +226,11 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
       return;
     }
 
-    // Simplified: allow resize if session exists (no ownership check)
+    if (!this.isSessionOwner(client.id, sessionId)) {
+      this.logger.warn(`[resize] Client ${client.id} is not owner of session ${sessionId}`);
+      return;
+    }
+
     if (this.terminalService.hasSession(sessionId)) {
       this.terminalService.resize(sessionId, cols, rows);
     }
@@ -229,7 +248,11 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
       return { success: false, error: 'Invalid sessionId' };
     }
 
-    // Simplified: allow kill if session exists (no ownership check)
+    if (!this.isSessionOwner(client.id, sessionId)) {
+      this.logger.warn(`[kill] Client ${client.id} is not owner of session ${sessionId}`);
+      return { success: false, error: 'Not authorized for this session' };
+    }
+
     if (this.terminalService.hasSession(sessionId)) {
       await this.terminalService.kill(sessionId);
 
@@ -345,7 +368,7 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
    */
   @SubscribeMessage(TerminalEvents.CANCEL)
   handleCancel(
-    @ConnectedSocket() _client: Socket,
+    @ConnectedSocket() client: Socket,
     @MessageBody() payload: { sessionId: number }
   ): SuccessResponse {
     this.logger.debug(`[terminal:cancel] sessionId=${payload.sessionId}`);
@@ -354,6 +377,11 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
     if (!isValidSessionId(sessionId)) {
       this.logger.warn(`[cancel] Invalid sessionId: ${sessionId}`);
       return { success: false, error: 'Invalid sessionId' };
+    }
+
+    if (!this.isSessionOwner(client.id, sessionId)) {
+      this.logger.warn(`[cancel] Client ${client.id} is not owner of session ${sessionId}`);
+      return { success: false, error: 'Not authorized for this session' };
     }
 
     if (!this.terminalService.hasSession(sessionId)) {

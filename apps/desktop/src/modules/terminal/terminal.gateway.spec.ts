@@ -221,8 +221,10 @@ describe('TerminalGateway', () => {
   // =========================================================================
 
   describe('handleInput', () => {
-    it('should write data to the terminal session', () => {
+    it('should write data to the terminal session when owned', () => {
       const client = createMockSocket('c1');
+      gateway.handleConnection(client);
+      gateway.registerClientSession('c1', 1);
       terminalService.hasSession.mockReturnValue(true);
 
       gateway.handleInput(client, { sessionId: 1, data: 'ls -la\n' });
@@ -230,8 +232,34 @@ describe('TerminalGateway', () => {
       expect(terminalService.write).toHaveBeenCalledWith(1, 'ls -la\n');
     });
 
+    it('should reject input when the client does not own the session', () => {
+      const client = createMockSocket('c1');
+      gateway.handleConnection(client);
+      // No registerClientSession call — client is connected but owns nothing.
+      terminalService.hasSession.mockReturnValue(true);
+
+      gateway.handleInput(client, { sessionId: 1, data: 'rm -rf /\n' });
+
+      expect(terminalService.write).not.toHaveBeenCalled();
+    });
+
+    it('should reject input from a different client even if some other client owns it', () => {
+      const owner = createMockSocket('owner');
+      const stranger = createMockSocket('stranger');
+      gateway.handleConnection(owner);
+      gateway.handleConnection(stranger);
+      gateway.registerClientSession('owner', 1);
+      terminalService.hasSession.mockReturnValue(true);
+
+      gateway.handleInput(stranger, { sessionId: 1, data: 'attack' });
+
+      expect(terminalService.write).not.toHaveBeenCalled();
+    });
+
     it('should not write if session does not exist', () => {
       const client = createMockSocket('c1');
+      gateway.handleConnection(client);
+      gateway.registerClientSession('c1', 999);
       terminalService.hasSession.mockReturnValue(false);
 
       gateway.handleInput(client, { sessionId: 999, data: 'echo hi' });
@@ -241,6 +269,8 @@ describe('TerminalGateway', () => {
 
     it('should reject non-string data', () => {
       const client = createMockSocket('c1');
+      gateway.handleConnection(client);
+      gateway.registerClientSession('c1', 1);
       terminalService.hasSession.mockReturnValue(true);
 
       gateway.handleInput(client, { sessionId: 1, data: 123 as any });
@@ -250,6 +280,8 @@ describe('TerminalGateway', () => {
 
     it('should reject data exceeding 1MB', () => {
       const client = createMockSocket('c1');
+      gateway.handleConnection(client);
+      gateway.registerClientSession('c1', 1);
       terminalService.hasSession.mockReturnValue(true);
 
       const largeData = 'x'.repeat(1_048_577); // 1MB + 1 byte
@@ -264,8 +296,10 @@ describe('TerminalGateway', () => {
   // =========================================================================
 
   describe('handleResize', () => {
-    it('should resize the terminal session', () => {
+    it('should resize the terminal session when owned', () => {
       const client = createMockSocket('c1');
+      gateway.handleConnection(client);
+      gateway.registerClientSession('c1', 1);
       terminalService.hasSession.mockReturnValue(true);
 
       gateway.handleResize(client, { sessionId: 1, cols: 120, rows: 40 });
@@ -273,8 +307,20 @@ describe('TerminalGateway', () => {
       expect(terminalService.resize).toHaveBeenCalledWith(1, 120, 40);
     });
 
+    it('should reject resize when the client does not own the session', () => {
+      const client = createMockSocket('c1');
+      gateway.handleConnection(client);
+      terminalService.hasSession.mockReturnValue(true);
+
+      gateway.handleResize(client, { sessionId: 1, cols: 120, rows: 40 });
+
+      expect(terminalService.resize).not.toHaveBeenCalled();
+    });
+
     it('should not resize if session does not exist', () => {
       const client = createMockSocket('c1');
+      gateway.handleConnection(client);
+      gateway.registerClientSession('c1', 999);
       terminalService.hasSession.mockReturnValue(false);
 
       gateway.handleResize(client, { sessionId: 999, cols: 80, rows: 24 });
@@ -284,6 +330,8 @@ describe('TerminalGateway', () => {
 
     it('should reject invalid dimensions (zero)', () => {
       const client = createMockSocket('c1');
+      gateway.handleConnection(client);
+      gateway.registerClientSession('c1', 1);
       terminalService.hasSession.mockReturnValue(true);
 
       gateway.handleResize(client, { sessionId: 1, cols: 0, rows: 0 });
@@ -293,6 +341,8 @@ describe('TerminalGateway', () => {
 
     it('should reject invalid dimensions (negative)', () => {
       const client = createMockSocket('c1');
+      gateway.handleConnection(client);
+      gateway.registerClientSession('c1', 1);
       terminalService.hasSession.mockReturnValue(true);
 
       gateway.handleResize(client, { sessionId: 1, cols: -10, rows: 24 });
@@ -302,6 +352,8 @@ describe('TerminalGateway', () => {
 
     it('should reject non-finite dimensions', () => {
       const client = createMockSocket('c1');
+      gateway.handleConnection(client);
+      gateway.registerClientSession('c1', 1);
       terminalService.hasSession.mockReturnValue(true);
 
       gateway.handleResize(client, { sessionId: 1, cols: NaN, rows: 24 });
@@ -315,15 +367,27 @@ describe('TerminalGateway', () => {
   // =========================================================================
 
   describe('handleKill', () => {
-    it('should kill the terminal and return success', async () => {
+    it('should kill the terminal and return success when owned', async () => {
       const client = createMockSocket('c1');
       gateway.handleConnection(client);
+      gateway.registerClientSession('c1', 1);
       terminalService.hasSession.mockReturnValue(true);
 
       const result = await gateway.handleKill(client, { sessionId: 1 });
 
       expect(terminalService.kill).toHaveBeenCalledWith(1);
       expect(result).toEqual({ success: true });
+    });
+
+    it('should reject kill when the client does not own the session', async () => {
+      const client = createMockSocket('c1');
+      gateway.handleConnection(client);
+      terminalService.hasSession.mockReturnValue(true);
+
+      const result = await gateway.handleKill(client, { sessionId: 1 });
+
+      expect(terminalService.kill).not.toHaveBeenCalled();
+      expect(result).toEqual({ success: false, error: 'Not authorized for this session' });
     });
 
     it('should clean up session tracking for all clients', async () => {
@@ -349,6 +413,7 @@ describe('TerminalGateway', () => {
     it('should leave the terminal room', async () => {
       const client = createMockSocket('c1');
       gateway.handleConnection(client);
+      gateway.registerClientSession('c1', 3);
       terminalService.hasSession.mockReturnValue(true);
 
       await gateway.handleKill(client, { sessionId: 3 });
@@ -358,6 +423,8 @@ describe('TerminalGateway', () => {
 
     it('should return failure for non-existent session', async () => {
       const client = createMockSocket('c1');
+      gateway.handleConnection(client);
+      gateway.registerClientSession('c1', 999);
       terminalService.hasSession.mockReturnValue(false);
 
       const result = await gateway.handleKill(client, { sessionId: 999 });
