@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { devtools } from 'zustand/middleware';
+import { devtools } from './utils/devtools';
 
 interface AppUIState {
   isHistoryOpen: boolean;
