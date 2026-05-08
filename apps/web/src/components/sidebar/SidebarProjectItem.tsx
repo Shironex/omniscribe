@@ -139,17 +139,17 @@ export const SidebarProjectItem = React.memo(function SidebarProjectItem({
                   <div
                     className={cn(
                       'flex items-center justify-center w-full h-full rounded-lg',
-                      'transition-all duration-100',
+                      'transition-[background-color,box-shadow,color] duration-150 ease-out',
                       thumbnailUrl
                         ? cn(
-                            'overflow-hidden ring-1.5 ring-offset-1 ring-offset-background',
+                            'overflow-hidden ring-2 ring-offset-2 ring-offset-sidebar',
                             isActive
                               ? 'ring-primary'
                               : 'ring-transparent hover:ring-muted-foreground/30'
                           )
                         : isActive
-                          ? 'bg-primary/15 text-primary'
-                          : 'text-foreground-secondary hover:bg-muted-foreground/10 hover:text-foreground'
+                          ? 'bg-sidebar-accent text-primary ring-1 ring-primary/60'
+                          : 'text-foreground-secondary hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
                     )}
                   >
                     {renderAvatar('sm')}
@@ -157,7 +157,7 @@ export const SidebarProjectItem = React.memo(function SidebarProjectItem({
                   {status && (
                     <StatusDot
                       status={status}
-                      className="absolute -top-0.5 -right-0.5 w-2 h-2 ring-1 ring-background"
+                      className="absolute -top-0.5 -right-0.5 w-2 h-2 ring-2 ring-sidebar"
                     />
                   )}
                 </div>
@@ -200,15 +200,19 @@ export const SidebarProjectItem = React.memo(function SidebarProjectItem({
             onClick={handleClick}
             className={cn(
               'no-drag group flex items-center gap-2 px-2 py-1.5 mx-1 rounded-lg cursor-pointer',
-              'transition-colors duration-100 relative',
+              'transition-colors duration-150 ease-out relative',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-1 focus-visible:ring-offset-sidebar',
               isActive
-                ? 'bg-primary/10 text-foreground'
-                : 'text-foreground-secondary hover:bg-muted-foreground/10 hover:text-foreground'
+                ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                : 'text-foreground-secondary hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
             )}
           >
-            {/* Active indicator bar */}
+            {/* Active indicator rail */}
             {isActive && (
-              <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-4 rounded-full bg-primary" />
+              <span
+                aria-hidden
+                className="absolute -left-1 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-r-full bg-primary"
+              />
             )}
 
             {thumbnailUrl && renderAvatar('md')}
@@ -216,7 +220,14 @@ export const SidebarProjectItem = React.memo(function SidebarProjectItem({
 
             <Tooltip>
               <TooltipTrigger asChild>
-                <span className="text-sm truncate flex-1">{label}</span>
+                <span
+                  className={cn(
+                    'text-sm truncate flex-1',
+                    isActive ? 'font-medium' : 'font-normal'
+                  )}
+                >
+                  {label}
+                </span>
               </TooltipTrigger>
               <TooltipContent side="right">{label}</TooltipContent>
             </Tooltip>
@@ -225,7 +236,7 @@ export const SidebarProjectItem = React.memo(function SidebarProjectItem({
               variant="ghost"
               size="icon"
               onClick={handleClose}
-              className="p-0 h-auto w-auto opacity-0 group-hover:opacity-100 shrink-0 transition-opacity duration-100"
+              className="shrink-0 h-5 w-5 p-0 opacity-0 group-hover:opacity-100 hover:bg-sidebar-accent rounded transition-opacity duration-150 ease-out"
               aria-label={`Close ${label}`}
             >
               <X size={14} />

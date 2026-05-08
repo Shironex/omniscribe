@@ -64,13 +64,15 @@ export function SidebarProjectList({
     <div
       data-testid="project-tabs"
       className={cn(
-        'flex-1 min-h-0 overflow-y-auto overflow-x-hidden py-1 no-scrollbar',
-        collapsed && 'space-y-1.5'
+        'flex-1 min-h-0 overflow-y-auto overflow-x-hidden py-1.5 no-scrollbar',
+        collapsed ? 'space-y-1.5' : 'space-y-0.5'
       )}
     >
       {tabs.length === 0 ? (
         <div className="px-3 py-4 text-center">
-          <p className="text-xs text-muted-foreground">No projects open</p>
+          <p className="text-xs font-medium tracking-tight text-muted-foreground">
+            No projects open
+          </p>
         </div>
       ) : (
         <DndContext
@@ -102,7 +104,7 @@ export function SidebarProjectList({
               <div
                 className={cn(
                   'flex items-center gap-2 px-3 py-1.5',
-                  'bg-card text-foreground border border-border rounded-lg shadow-lg',
+                  'bg-popover text-popover-foreground border border-sidebar-border rounded-lg shadow-xl',
                   collapsed ? 'w-10 justify-center' : ''
                 )}
               >

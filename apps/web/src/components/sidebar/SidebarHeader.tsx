@@ -20,7 +20,7 @@ export function SidebarHeader({ collapsed, onToggle, onNewProject }: SidebarHead
       )}
     >
       {!collapsed && (
-        <span className="no-drag text-sm font-semibold text-foreground tracking-tight truncate">
+        <span className="no-drag text-[13px] font-medium text-foreground tracking-tight truncate">
           Omniscribe
         </span>
       )}
@@ -40,7 +40,7 @@ export function SidebarHeader({ collapsed, onToggle, onNewProject }: SidebarHead
           </TooltipTrigger>
           <TooltipContent side="right">
             {collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            <kbd className="ml-1.5 px-1 py-0.5 text-[10px] bg-foreground/10 rounded">
+            <kbd className="ml-2 px-1.5 py-0.5 font-mono text-[10px] bg-muted text-muted-foreground rounded">
               {IS_MAC ? '⌘ B' : 'Ctrl+B'}
             </kbd>
           </TooltipContent>

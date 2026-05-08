@@ -47,7 +47,7 @@ export function Sidebar({
   return (
     <div
       className={cn(
-        'flex flex-col h-full shrink-0 bg-muted/50 border-r border-border/80',
+        'flex flex-col h-full shrink-0 bg-sidebar text-sidebar-foreground border-r border-sidebar-border',
         'transition-[width] duration-200 overflow-hidden'
       )}
       style={{
@@ -59,7 +59,7 @@ export function Sidebar({
       <SidebarHeader collapsed={collapsed} onToggle={toggleSidebar} onNewProject={onNewTab} />
 
       {/* Separator */}
-      <div className="mx-2 border-b border-border/30" />
+      <div className="mx-3 h-px bg-sidebar-border/60" />
 
       <SidebarProjectList
         tabs={tabs}
