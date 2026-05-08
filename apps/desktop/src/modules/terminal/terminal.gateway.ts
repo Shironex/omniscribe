@@ -334,6 +334,13 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
     return { success: false, error: `Terminal session ${sessionId} not found` };
   }
 
+  // TODO(security): terminal:join grants ownership to any authenticated socket
+  // that knows a sessionId, and sessionIds are sequential integers. Today this
+  // is acceptable because the WS auth token gates which processes can connect
+  // at all (single-trust-zone desktop app). If multi-window, a sandboxed
+  // iframe, or any cross-origin bridge is added, gate this behind an opaque
+  // sessionToken returned from spawn. Tracked in
+  // docs/review/2026-05-08-branch-master-plan-pr-0-1-2-3.md (issue I4).
   @SkipThrottle()
   @SubscribeMessage(TerminalEvents.JOIN)
   handleJoin(

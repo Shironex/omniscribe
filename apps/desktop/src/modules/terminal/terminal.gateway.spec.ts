@@ -573,6 +573,38 @@ describe('TerminalGateway', () => {
         error: 'Terminal session 999 not found',
       });
     });
+
+    // Documents the current trust model (kirei-review I4, 2026-05-08).
+    // terminal:join grants ownership to any authenticated socket that knows a
+    // sessionId. The WS auth token is the gate; sessionIds themselves are
+    // sequential and not secret. If this assertion fails, the trust model
+    // has changed — see the TODO(security) comment near handleJoin and the
+    // review doc before relaxing the test.
+    it('grants ownership to any authenticated socket that calls join with a known sessionId', () => {
+      const owner = createMockSocket('owner');
+      const stranger = createMockSocket('stranger');
+      gateway.handleConnection(owner);
+      gateway.handleConnection(stranger);
+
+      // owner spawned session 1
+      terminalService.spawn.mockReturnValue(1);
+      gateway.handleSpawn(owner, { cwd: '/tmp' });
+      terminalService.hasSession.mockReturnValue(true);
+
+      // Sanity: stranger initially cannot send input
+      gateway.handleInput(stranger, { sessionId: 1, data: 'before' });
+      expect(terminalService.write).not.toHaveBeenCalled();
+
+      // Stranger calls join — current behavior accepts the claim and grants
+      // ownership without checking that they spawned the session.
+      const result = gateway.handleJoin(stranger, { sessionId: 1 });
+      expect(result).toEqual({ success: true, scrollback: undefined });
+
+      // After join the stranger CAN send input. This is the behavior to lock
+      // down with an opaque sessionToken if the threat model expands.
+      gateway.handleInput(stranger, { sessionId: 1, data: 'after\n' });
+      expect(terminalService.write).toHaveBeenCalledWith(1, 'after\n');
+    });
   });
 
   // =========================================================================
