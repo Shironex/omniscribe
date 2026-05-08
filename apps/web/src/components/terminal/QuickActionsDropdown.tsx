@@ -16,8 +16,11 @@ import {
   Bot,
   Settings,
   Zap,
+  Plus,
   type LucideIcon,
 } from 'lucide-react';
+import { getCustomCommandIcon } from '@/lib/custom-command-icons';
+import type { CustomCommand } from '@omniscribe/shared';
 import type { QuickActionItem } from './TerminalCard';
 
 const iconMap: Record<string, LucideIcon> = {
@@ -51,6 +54,12 @@ interface QuickActionsDropdownProps {
   disabledTooltip?: string;
   onToggle: () => void;
   onAction: (actionId: string) => void;
+  /** Per-project custom commands shown as a separate "Custom" section. */
+  customCommands?: CustomCommand[];
+  /** Triggered when the user clicks a custom command. */
+  onCustomCommand?: (id: string) => void;
+  /** Triggered by the "Manage Custom Commands…" footer button. */
+  onManageCustomCommands?: () => void;
 }
 
 export function QuickActionsDropdown({
@@ -60,6 +69,9 @@ export function QuickActionsDropdown({
   disabledTooltip,
   onToggle,
   onAction,
+  customCommands,
+  onCustomCommand,
+  onManageCustomCommands,
 }: QuickActionsDropdownProps) {
   const groupedActions = useMemo(() => {
     const groups: Record<string, QuickActionItem[]> = {};
@@ -82,6 +94,10 @@ export function QuickActionsDropdown({
     }));
   }, [quickActions]);
 
+  const hasCustomSection = !!onCustomCommand && !!customCommands && customCommands.length > 0;
+  const hasManageFooter = !!onManageCustomCommands;
+  const hasAnyContent = quickActions.length > 0 || hasCustomSection || hasManageFooter;
+
   return (
     <>
       <button
@@ -103,8 +119,8 @@ export function QuickActionsDropdown({
       >
         <Zap size={12} />
       </button>
-      {!disabled && isOpen && quickActions.length > 0 && (
-        <div className="absolute right-0 top-full mt-1 z-50 min-w-[180px] max-h-[300px] overflow-y-auto bg-popover border border-border rounded-md shadow-lg py-1">
+      {!disabled && isOpen && hasAnyContent && (
+        <div className="absolute right-0 top-full mt-1 z-50 min-w-[200px] max-h-[360px] overflow-y-auto bg-popover border border-border rounded-md shadow-lg py-1">
           {groupedActions.map((group, groupIndex) => (
             <div key={group.category}>
               {groupIndex > 0 && <div className="my-1 border-t border-border" />}
@@ -127,6 +143,46 @@ export function QuickActionsDropdown({
               })}
             </div>
           ))}
+
+          {hasCustomSection && (
+            <div>
+              {groupedActions.length > 0 && <div className="my-1 border-t border-border" />}
+              <div className="px-3 py-1 text-2xs font-medium text-muted-foreground uppercase tracking-wide">
+                Custom
+              </div>
+              {customCommands!.map(cmd => {
+                const Icon = getCustomCommandIcon(cmd.icon);
+                return (
+                  <button
+                    type="button"
+                    key={cmd.id}
+                    onClick={() => onCustomCommand!(cmd.id)}
+                    title={cmd.command}
+                    className="w-full text-left px-3 py-1.5 text-xs text-foreground hover:bg-accent transition-colors flex items-center gap-2"
+                  >
+                    <Icon size={12} className="text-muted-foreground" />
+                    <span className="truncate">{cmd.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {hasManageFooter && (
+            <>
+              {(groupedActions.length > 0 || hasCustomSection) && (
+                <div className="my-1 border-t border-border" />
+              )}
+              <button
+                type="button"
+                onClick={onManageCustomCommands}
+                className="w-full text-left px-3 py-1.5 text-xs text-muted-foreground hover:bg-accent hover:text-foreground transition-colors flex items-center gap-2"
+              >
+                <Plus size={12} />
+                <span>Manage Custom Commands…</span>
+              </button>
+            </>
+          )}
         </div>
       )}
     </>

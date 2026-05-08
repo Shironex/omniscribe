@@ -8,6 +8,7 @@ import { useSessionHistoryStore } from '@/stores/useSessionHistoryStore';
 import { useConnectionStore } from '@/stores/useConnectionStore';
 import { useTerminalStore } from '@/stores/useTerminalStore';
 import { usePluginStore } from '@/stores/usePluginStore';
+import { useCustomCommandStore } from '@/stores/useCustomCommandStore';
 
 export interface UseStoreListenersReturn {
   initAllListeners: () => void;
@@ -36,6 +37,7 @@ export function useStoreListeners(): UseStoreListenersReturn {
     useSessionHistoryStore.getState().initListeners();
     useTerminalStore.getState().initListeners();
     usePluginStore.getState().initListeners();
+    useCustomCommandStore.getState().initListeners();
   }, []);
 
   const cleanupAllListeners = useCallback(() => {
@@ -48,6 +50,7 @@ export function useStoreListeners(): UseStoreListenersReturn {
     useSessionHistoryStore.getState().cleanupListeners();
     useTerminalStore.getState().cleanupListeners();
     usePluginStore.getState().cleanupListeners();
+    useCustomCommandStore.getState().cleanupListeners();
   }, []);
 
   const fetchInternalMcpStatus = useCallback(() => {

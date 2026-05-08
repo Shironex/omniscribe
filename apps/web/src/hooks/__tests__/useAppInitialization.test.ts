@@ -22,6 +22,8 @@ const mockInitTerminal = vi.fn();
 const mockCleanupTerminal = vi.fn();
 const mockInitPlugin = vi.fn();
 const mockCleanupPlugin = vi.fn();
+const mockInitCustomCommand = vi.fn();
+const mockCleanupCustomCommand = vi.fn();
 const mockCleanupUpdate = vi.fn();
 const mockInitUpdate = vi.fn().mockReturnValue(mockCleanupUpdate);
 const mockConnectSocket = vi.fn().mockResolvedValue(undefined);
@@ -105,6 +107,13 @@ vi.mock('@/stores/usePluginStore', () => ({
   usePluginStore: createMockStore(() => ({
     initListeners: mockInitPlugin,
     cleanupListeners: mockCleanupPlugin,
+  })),
+}));
+
+vi.mock('@/stores/useCustomCommandStore', () => ({
+  useCustomCommandStore: createMockStore(() => ({
+    initListeners: mockInitCustomCommand,
+    cleanupListeners: mockCleanupCustomCommand,
   })),
 }));
 
