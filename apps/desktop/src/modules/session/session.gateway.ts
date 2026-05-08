@@ -238,7 +238,8 @@ export class SessionGateway implements OnGatewayInit {
   }
 
   /**
-   * Handle session end hook events from HookManagerService.
+   * Handle session end hook events from a provider plugin's hook manager
+   * (e.g. ClaudeHookManagerService in @omniscribe/provider-claude).
    * Broadcasts to frontend so it can update UI immediately.
    */
   @OnEvent(InternalSessionEvents.HOOK_END)
