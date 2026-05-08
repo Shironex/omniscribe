@@ -102,8 +102,10 @@ describe('updater', () => {
       expect(mockAutoUpdater.autoDownload).toBe(false);
     });
 
-    it('should set autoInstallOnAppQuit to true', () => {
-      expect(mockAutoUpdater.autoInstallOnAppQuit).toBe(true);
+    it('should set autoInstallOnAppQuit to false', () => {
+      // Always require an explicit user action to install — never swap
+      // the binary silently on quit.
+      expect(mockAutoUpdater.autoInstallOnAppQuit).toBe(false);
     });
   });
 

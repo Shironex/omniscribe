@@ -91,6 +91,9 @@ describe('TerminalGateway (integration)', () => {
   });
 
   it('should handle terminal:resize and forward to service', async () => {
+    // Spawn first so the client is registered as owner of session 1.
+    await emitWithAck(client, 'terminal:spawn', { cwd: '/tmp/test' });
+
     client.emit('terminal:resize', { sessionId: 1, cols: 120, rows: 40 });
 
     await new Promise(resolve => setTimeout(resolve, 100));
@@ -99,12 +102,35 @@ describe('TerminalGateway (integration)', () => {
   });
 
   it('should handle terminal:kill and return success', async () => {
+    // Spawn first so the client owns session 1.
+    await emitWithAck(client, 'terminal:spawn', { cwd: '/tmp/test' });
+
     const response = await emitWithAck<{ success: boolean }>(client, 'terminal:kill', {
       sessionId: 1,
     });
 
     expect(response.success).toBe(true);
     expect(mockTerminalService.kill).toHaveBeenCalledWith(1);
+  });
+
+  it('rejects terminal:input from a client that does not own the session', async () => {
+    // Do NOT spawn or join — just send input cold.
+    client.emit('terminal:input', { sessionId: 1, data: 'attack' });
+
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    expect(mockTerminalService.write).not.toHaveBeenCalled();
+  });
+
+  it('rejects terminal:kill from a client that does not own the session', async () => {
+    const response = await emitWithAck<{ success: boolean; error?: string }>(
+      client,
+      'terminal:kill',
+      { sessionId: 1 }
+    );
+
+    expect(response.success).toBe(false);
+    expect(mockTerminalService.kill).not.toHaveBeenCalled();
   });
 
   it('should handle terminal:join and receive scrollback', async () => {

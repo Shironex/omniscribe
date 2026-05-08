@@ -150,10 +150,13 @@ describe('useAppInitialization', () => {
     vi.clearAllMocks();
     mockConnectSocket.mockResolvedValue(undefined);
     mockInitUpdate.mockReturnValue(mockCleanupUpdate);
-    // Mock window.electronAPI for getBackendPort and getStatus
+    // Mock window.electronAPI for getBackendPort, getWsAuthToken, getStatus
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (window as any).electronAPI = {
-      app: { getBackendPort: vi.fn().mockResolvedValue(12345) },
+      app: {
+        getBackendPort: vi.fn().mockResolvedValue(12345),
+        getWsAuthToken: vi.fn().mockResolvedValue('test-token'),
+      },
       claude: { getStatus: vi.fn().mockResolvedValue({ installed: false }) },
     };
   });
