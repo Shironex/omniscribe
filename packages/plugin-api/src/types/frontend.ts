@@ -335,6 +335,14 @@ export interface UsagePanelProps {
    * Defaults to false (standalone mode with own Popover).
    */
   embedded?: boolean;
+
+  /**
+   * Optional Radix anchors for standalone (non-embedded) usage popovers.
+   * Sidebar footer passes right/top to match neighbouring Settings tooltips.
+   */
+  tooltipSide?: 'top' | 'right' | 'bottom' | 'left';
+  popoverSide?: 'top' | 'right' | 'bottom' | 'left';
+  popoverAlign?: 'start' | 'center' | 'end';
 }
 
 /**

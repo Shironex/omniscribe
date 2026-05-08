@@ -61,7 +61,15 @@ const ERROR_MESSAGES: Record<UsageError, { title: string; description: string }>
  *
  * Registered as a usage panel via frontendActivate.
  */
-export function ClaudeUsagePanel({ embedded = false }: UsagePanelProps) {
+export function ClaudeUsagePanel({
+  embedded = false,
+  tooltipSide,
+  popoverSide,
+  popoverAlign,
+}: UsagePanelProps) {
+  const tooltipSideResolved = tooltipSide ?? 'bottom';
+  const popoverSideResolved = popoverSide ?? 'bottom';
+  const popoverAlignResolved = popoverAlign ?? 'end';
   const [open, setOpen] = useState(false);
 
   // Usage store
@@ -237,11 +245,12 @@ export function ClaudeUsagePanel({ embedded = false }: UsagePanelProps) {
         <TooltipTrigger asChild>
           <PopoverTrigger asChild>{trigger}</PopoverTrigger>
         </TooltipTrigger>
-        {!open && <TooltipContent side="bottom">{tooltipLabel}</TooltipContent>}
+        {!open && <TooltipContent side={tooltipSideResolved}>{tooltipLabel}</TooltipContent>}
       </Tooltip>
       <PopoverContent
         className="w-[340px] p-0 overflow-hidden bg-background border-border shadow-2xl"
-        align="end"
+        side={popoverSideResolved}
+        align={popoverAlignResolved}
         sideOffset={8}
       >
         {content}

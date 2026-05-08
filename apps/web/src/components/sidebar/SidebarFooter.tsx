@@ -45,7 +45,13 @@ export function SidebarFooter({ currentBranch, collapsed }: SidebarFooterProps) 
 
       {/* Usage + Settings row */}
       <div className={cn('flex items-center', collapsed ? 'flex-col gap-1' : 'justify-between')}>
-        <UsagePopover />
+        <UsagePopover
+          anchoring={{
+            tooltipSide: collapsed ? 'right' : 'top',
+            popoverSide: 'right',
+            popoverAlign: 'end',
+          }}
+        />
 
         <Tooltip>
           <TooltipTrigger asChild>

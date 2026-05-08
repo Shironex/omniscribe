@@ -8,9 +8,14 @@ import { useWorkspaceStore } from '@/stores/useWorkspaceStore';
 import { useSessionStore } from '@/stores/useSessionStore';
 import { usePluginStore, type ProviderInfo } from '@/stores/usePluginStore';
 import { PluginErrorBoundary } from '@/components/plugin/PluginErrorBoundary';
-import type { UsagePanelRegistration } from '@omniscribe/plugin-api';
+import type { UsagePanelProps, UsagePanelRegistration } from '@omniscribe/plugin-api';
 
 type WithPluginId<T> = T & { pluginId: string };
+
+export type UsagePopoverAnchoring = Pick<
+  UsagePanelProps,
+  'tooltipSide' | 'popoverSide' | 'popoverAlign'
+>;
 
 interface ResolvedPanel {
   aiMode: string;
@@ -20,7 +25,11 @@ interface ResolvedPanel {
 
 // ─── No usage fallback ─────────────────────────────────────────────────────
 
-function NoUsageFallback() {
+function NoUsageFallback({ anchoring }: { anchoring?: UsagePopoverAnchoring }) {
+  const tooltipSide = anchoring?.tooltipSide ?? 'bottom';
+  const popoverSide = anchoring?.popoverSide ?? 'bottom';
+  const popoverAlign = anchoring?.popoverAlign ?? 'end';
+
   return (
     <Popover>
       <Tooltip>
@@ -31,11 +40,12 @@ function NoUsageFallback() {
             </Button>
           </PopoverTrigger>
         </TooltipTrigger>
-        <TooltipContent side="bottom">Usage</TooltipContent>
+        <TooltipContent side={tooltipSide}>Usage</TooltipContent>
       </Tooltip>
       <PopoverContent
         className="w-[280px] p-0 overflow-hidden bg-background border-border shadow-lg"
-        align="end"
+        side={popoverSide}
+        align={popoverAlign}
         sideOffset={8}
       >
         <div className="flex items-center gap-2 px-4 py-3 border-b border-border/50 bg-secondary/10">
@@ -58,11 +68,16 @@ function NoUsageFallback() {
 function MultiProviderPopover({
   panels,
   projectPath,
+  anchoring,
 }: {
   panels: ResolvedPanel[];
   projectPath: string;
+  anchoring?: UsagePopoverAnchoring;
 }) {
   const [open, setOpen] = useState(false);
+  const tooltipSide = anchoring?.tooltipSide ?? 'bottom';
+  const popoverSide = anchoring?.popoverSide ?? 'bottom';
+  const popoverAlign = anchoring?.popoverAlign ?? 'end';
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -74,11 +89,12 @@ function MultiProviderPopover({
             </Button>
           </PopoverTrigger>
         </TooltipTrigger>
-        {!open && <TooltipContent side="bottom">Usage</TooltipContent>}
+        {!open && <TooltipContent side={tooltipSide}>Usage</TooltipContent>}
       </Tooltip>
       <PopoverContent
         className="w-[340px] p-0 overflow-hidden bg-background border-border shadow-lg"
-        align="end"
+        side={popoverSide}
+        align={popoverAlign}
         sideOffset={8}
       >
         <Tabs defaultValue={panels[0].aiMode}>
@@ -123,7 +139,7 @@ function MultiProviderPopover({
  * - 1 provider: renders the panel standalone (own Popover, same UX as before)
  * - 2+ providers: renders a single Popover with tabbed content per provider
  */
-export function UsagePopover() {
+export function UsagePopover({ anchoring }: { anchoring?: UsagePopoverAnchoring }) {
   const activeTabId = useWorkspaceStore(s => s.activeTabId);
   const tabs = useWorkspaceStore(s => s.tabs);
   const sessions = useSessionStore(s => s.sessions);
@@ -170,7 +186,7 @@ export function UsagePopover() {
 
   // No panels registered for any active provider
   if (resolvedPanels.length === 0) {
-    return <NoUsageFallback />;
+    return <NoUsageFallback anchoring={anchoring} />;
   }
 
   // Single provider: render standalone (panel manages its own Popover)
@@ -179,11 +195,13 @@ export function UsagePopover() {
     const PanelComponent = registration.component;
     return (
       <PluginErrorBoundary pluginId={registration.pluginId}>
-        <PanelComponent workingDir={projectPath} />
+        <PanelComponent workingDir={projectPath} {...anchoring} />
       </PluginErrorBoundary>
     );
   }
 
   // Multiple providers: tabbed popover
-  return <MultiProviderPopover panels={resolvedPanels} projectPath={projectPath} />;
+  return (
+    <MultiProviderPopover panels={resolvedPanels} projectPath={projectPath} anchoring={anchoring} />
+  );
 }

@@ -74,7 +74,15 @@ function PlanBadge({ planLabel }: { planLabel: string }) {
  *
  * Registered as a usage panel via frontendActivate.
  */
-export function CodexUsagePanel({ embedded = false }: UsagePanelProps) {
+export function CodexUsagePanel({
+  embedded = false,
+  tooltipSide,
+  popoverSide,
+  popoverAlign,
+}: UsagePanelProps) {
+  const tooltipSideResolved = tooltipSide ?? 'bottom';
+  const popoverSideResolved = popoverSide ?? 'bottom';
+  const popoverAlignResolved = popoverAlign ?? 'end';
   const [open, setOpen] = useState(false);
   const [metrics, setMetrics] = useState<UsageMetric[] | null>(null);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
@@ -308,11 +316,12 @@ export function CodexUsagePanel({ embedded = false }: UsagePanelProps) {
         <TooltipTrigger asChild>
           <PopoverTrigger asChild>{trigger}</PopoverTrigger>
         </TooltipTrigger>
-        {!open && <TooltipContent side="bottom">{tooltipLabel}</TooltipContent>}
+        {!open && <TooltipContent side={tooltipSideResolved}>{tooltipLabel}</TooltipContent>}
       </Tooltip>
       <PopoverContent
         className="w-[340px] p-0 overflow-hidden bg-background/95 backdrop-blur-xl border-border shadow-2xl"
-        align="end"
+        side={popoverSideResolved}
+        align={popoverAlignResolved}
         sideOffset={8}
       >
         {content}
