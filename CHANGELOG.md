@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## 1.7.0 (2026-05-08)
+
+### Features
+
+- **Provider changelog viewer** — New `registerChangelogSource` extension point on the plugin API lets providers contribute their own changelog feeds; Claude and Codex both ship one out of the box. Settings → Integrations gains a per-provider Changelog pane (auto-synthesized under a stable "Changelog" label) so you can see what shipped in the underlying CLI without leaving Omniscribe. Replaces the old Claude-specific changelog module.
+- **Per-project custom commands** — Define and manage your own slash commands per project, with shared types/payloads/events, a desktop backend module, and a web UI to author and invoke them.
+- **Plum and Abyss themes** — Two new curated themes added to the catalog.
+
+### Bug Fixes
+
+- **Usage popover anchoring** — Usage popover and tooltips now anchor like the sidebar footer peers, fixing positioning drift next to the sidebar.
+- **Stable changelog nav label** — Auto-synthesized settings nav entry for provider changelogs uses a stable "Changelog" label instead of a provider-derived one.
+
+### Refactoring
+
+- **Plugin API typing cleanup** — Retype `PluginComponentType` as `ComponentType` and add `PluginIconComponent`; drop `as any` casts in plugins and `eslint-disable` on plugin extension slots now that the types are correct.
+- **Sidebar theme tokens** — Sidebar adopts `--sidebar*` theme tokens with polished active/hover states.
+- **Plugin settings icon ring** — Removed the icon ring from plugin settings entries for a cleaner sidebar.
+
 ## 1.6.0 (2026-05-07)
 
 Promotes the 1.6 cycle out of beta. The **AI Capabilities** surface (Playwright Web/Electron, Omniscribe Status MCP) introduced in `1.6.0-beta.0` is now stable, alongside two redesigned core views and the removal of an under-delivering session feature.
