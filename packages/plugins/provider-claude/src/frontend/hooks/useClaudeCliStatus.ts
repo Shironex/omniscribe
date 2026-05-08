@@ -5,6 +5,7 @@ import type {
   ClaudeCliStatus,
   ClaudeVersionCheckResult,
   ClaudeInstallCommand,
+  ClaudeInstallCommandOptions,
 } from '@omniscribe/shared';
 import { writeClipboard } from '@/lib/clipboard';
 import { useSettingsStore } from '@/stores/useSettingsStore';
@@ -55,6 +56,10 @@ export function useClaudeCliStatus(): UseClaudeCliStatusReturn {
   // Local state
   const [showVersionPicker, setShowVersionPicker] = useState(false);
   const [installCommand, setInstallCommand] = useState<ClaudeInstallCommand | null>(null);
+  // The exact options that produced installCommand. Held so runInstall can
+  // pass them to main, which rebuilds the platform-specific command itself
+  // — main never trusts a command string from the renderer.
+  const [installOptions, setInstallOptions] = useState<ClaudeInstallCommandOptions | null>(null);
   const [copiedCommand, setCopiedCommand] = useState(false);
   const [versionCheckAttempted, setVersionCheckAttempted] = useState(false);
   const copiedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -113,11 +118,10 @@ export function useClaudeCliStatus(): UseClaudeCliStatusReturn {
   const getInstallCommand = useCallback(async (isUpdate: boolean, version?: string) => {
     try {
       if (window.electronAPI?.claude?.getInstallCommand) {
-        const result = await window.electronAPI.claude.getInstallCommand({
-          isUpdate,
-          version,
-        });
+        const options: ClaudeInstallCommandOptions = { isUpdate, version };
+        const result = await window.electronAPI.claude.getInstallCommand(options);
         setInstallCommand(result);
+        setInstallOptions(options);
       }
     } catch (error) {
       logger.error('Failed to get install command:', error);
@@ -142,16 +146,16 @@ export function useClaudeCliStatus(): UseClaudeCliStatusReturn {
   }, [installCommand]);
 
   const runInTerminal = useCallback(async () => {
-    if (installCommand?.command && window.electronAPI?.claude?.runInstall) {
+    if (installCommand?.command && installOptions && window.electronAPI?.claude?.runInstall) {
       try {
-        await window.electronAPI.claude.runInstall(installCommand.command);
+        await window.electronAPI.claude.runInstall(installOptions);
         toast.success('Terminal opened with install command');
       } catch (error) {
         logger.error('Failed to open terminal:', error);
         toast.error('Failed to open terminal');
       }
     }
-  }, [installCommand]);
+  }, [installCommand, installOptions]);
 
   // Cleanup timeout on unmount
   useEffect(() => {

@@ -56,7 +56,7 @@ interface ElectronAPI {
     checkVersion: () => Promise<ClaudeVersionCheckResult | null>;
     getVersions: () => Promise<ClaudeVersionList>;
     getInstallCommand: (options: ClaudeInstallCommandOptions) => Promise<ClaudeInstallCommand>;
-    runInstall: (command: string) => Promise<void>;
+    runInstall: (options: ClaudeInstallCommandOptions) => Promise<void>;
   };
   github?: {
     getStatus: () => Promise<GhCliStatus>;

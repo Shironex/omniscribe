@@ -54,7 +54,7 @@ export interface ElectronAPI {
     checkVersion: () => Promise<ClaudeVersionCheckResult | null>;
     getVersions: () => Promise<ClaudeVersionList>;
     getInstallCommand: (options: ClaudeInstallCommandOptions) => Promise<ClaudeInstallCommand>;
-    runInstall: (command: string) => Promise<void>;
+    runInstall: (options: ClaudeInstallCommandOptions) => Promise<void>;
   };
   github: {
     getStatus: () => Promise<GhCliStatus>;
@@ -140,8 +140,8 @@ const electronAPI: ElectronAPI = {
     getVersions: () => ipcRenderer.invoke('claude:get-versions') as Promise<ClaudeVersionList>,
     getInstallCommand: (options: ClaudeInstallCommandOptions) =>
       ipcRenderer.invoke('claude:get-install-command', options) as Promise<ClaudeInstallCommand>,
-    runInstall: (command: string) =>
-      ipcRenderer.invoke('claude:run-install', command) as Promise<void>,
+    runInstall: (options: ClaudeInstallCommandOptions) =>
+      ipcRenderer.invoke('claude:run-install', options) as Promise<void>,
   },
   github: {
     getStatus: () => ipcRenderer.invoke('github:get-status') as Promise<GhCliStatus>,
