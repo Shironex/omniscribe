@@ -430,6 +430,89 @@ describe('useSessionStore', () => {
         expect(result).toHaveLength(2);
         expect(result.map(s => s.id)).toEqual(['s2', 's4']);
       });
+
+      // TODO: unskip after PR 4 lands (fan-out re-render fix)
+      // PR 4 adds early-return in updateStatus when no UI-relevant field changes,
+      // so the Zustand state reference does not change and the memoized selector
+      // never needs to re-evaluate. The selector itself already returns a stable
+      // reference via createMemoizedSelector (shallow equality), but the store
+      // keeps firing state updates today even when nothing material changes.
+      // These assertions pin the EXPECTED post-PR-4 selector contract.
+      it.skip('returns same reference when unrelated state field changes (Object.is)', () => {
+        const sessions = [
+          createMockSession({ id: 's1', status: 'working' }),
+          createMockSession({ id: 's2', status: 'idle' }),
+        ];
+        useSessionStore.setState({ sessions });
+
+        const stateA = useSessionStore.getState();
+        const first = selectActiveSessions(stateA);
+
+        // Simulate an update that does NOT change which sessions are active
+        // (e.g. lastActiveAt bumped on an idle session — not in the active list)
+        const updatedSessions = sessions.map(s =>
+          s.id === 's2' ? { ...s, lastActiveAt: new Date() } : s
+        );
+        useSessionStore.setState({ sessions: updatedSessions });
+        const stateB = useSessionStore.getState();
+        const second = selectActiveSessions(stateB);
+
+        expect(Object.is(first, second)).toBe(true);
+      });
+    });
+
+    // Fan-out stable-reference assertions for selectSessionsForProject.
+    // TODO: unskip after PR 4 lands (fan-out re-render fix)
+    // See comment above on selectActiveSessions for background.
+    describe('selectSessionsForProject — stable reference (fan-out guard)', () => {
+      it.skip('returns same reference when sessions for other projects change (Object.is)', () => {
+        const sessA = createMockSession({ id: 's1', projectPath: '/proj-a', status: 'working' });
+        const sessB = createMockSession({ id: 's2', projectPath: '/proj-b', status: 'idle' });
+        useSessionStore.setState({ sessions: [sessA, sessB] });
+
+        const selector = selectSessionsForProject('/proj-a');
+
+        const stateA = useSessionStore.getState();
+        const first = selector(stateA);
+
+        // Update only the /proj-b session — /proj-a result must not change
+        const updated = [sessA, { ...sessB, lastActiveAt: new Date() }];
+        useSessionStore.setState({ sessions: updated });
+        const stateB = useSessionStore.getState();
+        const second = selector(stateB);
+
+        expect(Object.is(first, second)).toBe(true);
+      });
+
+      it('returns a new reference when sessions for the project actually change', () => {
+        const sessA = createMockSession({ id: 's1', projectPath: '/proj-a', status: 'idle' });
+        useSessionStore.setState({ sessions: [sessA] });
+
+        const selector = selectSessionsForProject('/proj-a');
+        const first = selector(useSessionStore.getState());
+
+        // Add a new session for /proj-a — reference must update
+        const sessA2 = createMockSession({ id: 's2', projectPath: '/proj-a', status: 'idle' });
+        useSessionStore.setState({ sessions: [sessA, sessA2] });
+        const second = selector(useSessionStore.getState());
+
+        expect(Object.is(first, second)).toBe(false);
+        expect(second).toHaveLength(2);
+      });
+
+      it('returns same reference on back-to-back identical state reads', () => {
+        const sessions = [
+          createMockSession({ id: 's1', projectPath: '/proj-a', status: 'working' }),
+        ];
+        useSessionStore.setState({ sessions });
+
+        const selector = selectSessionsForProject('/proj-a');
+        const state = useSessionStore.getState();
+        const first = selector(state);
+        const second = selector(state);
+
+        expect(Object.is(first, second)).toBe(true);
+      });
     });
 
     describe('selectRunningSessionCount', () => {
