@@ -716,13 +716,21 @@ describe('useSplashScreen', () => {
     vi.useRealTimers();
   });
 
-  async function setup(connectionStatus = 'reconnecting', isWorkspaceRestored = false) {
+  async function setup(
+    connectionStatus = 'reconnecting',
+    isWorkspaceRestored = false,
+    updateStatus: 'idle' | 'checking' | 'available' | 'downloading' | 'ready' | 'error' = 'idle'
+  ) {
     vi.doMock('@/stores/useConnectionStore', () => ({
       useConnectionStore: (sel: Selector) => sel({ status: connectionStatus }),
     }));
 
     vi.doMock('@/stores/useWorkspaceStore', () => ({
       useWorkspaceStore: (sel: Selector) => sel({ isRestored: isWorkspaceRestored }),
+    }));
+
+    vi.doMock('@/stores/useUpdateStore', () => ({
+      useUpdateStore: (sel: Selector) => sel({ status: updateStatus }),
     }));
 
     vi.doMock('@/hooks/useAppVersion', () => ({
@@ -740,6 +748,9 @@ describe('useSplashScreen', () => {
     expect(result.current).toHaveProperty('showSpinner');
     expect(result.current).toHaveProperty('statusText');
     expect(result.current).toHaveProperty('version');
+    expect(result.current).toHaveProperty('variant');
+    expect(result.current).toHaveProperty('steps');
+    expect(result.current).toHaveProperty('error');
   });
 
   it('is initially visible and not dismissing', async () => {
@@ -795,9 +806,9 @@ describe('useSplashScreen', () => {
     const { result } = await setup('connected', true);
     expect(result.current.isDismissing).toBe(false);
 
-    // Advance past minimum display time (1500ms)
+    // Advance past minimum display time (1200ms)
     act(() => {
-      vi.advanceTimersByTime(1500);
+      vi.advanceTimersByTime(1200);
     });
     expect(result.current.isDismissing).toBe(true);
   });
@@ -807,7 +818,7 @@ describe('useSplashScreen', () => {
 
     // Advance past minimum display time to trigger dismiss
     act(() => {
-      vi.advanceTimersByTime(1500);
+      vi.advanceTimersByTime(1200);
     });
     expect(result.current.isDismissing).toBe(true);
 
@@ -822,7 +833,7 @@ describe('useSplashScreen', () => {
     const { result } = await setup('connected', true);
 
     act(() => {
-      vi.advanceTimersByTime(1000); // < 1500ms min
+      vi.advanceTimersByTime(800); // < 1200ms min
     });
     expect(result.current.isDismissing).toBe(false);
     expect(result.current.isVisible).toBe(true);
@@ -834,20 +845,22 @@ describe('useSplashScreen', () => {
     act(() => {
       vi.advanceTimersByTime(10_000);
     });
-    expect(result.current.isDismissing).toBe(true);
+    // After max-time the variant flips to 'error' so the splash STAYS UP
+    // (with Retry/Close affordances) rather than auto-dismissing — this is
+    // the new behaviour and is honest about the failed state.
+    expect(result.current.variant).toBe('error');
+    expect(result.current.isVisible).toBe(true);
   });
 
-  it('shows warning toast on max timeout when app is not ready', async () => {
+  it('does not auto-show toast warning when variant flips to error on stuck connection', async () => {
+    // The toast was the old recovery affordance; the error variant now
+    // surfaces Retry + Close visually, so the toast is suppressed in that
+    // path to avoid double-prompting the user.
     await setup('reconnecting', false);
-
     act(() => {
       vi.advanceTimersByTime(10_000);
     });
-
-    expect(toast.warning).toHaveBeenCalledWith(
-      'Some services are still connecting. The app may take a moment to fully load.',
-      expect.objectContaining({ duration: 5000 })
-    );
+    expect(toast.warning).not.toHaveBeenCalled();
   });
 
   it('does not show warning toast on max timeout when app is ready', async () => {
@@ -858,5 +871,89 @@ describe('useSplashScreen', () => {
     });
 
     expect(toast.warning).not.toHaveBeenCalled();
+  });
+
+  // ---------------------------------------------------------------------------
+  // New shape: variant, steps, error
+  // ---------------------------------------------------------------------------
+
+  it('exposes a 3-row boot trace (backend, socket, workspace)', async () => {
+    const { result } = await setup('reconnecting', false);
+    expect(result.current.steps).toHaveLength(3);
+    expect(result.current.steps.map(s => s.id)).toEqual(['backend', 'socket', 'workspace']);
+  });
+
+  it('flips backend + socket to done once connected', async () => {
+    const { result } = await setup('connected', false);
+    const byId = Object.fromEntries(result.current.steps.map(s => [s.id, s.status]));
+    expect(byId.backend).toBe('done');
+    expect(byId.socket).toBe('done');
+    expect(byId.workspace).toBe('running');
+  });
+
+  it('flips workspace to done once restored', async () => {
+    const { result } = await setup('connected', true);
+    const byId = Object.fromEntries(result.current.steps.map(s => [s.id, s.status]));
+    expect(byId.workspace).toBe('done');
+  });
+
+  it('keeps workspace in wait while socket is still connecting', async () => {
+    const { result } = await setup('reconnecting', false);
+    const byId = Object.fromEntries(result.current.steps.map(s => [s.id, s.status]));
+    expect(byId.workspace).toBe('wait');
+  });
+
+  it('marks the active row as the running step (one at a time)', async () => {
+    const { result } = await setup('connected', false);
+    const running = result.current.steps.filter(s => s.status === 'running');
+    expect(running).toHaveLength(1);
+    expect(running[0].id).toBe('workspace');
+  });
+
+  it('returns variant=loading by default', async () => {
+    const { result } = await setup('reconnecting', false);
+    expect(result.current.variant).toBe('loading');
+  });
+
+  it('returns variant=error when connection fails', async () => {
+    const { result } = await setup('failed', false);
+    expect(result.current.variant).toBe('error');
+    expect(result.current.error).toMatch(/backend connection failed/i);
+  });
+
+  it('collapses all steps to error when connection fails', async () => {
+    const { result } = await setup('failed', false);
+    const statuses = result.current.steps.map(s => s.status);
+    // backend + socket are sourced from the connection signal — both error.
+    // workspace is wait until socket is connected — stays wait.
+    expect(statuses).toContain('error');
+  });
+
+  it('returns variant=updating when updater is downloading', async () => {
+    const { result } = await setup('connected', true, 'downloading');
+    expect(result.current.variant).toBe('updating');
+  });
+
+  it('returns variant=updating when updater is ready to install', async () => {
+    const { result } = await setup('connected', true, 'ready');
+    expect(result.current.variant).toBe('updating');
+  });
+
+  it('does not auto-dismiss in the updating variant', async () => {
+    const { result } = await setup('connected', true, 'downloading');
+    act(() => {
+      vi.advanceTimersByTime(5000);
+    });
+    expect(result.current.isDismissing).toBe(false);
+    expect(result.current.isVisible).toBe(true);
+  });
+
+  it('does not auto-dismiss in the error variant', async () => {
+    const { result } = await setup('failed', false);
+    act(() => {
+      vi.advanceTimersByTime(5000);
+    });
+    expect(result.current.isDismissing).toBe(false);
+    expect(result.current.isVisible).toBe(true);
   });
 });
