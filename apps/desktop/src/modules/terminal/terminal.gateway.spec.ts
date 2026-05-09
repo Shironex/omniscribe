@@ -124,12 +124,11 @@ describe('TerminalGateway', () => {
 
   describe('handleDisconnect', () => {
     afterEach(() => {
-      // Some tests in this block schedule deferred cleanup timers; clearing
-      // fake timers between tests prevents one test's pending callback from
-      // mutating the next test's state.
-      if (jest.isMockFunction(setTimeout)) {
-        jest.useRealTimers();
-      }
+      // Some tests in this block schedule deferred cleanup timers; switching
+      // back to real timers prevents one test's pending callback from
+      // mutating the next test's state. `useRealTimers()` is a safe no-op
+      // when real timers are already active.
+      jest.useRealTimers();
     });
 
     it('should remove client tracking data', () => {

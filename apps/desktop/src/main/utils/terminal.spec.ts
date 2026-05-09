@@ -10,17 +10,23 @@ jest.mock('@omniscribe/shared', () => ({
 
 const mockSpawn = jest.fn();
 const mockExecFileAsync = jest.fn();
+const mockExecFile = jest.fn();
 
 jest.mock('child_process', () => ({
-  execFile: jest.fn(),
+  execFile: mockExecFile,
   spawn: (...args: unknown[]) => mockSpawn(...args),
 }));
 
 jest.mock('util', () => ({
-  promisify:
-    () =>
-    (...args: unknown[]) =>
-      mockExecFileAsync(...args),
+  promisify: jest.fn((fn: unknown) => {
+    // Production code calls `promisify(execFile)`. Pin the contract: if a
+    // refactor accidentally promisifies a different function (e.g. `exec`),
+    // this mock will throw and the test will fail loudly.
+    if (fn !== mockExecFile) {
+      throw new Error('promisify mock: expected execFile, got something else');
+    }
+    return (...args: unknown[]) => mockExecFileAsync(...args);
+  }),
 }));
 
 // ---- Tests ----

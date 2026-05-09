@@ -254,6 +254,15 @@ describe('IPC:App', () => {
       const result = handlers['app:get-ws-auth-token'](mockEvent);
       expect(result).toBe('mock-token-32-chars-deadbeef-cafebabe');
     });
+
+    it('should propagate the fail-fast error when token is not initialized', () => {
+      mockGetWsAuthToken.mockImplementationOnce(() => {
+        throw new Error('WS auth token not initialized');
+      });
+      expect(() => handlers['app:get-ws-auth-token'](mockEvent)).toThrow(
+        'WS auth token not initialized'
+      );
+    });
   });
 
   // ================================================================

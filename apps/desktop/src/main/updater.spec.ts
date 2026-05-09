@@ -69,7 +69,7 @@ describe('updater', () => {
 
     // Set opposite values so module init tests prove the module writes them
     mockAutoUpdater.autoDownload = true;
-    mockAutoUpdater.autoInstallOnAppQuit = false;
+    mockAutoUpdater.autoInstallOnAppQuit = true;
     mockAutoUpdater.channel = 'latest';
     mockAutoUpdater.allowPrerelease = false;
     mockAutoUpdater.allowDowngrade = false;
