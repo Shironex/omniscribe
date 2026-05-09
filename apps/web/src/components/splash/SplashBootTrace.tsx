@@ -15,7 +15,10 @@ const STATUS_LABEL: Record<SplashStepStatus, string> = {
 function rowColor(status: SplashStepStatus): string {
   switch (status) {
     case 'done':
-      return 'var(--status-success)';
+      // Primary tint at low alpha — completed rows recede visually so the
+      // active `running` row stays the focal point, but they still carry
+      // the active theme's hue (rather than a jarring success-green).
+      return 'oklch(from var(--primary) l c h / 0.5)';
     case 'running':
       return 'var(--primary)';
     case 'error':
