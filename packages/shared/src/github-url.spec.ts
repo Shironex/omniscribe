@@ -122,6 +122,10 @@ describe('parseGitHubRepoUrl', () => {
     expect(parseGitHubRepoUrl('https://github.com/owner/repo/pull/42')).toBeNull();
   });
 
+  it('returns null for ssh:// URL with extra path segments', () => {
+    expect(parseGitHubRepoUrl('ssh://git@github.com/owner/repo/tree/main')).toBeNull();
+  });
+
   it('returns null for SSH shorthand with extra path segments after the repo', () => {
     expect(parseGitHubRepoUrl('git@github.com:owner/repo.git/extra/path')).toBeNull();
   });
