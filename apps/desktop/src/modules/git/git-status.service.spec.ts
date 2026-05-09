@@ -75,10 +75,8 @@ describe('GitStatusService', () => {
       gitBase.execGit.mockResolvedValueOnce({ stdout: '.git/rebase-merge\n', stderr: '' });
       // checkRebaseState: rev-parse --git-path rebase-apply
       gitBase.execGit.mockResolvedValueOnce({ stdout: '.git/rebase-apply\n', stderr: '' });
-      // checkRebaseState: ls-files rebase-merge (fails = no rebase)
-      gitBase.execGit.mockRejectedValueOnce(new Error('not found'));
-      // checkRebaseState: ls-files rebase-apply (fails = no rebase)
-      gitBase.execGit.mockRejectedValueOnce(new Error('not found'));
+      // checkRebaseState: existsSync(rebase-merge) + existsSync(rebase-apply)
+      (fs.existsSync as jest.Mock).mockReturnValueOnce(false).mockReturnValueOnce(false);
       // checkMergeState: rev-parse --git-path MERGE_HEAD
       gitBase.execGit.mockResolvedValueOnce({ stdout: '.git/MERGE_HEAD\n', stderr: '' });
       // checkMergeState: existsSync returns false (no merge)
@@ -113,8 +111,7 @@ describe('GitStatusService', () => {
       // checkRebaseState calls
       gitBase.execGit.mockResolvedValueOnce({ stdout: '.git/rebase-merge\n', stderr: '' });
       gitBase.execGit.mockResolvedValueOnce({ stdout: '.git/rebase-apply\n', stderr: '' });
-      gitBase.execGit.mockRejectedValueOnce(new Error('not found'));
-      gitBase.execGit.mockRejectedValueOnce(new Error('not found'));
+      (fs.existsSync as jest.Mock).mockReturnValueOnce(false).mockReturnValueOnce(false);
       // checkMergeState calls
       gitBase.execGit.mockResolvedValueOnce({ stdout: '.git/MERGE_HEAD\n', stderr: '' });
       (fs.existsSync as jest.Mock).mockReturnValueOnce(false);
@@ -141,8 +138,7 @@ describe('GitStatusService', () => {
       });
       gitBase.execGit.mockResolvedValueOnce({ stdout: '.git/rebase-merge\n', stderr: '' });
       gitBase.execGit.mockResolvedValueOnce({ stdout: '.git/rebase-apply\n', stderr: '' });
-      gitBase.execGit.mockRejectedValueOnce(new Error('not found'));
-      gitBase.execGit.mockRejectedValueOnce(new Error('not found'));
+      (fs.existsSync as jest.Mock).mockReturnValueOnce(false).mockReturnValueOnce(false);
       gitBase.execGit.mockResolvedValueOnce({ stdout: '.git/MERGE_HEAD\n', stderr: '' });
       (fs.existsSync as jest.Mock).mockReturnValueOnce(false);
       gitBase.execGit.mockResolvedValueOnce({ stdout: '', stderr: '' });
@@ -167,8 +163,7 @@ describe('GitStatusService', () => {
       });
       gitBase.execGit.mockResolvedValueOnce({ stdout: '.git/rebase-merge\n', stderr: '' });
       gitBase.execGit.mockResolvedValueOnce({ stdout: '.git/rebase-apply\n', stderr: '' });
-      gitBase.execGit.mockRejectedValueOnce(new Error('not found'));
-      gitBase.execGit.mockRejectedValueOnce(new Error('not found'));
+      (fs.existsSync as jest.Mock).mockReturnValueOnce(false).mockReturnValueOnce(false);
       gitBase.execGit.mockResolvedValueOnce({ stdout: '.git/MERGE_HEAD\n', stderr: '' });
       (fs.existsSync as jest.Mock).mockReturnValueOnce(false);
       gitBase.execGit.mockResolvedValueOnce({ stdout: '', stderr: '' });
@@ -192,8 +187,7 @@ describe('GitStatusService', () => {
       });
       gitBase.execGit.mockResolvedValueOnce({ stdout: '.git/rebase-merge\n', stderr: '' });
       gitBase.execGit.mockResolvedValueOnce({ stdout: '.git/rebase-apply\n', stderr: '' });
-      gitBase.execGit.mockRejectedValueOnce(new Error('not found'));
-      gitBase.execGit.mockRejectedValueOnce(new Error('not found'));
+      (fs.existsSync as jest.Mock).mockReturnValueOnce(false).mockReturnValueOnce(false);
       gitBase.execGit.mockResolvedValueOnce({ stdout: '.git/MERGE_HEAD\n', stderr: '' });
       (fs.existsSync as jest.Mock).mockReturnValueOnce(false);
       gitBase.execGit.mockResolvedValueOnce({ stdout: '', stderr: '' });
@@ -215,8 +209,7 @@ describe('GitStatusService', () => {
       });
       gitBase.execGit.mockResolvedValueOnce({ stdout: '.git/rebase-merge\n', stderr: '' });
       gitBase.execGit.mockResolvedValueOnce({ stdout: '.git/rebase-apply\n', stderr: '' });
-      gitBase.execGit.mockRejectedValueOnce(new Error('not found'));
-      gitBase.execGit.mockRejectedValueOnce(new Error('not found'));
+      (fs.existsSync as jest.Mock).mockReturnValueOnce(false).mockReturnValueOnce(false);
       gitBase.execGit.mockResolvedValueOnce({ stdout: '.git/MERGE_HEAD\n', stderr: '' });
       (fs.existsSync as jest.Mock).mockReturnValueOnce(false);
       gitBase.execGit.mockResolvedValueOnce({ stdout: '', stderr: '' });
@@ -240,8 +233,7 @@ describe('GitStatusService', () => {
       });
       gitBase.execGit.mockResolvedValueOnce({ stdout: '.git/rebase-merge\n', stderr: '' });
       gitBase.execGit.mockResolvedValueOnce({ stdout: '.git/rebase-apply\n', stderr: '' });
-      gitBase.execGit.mockRejectedValueOnce(new Error('not found'));
-      gitBase.execGit.mockRejectedValueOnce(new Error('not found'));
+      (fs.existsSync as jest.Mock).mockReturnValueOnce(false).mockReturnValueOnce(false);
       gitBase.execGit.mockResolvedValueOnce({ stdout: '.git/MERGE_HEAD\n', stderr: '' });
       (fs.existsSync as jest.Mock).mockReturnValueOnce(false);
       gitBase.execGit.mockResolvedValueOnce({ stdout: '', stderr: '' });
@@ -268,8 +260,7 @@ describe('GitStatusService', () => {
       });
       gitBase.execGit.mockResolvedValueOnce({ stdout: '.git/rebase-merge\n', stderr: '' });
       gitBase.execGit.mockResolvedValueOnce({ stdout: '.git/rebase-apply\n', stderr: '' });
-      gitBase.execGit.mockRejectedValueOnce(new Error('not found'));
-      gitBase.execGit.mockRejectedValueOnce(new Error('not found'));
+      (fs.existsSync as jest.Mock).mockReturnValueOnce(false).mockReturnValueOnce(false);
       gitBase.execGit.mockResolvedValueOnce({ stdout: '.git/MERGE_HEAD\n', stderr: '' });
       (fs.existsSync as jest.Mock).mockReturnValueOnce(false);
       gitBase.execGit.mockResolvedValueOnce({ stdout: '', stderr: '' });
@@ -302,8 +293,7 @@ describe('GitStatusService', () => {
       });
       gitBase.execGit.mockResolvedValueOnce({ stdout: '.git/rebase-merge\n', stderr: '' });
       gitBase.execGit.mockResolvedValueOnce({ stdout: '.git/rebase-apply\n', stderr: '' });
-      gitBase.execGit.mockRejectedValueOnce(new Error('not found'));
-      gitBase.execGit.mockRejectedValueOnce(new Error('not found'));
+      (fs.existsSync as jest.Mock).mockReturnValueOnce(false).mockReturnValueOnce(false);
       gitBase.execGit.mockResolvedValueOnce({ stdout: '.git/MERGE_HEAD\n', stderr: '' });
       (fs.existsSync as jest.Mock).mockReturnValueOnce(false);
       gitBase.execGit.mockResolvedValueOnce({ stdout: '', stderr: '' });
@@ -378,38 +368,37 @@ describe('GitStatusService', () => {
   });
 
   describe('checkRebaseState', () => {
-    it('should return true when rebase-merge directory exists', async () => {
+    it('should return true when rebase-merge directory exists on disk', async () => {
       // rev-parse --git-path rebase-merge
       gitBase.execGit.mockResolvedValueOnce({ stdout: '.git/rebase-merge\n', stderr: '' });
       // rev-parse --git-path rebase-apply
       gitBase.execGit.mockResolvedValueOnce({ stdout: '.git/rebase-apply\n', stderr: '' });
-      // ls-files rebase-merge succeeds
-      gitBase.execGit.mockResolvedValueOnce({ stdout: '.git/rebase-merge\n', stderr: '' });
+      // existsSync(rebase-merge) → true (rebase in progress)
+      (fs.existsSync as jest.Mock).mockReturnValueOnce(true);
 
       const result = await service.checkRebaseState('/repo');
 
       expect(result).toBe(true);
+      expect(fs.existsSync).toHaveBeenCalledWith('/repo/.git/rebase-merge');
     });
 
-    it('should return true when rebase-apply directory exists', async () => {
+    it('should return true when rebase-apply directory exists on disk', async () => {
       gitBase.execGit.mockResolvedValueOnce({ stdout: '.git/rebase-merge\n', stderr: '' });
       gitBase.execGit.mockResolvedValueOnce({ stdout: '.git/rebase-apply\n', stderr: '' });
-      // ls-files rebase-merge fails
-      gitBase.execGit.mockRejectedValueOnce(new Error('not found'));
-      // ls-files rebase-apply succeeds
-      gitBase.execGit.mockResolvedValueOnce({ stdout: '.git/rebase-apply\n', stderr: '' });
+      // existsSync(rebase-merge) → false, existsSync(rebase-apply) → true
+      (fs.existsSync as jest.Mock).mockReturnValueOnce(false).mockReturnValueOnce(true);
 
       const result = await service.checkRebaseState('/repo');
 
       expect(result).toBe(true);
+      expect(fs.existsSync).toHaveBeenCalledWith('/repo/.git/rebase-apply');
     });
 
     it('should return false when neither rebase directory exists', async () => {
       gitBase.execGit.mockResolvedValueOnce({ stdout: '.git/rebase-merge\n', stderr: '' });
       gitBase.execGit.mockResolvedValueOnce({ stdout: '.git/rebase-apply\n', stderr: '' });
-      // Both ls-files fail
-      gitBase.execGit.mockRejectedValueOnce(new Error('not found'));
-      gitBase.execGit.mockRejectedValueOnce(new Error('not found'));
+      // Both existsSync calls return false
+      (fs.existsSync as jest.Mock).mockReturnValueOnce(false).mockReturnValueOnce(false);
 
       const result = await service.checkRebaseState('/repo');
 
@@ -421,6 +410,47 @@ describe('GitStatusService', () => {
 
       const result = await service.checkRebaseState('/repo');
 
+      expect(result).toBe(false);
+    });
+
+    it('accepts rebase paths living in the shared git common dir (worktree)', async () => {
+      // Worktree case: rev-parse --git-path returns absolute paths into
+      // the main repo's .git dir, not inside the worktree itself.
+      gitBase.execGit
+        .mockResolvedValueOnce({
+          stdout: '/main-repo/.git/worktrees/feat/rebase-merge\n',
+          stderr: '',
+        })
+        .mockResolvedValueOnce({
+          stdout: '/main-repo/.git/worktrees/feat/rebase-apply\n',
+          stderr: '',
+        })
+        // isInsideProjectOrGitCommon → rev-parse --git-common-dir
+        .mockResolvedValueOnce({ stdout: '/main-repo/.git\n', stderr: '' });
+      // existsSync(rebase-merge) → true (rebase in progress in worktree)
+      (fs.existsSync as jest.Mock).mockReturnValueOnce(true);
+
+      const result = await service.checkRebaseState('/main-repo/.worktrees/feature');
+
+      expect(result).toBe(true);
+      expect(fs.existsSync).toHaveBeenCalledWith('/main-repo/.git/worktrees/feat/rebase-merge');
+    });
+
+    it('refuses to existsSync rebase paths outside both project and git-common-dir', async () => {
+      // Pretend a tampered config returns paths entirely outside both
+      // the project and the git common dir.
+      gitBase.execGit
+        .mockResolvedValueOnce({ stdout: '/etc/passwd\n', stderr: '' })
+        .mockResolvedValueOnce({ stdout: '/etc/shadow\n', stderr: '' })
+        // git-common-dir lookup for first candidate's safety check
+        .mockResolvedValueOnce({ stdout: '/main-repo/.git\n', stderr: '' })
+        // git-common-dir lookup for second candidate's safety check
+        .mockResolvedValueOnce({ stdout: '/main-repo/.git\n', stderr: '' });
+
+      const result = await service.checkRebaseState('/main-repo');
+
+      // The dangerous existsSync must NOT be called.
+      expect(fs.existsSync).not.toHaveBeenCalled();
       expect(result).toBe(false);
     });
   });

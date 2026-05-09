@@ -191,36 +191,46 @@ export class GitStatusService {
   }
 
   /**
-   * Check if rebase is in progress
+   * Check if rebase is in progress by testing whether rebase-merge or
+   * rebase-apply directories exist on disk. Mirrors `checkMergeState`'s
+   * `rev-parse --git-path` + `existsSync` pattern instead of the prior
+   * 4-spawn approach (`git rev-parse` ×2 + `git ls-files --error-unmatch`
+   * ×2). Saves ~80 ms per `getStatus()`.
    */
   async checkRebaseState(projectPath: string): Promise<boolean> {
     try {
-      const { stdout } = await this.gitBase.execGit(projectPath, [
+      // rev-parse --git-path resolves the actual filesystem path for each
+      // rebase directory (works correctly in worktrees where .git is a
+      // file pointing at the shared common dir).
+      const { stdout: mergeOut } = await this.gitBase.execGit(projectPath, [
         'rev-parse',
         '--git-path',
         'rebase-merge',
       ]);
-      const rebaseMergePath = stdout.trim();
-
-      const { stdout: rebaseApplyOutput } = await this.gitBase.execGit(projectPath, [
+      const { stdout: applyOut } = await this.gitBase.execGit(projectPath, [
         'rev-parse',
         '--git-path',
         'rebase-apply',
       ]);
-      const rebaseApplyPath = rebaseApplyOutput.trim();
 
-      // Check if either rebase directory exists
-      const { stdout: lsOutput } = await this.gitBase
-        .execGit(projectPath, ['ls-files', '--error-unmatch', rebaseMergePath])
-        .catch(() => ({ stdout: '' }));
+      const candidates = [mergeOut.trim(), applyOut.trim()].filter(p => p.length > 0);
 
-      if (lsOutput) return true;
+      for (const rel of candidates) {
+        const fullPath = resolve(projectPath, rel);
 
-      const { stdout: lsApplyOutput } = await this.gitBase
-        .execGit(projectPath, ['ls-files', '--error-unmatch', rebaseApplyPath])
-        .catch(() => ({ stdout: '' }));
+        // Defense: a tampered git config could in principle make
+        // --git-path point outside the worktree's project + common dir.
+        // Refuse to existsSync arbitrary paths.
+        if (!(await this.isInsideProjectOrGitCommon(projectPath, fullPath))) {
+          this.logger.warn(
+            `Refusing existsSync — rebase path outside project/git-common-dir: ${fullPath}`
+          );
+          continue;
+        }
+        if (existsSync(fullPath)) return true;
+      }
 
-      return !!lsApplyOutput;
+      return false;
     } catch (error) {
       this.logger.warn('Failed to check rebase state:', error);
       return false;
