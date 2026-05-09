@@ -281,12 +281,17 @@ export const useSessionStore = create<SessionStore>()(
 
         updateSession: (sessionId, updates) => {
           logger.debug('updateSession', sessionId);
+          // NOTE: `lastActiveAt` is intentionally NOT bumped here. The
+          // backend stamps its own timestamp on the source session and
+          // ships it on the wire (see SessionService.updateStatus); the
+          // renderer never reads `lastActiveAt` for display, so bumping
+          // it on every store write was rotating the session reference
+          // and triggering downstream `useShallow` / React.memo
+          // re-renders for free.
           set(
             state => ({
               sessions: state.sessions.map(session =>
-                session.id === sessionId
-                  ? { ...session, ...updates, lastActiveAt: new Date() }
-                  : session
+                session.id === sessionId ? { ...session, ...updates } : session
               ),
             }),
             undefined,
@@ -306,9 +311,9 @@ export const useSessionStore = create<SessionStore>()(
           logger.debug('updateStatus', sessionId, status);
           set(
             state => {
-              const sessionExists = state.sessions.some(s => s.id === sessionId);
+              const session = state.sessions.find(s => s.id === sessionId);
 
-              if (!sessionExists) {
+              if (!session) {
                 // Buffer the status update for later
                 logger.debug('Buffering pending update for unknown session', sessionId);
                 const pending = state.pendingStatusUpdates[sessionId] ?? [];
@@ -331,22 +336,47 @@ export const useSessionStore = create<SessionStore>()(
                 };
               }
 
+              // Early-return if no UI-relevant field actually changed.
+              // The backend re-emits status events on every PTY tick, but
+              // most carry the same payload (idle→idle, working→working
+              // with unchanged elapsed text). Skipping the array spread
+              // here preserves the array reference and the per-session
+              // reference, so downstream `useShallow` selectors and
+              // React.memo'd TerminalCards don't fan out unnecessarily.
+              const nextMessage = message ?? session.statusMessage;
+              const branchChanged = branch !== undefined && branch !== session.branch;
+              const worktreeChanged =
+                worktreePath !== undefined && worktreePath !== session.worktreePath;
+              const baselineChanged =
+                baselineCommitHash !== undefined &&
+                baselineCommitHash !== session.baselineCommitHash;
+              if (
+                session.status === status &&
+                session.statusMessage === nextMessage &&
+                session.needsInputPrompt === needsInputPrompt &&
+                !branchChanged &&
+                !worktreeChanged &&
+                !baselineChanged
+              ) {
+                return state;
+              }
+
+              // `lastActiveAt` intentionally not bumped here — see
+              // `updateSession` for rationale.
               return {
-                sessions: state.sessions.map(session =>
-                  session.id === sessionId
+                sessions: state.sessions.map(s =>
+                  s.id === sessionId
                     ? {
-                        ...session,
+                        ...s,
                         status,
-                        // Only update statusMessage if a new message is provided
-                        statusMessage: message ?? session.statusMessage,
+                        statusMessage: nextMessage,
                         needsInputPrompt,
                         // Apply branch/worktreePath when present (Bug #4)
                         ...(branch !== undefined && { branch }),
                         ...(worktreePath !== undefined && { worktreePath }),
                         ...(baselineCommitHash !== undefined && { baselineCommitHash }),
-                        lastActiveAt: new Date(),
                       }
-                    : session
+                    : s
                 ),
               };
             },

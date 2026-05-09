@@ -180,7 +180,11 @@ describe('useSessionStore', () => {
       expect(updated.name).toBe('New Name');
     });
 
-    it('updates lastActiveAt on change', () => {
+    it('does not bump renderer-side lastActiveAt (kept stable to avoid fan-out)', () => {
+      // Renderer dropped its lastActiveAt bump in PR 4 perf #1: the
+      // backend still stamps its own timestamp and ships it on the wire.
+      // The renderer must NOT rotate this field on every store write —
+      // that would fan out re-renders to every consumer.
       const oldDate = new Date(2020, 0, 1);
       const session = createMockSession({ id: 'sess-1', lastActiveAt: oldDate });
       useSessionStore.setState({ sessions: [session] });
@@ -188,7 +192,7 @@ describe('useSessionStore', () => {
       useSessionStore.getState().updateSession('sess-1', { name: 'Updated' });
 
       const updated = useSessionStore.getState().sessions[0];
-      expect(updated.lastActiveAt.getTime()).toBeGreaterThan(oldDate.getTime());
+      expect(updated.lastActiveAt).toBe(oldDate);
     });
 
     it('does not affect other sessions', () => {
@@ -257,6 +261,48 @@ describe('useSessionStore', () => {
 
       const updated = useSessionStore.getState().sessions[0];
       expect(updated.needsInputPrompt).toBe(true);
+    });
+
+    it('preserves array and session reference when nothing UI-relevant changed', () => {
+      // Backend re-emits status events on every PTY tick. Most carry the
+      // same payload (idle→idle, working→working with the same message).
+      // updateStatus must early-return same state in that case so
+      // useShallow / React.memo consumers don't fan out re-renders.
+      const session = createMockSession({
+        id: 'sess-1',
+        status: 'working' as SessionStatus,
+        statusMessage: 'thinking',
+        needsInputPrompt: false,
+      });
+      useSessionStore.setState({ sessions: [session] });
+      const sessionsBefore = useSessionStore.getState().sessions;
+
+      useSessionStore
+        .getState()
+        .updateStatus('sess-1', 'working', 'thinking', false, undefined, undefined, undefined);
+
+      const sessionsAfter = useSessionStore.getState().sessions;
+      // Array reference preserved
+      expect(sessionsAfter).toBe(sessionsBefore);
+      // Session reference preserved
+      expect(sessionsAfter[0]).toBe(session);
+    });
+
+    it('still emits a new reference when status flips', () => {
+      const session = createMockSession({
+        id: 'sess-1',
+        status: 'idle' as SessionStatus,
+        statusMessage: 'waiting',
+      });
+      useSessionStore.setState({ sessions: [session] });
+      const sessionsBefore = useSessionStore.getState().sessions;
+
+      useSessionStore.getState().updateStatus('sess-1', 'working', 'waiting');
+
+      const sessionsAfter = useSessionStore.getState().sessions;
+      expect(sessionsAfter).not.toBe(sessionsBefore);
+      expect(sessionsAfter[0]).not.toBe(session);
+      expect(sessionsAfter[0].status).toBe('working');
     });
   });
 
