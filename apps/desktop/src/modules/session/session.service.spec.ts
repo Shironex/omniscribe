@@ -5,6 +5,11 @@ import { TerminalService } from '../terminal/terminal.service';
 import { WorktreeService } from '../git/worktree.service';
 import { WorkspaceService } from '../workspace/workspace.service';
 import type { SessionStatus } from '@omniscribe/shared';
+import {
+  MAX_SESSION_NAME_LENGTH,
+  MAX_MODEL_LENGTH,
+  MAX_SYSTEM_PROMPT_LENGTH,
+} from '@omniscribe/shared';
 
 describe('SessionService', () => {
   let service: SessionService;
@@ -295,6 +300,85 @@ describe('SessionService', () => {
         expect(result).toBeUndefined();
         expect(service.get(session.id)?.status).toBe('idle');
       });
+    });
+  });
+
+  describe('update', () => {
+    it('should update session name when within length limit', () => {
+      const session = service.create('claude', '/project');
+
+      const result = service.update(session.id, { name: 'Updated Name' });
+
+      expect(result).toBeDefined();
+      expect(service.get(session.id)?.name).toBe('Updated Name');
+    });
+
+    it('should reject name exceeding MAX_SESSION_NAME_LENGTH and return undefined', () => {
+      const session = service.create('claude', '/project');
+      const originalName = session.name;
+      const tooLong = 'x'.repeat(MAX_SESSION_NAME_LENGTH + 1);
+
+      const result = service.update(session.id, { name: tooLong });
+
+      expect(result).toBeUndefined();
+      expect(service.get(session.id)?.name).toBe(originalName);
+    });
+
+    it('should reject model exceeding MAX_MODEL_LENGTH and return undefined', () => {
+      const session = service.create('claude', '/project', { model: 'claude-3-sonnet' });
+      const tooLong = 'x'.repeat(MAX_MODEL_LENGTH + 1);
+
+      const result = service.update(session.id, { model: tooLong });
+
+      expect(result).toBeUndefined();
+      expect(service.get(session.id)?.model).toBe('claude-3-sonnet');
+    });
+
+    it('should reject systemPrompt exceeding MAX_SYSTEM_PROMPT_LENGTH and return undefined', () => {
+      const session = service.create('claude', '/project', { systemPrompt: 'original prompt' });
+      const tooLong = 'x'.repeat(MAX_SYSTEM_PROMPT_LENGTH + 1);
+
+      const result = service.update(session.id, { systemPrompt: tooLong });
+
+      expect(result).toBeUndefined();
+      expect(service.get(session.id)?.systemPrompt).toBe('original prompt');
+    });
+
+    it('should accept name exactly at MAX_SESSION_NAME_LENGTH', () => {
+      const session = service.create('claude', '/project');
+      const atLimit = 'x'.repeat(MAX_SESSION_NAME_LENGTH);
+
+      const result = service.update(session.id, { name: atLimit });
+
+      expect(result).toBeDefined();
+      expect(service.get(session.id)?.name).toBe(atLimit);
+    });
+
+    it('should return undefined for non-existent session', () => {
+      const result = service.update('nonexistent', { name: 'New Name' });
+      expect(result).toBeUndefined();
+    });
+
+    it('should emit session.status event on successful update', () => {
+      const session = service.create('claude', '/project');
+      eventEmitter.emit.mockClear();
+
+      service.update(session.id, { name: 'Updated' });
+
+      expect(eventEmitter.emit).toHaveBeenCalledWith(
+        'session.status',
+        expect.objectContaining({ sessionId: session.id })
+      );
+    });
+
+    it('should not emit any event when a length limit is exceeded', () => {
+      const session = service.create('claude', '/project');
+      eventEmitter.emit.mockClear();
+      const tooLong = 'x'.repeat(MAX_SESSION_NAME_LENGTH + 1);
+
+      service.update(session.id, { name: tooLong });
+
+      expect(eventEmitter.emit).not.toHaveBeenCalled();
     });
   });
 
