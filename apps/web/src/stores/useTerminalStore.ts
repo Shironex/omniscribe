@@ -77,7 +77,7 @@ const COMMON_DEFAULTS = {
   letterSpacing: 0,
   cursorStyle: 'block' as CursorStyle,
   cursorBlink: true,
-  scrollback: 10000,
+  scrollback: 3000,
   terminalThemeName: 'tokyonight' as TerminalThemeName,
   editorProtocol: DEFAULT_EDITOR_PROTOCOL,
 };
