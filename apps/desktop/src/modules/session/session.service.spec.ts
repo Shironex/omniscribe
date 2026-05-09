@@ -354,6 +354,44 @@ describe('SessionService', () => {
       expect(service.get(session.id)?.name).toBe(atLimit);
     });
 
+    it('should update model when within length limit', () => {
+      const session = service.create('claude', '/project');
+
+      const result = service.update(session.id, { model: 'claude-4-opus' });
+
+      expect(result).toBeDefined();
+      expect(service.get(session.id)?.model).toBe('claude-4-opus');
+    });
+
+    it('should accept model exactly at MAX_MODEL_LENGTH', () => {
+      const session = service.create('claude', '/project');
+      const atLimit = 'x'.repeat(MAX_MODEL_LENGTH);
+
+      const result = service.update(session.id, { model: atLimit });
+
+      expect(result).toBeDefined();
+      expect(service.get(session.id)?.model).toBe(atLimit);
+    });
+
+    it('should update systemPrompt when within length limit', () => {
+      const session = service.create('claude', '/project');
+
+      const result = service.update(session.id, { systemPrompt: 'Be concise.' });
+
+      expect(result).toBeDefined();
+      expect(service.get(session.id)?.systemPrompt).toBe('Be concise.');
+    });
+
+    it('should accept systemPrompt exactly at MAX_SYSTEM_PROMPT_LENGTH', () => {
+      const session = service.create('claude', '/project');
+      const atLimit = 'x'.repeat(MAX_SYSTEM_PROMPT_LENGTH);
+
+      const result = service.update(session.id, { systemPrompt: atLimit });
+
+      expect(result).toBeDefined();
+      expect(service.get(session.id)?.systemPrompt).toBe(atLimit);
+    });
+
     it('should return undefined for non-existent session', () => {
       const result = service.update('nonexistent', { name: 'New Name' });
       expect(result).toBeUndefined();
