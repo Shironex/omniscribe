@@ -362,3 +362,131 @@
 .retro * {
   border-radius: 0 !important;
 }
+
+/* =============================================================================
+   Splash screen — "Constellation" motion
+   ----------------------------------------------------------------------------
+   Threads converging on a steady ember at the center, a stepwise boot trace,
+   and an indeterminate sliding sweep. All keyframes are theme-token aware:
+   colors are sourced from `var(--primary)` / `var(--accent)` / status tokens
+   so the splash recolors with the active theme.
+   ========================================================================== */
+
+@keyframes omniscribe-thread-draw {
+  from {
+    stroke-dashoffset: var(--thread-len, 600);
+    opacity: 0;
+  }
+  to {
+    stroke-dashoffset: 0;
+    opacity: var(--thread-target-opacity, 1);
+  }
+}
+
+@keyframes omniscribe-thread-shimmer {
+  0% {
+    stroke-dashoffset: var(--thread-len, 600);
+  }
+  100% {
+    stroke-dashoffset: calc(var(--thread-len, 600) * -1);
+  }
+}
+
+@keyframes omniscribe-ember-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.03);
+  }
+}
+
+@keyframes omniscribe-ember-glow {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(1.08);
+  }
+}
+
+@keyframes omniscribe-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes omniscribe-fade-up-soft {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes omniscribe-track-slide {
+  0% {
+    background-position: -120% 0;
+  }
+  100% {
+    background-position: 220% 0;
+  }
+}
+
+@keyframes omniscribe-dot-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@keyframes omniscribe-row-dot-pulse {
+  0%,
+  100% {
+    opacity: 0.85;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.18);
+  }
+}
+
+@keyframes omniscribe-snap-flash {
+  0% {
+    opacity: var(--thread-target-opacity, 1);
+  }
+  40% {
+    opacity: 1;
+  }
+  100% {
+    opacity: var(--thread-target-opacity, 1);
+  }
+}
+
+/* Honour reduced-motion: kill the loops, keep the entrance fade. */
+@media (prefers-reduced-motion: reduce) {
+  .omniscribe-anim-shimmer,
+  .omniscribe-anim-pulse,
+  .omniscribe-anim-glow,
+  .omniscribe-anim-track,
+  .omniscribe-anim-blink,
+  .omniscribe-anim-row-pulse {
+    animation: none !important;
+  }
+}
