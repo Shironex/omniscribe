@@ -255,6 +255,47 @@ describe('SessionService', () => {
       const s4 = service.updateStatus(session.id, 'finished', 'All done');
       expect(s4?.status).toBe('finished');
     });
+
+    describe('idempotent same-state transitions', () => {
+      it('should silently accept idle -> idle (no warn, no event when nothing changes)', () => {
+        const warnSpy = jest.spyOn((service as any).logger, 'warn');
+        const session = service.create('claude', '/project');
+        eventEmitter.emit.mockClear();
+
+        const result = service.updateStatus(session.id, 'idle');
+
+        expect(result).toBeDefined();
+        expect(result?.status).toBe('idle');
+        expect(warnSpy).not.toHaveBeenCalled();
+        expect(eventEmitter.emit).not.toHaveBeenCalledWith('session.status', expect.anything());
+      });
+
+      it('should accept working -> working with a new message and emit STATUS', () => {
+        const session = service.create('claude', '/project');
+        service.updateStatus(session.id, 'working', 'First task');
+        eventEmitter.emit.mockClear();
+
+        const result = service.updateStatus(session.id, 'working', 'Second task');
+
+        expect(result?.status).toBe('working');
+        expect(result?.statusMessage).toBe('Second task');
+        expect(eventEmitter.emit).toHaveBeenCalledWith(
+          'session.status',
+          expect.objectContaining({
+            sessionId: session.id,
+            status: 'working',
+            message: 'Second task',
+          })
+        );
+      });
+
+      it('should still reject genuinely invalid cross-state transitions', () => {
+        const session = service.create('claude', '/project');
+        const result = service.updateStatus(session.id, 'disconnected');
+        expect(result).toBeUndefined();
+        expect(service.get(session.id)?.status).toBe('idle');
+      });
+    });
   });
 
   describe('assignBranch', () => {

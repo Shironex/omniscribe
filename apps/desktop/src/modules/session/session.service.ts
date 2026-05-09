@@ -254,6 +254,26 @@ export class SessionService {
       return undefined;
     }
 
+    // MCP re-emits the current status frequently by design — short-circuit before validation
+    if (status === session.status) {
+      const messageChanged = message !== session.statusMessage;
+      const promptChanged = needsInputPrompt !== session.needsInputPrompt;
+      if (!messageChanged && !promptChanged) {
+        return session;
+      }
+      // Same state but metadata changed — update and emit without going through the validator
+      session.statusMessage = message;
+      session.needsInputPrompt = needsInputPrompt;
+      session.lastActiveAt = new Date();
+      this.eventEmitter.emit(InternalSessionEvents.STATUS, {
+        sessionId,
+        status,
+        message,
+        needsInputPrompt,
+      } satisfies SessionStatusUpdate);
+      return session;
+    }
+
     // Validate state transition
     const validTargets = VALID_TRANSITIONS[session.status];
     if (validTargets && !validTargets.has(status)) {
