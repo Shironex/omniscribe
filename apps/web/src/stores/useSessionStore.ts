@@ -410,7 +410,8 @@ export const useSessionStore = create<SessionStore>()(
               update.message,
               update.needsInputPrompt,
               update.branch,
-              update.worktreePath
+              update.worktreePath,
+              update.baselineCommitHash
             );
           }
 
