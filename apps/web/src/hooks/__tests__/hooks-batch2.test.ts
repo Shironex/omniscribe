@@ -806,9 +806,9 @@ describe('useSplashScreen', () => {
     const { result } = await setup('connected', true);
     expect(result.current.isDismissing).toBe(false);
 
-    // Advance past minimum display time (1200ms)
+    // Advance past minimum display time (2000ms)
     act(() => {
-      vi.advanceTimersByTime(1200);
+      vi.advanceTimersByTime(2000);
     });
     expect(result.current.isDismissing).toBe(true);
   });
@@ -818,7 +818,7 @@ describe('useSplashScreen', () => {
 
     // Advance past minimum display time to trigger dismiss
     act(() => {
-      vi.advanceTimersByTime(1200);
+      vi.advanceTimersByTime(2000);
     });
     expect(result.current.isDismissing).toBe(true);
 
@@ -833,7 +833,7 @@ describe('useSplashScreen', () => {
     const { result } = await setup('connected', true);
 
     act(() => {
-      vi.advanceTimersByTime(800); // < 1200ms min
+      vi.advanceTimersByTime(1500); // < 2000ms min
     });
     expect(result.current.isDismissing).toBe(false);
     expect(result.current.isVisible).toBe(true);
@@ -883,17 +883,60 @@ describe('useSplashScreen', () => {
     expect(result.current.steps.map(s => s.id)).toEqual(['backend', 'socket', 'workspace']);
   });
 
-  it('flips backend + socket to done once connected', async () => {
+  it('flips backend + socket to done once connected (after dwell)', async () => {
     const { result } = await setup('connected', false);
+    // Phase needs to reach 2 for socket to flip to done — advance past
+    // the socket dwell threshold (1100ms) to observe the steady state.
+    act(() => {
+      vi.advanceTimersByTime(1100);
+    });
     const byId = Object.fromEntries(result.current.steps.map(s => [s.id, s.status]));
     expect(byId.backend).toBe('done');
     expect(byId.socket).toBe('done');
     expect(byId.workspace).toBe('running');
   });
 
-  it('flips workspace to done once restored', async () => {
+  it('flips workspace to done once restored (after dwell)', async () => {
     const { result } = await setup('connected', true);
+    // Workspace dwells until phase 3 (1700ms).
+    act(() => {
+      vi.advanceTimersByTime(1700);
+    });
     const byId = Object.fromEntries(result.current.steps.map(s => [s.id, s.status]));
+    expect(byId.workspace).toBe('done');
+  });
+
+  it('paces backend → socket → workspace through the dwell phases', async () => {
+    const { result } = await setup('connected', true);
+
+    // Frame 0: only backend runs, others wait
+    let byId = Object.fromEntries(result.current.steps.map(s => [s.id, s.status]));
+    expect(byId.backend).toBe('running');
+    expect(byId.socket).toBe('wait');
+    expect(byId.workspace).toBe('wait');
+
+    // After backend dwell (600ms): backend done, socket running
+    act(() => {
+      vi.advanceTimersByTime(600);
+    });
+    byId = Object.fromEntries(result.current.steps.map(s => [s.id, s.status]));
+    expect(byId.backend).toBe('done');
+    expect(byId.socket).toBe('running');
+    expect(byId.workspace).toBe('wait');
+
+    // After socket dwell (total 1100ms): socket done, workspace running
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+    byId = Object.fromEntries(result.current.steps.map(s => [s.id, s.status]));
+    expect(byId.socket).toBe('done');
+    expect(byId.workspace).toBe('running');
+
+    // After workspace dwell (total 1700ms): all done
+    act(() => {
+      vi.advanceTimersByTime(600);
+    });
+    byId = Object.fromEntries(result.current.steps.map(s => [s.id, s.status]));
     expect(byId.workspace).toBe('done');
   });
 
@@ -903,8 +946,12 @@ describe('useSplashScreen', () => {
     expect(byId.workspace).toBe('wait');
   });
 
-  it('marks the active row as the running step (one at a time)', async () => {
+  it('marks one row as running at any given time', async () => {
     const { result } = await setup('connected', false);
+    // After phase 2 the socket has finished and workspace is the active row.
+    act(() => {
+      vi.advanceTimersByTime(1100);
+    });
     const running = result.current.steps.filter(s => s.status === 'running');
     expect(running).toHaveLength(1);
     expect(running[0].id).toBe('workspace');

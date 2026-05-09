@@ -6,13 +6,28 @@ import { useUpdateStore } from '@/stores/useUpdateStore';
 import { useAppVersion } from './useAppVersion';
 
 /** Minimum time the splash screen stays visible (ms) */
-const MIN_DISPLAY_MS = 1200;
+const MIN_DISPLAY_MS = 2000;
 /** Maximum time before force-dismissing the splash screen (ms) */
 const MAX_DISPLAY_MS = 10_000;
 /** Delay before showing the spinner / footer status (ms) */
 const SPINNER_DELAY_MS = 500;
 /** Duration of the fade-out exit animation (ms) */
 const EXIT_ANIMATION_MS = 500;
+
+/**
+ * Per-step minimum dwell time (ms from mount) before the row is allowed to
+ * flip to `done`. Each row also picks up `running` when the previous one
+ * has reached its dwell threshold — so on instant cold starts the user
+ * still sees `wait → running → done` choreography play out across the rows
+ * instead of all three flipping to done on the first frame. Real readiness
+ * signals are still authoritative: a slow backend keeps the row in
+ * `running` past its dwell threshold until the real signal fires.
+ */
+const STEP_DWELL_MS = {
+  backend: 600,
+  socket: 1100,
+  workspace: 1700,
+} as const;
 
 /**
  * Boot-trace step descriptor.
@@ -89,6 +104,10 @@ export function useSplashScreen(): SplashScreenState {
   const [showSpinner, setShowSpinner] = useState(false);
   const [isDismissing, setIsDismissing] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
+  // Step dwell phase: 0 before backend dwell, 1 after it, 2 after socket
+  // dwell, 3 after workspace dwell. Combined with real signals to derive
+  // the per-row status so the choreography is always visible.
+  const [stepPhase, setStepPhase] = useState(0);
   const version = useAppVersion();
 
   const hasDismissedRef = useRef(false);
@@ -134,6 +153,19 @@ export function useSplashScreen(): SplashScreenState {
     return () => clearTimeout(timer);
   }, []);
 
+  // Step-dwell phase ticker — schedules three transitions so each boot-trace
+  // row gets visible airtime even on instant cold starts.
+  useEffect(() => {
+    const t1 = setTimeout(() => setStepPhase(p => Math.max(p, 1)), STEP_DWELL_MS.backend);
+    const t2 = setTimeout(() => setStepPhase(p => Math.max(p, 2)), STEP_DWELL_MS.socket);
+    const t3 = setTimeout(() => setStepPhase(p => Math.max(p, 3)), STEP_DWELL_MS.workspace);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+    };
+  }, []);
+
   // Dismiss effect
   useEffect(() => {
     if (!shouldDismiss || hasDismissedRef.current) return;
@@ -156,7 +188,7 @@ export function useSplashScreen(): SplashScreenState {
   }, [maxTimeReached, isAppReady, variant]);
 
   const statusText = deriveStatusText(connectionStatus, isWorkspaceRestored);
-  const steps = deriveSteps(connectionStatus, isWorkspaceRestored, isConnectionFailed);
+  const steps = deriveSteps(connectionStatus, isWorkspaceRestored, isConnectionFailed, stepPhase);
   const error = isConnectionFailed
     ? 'Backend connection failed. The orchestrator could not reach its WebSocket.'
     : isStuck
@@ -197,57 +229,67 @@ function deriveStatusText(connectionStatus: string, isWorkspaceRestored: boolean
 }
 
 /**
- * Map real readiness signals into the boot-trace step list.
+ * Map real readiness signals + the dwell phase into the boot-trace step list.
  *
- * Step semantics:
- * - `backend`   — `running` until socket connects, then `done`. We use the
- *                 socket transition as the proxy for "Nest is up + accepting"
- *                 because that's the externally-observable signal we have.
- * - `socket`    — `wait` while backend is starting; `running` while we're
- *                 negotiating; `done` once `connected`. Splits the narrative
- *                 from `backend` so the user sees two distinct phases on
- *                 cold starts that take a moment.
- * - `workspace` — `wait` until socket is up; `running` until restored;
- *                 `done` once `isRestored` flips.
- * Any failed connection collapses the active row into `error`.
+ * `stepPhase` is a 0..3 counter advanced by per-step dwell timers in the
+ * hook. It establishes the *minimum* visible animation pacing — each row
+ * gets at least its dwell time as `running` before flipping to `done`.
+ * Real readiness signals can extend a row past its dwell (slow backends
+ * stay `running`) but cannot skip the dwell (instant cold starts still
+ * see the full choreography).
+ *
+ * - `backend`   — `running` from frame 0; `done` only when phase >= 1
+ *                 AND the socket has actually connected.
+ * - `socket`    — `wait` while phase < 1; `running` once the prior row's
+ *                 dwell has elapsed (or `connectionStatus === 'reconnecting'`,
+ *                 whichever is first); `done` only when phase >= 2 AND
+ *                 the socket is connected.
+ * - `workspace` — `wait` while phase < 2; `running` after the socket row
+ *                 reaches done; `done` only when phase >= 3 AND the
+ *                 workspace store has restored.
+ *
+ * Any failed connection collapses the affected rows into `error`
+ * immediately — error always trumps dwell.
  */
 function deriveSteps(
   connectionStatus: string,
   isWorkspaceRestored: boolean,
-  isConnectionFailed: boolean
+  isConnectionFailed: boolean,
+  stepPhase: number
 ): SplashStep[] {
   const isConnected = connectionStatus === 'connected';
+  const isReconnecting = connectionStatus === 'reconnecting';
 
-  // Backend: we treat the very first "reconnecting" tick as backend start-up.
-  // Once the socket flips to connected, backend is done.
+  // Backend: starts running immediately, requires phase >= 1 AND a real
+  // connection to flip to done.
   const backendStatus: SplashStepStatus = isConnectionFailed
     ? 'error'
-    : isConnected
+    : isConnected && stepPhase >= 1
       ? 'done'
       : 'running';
 
-  // Socket: only meaningfully "running" once backend has had a chance to
-  // come up. We intentionally collapse the early "Initializing..." phase
-  // into the backend row — otherwise both rows would say running at the
-  // same time on the first frame and it would look fake.
+  // Socket: waits for backend to dwell, then runs, then dones once
+  // phase >= 2 AND really connected.
   let socketStatus: SplashStepStatus;
   if (isConnectionFailed) {
     socketStatus = 'error';
-  } else if (isConnected) {
+  } else if (isConnected && stepPhase >= 2) {
     socketStatus = 'done';
-  } else if (connectionStatus === 'reconnecting') {
+  } else if (stepPhase >= 1 || isReconnecting) {
     socketStatus = 'running';
   } else {
     socketStatus = 'wait';
   }
 
+  // Workspace: waits for socket to dwell, then runs, then dones once
+  // phase >= 3 AND really restored.
   let workspaceStatus: SplashStepStatus;
-  if (!isConnected) {
+  if (stepPhase < 2) {
     workspaceStatus = 'wait';
-  } else if (!isWorkspaceRestored) {
-    workspaceStatus = 'running';
-  } else {
+  } else if (isWorkspaceRestored && stepPhase >= 3) {
     workspaceStatus = 'done';
+  } else {
+    workspaceStatus = 'running';
   }
 
   return [
