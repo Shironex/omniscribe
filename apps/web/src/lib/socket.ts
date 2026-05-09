@@ -108,7 +108,7 @@ export function resetSocket(): void {
  */
 export function getSocket(): Socket {
   if (!_socket) {
-    throw new Error('Socket not initialized — call initializeSocket(port) first');
+    throw new Error('Socket not initialized — call initializeSocket(port, authToken) first');
   }
   return _socket;
 }
