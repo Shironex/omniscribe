@@ -11,8 +11,13 @@ const logger = createLogger('UsageStore');
 /** Polling interval for usage data (15 minutes) */
 const USAGE_POLLING_INTERVAL = 15 * 60 * 1000;
 
-/** Data is considered stale after 2 minutes */
-const STALE_THRESHOLD = 2 * 60 * 1000;
+/**
+ * Data is considered stale after 16 minutes — the 15-minute polling
+ * interval plus a 1-minute jitter buffer for fetch latency. Previously
+ * 2 minutes, which made the store report stale for 13/15 of every cycle
+ * and prompted spurious manual refetches.
+ */
+const STALE_THRESHOLD = 16 * 60 * 1000;
 
 /** Module-level polling interval ID (non-serializable, kept out of reactive state) */
 let pollingIntervalId: ReturnType<typeof setInterval> | null = null;

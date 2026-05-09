@@ -180,7 +180,11 @@ describe('useSessionStore', () => {
       expect(updated.name).toBe('New Name');
     });
 
-    it('updates lastActiveAt on change', () => {
+    it('does not bump renderer-side lastActiveAt (kept stable to avoid fan-out)', () => {
+      // Renderer dropped its lastActiveAt bump in PR 4 perf #1: the
+      // backend still stamps its own timestamp and ships it on the wire.
+      // The renderer must NOT rotate this field on every store write —
+      // that would fan out re-renders to every consumer.
       const oldDate = new Date(2020, 0, 1);
       const session = createMockSession({ id: 'sess-1', lastActiveAt: oldDate });
       useSessionStore.setState({ sessions: [session] });
@@ -188,7 +192,7 @@ describe('useSessionStore', () => {
       useSessionStore.getState().updateSession('sess-1', { name: 'Updated' });
 
       const updated = useSessionStore.getState().sessions[0];
-      expect(updated.lastActiveAt.getTime()).toBeGreaterThan(oldDate.getTime());
+      expect(updated.lastActiveAt).toBe(oldDate);
     });
 
     it('does not affect other sessions', () => {
@@ -257,6 +261,48 @@ describe('useSessionStore', () => {
 
       const updated = useSessionStore.getState().sessions[0];
       expect(updated.needsInputPrompt).toBe(true);
+    });
+
+    it('preserves array and session reference when nothing UI-relevant changed', () => {
+      // Backend re-emits status events on every PTY tick. Most carry the
+      // same payload (idle→idle, working→working with the same message).
+      // updateStatus must early-return same state in that case so
+      // useShallow / React.memo consumers don't fan out re-renders.
+      const session = createMockSession({
+        id: 'sess-1',
+        status: 'working' as SessionStatus,
+        statusMessage: 'thinking',
+        needsInputPrompt: false,
+      });
+      useSessionStore.setState({ sessions: [session] });
+      const sessionsBefore = useSessionStore.getState().sessions;
+
+      useSessionStore
+        .getState()
+        .updateStatus('sess-1', 'working', 'thinking', false, undefined, undefined, undefined);
+
+      const sessionsAfter = useSessionStore.getState().sessions;
+      // Array reference preserved
+      expect(sessionsAfter).toBe(sessionsBefore);
+      // Session reference preserved
+      expect(sessionsAfter[0]).toBe(session);
+    });
+
+    it('still emits a new reference when status flips', () => {
+      const session = createMockSession({
+        id: 'sess-1',
+        status: 'idle' as SessionStatus,
+        statusMessage: 'waiting',
+      });
+      useSessionStore.setState({ sessions: [session] });
+      const sessionsBefore = useSessionStore.getState().sessions;
+
+      useSessionStore.getState().updateStatus('sess-1', 'working', 'waiting');
+
+      const sessionsAfter = useSessionStore.getState().sessions;
+      expect(sessionsAfter).not.toBe(sessionsBefore);
+      expect(sessionsAfter[0]).not.toBe(session);
+      expect(sessionsAfter[0].status).toBe('working');
     });
   });
 
@@ -429,6 +475,79 @@ describe('useSessionStore', () => {
         const result = selectActiveSessions(useSessionStore.getState());
         expect(result).toHaveLength(2);
         expect(result.map(s => s.id)).toEqual(['s2', 's4']);
+      });
+
+      it('returns same reference when unrelated state field changes (Object.is)', () => {
+        const sessions = [
+          createMockSession({ id: 's1', status: 'working' }),
+          createMockSession({ id: 's2', status: 'idle' }),
+        ];
+        useSessionStore.setState({ sessions });
+
+        const stateA = useSessionStore.getState();
+        const first = selectActiveSessions(stateA);
+
+        // Simulate an update that does NOT change which sessions are active
+        // (e.g. lastActiveAt bumped on an idle session — not in the active list)
+        const updatedSessions = sessions.map(s =>
+          s.id === 's2' ? { ...s, lastActiveAt: new Date() } : s
+        );
+        useSessionStore.setState({ sessions: updatedSessions });
+        const stateB = useSessionStore.getState();
+        const second = selectActiveSessions(stateB);
+
+        expect(Object.is(first, second)).toBe(true);
+      });
+    });
+
+    describe('selectSessionsForProject — stable reference (fan-out guard)', () => {
+      it('returns same reference when sessions for other projects change (Object.is)', () => {
+        const sessA = createMockSession({ id: 's1', projectPath: '/proj-a', status: 'working' });
+        const sessB = createMockSession({ id: 's2', projectPath: '/proj-b', status: 'idle' });
+        useSessionStore.setState({ sessions: [sessA, sessB] });
+
+        const selector = selectSessionsForProject('/proj-a');
+
+        const stateA = useSessionStore.getState();
+        const first = selector(stateA);
+
+        // Update only the /proj-b session — /proj-a result must not change
+        const updated = [sessA, { ...sessB, lastActiveAt: new Date() }];
+        useSessionStore.setState({ sessions: updated });
+        const stateB = useSessionStore.getState();
+        const second = selector(stateB);
+
+        expect(Object.is(first, second)).toBe(true);
+      });
+
+      it('returns a new reference when sessions for the project actually change', () => {
+        const sessA = createMockSession({ id: 's1', projectPath: '/proj-a', status: 'idle' });
+        useSessionStore.setState({ sessions: [sessA] });
+
+        const selector = selectSessionsForProject('/proj-a');
+        const first = selector(useSessionStore.getState());
+
+        // Add a new session for /proj-a — reference must update
+        const sessA2 = createMockSession({ id: 's2', projectPath: '/proj-a', status: 'idle' });
+        useSessionStore.setState({ sessions: [sessA, sessA2] });
+        const second = selector(useSessionStore.getState());
+
+        expect(Object.is(first, second)).toBe(false);
+        expect(second).toHaveLength(2);
+      });
+
+      it('returns same reference on back-to-back identical state reads', () => {
+        const sessions = [
+          createMockSession({ id: 's1', projectPath: '/proj-a', status: 'working' }),
+        ];
+        useSessionStore.setState({ sessions });
+
+        const selector = selectSessionsForProject('/proj-a');
+        const state = useSessionStore.getState();
+        const first = selector(state);
+        const second = selector(state);
+
+        expect(Object.is(first, second)).toBe(true);
       });
     });
 

@@ -448,16 +448,16 @@ describe('useUsageStore', () => {
       expect(useUsageStore.getState().isStale()).toBe(true);
     });
 
-    it('returns true when lastFetched is older than 2 minutes', () => {
-      const threeMinutesAgo = Date.now() - 3 * 60 * 1000;
-      useUsageStore.setState({ lastFetched: threeMinutesAgo });
+    it('returns true when lastFetched is older than 16 minutes', () => {
+      const seventeenMinutesAgo = Date.now() - 17 * 60 * 1000;
+      useUsageStore.setState({ lastFetched: seventeenMinutesAgo });
 
       expect(useUsageStore.getState().isStale()).toBe(true);
     });
 
-    it('returns false when lastFetched is within 2 minutes', () => {
-      const oneMinuteAgo = Date.now() - 1 * 60 * 1000;
-      useUsageStore.setState({ lastFetched: oneMinuteAgo });
+    it('returns false when lastFetched is within 16 minutes', () => {
+      const tenMinutesAgo = Date.now() - 10 * 60 * 1000;
+      useUsageStore.setState({ lastFetched: tenMinutesAgo });
 
       expect(useUsageStore.getState().isStale()).toBe(false);
     });
@@ -468,10 +468,10 @@ describe('useUsageStore', () => {
       expect(useUsageStore.getState().isStale()).toBe(false);
     });
 
-    it('returns true when exactly at 2 minute boundary', () => {
-      // 2 minutes and 1ms ago should be stale
-      const justOverTwoMinutes = Date.now() - (2 * 60 * 1000 + 1);
-      useUsageStore.setState({ lastFetched: justOverTwoMinutes });
+    it('returns true when just past the 16 minute boundary', () => {
+      // 16 minutes and 1ms ago should be stale
+      const justOverSixteenMinutes = Date.now() - (16 * 60 * 1000 + 1);
+      useUsageStore.setState({ lastFetched: justOverSixteenMinutes });
 
       expect(useUsageStore.getState().isStale()).toBe(true);
     });
@@ -481,7 +481,7 @@ describe('useUsageStore', () => {
       expect(useUsageStore.getState().isStale()).toBe(false);
 
       // Advance past the stale threshold
-      vi.advanceTimersByTime(2 * 60 * 1000 + 1);
+      vi.advanceTimersByTime(16 * 60 * 1000 + 1);
       expect(useUsageStore.getState().isStale()).toBe(true);
     });
   });

@@ -46,6 +46,8 @@ describe('TerminalGateway', () => {
       kill: jest.fn().mockResolvedValue(undefined),
       hasSession: jest.fn().mockReturnValue(true),
       getScrollback: jest.fn().mockReturnValue(null),
+      pause: jest.fn(),
+      resume: jest.fn(),
     } as unknown as jest.Mocked<TerminalService>;
 
     const module: TestingModule = await Test.createTestingModule({
@@ -806,9 +808,12 @@ describe('TerminalGateway', () => {
   // =========================================================================
 
   describe('backpressure', () => {
-    it('should pause terminal when pending chars exceed HIGH_WATER_MARK', () => {
-      terminalService.pause = jest.fn();
+    afterEach(() => {
+      jest.clearAllTimers();
+      jest.useRealTimers();
+    });
 
+    it('should pause terminal when pending chars exceed HIGH_WATER_MARK', () => {
       // Emit enough data to exceed ~250KB (HIGH_WATER_MARK = 256_000)
       const largeData = 'x'.repeat(260_000);
       gateway.handleTerminalOutput({ sessionId: 1, data: largeData });
@@ -817,8 +822,6 @@ describe('TerminalGateway', () => {
     });
 
     it('should track chars not packets — many small writes should not trigger', () => {
-      terminalService.pause = jest.fn();
-
       // 100 small packets (100 chars total — well below 256KB)
       for (let i = 0; i < 100; i++) {
         gateway.handleTerminalOutput({ sessionId: 1, data: 'x' });
@@ -828,8 +831,6 @@ describe('TerminalGateway', () => {
     });
 
     it('should not pause the same terminal twice', () => {
-      terminalService.pause = jest.fn();
-
       // First call triggers pause
       gateway.handleTerminalOutput({ sessionId: 1, data: 'x'.repeat(260_000) });
       expect(terminalService.pause).toHaveBeenCalledTimes(1);
@@ -837,6 +838,52 @@ describe('TerminalGateway', () => {
       // Second call should not re-pause (already paused)
       gateway.handleTerminalOutput({ sessionId: 1, data: 'x'.repeat(260_000) });
       expect(terminalService.pause).toHaveBeenCalledTimes(1);
+    });
+
+    // PAUSE_SAFETY_TIMEOUT_MS force-resume: if the drain event never fires
+    // (e.g. the client closes or stalls), the 15s safety timeout must
+    // force-resume the PTY so Claude is never permanently deadlocked.
+    it('should force-resume after PAUSE_SAFETY_TIMEOUT_MS (15s) without manual drain', () => {
+      jest.useFakeTimers();
+
+      // Trigger backpressure pause
+      gateway.handleTerminalOutput({ sessionId: 1, data: 'x'.repeat(260_000) });
+      expect(terminalService.pause).toHaveBeenCalledWith(1);
+
+      // Terminal is now paused; drain event never arrives.
+      // Before the safety timeout fires, resume should NOT have been called.
+      jest.advanceTimersByTime(14_999);
+      expect(terminalService.resume).not.toHaveBeenCalled();
+
+      // Advance past the 15s safety window — force-resume must fire.
+      jest.advanceTimersByTime(2);
+      expect(terminalService.resume).toHaveBeenCalledWith(1);
+    });
+
+    it('should NOT force-resume when drain clears backpressure before the timeout', () => {
+      jest.useFakeTimers();
+
+      const client = createMockSocket('c1');
+      let drainCallback: (() => void) | undefined;
+      client.conn.on = jest.fn((_event: string, cb: () => void) => {
+        drainCallback = cb;
+      });
+
+      gateway.handleConnection(client);
+
+      // Trigger backpressure pause
+      gateway.handleTerminalOutput({ sessionId: 1, data: 'x'.repeat(260_000) });
+      expect(terminalService.pause).toHaveBeenCalledWith(1);
+
+      // Drain fires at 5s — clears pause and cancels the safety timeout.
+      jest.advanceTimersByTime(5_000);
+      drainCallback?.();
+      expect(terminalService.resume).toHaveBeenCalledWith(1);
+
+      // Advance past the original 15s window to confirm the timer was cancelled
+      // (resume must only have been called once — from the drain, not from timeout).
+      jest.advanceTimersByTime(11_000);
+      expect(terminalService.resume).toHaveBeenCalledTimes(1);
     });
   });
 });

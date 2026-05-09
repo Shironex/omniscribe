@@ -32,7 +32,7 @@ const initialState = {
   letterSpacing: 0,
   cursorStyle: 'block' as const,
   cursorBlink: true,
-  scrollback: 10000,
+  scrollback: 3000,
   terminalThemeName: 'tokyonight' as const,
   focusedSessionId: null,
   addSlotRequestCounter: 0,
@@ -79,8 +79,8 @@ describe('useTerminalStore', () => {
       expect(useTerminalStore.getState().cursorBlink).toBe(true);
     });
 
-    it('has default scrollback of 10000', () => {
-      expect(useTerminalStore.getState().scrollback).toBe(10000);
+    it('has default scrollback of 3000', () => {
+      expect(useTerminalStore.getState().scrollback).toBe(3000);
     });
 
     it('has default terminal theme of tokyonight', () => {
@@ -227,7 +227,7 @@ describe('useTerminalStore', () => {
       expect(state.letterSpacing).toBe(0);
       expect(state.cursorStyle).toBe('block');
       expect(state.cursorBlink).toBe(true);
-      expect(state.scrollback).toBe(10000);
+      expect(state.scrollback).toBe(3000);
       expect(state.terminalThemeName).toBe('tokyonight');
     });
 
