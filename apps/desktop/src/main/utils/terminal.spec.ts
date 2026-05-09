@@ -9,18 +9,24 @@ jest.mock('@omniscribe/shared', () => ({
 }));
 
 const mockSpawn = jest.fn();
-const mockExecAsync = jest.fn();
+const mockExecFileAsync = jest.fn();
+const mockExecFile = jest.fn();
 
 jest.mock('child_process', () => ({
-  exec: jest.fn(),
+  execFile: mockExecFile,
   spawn: (...args: unknown[]) => mockSpawn(...args),
 }));
 
 jest.mock('util', () => ({
-  promisify:
-    () =>
-    (...args: unknown[]) =>
-      mockExecAsync(...args),
+  promisify: jest.fn((fn: unknown) => {
+    // Production code calls `promisify(execFile)`. Pin the contract: if a
+    // refactor accidentally promisifies a different function (e.g. `exec`),
+    // this mock will throw and the test will fail loudly.
+    if (fn !== mockExecFile) {
+      throw new Error('promisify mock: expected execFile, got something else');
+    }
+    return (...args: unknown[]) => mockExecFileAsync(...args);
+  }),
 }));
 
 // ---- Tests ----
@@ -152,31 +158,55 @@ describe('terminal utilities', () => {
       Object.defineProperty(process, 'platform', { value: 'darwin' });
     });
 
-    it('should use osascript to open Terminal.app', async () => {
-      mockExecAsync.mockResolvedValue({ stdout: '', stderr: '' });
+    it('should call osascript via execFile (no shell parsing)', async () => {
+      mockExecFileAsync.mockResolvedValue({ stdout: '', stderr: '' });
 
       await openTerminalWithCommand('npm install');
 
-      expect(mockExecAsync).toHaveBeenCalledWith(expect.stringContaining('osascript'));
-      expect(mockExecAsync).toHaveBeenCalledWith(expect.stringContaining('npm install'));
+      // First arg is the binary, second is the argv array — never one
+      // command string.
+      expect(mockExecFileAsync).toHaveBeenCalledWith('osascript', expect.arrayContaining(['-e']));
+      const argvFromCall = mockExecFileAsync.mock.calls[0][1] as string[];
+      const joined = argvFromCall.join('|');
+      expect(joined).toContain('npm install');
+      expect(joined).toContain('tell app "Terminal" to do script');
     });
 
     it('should escape backslashes in the command for AppleScript', async () => {
-      mockExecAsync.mockResolvedValue({ stdout: '', stderr: '' });
+      mockExecFileAsync.mockResolvedValue({ stdout: '', stderr: '' });
 
       await openTerminalWithCommand('echo C:\\Users\\test');
 
-      const calledWith = mockExecAsync.mock.calls[0][0] as string;
-      expect(calledWith).toContain('C:\\\\Users\\\\test');
+      const argv = mockExecFileAsync.mock.calls[0][1] as string[];
+      const joined = argv.join('|');
+      expect(joined).toContain('C:\\\\Users\\\\test');
     });
 
     it('should escape double quotes in the command for AppleScript', async () => {
-      mockExecAsync.mockResolvedValue({ stdout: '', stderr: '' });
+      mockExecFileAsync.mockResolvedValue({ stdout: '', stderr: '' });
 
       await openTerminalWithCommand('echo "hello"');
 
-      const calledWith = mockExecAsync.mock.calls[0][0] as string;
-      expect(calledWith).toContain('\\"hello\\"');
+      const argv = mockExecFileAsync.mock.calls[0][1] as string[];
+      const joined = argv.join('|');
+      expect(joined).toContain('\\"hello\\"');
+    });
+
+    it('does not concatenate the command into a shell string', async () => {
+      mockExecFileAsync.mockResolvedValue({ stdout: '', stderr: '' });
+
+      await openTerminalWithCommand('rm -rf "/"; echo done');
+
+      // The first arg is always the binary name, never a long shell line.
+      expect(mockExecFileAsync.mock.calls[0][0]).toBe('osascript');
+      // No argv element should look like a concatenated shell invocation,
+      // and the dangerous payload must remain inside an AppleScript-escaped
+      // -e value rather than be exposed as a separate spawn-style token.
+      const argv = mockExecFileAsync.mock.calls[0][1] as string[];
+      for (const arg of argv) {
+        expect(arg).not.toMatch(/^osascript\s/);
+      }
+      expect(argv).not.toContain('rm -rf "/"; echo done');
     });
   });
 

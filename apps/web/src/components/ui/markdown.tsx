@@ -1,11 +1,5 @@
-import ReactMarkdown from 'react-markdown';
-import rehypeRaw from 'rehype-raw';
-import rehypeSanitize from 'rehype-sanitize';
-import remarkGfm from 'remark-gfm';
+import { lazy, Suspense } from 'react';
 import { cn } from '@/lib/utils';
-
-const REMARK_PLUGINS = [remarkGfm];
-const REHYPE_PLUGINS = [rehypeRaw, rehypeSanitize];
 
 interface MarkdownProps {
   children: string;
@@ -13,13 +7,23 @@ interface MarkdownProps {
 }
 
 /**
- * Render Markdown content (including inline HTML) as styled React elements.
+ * Lazy-loaded inner component. ReactMarkdown + remark-gfm + rehype-sanitize
+ * are roughly ~140 KB gzip on their own — far too heavy to ship in the
+ * eager bundle when Markdown is only needed inside the Settings →
+ * Updates / Changelog flow.
  *
- * Renders the provided Markdown string into a themed, typographic container; inline/raw HTML is allowed and will be sanitized before rendering.
+ * `rehype-raw` was previously included to allow inline HTML in changelog
+ * bodies, but our changelog never carries raw HTML. Dropping the dep
+ * removes the rest of the parser graph.
+ */
+const MarkdownInner = lazy(() => import('./markdown-impl'));
+
+/**
+ * Render Markdown content as styled React elements.
  *
- * @param children - The Markdown source to render; may include inline/raw HTML which will be sanitized.
- * @param className - Optional additional CSS classes to merge with the component's default typography and layout styles.
- * @returns A React element containing the processed and styled Markdown content.
+ * Suspense fallback uses a single-line placeholder sized to the layout —
+ * since this component is only mounted on Settings panes, the fallback
+ * is brief and never paints in critical-path UI.
  */
 export function Markdown({ children, className }: MarkdownProps) {
   return (
@@ -50,9 +54,11 @@ export function Markdown({ children, className }: MarkdownProps) {
         className
       )}
     >
-      <ReactMarkdown remarkPlugins={REMARK_PLUGINS} rehypePlugins={REHYPE_PLUGINS}>
-        {children}
-      </ReactMarkdown>
+      <Suspense
+        fallback={<div className="h-3 w-2/3 animate-pulse rounded bg-muted/40" aria-hidden />}
+      >
+        <MarkdownInner>{children}</MarkdownInner>
+      </Suspense>
     </div>
   );
 }

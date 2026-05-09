@@ -23,11 +23,21 @@ import type {
   ThemeRegistration,
   ChangelogSourceRegistration,
 } from '@omniscribe/plugin-api';
+import { lazy, Suspense } from 'react';
 import { ChangelogEvents, createLogger } from '@omniscribe/shared';
 import { Newspaper } from 'lucide-react';
-import { ChangelogSection } from '@/components/changelog/ChangelogSection';
 import { emitAsync } from '@/lib/socket';
 import type { usePluginStore as UsePluginStoreType } from '@/stores/usePluginStore';
+
+/**
+ * Lazy ChangelogSection. Settings → Updates is the only path that
+ * mounts this; loading react-markdown + plugins eagerly via the plugin
+ * activation pipeline was the single biggest contributor to the
+ * renderer entry chunk (~140 KB gzip).
+ */
+const LazyChangelogSection = lazy(() =>
+  import('@/components/changelog/ChangelogSection').then(m => ({ default: m.ChangelogSection }))
+);
 
 /**
  * Dispose all subscriptions in a plugin context.
@@ -106,13 +116,17 @@ export function createFrontendPluginContext(
       // tears both down atomically.
       const Icon = reg.icon ?? Newspaper;
       const inferredCategory =
-        reg.categoryId ?? pluginId.replace(/^provider-/, '') ?? 'integrations';
+        reg.categoryId ?? (pluginId.replace(/^provider-/, '') || 'integrations');
       const sectionId = `changelog:${reg.id}`;
       const label = reg.label;
       const viewUrl = reg.source.viewUrl;
 
       const SectionComponent = () => (
-        <ChangelogSection sourceId={reg.id} label={label} icon={Icon} viewUrl={viewUrl} />
+        <Suspense
+          fallback={<div className="h-3 w-1/3 animate-pulse rounded bg-muted/40" aria-hidden />}
+        >
+          <LazyChangelogSection sourceId={reg.id} label={label} icon={Icon} viewUrl={viewUrl} />
+        </Suspense>
       );
 
       const sourceDisposable = store.getState().registerChangelogSource(pluginId, reg);

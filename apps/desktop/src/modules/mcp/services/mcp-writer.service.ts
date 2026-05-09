@@ -265,6 +265,12 @@ export class McpWriterService implements OnModuleDestroy {
 
         // Determine which ids to remove. Prefer the meta marker; fall back
         // to the legacy behavior of only removing MCP_SERVER_NAME.
+        //
+        // Defense: cross-check every id against the live capability
+        // registry before deleting anything. A user (or malicious config
+        // generator) could forge `_omniscribe.managedCapabilities` to list
+        // an unrelated server they want us to wipe; we only honor ids that
+        // we actually know how to manage.
         const meta = config[`_${MCP_SERVER_NAME}`] as { managedCapabilities?: unknown } | undefined;
         const managed = Array.isArray(meta?.managedCapabilities)
           ? (meta!.managedCapabilities as unknown[]).filter(
@@ -272,9 +278,21 @@ export class McpWriterService implements OnModuleDestroy {
             )
           : null;
 
+        const knownIds = new Set(this.capRegistry.list().map(cap => cap.id));
+        // The legacy MCP_SERVER_NAME entry predates the capability registry,
+        // so explicitly accept it even if a custom build dropped that
+        // capability from the registry.
+        knownIds.add(MCP_SERVER_NAME);
+
         const idsToRemove =
           managed && managed.length > 0
-            ? managed
+            ? managed.filter(id => {
+                if (knownIds.has(id)) return true;
+                this.logger.warn(
+                  `Refusing to remove "${id}" — not a known managed capability (marker forging?)`
+                );
+                return false;
+              })
             : MCP_SERVER_NAME in mcpServers
               ? [MCP_SERVER_NAME]
               : [];

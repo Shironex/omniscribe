@@ -20,13 +20,18 @@ export function SplashScreen() {
       animate={isDismissing ? { opacity: 0, scale: 1.02 } : { opacity: 1, scale: 1 }}
       transition={{ duration: 0.5, ease: 'easeOut' }}
     >
-      {/* Logo */}
-      <img
-        src={`${import.meta.env.BASE_URL}logo.png`}
-        alt="Omniscribe"
-        className="h-24 w-24"
-        draggable={false}
-      />
+      {/* Logo: prefer the 36 KB WebP, fall back to the 165 KB PNG.
+          Electron always supports WebP so the fallback is for safety,
+          not parity. */}
+      <picture>
+        <source srcSet={`${import.meta.env.BASE_URL}logo.webp`} type="image/webp" />
+        <img
+          src={`${import.meta.env.BASE_URL}logo.png`}
+          alt="Omniscribe"
+          className="h-24 w-24"
+          draggable={false}
+        />
+      </picture>
 
       {/* Version label */}
       {version && (

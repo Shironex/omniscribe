@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { devtools } from 'zustand/middleware';
+import { devtools } from './utils/devtools';
 import { ChangelogEvents, createLogger, extractErrorMessage } from '@omniscribe/shared';
 import type {
   ChangelogError,

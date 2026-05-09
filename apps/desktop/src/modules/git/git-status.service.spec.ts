@@ -451,6 +451,35 @@ describe('GitStatusService', () => {
 
       expect(result).toBe(false);
     });
+
+    it('accepts MERGE_HEAD living in the shared git common dir (worktree)', async () => {
+      // Worktree case: rev-parse --git-path returns an absolute path that
+      // points into the main repo's .git dir, not into the worktree.
+      // checkMergeState must accept that path because git stores merge
+      // state in the shared common dir for worktrees.
+      gitBase.execGit
+        .mockResolvedValueOnce({ stdout: '/main-repo/.git/MERGE_HEAD\n', stderr: '' })
+        .mockResolvedValueOnce({ stdout: '/main-repo/.git\n', stderr: '' });
+      (fs.existsSync as jest.Mock).mockReturnValueOnce(true);
+
+      const result = await service.checkMergeState('/main-repo/.worktrees/feature');
+
+      expect(result).toBe(true);
+      expect(fs.existsSync).toHaveBeenCalledWith('/main-repo/.git/MERGE_HEAD');
+    });
+
+    it('refuses to existsSync a path outside both project and git-common-dir', async () => {
+      // Pretend a tampered config returns a path entirely outside both.
+      gitBase.execGit
+        .mockResolvedValueOnce({ stdout: '/etc/passwd\n', stderr: '' })
+        .mockResolvedValueOnce({ stdout: '/main-repo/.git\n', stderr: '' });
+
+      const result = await service.checkMergeState('/main-repo');
+
+      // The dangerous existsSync must NOT be called.
+      expect(fs.existsSync).not.toHaveBeenCalled();
+      expect(result).toBe(false);
+    });
   });
 
   describe('getStashCount', () => {

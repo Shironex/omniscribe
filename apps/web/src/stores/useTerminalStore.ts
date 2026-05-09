@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { devtools, persist } from 'zustand/middleware';
+import { persist } from 'zustand/middleware';
+import { devtools } from './utils/devtools';
 import {
   createLogger,
   TerminalEvents,

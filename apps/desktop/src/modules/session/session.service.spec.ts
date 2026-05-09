@@ -37,8 +37,6 @@ describe('SessionService', () => {
         theme: 'dark',
         worktree: { mode: 'always', autoCleanup: true, location: 'project' },
       }),
-      saveActiveSessionsSnapshot: jest.fn(),
-      getActiveSessionsSnapshot: jest.fn().mockReturnValue([]),
       addSessionHistory: jest.fn(),
     } as unknown as jest.Mocked<WorkspaceService>;
 

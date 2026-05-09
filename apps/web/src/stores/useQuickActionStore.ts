@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { devtools, persist, createJSONStorage, StateStorage } from 'zustand/middleware';
+import { persist, createJSONStorage, StateStorage } from 'zustand/middleware';
+import { devtools } from './utils/devtools';
 import { QuickAction, createLogger } from '@omniscribe/shared';
 import { createMemoizedSelector } from './utils';
 

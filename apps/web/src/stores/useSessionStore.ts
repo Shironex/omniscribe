@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { devtools } from 'zustand/middleware';
+import { devtools } from './utils/devtools';
 import {
   SessionStatus,
   HealthLevel,
@@ -410,7 +410,8 @@ export const useSessionStore = create<SessionStore>()(
               update.message,
               update.needsInputPrompt,
               update.branch,
-              update.worktreePath
+              update.worktreePath,
+              update.baselineCommitHash
             );
           }
 

@@ -13,7 +13,7 @@ import { SkipThrottle } from '@nestjs/throttler';
 import { Server, Socket } from 'socket.io';
 import { OnEvent } from '@nestjs/event-emitter';
 import { WsThrottlerGuard } from '../shared/ws-throttler.guard';
-import { isValidSessionId } from '../shared/validation';
+import { isValidSessionId, validatePath } from '../shared/validation';
 import { TerminalService } from './terminal.service';
 import {
   TerminalSpawnPayload,
@@ -38,6 +38,12 @@ const MAX_INPUT_SIZE = 1_048_576; // 1MB
 const HIGH_WATER_MARK = 256_000; // ~250KB — pause PTY when this many chars are unacknowledged
 const PAUSE_SAFETY_TIMEOUT_MS = 15_000; // Force-resume after 15s to prevent deadlock
 
+// Ownership cleanup is deferred this long after disconnect to give Socket.io
+// Connection State Recovery (CSR) a chance to resume the same socket.id
+// without losing the per-client session ownership map. Match the CSR window
+// configured in custom-io-adapter.ts (`maxDisconnectionDuration`).
+const OWNERSHIP_CLEANUP_GRACE_MS = 30_000;
+
 @UseGuards(WsThrottlerGuard)
 @WebSocketGateway({
   cors: CORS_CONFIG,
@@ -50,6 +56,10 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
 
   private clientSessions = new Map<string, Set<number>>();
   private connectedClients = new Map<string, Socket>();
+  // Pending ownership-cleanup timers keyed by clientId. A timer is armed on
+  // disconnect and cleared if the same clientId reconnects within the CSR
+  // window (or explicitly rejoins). When the timer fires, ownership is wiped.
+  private pendingOwnershipCleanup = new Map<string, NodeJS.Timeout>();
 
   // Backpressure tracking (per-terminal, independent of each other)
   private pendingWrites = new Map<number, number>();
@@ -64,6 +74,15 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
 
   handleConnection(client: Socket): void {
     this.logger.debug(`Client connected: ${client.id}`);
+    // Cancel any pending ownership cleanup from a recent disconnect.
+    // Without this, a CSR-resumed socket would keep its old ownership map only
+    // if reconnect arrived BEFORE the timer fired — clearing the timer makes
+    // the success path explicit and turns the rare race into a no-op.
+    const pendingCleanup = this.pendingOwnershipCleanup.get(client.id);
+    if (pendingCleanup) {
+      clearTimeout(pendingCleanup);
+      this.pendingOwnershipCleanup.delete(client.id);
+    }
     // Only create a new Set if client doesn't already have sessions registered
     // This prevents clearing sessions on reconnection
     if (!this.clientSessions.has(client.id)) {
@@ -113,8 +132,28 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
       this.resumeTerminal(sessionId);
     }
 
-    this.clientSessions.delete(client.id);
     this.connectedClients.delete(client.id);
+
+    // Defer ownership cleanup until the Socket.io Connection State Recovery
+    // window has expired. With CSR, the same socket.id may resume; if that
+    // happens before the timer fires, handleConnection clears it and the
+    // ownership map is preserved. If not, we wipe ownership here just like
+    // we used to do synchronously. This closes the race where input/resize/
+    // kill events arriving between reconnect and terminal:join would be
+    // silently rejected.
+    const clientId = client.id;
+    const existingTimer = this.pendingOwnershipCleanup.get(clientId);
+    if (existingTimer) clearTimeout(existingTimer);
+    const timer = setTimeout(() => {
+      this.pendingOwnershipCleanup.delete(clientId);
+      // Reconnect already happened — nothing to clean up.
+      if (this.connectedClients.has(clientId)) return;
+      this.clientSessions.delete(clientId);
+    }, OWNERSHIP_CLEANUP_GRACE_MS);
+    // Allow the Node process to exit even if a cleanup is still pending
+    // (test runners and graceful shutdown both expect no lingering handles).
+    timer.unref?.();
+    this.pendingOwnershipCleanup.set(clientId, timer);
   }
 
   @SubscribeMessage(TerminalEvents.SPAWN)
@@ -123,6 +162,33 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
     @MessageBody() payload: TerminalSpawnPayload
   ): TerminalSpawnResponse {
     this.logger.info(`Spawning terminal for client ${client.id} (cwd: ${payload?.cwd})`);
+
+    // Validate cwd before passing to PTY. An empty/missing cwd falls back
+    // to process.cwd() inside terminal.service, so undefined is allowed.
+    if (payload?.cwd !== undefined) {
+      const cwdError = validatePath(payload.cwd, 'cwd');
+      if (cwdError) {
+        this.logger.warn(`[spawn] Rejecting spawn — ${cwdError}`);
+        throw new Error(cwdError);
+      }
+    }
+
+    // Validate caller-provided env: object of string→string entries only.
+    // Per-key safety (PATH/HOME/etc.) is enforced by buildSafeEnv's
+    // caller blocklist when the values are merged into the spawn env.
+    if (payload?.env !== undefined) {
+      if (typeof payload.env !== 'object' || payload.env === null || Array.isArray(payload.env)) {
+        this.logger.warn(`[spawn] Rejecting spawn — env must be an object`);
+        throw new Error('Invalid env: must be an object of string→string entries');
+      }
+      for (const [key, value] of Object.entries(payload.env)) {
+        if (typeof key !== 'string' || typeof value !== 'string') {
+          this.logger.warn(`[spawn] Rejecting spawn — env entries must be strings`);
+          throw new Error('Invalid env: entries must be strings');
+        }
+      }
+    }
+
     const sessionId = this.terminalService.spawn(payload?.cwd, payload?.env);
 
     // Track session ownership
@@ -137,10 +203,22 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
     return { sessionId };
   }
 
+  /**
+   * Confirm the socket has been registered as an owner of `sessionId`.
+   * Sessions become owned via:
+   *   - terminal:spawn (the spawner owns the session it just created)
+   *   - terminal:join (a client explicitly joining a session it knows)
+   *   - registerClientSession (called from SessionGateway when sessions
+   *     are spawned through a higher-level launcher)
+   */
+  private isSessionOwner(clientId: string, sessionId: number): boolean {
+    return this.clientSessions.get(clientId)?.has(sessionId) === true;
+  }
+
   @SkipThrottle()
   @SubscribeMessage(TerminalEvents.INPUT)
   handleInput(
-    @ConnectedSocket() _client: Socket,
+    @ConnectedSocket() client: Socket,
     @MessageBody() payload: TerminalInputPayload
   ): void {
     const { sessionId, data } = payload;
@@ -163,8 +241,11 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
       return;
     }
 
-    // Simplified pattern from automaker: if client is in the terminal room, allow input
-    // No ownership checking - if you're connected to the session, you can write to it
+    if (!this.isSessionOwner(client.id, sessionId)) {
+      this.logger.warn(`[input] Client ${client.id} is not owner of session ${sessionId}`);
+      return;
+    }
+
     if (this.terminalService.hasSession(sessionId)) {
       this.terminalService.write(sessionId, data);
     }
@@ -194,7 +275,7 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
   @SkipThrottle()
   @SubscribeMessage(TerminalEvents.RESIZE)
   handleResize(
-    @ConnectedSocket() _client: Socket,
+    @ConnectedSocket() client: Socket,
     @MessageBody() payload: TerminalResizePayload
   ): void {
     const { sessionId, cols, rows } = payload;
@@ -211,7 +292,11 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
       return;
     }
 
-    // Simplified: allow resize if session exists (no ownership check)
+    if (!this.isSessionOwner(client.id, sessionId)) {
+      this.logger.warn(`[resize] Client ${client.id} is not owner of session ${sessionId}`);
+      return;
+    }
+
     if (this.terminalService.hasSession(sessionId)) {
       this.terminalService.resize(sessionId, cols, rows);
     }
@@ -229,7 +314,11 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
       return { success: false, error: 'Invalid sessionId' };
     }
 
-    // Simplified: allow kill if session exists (no ownership check)
+    if (!this.isSessionOwner(client.id, sessionId)) {
+      this.logger.warn(`[kill] Client ${client.id} is not owner of session ${sessionId}`);
+      return { success: false, error: 'Not authorized for this session' };
+    }
+
     if (this.terminalService.hasSession(sessionId)) {
       await this.terminalService.kill(sessionId);
 
@@ -245,6 +334,13 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
     return { success: false, error: `Terminal session ${sessionId} not found` };
   }
 
+  // TODO(security): terminal:join grants ownership to any authenticated socket
+  // that knows a sessionId, and sessionIds are sequential integers. Today this
+  // is acceptable because the WS auth token gates which processes can connect
+  // at all (single-trust-zone desktop app). If multi-window, a sandboxed
+  // iframe, or any cross-origin bridge is added, gate this behind an opaque
+  // sessionToken returned from spawn. Tracked in
+  // docs/review/2026-05-08-branch-master-plan-pr-0-1-2-3.md (issue I4).
   @SkipThrottle()
   @SubscribeMessage(TerminalEvents.JOIN)
   handleJoin(
@@ -345,7 +441,7 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
    */
   @SubscribeMessage(TerminalEvents.CANCEL)
   handleCancel(
-    @ConnectedSocket() _client: Socket,
+    @ConnectedSocket() client: Socket,
     @MessageBody() payload: { sessionId: number }
   ): SuccessResponse {
     this.logger.debug(`[terminal:cancel] sessionId=${payload.sessionId}`);
@@ -354,6 +450,11 @@ export class TerminalGateway implements OnGatewayInit, OnGatewayConnection, OnGa
     if (!isValidSessionId(sessionId)) {
       this.logger.warn(`[cancel] Invalid sessionId: ${sessionId}`);
       return { success: false, error: 'Invalid sessionId' };
+    }
+
+    if (!this.isSessionOwner(client.id, sessionId)) {
+      this.logger.warn(`[cancel] Client ${client.id} is not owner of session ${sessionId}`);
+      return { success: false, error: 'Not authorized for this session' };
     }
 
     if (!this.terminalService.hasSession(sessionId)) {

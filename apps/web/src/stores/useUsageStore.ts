@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { devtools } from 'zustand/middleware';
+import { devtools } from './utils/devtools';
 import type { ClaudeUsage, UsageStatus, UsageError } from '@omniscribe/shared';
 import { createLogger, extractErrorMessage, UsageEvents } from '@omniscribe/shared';
 import { getSocket } from '@/lib/socket';

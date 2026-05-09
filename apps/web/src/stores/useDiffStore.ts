@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { devtools } from 'zustand/middleware';
+import { devtools } from './utils/devtools';
 import { createLogger, extractErrorMessage, GitEvents } from '@omniscribe/shared';
 import type { GitFileDiff, GitDiffPayload, GitDiffResponse } from '@omniscribe/shared';
 import { emitAsync } from '@/lib/socketHelpers';

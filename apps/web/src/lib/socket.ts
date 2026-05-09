@@ -6,16 +6,23 @@ const logger = createLogger('Socket');
 let _socket: Socket | null = null;
 
 /**
- * Initialize the socket singleton with the dynamically assigned backend port.
+ * Initialize the socket singleton with the dynamically assigned backend port
+ * and the per-window auth token. Both arguments are required — the backend
+ * rejects unauthenticated handshakes via Socket.io's `allowRequest` hook.
+ *
  * Must be called exactly once before any other socket operation.
  */
-export function initializeSocket(port: number): Socket {
+export function initializeSocket(port: number, authToken: string): Socket {
   if (_socket) {
     if (import.meta.env.DEV) {
       logger.warn('Socket already initialized, returning existing instance');
       return _socket;
     }
     throw new Error('Socket already initialized');
+  }
+
+  if (typeof authToken !== 'string' || authToken.length === 0) {
+    throw new Error('initializeSocket requires a non-empty auth token');
   }
 
   const url = `ws://${LOCALHOST}:${port}`;
@@ -30,6 +37,11 @@ export function initializeSocket(port: number): Socket {
     randomizationFactor: 0.5,
     timeout: 20000,
     transports: ['websocket', 'polling'],
+    // engine.io URL query — visible to the server's `allowRequest`
+    // hook, which fires BEFORE the Socket.io connection middleware
+    // would see `socket.handshake.auth`. This is the field the backend
+    // actually checks.
+    query: { auth: authToken },
   });
 
   // Connection event handlers
@@ -96,7 +108,7 @@ export function resetSocket(): void {
  */
 export function getSocket(): Socket {
   if (!_socket) {
-    throw new Error('Socket not initialized — call initializeSocket(port) first');
+    throw new Error('Socket not initialized — call initializeSocket(port, authToken) first');
   }
   return _socket;
 }

@@ -12,6 +12,7 @@ import {
 import { CLI_TOOLS, checkCliAvailable, type CLITool } from '../utils';
 import { getLogsDir } from '../logger';
 import { getBackendPort } from '../backend-port';
+import { getWsAuthToken } from '../ws-auth';
 import type { ProjectValidationResult } from './types';
 
 const logger = createLogger('IPC:App');
@@ -73,6 +74,13 @@ export function registerAppHandlers(): void {
   ipcMain.handle('app:get-backend-port', () => {
     logger.debug('app:get-backend-port invoked');
     return getBackendPort();
+  });
+
+  ipcMain.handle('app:get-ws-auth-token', () => {
+    // Per-window token used by Socket.io allowRequest. Logged at debug
+    // only — never include the token value in logs.
+    logger.debug('app:get-ws-auth-token invoked');
+    return getWsAuthToken();
   });
 
   ipcMain.handle('app:list-log-files', async () => {
@@ -156,6 +164,17 @@ export function registerAppHandlers(): void {
         throw new Error('Invalid folder path');
       }
 
+      // Reject characters that would re-enter cmd.exe parsing on Windows.
+      // We always go through cmd.exe on Windows so .cmd wrappers (e.g.
+      // code.cmd) work. Inside the double-quoted arg cmd.exe still
+      // expands `%VAR%`, so block `%` to prevent env-var substitution;
+      // also block `&`, `|`, `<`, `>`, `^`, `"` which can break out of
+      // (or chain past) the quoted form. The path itself never legally
+      // contains any of these — reject and bail early.
+      if (process.platform === 'win32' && /[&^|<>"%]/.test(folderPath)) {
+        throw new Error('Folder path contains characters that are unsafe on Windows shell');
+      }
+
       if (!existsSync(folderPath)) {
         throw new Error('Folder path does not exist');
       }
@@ -186,6 +205,7 @@ export function cleanupAppHandlers(): void {
   ipcMain.removeHandler('app:open-logs-folder');
   ipcMain.removeHandler('app:clipboard-write');
   ipcMain.removeHandler('app:get-backend-port');
+  ipcMain.removeHandler('app:get-ws-auth-token');
   ipcMain.removeHandler('app:list-log-files');
   ipcMain.removeHandler('app:read-log-file');
   ipcMain.removeHandler('app:open-in-editor');

@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+### Behavior changes
+
+- **Terminal shell flag changed from `--login` to `-i`** — Spawned `bash` and `zsh` sessions now run interactively instead of as login shells, matching VS Code and iTerm. Interactive shells source `~/.bashrc` / `~/.zshrc`, the files where most users set PATH and aliases. If your PATH or aliases live exclusively in `~/.bash_profile` or `~/.zprofile` (the login-shell startup files), tools such as `node`, `git`, or `claude` may appear to vanish from terminal sessions on upgrade. To restore them, source your login config from `~/.bashrc` / `~/.zshrc` (e.g. add `[ -f ~/.bash_profile ] && source ~/.bash_profile` to `~/.bashrc`) or move the relevant exports across. PowerShell, `cmd`, and `sh` are unaffected.
+
 ## 1.7.0 (2026-05-08)
 
 ### Features

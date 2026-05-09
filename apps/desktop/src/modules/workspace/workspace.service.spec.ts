@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { WorkspaceService } from './workspace.service';
-import type { ProjectTabDTO, QuickAction } from '@omniscribe/shared';
+import type { ProjectTabDTO, QuickAction, SessionHistoryEntry } from '@omniscribe/shared';
 
 // Mock electron-store with an in-memory implementation
 jest.mock('electron-store', () => {
@@ -437,6 +437,169 @@ describe('WorkspaceService', () => {
       });
       expect(service.getProjectCustomCommand(projectA, created.id)?.label).toBe('Find me');
       expect(service.getProjectCustomCommand(projectA, 'missing')).toBeUndefined();
+    });
+  });
+
+  describe('session history', () => {
+    const projectA = '/Users/me/projectA';
+    const projectB = '/Users/me/projectB';
+
+    function makeEntry(overrides: Partial<SessionHistoryEntry> = {}): SessionHistoryEntry {
+      return {
+        omniscribeSessionId: 'omni-1',
+        claudeSessionId: 'claude-1',
+        projectPath: projectA,
+        name: 'Session 1',
+        lastStatus: 'idle',
+        createdAt: new Date().toISOString(),
+        lastActiveAt: new Date().toISOString(),
+        ...overrides,
+      };
+    }
+
+    it('returns an empty list when no entries exist', () => {
+      expect(service.getSessionHistory()).toEqual([]);
+    });
+
+    it('adds an entry and returns it via getSessionHistory', () => {
+      const entry = makeEntry();
+      service.addSessionHistory(entry);
+      const history = service.getSessionHistory();
+      expect(history).toHaveLength(1);
+      expect(history[0].claudeSessionId).toBe('claude-1');
+    });
+
+    it('puts newer entries first', () => {
+      service.addSessionHistory(makeEntry({ claudeSessionId: 'old', name: 'Old' }));
+      service.addSessionHistory(makeEntry({ claudeSessionId: 'new', name: 'New' }));
+      const history = service.getSessionHistory();
+      expect(history.map(h => h.claudeSessionId)).toEqual(['new', 'old']);
+    });
+
+    it('deduplicates by claudeSessionId, keeping the new entry on top', () => {
+      service.addSessionHistory(makeEntry({ claudeSessionId: 'dup', name: 'first' }));
+      service.addSessionHistory(makeEntry({ claudeSessionId: 'other' }));
+      service.addSessionHistory(makeEntry({ claudeSessionId: 'dup', name: 'second' }));
+
+      const history = service.getSessionHistory();
+      expect(history).toHaveLength(2);
+      expect(history[0]).toMatchObject({ claudeSessionId: 'dup', name: 'second' });
+      expect(history[1].claudeSessionId).toBe('other');
+    });
+
+    it('prunes to MAX_SESSION_HISTORY (200) entries', () => {
+      for (let i = 0; i < 205; i++) {
+        service.addSessionHistory(makeEntry({ claudeSessionId: `claude-${i}` }));
+      }
+      const history = service.getSessionHistory();
+      expect(history).toHaveLength(200);
+      // Newest first — index 0 must be the last-added entry.
+      expect(history[0].claudeSessionId).toBe('claude-204');
+    });
+
+    it('filters by project path on getSessionHistory', () => {
+      service.addSessionHistory(makeEntry({ claudeSessionId: 'a1', projectPath: projectA }));
+      service.addSessionHistory(makeEntry({ claudeSessionId: 'b1', projectPath: projectB }));
+      service.addSessionHistory(makeEntry({ claudeSessionId: 'a2', projectPath: projectA }));
+
+      const filtered = service.getSessionHistory(projectA);
+      expect(filtered.map(h => h.claudeSessionId).sort()).toEqual(['a1', 'a2']);
+    });
+
+    it('normalizes Windows-style backslash paths', () => {
+      service.addSessionHistory(
+        makeEntry({ claudeSessionId: 'win', projectPath: 'C:\\Users\\me\\proj' })
+      );
+      const filtered = service.getSessionHistory('C:/Users/me/proj');
+      expect(filtered).toHaveLength(1);
+      expect(filtered[0].claudeSessionId).toBe('win');
+    });
+
+    it('updates an existing entry via updateSessionHistory', () => {
+      service.addSessionHistory(makeEntry({ claudeSessionId: 'upd', lastStatus: 'idle' }));
+      service.updateSessionHistory('upd', { lastStatus: 'done', exitCode: 0 });
+
+      const [entry] = service.getSessionHistory();
+      expect(entry.lastStatus).toBe('done');
+      expect(entry.exitCode).toBe(0);
+    });
+
+    it('updateSessionHistory is a no-op when claudeSessionId is unknown', () => {
+      service.addSessionHistory(makeEntry({ claudeSessionId: 'real' }));
+      service.updateSessionHistory('missing', { lastStatus: 'done' });
+
+      const [entry] = service.getSessionHistory();
+      expect(entry.lastStatus).toBe('idle');
+    });
+  });
+
+  describe('project capabilities', () => {
+    const projectA = '/Users/me/projectA';
+    const projectB = '/Users/me/projectB';
+
+    it('returns undefined when no capabilities have been stored', () => {
+      expect(service.getProjectCapabilities(projectA)).toBeUndefined();
+    });
+
+    it('returns an empty array when an explicit empty list has been stored', () => {
+      service.setProjectCapabilities(projectA, []);
+      expect(service.getProjectCapabilities(projectA)).toEqual([]);
+    });
+
+    it('round-trips capability ids', () => {
+      service.setProjectCapabilities(projectA, ['cap-a', 'cap-b']);
+      expect(service.getProjectCapabilities(projectA)).toEqual(['cap-a', 'cap-b']);
+    });
+
+    it('keeps separate lists per project', () => {
+      service.setProjectCapabilities(projectA, ['a']);
+      service.setProjectCapabilities(projectB, ['b1', 'b2']);
+      expect(service.getProjectCapabilities(projectA)).toEqual(['a']);
+      expect(service.getProjectCapabilities(projectB)).toEqual(['b1', 'b2']);
+    });
+
+    it('returns a defensive copy so callers cannot mutate stored state', () => {
+      service.setProjectCapabilities(projectA, ['x']);
+      const ids = service.getProjectCapabilities(projectA)!;
+      ids.push('mutated');
+      expect(service.getProjectCapabilities(projectA)).toEqual(['x']);
+    });
+
+    it('keys by normalized path so backslashes round-trip with slashes', () => {
+      service.setProjectCapabilities('C:\\Users\\me\\proj', ['x']);
+      expect(service.getProjectCapabilities('C:/Users/me/proj')).toEqual(['x']);
+    });
+  });
+
+  describe('project electron CDP port', () => {
+    const projectA = '/Users/me/projectA';
+    const projectB = '/Users/me/projectB';
+
+    it('returns undefined when none has been stored', () => {
+      expect(service.getProjectElectronCdpPort(projectA)).toBeUndefined();
+    });
+
+    it('round-trips a port number', () => {
+      service.setProjectElectronCdpPort(projectA, 9333);
+      expect(service.getProjectElectronCdpPort(projectA)).toBe(9333);
+    });
+
+    it('keeps independent ports per project', () => {
+      service.setProjectElectronCdpPort(projectA, 9000);
+      service.setProjectElectronCdpPort(projectB, 9001);
+      expect(service.getProjectElectronCdpPort(projectA)).toBe(9000);
+      expect(service.getProjectElectronCdpPort(projectB)).toBe(9001);
+    });
+
+    it('overwrites an existing port for the same project', () => {
+      service.setProjectElectronCdpPort(projectA, 9000);
+      service.setProjectElectronCdpPort(projectA, 9100);
+      expect(service.getProjectElectronCdpPort(projectA)).toBe(9100);
+    });
+
+    it('keys by normalized path so backslashes round-trip with slashes', () => {
+      service.setProjectElectronCdpPort('C:\\Users\\me\\proj', 9222);
+      expect(service.getProjectElectronCdpPort('C:/Users/me/proj')).toBe(9222);
     });
   });
 });

@@ -56,7 +56,11 @@ export function useAppInitialization(): void {
         if (port <= 0 || port > 65535) {
           throw new Error(`Invalid backend port: ${port}`);
         }
-        initializeSocket(port);
+        const wsAuthToken = await window.electronAPI?.app?.getWsAuthToken?.();
+        if (typeof wsAuthToken !== 'string' || wsAuthToken.length === 0) {
+          throw new Error('Failed to get WS auth token — electronAPI not available');
+        }
+        initializeSocket(port, wsAuthToken);
         // Register all socket listeners BEFORE connecting so that onConnect
         // callbacks fire on the initial connection, not just on reconnect
         initAllListeners();

@@ -1,8 +1,8 @@
-import { exec, spawn } from 'child_process';
+import { execFile, spawn } from 'child_process';
 import { promisify } from 'util';
 import { createLogger } from '@omniscribe/shared';
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 const logger = createLogger('TerminalUtil');
 
 /**
@@ -84,11 +84,17 @@ export async function openTerminalWithCommand(command: string): Promise<void> {
       resolve();
     });
   } else if (platform === 'darwin') {
-    // macOS: Use osascript with properly escaped command
-    // AppleScript escaping: escape backslashes and quotes
+    // macOS: Use osascript via execFile so the shell is never involved.
+    // AppleScript still needs its own escaping for backslashes and double
+    // quotes — those are literal characters inside the AppleScript string,
+    // independent of any shell parsing concerns.
     const escapedForAppleScript = command.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-    const terminalCommand = `osascript -e 'tell app "Terminal" to do script "${escapedForAppleScript}"' -e 'tell app "Terminal" to activate'`;
-    await execAsync(terminalCommand);
+    await execFileAsync('osascript', [
+      '-e',
+      `tell app "Terminal" to do script "${escapedForAppleScript}"`,
+      '-e',
+      'tell app "Terminal" to activate',
+    ]);
   } else {
     // Linux: Use spawn with argument arrays for safer execution
     const escapedCommand = escapeShellArg(command);

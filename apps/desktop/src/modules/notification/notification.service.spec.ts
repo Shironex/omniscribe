@@ -88,20 +88,25 @@ describe('NotificationService', () => {
   // -------------------------------------------------------------------------
   // showTestNotification
   // -------------------------------------------------------------------------
+  // Note: the Windows AUMID does NOT flow through any per-notification field —
+  // Electron's official Notification API has no `appID`. The AUMID is pinned
+  // process-wide via app.setAppUserModelId in main/index.ts, so every
+  // Notification this process emits inherits it. The ordering invariant test
+  // below guards that pinning happens before protocol/notification setup.
   describe('showTestNotification', () => {
-    it('passes appID to native Notification so Windows toast resolves correct AUMID', () => {
-      service.showTestNotification();
-
-      expect(MockNotification).toHaveBeenCalledWith(
-        expect.objectContaining({ appID: 'com.omniscribe.desktop' })
-      );
-    });
-
     it('calls show() on the constructed Notification', () => {
       service.showTestNotification();
 
       const instance = MockNotification.mock.results[0].value as { show: jest.Mock };
       expect(instance.show).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not pass an appID field (no such option exists on Notification)', () => {
+      service.showTestNotification();
+
+      const opts = MockNotification.mock.calls[0]?.[0] as Record<string, unknown>;
+      expect(opts).toBeDefined();
+      expect(opts).not.toHaveProperty('appID');
     });
   });
 
@@ -109,15 +114,15 @@ describe('NotificationService', () => {
   // showNativeNotification (production path — exercised via showUpdateAvailable)
   // -------------------------------------------------------------------------
   describe('showNativeNotification (via showUpdateAvailable)', () => {
-    it('passes appID to native Notification for production notifications', () => {
+    it('does not pass an appID field on production notifications either', () => {
       jest.useFakeTimers();
       service.showUpdateAvailable('1.2.3');
       jest.runAllTimers();
       jest.useRealTimers();
 
-      expect(MockNotification).toHaveBeenCalledWith(
-        expect.objectContaining({ appID: 'com.omniscribe.desktop' })
-      );
+      const opts = MockNotification.mock.calls[0]?.[0] as Record<string, unknown>;
+      expect(opts).toBeDefined();
+      expect(opts).not.toHaveProperty('appID');
     });
   });
 

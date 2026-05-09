@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { existsSync } from 'fs';
-import { resolve } from 'path';
+import { isAbsolute, relative, resolve } from 'path';
 import { BranchInfo, createLogger } from '@omniscribe/shared';
 import type { GitRepoStatus, GitFileChange, GitFileStatus } from '@omniscribe/shared';
 import { GitBaseService } from './git-base.service';
@@ -243,10 +243,47 @@ export class GitStatusService {
       if (!mergePath) return false;
 
       const fullPath = resolve(projectPath, mergePath);
+
+      // Defense: ensure the resolved path lives inside this project or
+      // its shared git common dir (worktree case). A tampered git config
+      // could in principle point --git-path outside the worktree; we
+      // refuse to existsSync() arbitrary paths on the filesystem.
+      if (!(await this.isInsideProjectOrGitCommon(projectPath, fullPath))) {
+        this.logger.warn(`Refusing existsSync — path outside project/git-common-dir: ${fullPath}`);
+        return false;
+      }
       return existsSync(fullPath);
     } catch {
       return false;
     }
+  }
+
+  /**
+   * Validate that `candidate` is contained within `projectPath` or the
+   * git common dir resolved from `projectPath` (worktrees share their
+   * common dir with the main checkout, so MERGE_HEAD/rebase paths in
+   * worktrees legitimately live outside the worktree's own tree).
+   */
+  private async isInsideProjectOrGitCommon(
+    projectPath: string,
+    candidate: string
+  ): Promise<boolean> {
+    const isInside = (dir: string, target: string): boolean => {
+      const rel = relative(dir, target);
+      return rel === '' || (!rel.startsWith('..') && !isAbsolute(rel));
+    };
+    const target = resolve(candidate);
+    if (isInside(resolve(projectPath), target)) return true;
+
+    try {
+      const { stdout } = await this.gitBase.execGit(projectPath, ['rev-parse', '--git-common-dir']);
+      const common = stdout.trim();
+      if (!common) return false;
+      if (isInside(resolve(projectPath, common), target)) return true;
+    } catch {
+      // If git can't resolve the common dir, refuse the path.
+    }
+    return false;
   }
 
   /**

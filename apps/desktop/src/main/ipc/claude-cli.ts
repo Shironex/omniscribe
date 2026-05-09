@@ -56,14 +56,36 @@ export function registerClaudeCliHandlers(): void {
     }
   );
 
-  ipcMain.handle('claude:run-install', async (_event, command: string) => {
+  // Security: do not accept an arbitrary command string from the renderer.
+  // The renderer passes the SAME options it would pass to
+  // claude:get-install-command, and main rebuilds the command via the
+  // pure function getInstallCommand(). This caps what we run to the
+  // platform-specific install commands defined in version-check.ts.
+  ipcMain.handle('claude:run-install', async (_event, options: ClaudeInstallCommandOptions) => {
     try {
+      if (!isValidInstallOptions(options)) {
+        throw new Error('Invalid install options');
+      }
+      const { command } = getInstallCommand(options);
       await openTerminalWithCommand(command);
     } catch (error) {
       logger.error('Failed to run install command:', error);
       throw error;
     }
   });
+}
+
+/**
+ * Validate options for claude:run-install. Only the shape produced by
+ * the legitimate Settings UI is accepted; everything else is rejected.
+ */
+function isValidInstallOptions(value: unknown): value is ClaudeInstallCommandOptions {
+  if (!value || typeof value !== 'object') return false;
+  const v = value as Record<string, unknown>;
+  if (typeof v.isUpdate !== 'boolean') return false;
+  if (v.version !== undefined && typeof v.version !== 'string') return false;
+  if (typeof v.version === 'string' && !/^[\w.\-+]{1,64}$/.test(v.version)) return false;
+  return true;
 }
 
 /**

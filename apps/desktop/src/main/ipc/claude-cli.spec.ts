@@ -166,19 +166,63 @@ describe('IPC:ClaudeCli', () => {
   // claude:run-install
   // ================================================================
   describe('claude:run-install', () => {
-    it('should delegate to openTerminalWithCommand', async () => {
+    it('rebuilds the command in main from validated options and runs it', async () => {
+      const options = { isUpdate: false };
+      const built = { command: 'curl install.sh | bash', description: 'Install' };
+      mockGetInstallCommand.mockReturnValue(built);
       mockOpenTerminalWithCommand.mockResolvedValue(undefined);
 
-      await handlers['claude:run-install'](mockEvent, 'npm install -g claude');
+      await handlers['claude:run-install'](mockEvent, options);
 
-      expect(mockOpenTerminalWithCommand).toHaveBeenCalledWith('npm install -g claude');
+      expect(mockGetInstallCommand).toHaveBeenCalledWith(options);
+      expect(mockOpenTerminalWithCommand).toHaveBeenCalledWith(built.command);
     });
 
-    it('should propagate errors and log them', async () => {
+    it('rejects an arbitrary command string from the renderer', async () => {
+      // The old API took a string; the new API requires an options object.
+      // A renderer that tries to bypass main and pass its own command must
+      // get an error back, and main must NOT call openTerminalWithCommand.
+      await expect(
+        handlers['claude:run-install'](mockEvent, 'rm -rf /; echo done')
+      ).rejects.toThrow();
+      expect(mockOpenTerminalWithCommand).not.toHaveBeenCalled();
+    });
+
+    it('rejects malformed options', async () => {
+      await expect(
+        handlers['claude:run-install'](mockEvent, { isUpdate: 'yes please' })
+      ).rejects.toThrow('Invalid install options');
+      expect(mockOpenTerminalWithCommand).not.toHaveBeenCalled();
+    });
+
+    it('rejects suspicious version strings', async () => {
+      await expect(
+        handlers['claude:run-install'](mockEvent, {
+          isUpdate: true,
+          version: '1.0.0; rm -rf /',
+        })
+      ).rejects.toThrow('Invalid install options');
+      expect(mockOpenTerminalWithCommand).not.toHaveBeenCalled();
+    });
+
+    it('accepts valid update options with a version', async () => {
+      const options = { isUpdate: true, version: '2.0.0' };
+      const built = { command: 'pkill claude; claude install --force 2.0.0', description: '' };
+      mockGetInstallCommand.mockReturnValue(built);
+      mockOpenTerminalWithCommand.mockResolvedValue(undefined);
+
+      await handlers['claude:run-install'](mockEvent, options);
+
+      expect(mockGetInstallCommand).toHaveBeenCalledWith(options);
+      expect(mockOpenTerminalWithCommand).toHaveBeenCalledWith(built.command);
+    });
+
+    it('propagates errors from openTerminalWithCommand', async () => {
       const error = new Error('Terminal open failed');
+      mockGetInstallCommand.mockReturnValue({ command: 'cmd', description: '' });
       mockOpenTerminalWithCommand.mockRejectedValue(error);
 
-      await expect(handlers['claude:run-install'](mockEvent, 'bad command')).rejects.toThrow(
+      await expect(handlers['claude:run-install'](mockEvent, { isUpdate: false })).rejects.toThrow(
         'Terminal open failed'
       );
       expect(mockLogger.error).toHaveBeenCalledWith('Failed to run install command:', error);

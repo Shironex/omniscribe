@@ -87,7 +87,6 @@ describe('SessionGateway (integration)', () => {
 
     const mockWorkspaceService = {
       getPreferences: jest.fn().mockReturnValue({ theme: 'dark' }),
-      getActiveSessionsSnapshot: jest.fn().mockReturnValue([]),
     };
 
     const mockPluginRegistry = {

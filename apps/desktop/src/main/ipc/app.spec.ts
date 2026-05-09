@@ -55,6 +55,11 @@ jest.mock('../backend-port', () => ({
   getBackendPort: () => mockGetBackendPort(),
 }));
 
+const mockGetWsAuthToken = jest.fn(() => 'mock-token-32-chars-deadbeef-cafebabe');
+jest.mock('../ws-auth', () => ({
+  getWsAuthToken: () => mockGetWsAuthToken(),
+}));
+
 const handlers: Record<string, (...args: unknown[]) => unknown> = {};
 
 jest.mock('electron', () => ({
@@ -104,9 +109,9 @@ describe('IPC:App', () => {
       expect(ipcMain.handle).toHaveBeenCalledWith('app:open-logs-folder', expect.any(Function));
       expect(ipcMain.handle).toHaveBeenCalledWith('app:clipboard-write', expect.any(Function));
       expect(ipcMain.handle).toHaveBeenCalledWith('app:get-backend-port', expect.any(Function));
+      expect(ipcMain.handle).toHaveBeenCalledWith('app:get-ws-auth-token', expect.any(Function));
       expect(ipcMain.handle).toHaveBeenCalledWith('app:list-log-files', expect.any(Function));
       expect(ipcMain.handle).toHaveBeenCalledWith('app:read-log-file', expect.any(Function));
-      expect(ipcMain.handle).toHaveBeenCalledWith('app:detect-editors', expect.any(Function));
       expect(ipcMain.handle).toHaveBeenCalledWith('app:open-in-editor', expect.any(Function));
     });
   });
@@ -238,6 +243,25 @@ describe('IPC:App', () => {
     it('should return the backend port', () => {
       const result = handlers['app:get-backend-port'](mockEvent);
       expect(result).toBe(3001);
+    });
+  });
+
+  // ================================================================
+  // app:get-ws-auth-token
+  // ================================================================
+  describe('app:get-ws-auth-token', () => {
+    it('should return the per-window WS auth token', () => {
+      const result = handlers['app:get-ws-auth-token'](mockEvent);
+      expect(result).toBe('mock-token-32-chars-deadbeef-cafebabe');
+    });
+
+    it('should propagate the fail-fast error when token is not initialized', () => {
+      mockGetWsAuthToken.mockImplementationOnce(() => {
+        throw new Error('WS auth token not initialized');
+      });
+      expect(() => handlers['app:get-ws-auth-token'](mockEvent)).toThrow(
+        'WS auth token not initialized'
+      );
     });
   });
 
@@ -466,9 +490,9 @@ describe('IPC:App', () => {
       expect(ipcMain.removeHandler).toHaveBeenCalledWith('app:open-logs-folder');
       expect(ipcMain.removeHandler).toHaveBeenCalledWith('app:clipboard-write');
       expect(ipcMain.removeHandler).toHaveBeenCalledWith('app:get-backend-port');
+      expect(ipcMain.removeHandler).toHaveBeenCalledWith('app:get-ws-auth-token');
       expect(ipcMain.removeHandler).toHaveBeenCalledWith('app:list-log-files');
       expect(ipcMain.removeHandler).toHaveBeenCalledWith('app:read-log-file');
-      expect(ipcMain.removeHandler).toHaveBeenCalledWith('app:detect-editors');
       expect(ipcMain.removeHandler).toHaveBeenCalledWith('app:open-in-editor');
     });
   });

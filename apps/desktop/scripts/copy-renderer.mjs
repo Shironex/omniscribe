@@ -29,7 +29,11 @@ if (!fs.existsSync(webDistPath)) {
   process.exit(1);
 }
 
-// Create renderer directory
+// Wipe the existing renderer dir before copying. Without this every
+// rebuild leaves stale source maps, fingerprinted asset chunks, and
+// orphaned vendor bundles on disk — they accumulate to ~160 MB after a
+// few iterations and bloat the packaged app.
+fs.rmSync(rendererPath, { recursive: true, force: true });
 fs.mkdirSync(rendererPath, { recursive: true });
 
 // Copy files

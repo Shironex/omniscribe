@@ -587,13 +587,14 @@ describe('TerminalService', () => {
         expect(options.useConpty).toBe(false);
       });
 
-      it('should not pass --login args for cmd.exe', () => {
+      it('should not pass POSIX shell args for cmd.exe', () => {
         const pty = require('node-pty');
 
         winService.spawn('/project');
 
         const spawnCall = pty.spawn.mock.calls[pty.spawn.mock.calls.length - 1];
         const args = spawnCall[1];
+        expect(args).not.toContain('-i');
         expect(args).not.toContain('--login');
       });
 
@@ -679,14 +680,15 @@ describe('TerminalService', () => {
         expect(options.useConpty).toBeUndefined();
       });
 
-      it('should pass --login args for bash', () => {
+      it('should pass -i (interactive) args for bash', () => {
         const pty = require('node-pty');
 
         unixService.spawn('/project');
 
         const spawnCall = pty.spawn.mock.calls[pty.spawn.mock.calls.length - 1];
         const args = spawnCall[1];
-        expect(args).toContain('--login');
+        expect(args).toContain('-i');
+        expect(args).not.toContain('--login');
       });
 
       it('should send SIGTERM first when killing on Unix', async () => {

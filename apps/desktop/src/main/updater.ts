@@ -22,9 +22,13 @@ let eventEmitter: EventEmitter2 | null = null;
 let initialCheckTimer: ReturnType<typeof setTimeout> | null = null;
 let periodicCheckTimer: ReturnType<typeof setInterval> | null = null;
 
-// Disable auto download — user controls when to download
+// Disable auto download — user controls when to download.
+// Disable autoInstallOnAppQuit — never silently swap binaries on quit;
+// the install must always be a deliberate, surfaced action so the user
+// can verify the new version (especially important on platforms where
+// signing isn't end-to-end enforced).
 autoUpdater.autoDownload = false;
-autoUpdater.autoInstallOnAppQuit = true;
+autoUpdater.autoInstallOnAppQuit = false;
 
 function parseReleaseNotes(releaseNotes: ElectronUpdateInfo['releaseNotes']): string | null {
   if (!releaseNotes) return null;
