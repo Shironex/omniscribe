@@ -46,11 +46,19 @@ const ALLOWED_STORE_KEYS = new Set<string>([
 
 /**
  * Prefixes whose nested paths the renderer is allowed to read/write.
- * `workspace.*` is broad because the workspace store mirrors a typed
- * object schema with no secrets. `preferences.*` is explicitly NOT
- * here — every preference must be enumerated by name above.
+ *
+ * Scoped to the actual object/array-valued branches of the schema so
+ * scalar leaves (e.g. `workspace.activeTabId`, `window.maximized`)
+ * cannot be reshaped into objects via paths like
+ * `workspace.activeTabId.injected`. `preferences.*` is intentionally
+ * NOT here — every preference must be enumerated by exact name above.
  */
-const ALLOWED_NESTED_PREFIXES = ['workspace.', 'window.'] as const;
+const ALLOWED_NESTED_PREFIXES = [
+  'workspace.tabs.',
+  'workspace.preferences.',
+  'workspace.quickActions.',
+  'window.bounds.',
+] as const;
 
 /**
  * Check if a key is allowed.
@@ -101,33 +109,106 @@ const STORE_SIZE_CAPS_BYTES: Record<string, number> = {
 
 const STORE_DEFAULT_CAP_BYTES = 4_194_304; // 4 MB hard ceiling for nested writes
 
-function isWithinSizeCap(key: string, value: unknown): boolean {
-  // Quick path: tiny primitive values never trip the cap.
-  let serialized: string | undefined;
-  try {
-    serialized = JSON.stringify(value);
-  } catch {
-    // Non-serializable payloads (cycles, BigInt, etc.) are rejected.
-    return false;
-  }
-  if (serialized === undefined) return true; // value was undefined → store will delete
-  const byteLength = Buffer.byteLength(serialized, 'utf8');
+type SizeCheckResult = 'ok' | 'oversize' | 'unserializable';
 
-  // Find the most specific cap. Walk the key shorter and shorter
-  // checking for a registered cap; fall back to the default ceiling.
-  let cap = STORE_SIZE_CAPS_BYTES[key];
-  if (cap === undefined) {
-    let probe = key;
-    while (probe.includes('.')) {
-      probe = probe.slice(0, probe.lastIndexOf('.'));
-      if (STORE_SIZE_CAPS_BYTES[probe] !== undefined) {
-        cap = STORE_SIZE_CAPS_BYTES[probe];
-        break;
-      }
+/**
+ * Find the nearest registered size cap walking up the key tree.
+ * Returns `[capKey, capBytes]` where `capKey` is the segment-prefix
+ * that owns the cap (may equal `key`), or `undefined` if none.
+ */
+function findEnclosingCap(key: string): [string, number] | undefined {
+  if (STORE_SIZE_CAPS_BYTES[key] !== undefined) {
+    return [key, STORE_SIZE_CAPS_BYTES[key]];
+  }
+  let probe = key;
+  while (probe.includes('.')) {
+    probe = probe.slice(0, probe.lastIndexOf('.'));
+    if (STORE_SIZE_CAPS_BYTES[probe] !== undefined) {
+      return [probe, STORE_SIZE_CAPS_BYTES[probe]];
     }
   }
-  if (cap === undefined) cap = STORE_DEFAULT_CAP_BYTES;
-  return byteLength <= cap;
+  return undefined;
+}
+
+/**
+ * Apply a `set(key, value)` mutation against `root`, where `path` is
+ * the dot-segments of `key` *relative to* the cap-owning ancestor.
+ *
+ * Returns the resulting structure. Numeric segments materialize as
+ * array indices when the parent is already an array (or absent and
+ * the next segment is also numeric); otherwise objects are created.
+ *
+ * Pure: never mutates `root` in place.
+ */
+function applyMutation(root: unknown, path: string[], value: unknown): unknown {
+  if (path.length === 0) return value;
+
+  const [head, ...rest] = path;
+  const isNumeric = /^\d+$/.test(head);
+
+  if (Array.isArray(root)) {
+    const idx = Number(head);
+    const next = root.slice();
+    if (Number.isFinite(idx) && idx >= 0) {
+      next[idx] = applyMutation(root[idx], rest, value);
+    } else {
+      // Non-numeric segment under an array — fall through to object form.
+      return { ...root, [head]: applyMutation(undefined, rest, value) };
+    }
+    return next;
+  }
+
+  if (root !== null && typeof root === 'object') {
+    const obj = root as Record<string, unknown>;
+    return { ...obj, [head]: applyMutation(obj[head], rest, value) };
+  }
+
+  // Materialize a fresh container for missing/scalar slots.
+  if (isNumeric) {
+    const arr: unknown[] = [];
+    arr[Number(head)] = applyMutation(undefined, rest, value);
+    return arr;
+  }
+  return { [head]: applyMutation(undefined, rest, value) };
+}
+
+/**
+ * Check whether `set(key, value)` would push the nearest-capped
+ * ancestor over its byte budget. Measuring the ancestor (not just the
+ * leaf) prevents unbounded growth via many individually capped
+ * children — e.g. writing `workspace.tabs.<n>` repeatedly.
+ *
+ * Returns `'unserializable'` for cycles/BigInt, `'oversize'` when the
+ * cap would be breached, `'ok'` otherwise. Splitting the result lets
+ * the caller log a precise reason.
+ */
+function checkSizeCap(key: string, value: unknown): SizeCheckResult {
+  const enclosing = findEnclosingCap(key);
+  const [capKey, cap] = enclosing ?? ['', STORE_DEFAULT_CAP_BYTES];
+
+  // Compute the value to measure: when an ancestor owns the cap, fold
+  // the pending mutation into a clone of the current ancestor; when
+  // the leaf itself owns the cap (or no cap is registered), measure
+  // the new leaf value directly.
+  let measured: unknown;
+  if (enclosing && capKey !== key) {
+    const current = store.get(capKey);
+    const relative = key.slice(capKey.length + 1).split('.');
+    measured = applyMutation(current, relative, value);
+  } else {
+    measured = value;
+  }
+
+  let serialized: string | undefined;
+  try {
+    serialized = JSON.stringify(measured);
+  } catch {
+    // Cycles, BigInt, or other non-JSON payloads.
+    return 'unserializable';
+  }
+  if (serialized === undefined) return 'ok'; // undefined → store will delete
+
+  return Buffer.byteLength(serialized, 'utf8') <= cap ? 'ok' : 'oversize';
 }
 
 /**
@@ -147,7 +228,12 @@ export function registerStoreHandlers(): void {
       logger.warn(`Blocked store:set for unauthorized key: ${key}`);
       return;
     }
-    if (!isWithinSizeCap(key, value)) {
+    const sizeCheck = checkSizeCap(key, value);
+    if (sizeCheck === 'unserializable') {
+      logger.warn(`Blocked store:set for "${key}" — value is not JSON-serializable`);
+      return;
+    }
+    if (sizeCheck === 'oversize') {
       logger.warn(`Blocked store:set for "${key}" — value exceeds size cap`);
       return;
     }

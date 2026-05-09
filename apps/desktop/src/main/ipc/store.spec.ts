@@ -74,9 +74,10 @@ describe('IPC:Store', () => {
       );
     });
 
-    it('should allow nested workspace.* keys via prefix matching', () => {
+    it('should allow nested keys under whitelisted object/array branches', () => {
       handlers['store:set'](mockEvent, 'workspace.tabs', { '0': { name: 'test' } });
-      // workspace.tabs.0.name starts with 'workspace.' so should be allowed
+      // `workspace.tabs.0.name` falls under the `workspace.tabs.` prefix
+      // (an array-valued branch), so the access is allowed.
       const result = handlers['store:get'](mockEvent, 'workspace.tabs.0.name');
       // MockStore uses a flat Map and doesn't support dot-notation traversal
       // like the real electron-store, so the nested key returns undefined
@@ -173,11 +174,50 @@ describe('IPC:Store', () => {
       expect(handlers['store:get'](mockEvent, 'preferences.theme')).not.toBe(big);
     });
 
-    it('rejects values that cannot be JSON-serialized', () => {
+    it('rejects values that cannot be JSON-serialized with a distinct warning', () => {
       const cyclic: Record<string, unknown> = {};
       cyclic.self = cyclic;
       handlers['store:set'](mockEvent, 'preferences.theme', cyclic);
-      expect(mockLogger.warn).toHaveBeenCalled();
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        'Blocked store:set for "preferences.theme" — value is not JSON-serializable'
+      );
+    });
+
+    it('rejects writes that descend into a scalar leaf (workspace.activeTabId.*)', () => {
+      handlers['store:set'](mockEvent, 'workspace.activeTabId.injected', 'pwn');
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        'Blocked store:set for unauthorized key: workspace.activeTabId.injected'
+      );
+    });
+
+    it('rejects writes that descend into the maximized scalar (window.maximized.*)', () => {
+      handlers['store:set'](mockEvent, 'window.maximized.foo', true);
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        'Blocked store:set for unauthorized key: window.maximized.foo'
+      );
+    });
+
+    it('measures the cap-owning ancestor when writing a child path', () => {
+      // Seed a workspace.preferences object near (but under) its 256 KB cap.
+      const NEAR_CAP = 250_000;
+      const seed = { padding: 'x'.repeat(NEAR_CAP) };
+      handlers['store:set'](mockEvent, 'workspace.preferences', seed);
+      mockLogger.warn.mockClear();
+
+      // A child write whose own bytes are tiny but pushes the ancestor
+      // over the cap must now be rejected.
+      const childPayload = 'y'.repeat(20_000);
+      handlers['store:set'](mockEvent, 'workspace.preferences.extra', childPayload);
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        'Blocked store:set for "workspace.preferences.extra" — value exceeds size cap'
+      );
+    });
+
+    it('allows a child write that fits within the ancestor cap', () => {
+      handlers['store:set'](mockEvent, 'workspace.preferences', { existing: 'small' });
+      mockLogger.warn.mockClear();
+      handlers['store:set'](mockEvent, 'workspace.preferences.extra', 'tiny');
+      expect(mockLogger.warn).not.toHaveBeenCalled();
     });
   });
 
@@ -250,8 +290,10 @@ describe('IPC:Store', () => {
     ];
 
     it.each(blockedKeys)('should block store:get for "%s"', key => {
+      mockLogger.warn.mockClear();
       const result = handlers['store:get'](mockEvent, key);
       expect(result).toBeUndefined();
+      expect(mockLogger.warn).toHaveBeenCalled();
     });
 
     it.each(blockedKeys)('should block store:set for "%s"', key => {
