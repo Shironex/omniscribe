@@ -94,7 +94,7 @@ export const LOG_MAX_FILE_SIZE = 10 * 1024 * 1024;
 export const LOG_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
 /** Log flush interval in milliseconds */
-export const LOG_FLUSH_INTERVAL_MS = 100;
+export const LOG_FLUSH_INTERVAL_MS = 500;
 
 /** Maximum buffered log entries before forced flush */
 export const LOG_BUFFER_MAX_ENTRIES = 50;

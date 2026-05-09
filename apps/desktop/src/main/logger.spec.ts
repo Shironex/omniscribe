@@ -30,7 +30,7 @@ jest.mock('@omniscribe/shared', () => ({
   LOG_FILE_PREFIX: 'omniscribe',
   LOG_MAX_FILE_SIZE: 10 * 1024 * 1024,
   LOG_MAX_AGE_MS: 7 * 24 * 60 * 60 * 1000,
-  LOG_FLUSH_INTERVAL_MS: 100,
+  LOG_FLUSH_INTERVAL_MS: 500,
   LOG_BUFFER_MAX_ENTRIES: 50,
   LOG_CLEANUP_INTERVAL_MS: 60 * 60 * 1000,
   createLogger: () => ({
@@ -227,7 +227,7 @@ describe('logger', () => {
       mockStat.mockResolvedValue({ size: 0 });
 
       // Advance past the flush interval to trigger the timer and let async doFlush() complete
-      await jest.advanceTimersByTimeAsync(100); // LOG_FLUSH_INTERVAL_MS
+      await jest.advanceTimersByTimeAsync(500); // LOG_FLUSH_INTERVAL_MS
 
       expect(mockAppendFile).toHaveBeenCalledWith(
         expect.stringContaining('omniscribe-'),
