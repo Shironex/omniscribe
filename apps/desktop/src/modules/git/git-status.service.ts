@@ -195,25 +195,27 @@ export class GitStatusService {
    * rebase-apply directories exist on disk. Mirrors `checkMergeState`'s
    * `rev-parse --git-path` + `existsSync` pattern instead of the prior
    * 4-spawn approach (`git rev-parse` ×2 + `git ls-files --error-unmatch`
-   * ×2). Saves ~80 ms per `getStatus()`.
+   * ×2). Batches both `--git-path` flags into 1 spawn — saves ~80–100 ms
+   * per `getStatus()`.
    */
   async checkRebaseState(projectPath: string): Promise<boolean> {
     try {
-      // rev-parse --git-path resolves the actual filesystem path for each
-      // rebase directory (works correctly in worktrees where .git is a
-      // file pointing at the shared common dir).
-      const { stdout: mergeOut } = await this.gitBase.execGit(projectPath, [
+      // rev-parse accepts multiple --git-path flags and emits one resolved
+      // path per line. Works correctly in worktrees where .git is a file
+      // pointing at the shared common dir.
+      const { stdout } = await this.gitBase.execGit(projectPath, [
         'rev-parse',
         '--git-path',
         'rebase-merge',
-      ]);
-      const { stdout: applyOut } = await this.gitBase.execGit(projectPath, [
-        'rev-parse',
         '--git-path',
         'rebase-apply',
       ]);
 
-      const candidates = [mergeOut.trim(), applyOut.trim()].filter(p => p.length > 0);
+      const candidates = stdout
+        .trim()
+        .split('\n')
+        .map(p => p.trim())
+        .filter(p => p.length > 0);
 
       for (const rel of candidates) {
         const fullPath = resolve(projectPath, rel);
