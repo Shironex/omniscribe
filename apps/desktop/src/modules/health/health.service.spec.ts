@@ -459,4 +459,96 @@ describe('HealthService', () => {
       expect(() => service.checkHealth()).not.toThrow();
     });
   });
+
+  // ==================================================================
+  // determineHealth edge cases
+  // ==================================================================
+  describe('determineHealth edge cases', () => {
+    it('should return healthy for working session that has never produced output (lastOutputAt undefined)', () => {
+      // The output-stale check guards with `if (lastOutput > 0 && ...)`.
+      // A session that spawned but hasn't produced any output yet must not
+      // be immediately flagged as degraded.
+      const session = makeSession({ status: 'working', lastOutputAt: undefined });
+      sessionService.getAll.mockReturnValue([session]);
+      jest.spyOn(process, 'kill').mockImplementation(() => true);
+
+      service.checkHealth();
+
+      expect(eventEmitter.emit).toHaveBeenCalledWith(
+        InternalSessionEvents.HEALTH,
+        expect.objectContaining({ health: 'healthy' })
+      );
+    });
+
+    it('should not fail for error state session when lastActiveAt is undefined', () => {
+      // The error-duration check guards with `if (session.status === 'error' && session.lastActiveAt)`.
+      // An error session without lastActiveAt must not crash and must be considered healthy
+      // (the guard short-circuits before the duration math).
+      const session = makeSession({ status: 'error', lastActiveAt: undefined as any });
+      sessionService.getAll.mockReturnValue([session]);
+      jest.spyOn(process, 'kill').mockImplementation(() => true);
+
+      expect(() => service.checkHealth()).not.toThrow();
+
+      expect(eventEmitter.emit).toHaveBeenCalledWith(
+        InternalSessionEvents.HEALTH,
+        expect.objectContaining({ health: 'healthy' })
+      );
+    });
+
+    it('should return healthy for a recently-errored session (under 2-minute threshold)', () => {
+      const thirtySecondsAgo = new Date(Date.now() - 30_000);
+      const session = makeSession({ status: 'error', lastActiveAt: thirtySecondsAgo });
+      sessionService.getAll.mockReturnValue([session]);
+      jest.spyOn(process, 'kill').mockImplementation(() => true);
+
+      service.checkHealth();
+
+      expect(eventEmitter.emit).toHaveBeenCalledWith(
+        InternalSessionEvents.HEALTH,
+        expect.objectContaining({ health: 'healthy' })
+      );
+    });
+
+    it('should return healthy for planning/finished/connecting sessions (not in WORKING or IDLE sets)', () => {
+      // These statuses fall through both WORKING_STATUSES and IDLE_STATUSES checks
+      // and land at the final catch-all `return { level: 'healthy' }`.
+      for (const status of ['planning', 'finished', 'connecting'] as const) {
+        eventEmitter.emit.mockClear();
+        const session = makeSession({ status: status as any });
+        sessionService.getAll.mockReturnValue([session]);
+        jest.spyOn(process, 'kill').mockImplementation(() => true);
+
+        service.checkHealth();
+
+        expect(eventEmitter.emit).toHaveBeenCalledWith(
+          InternalSessionEvents.HEALTH,
+          expect.objectContaining({ health: 'healthy' })
+        );
+      }
+    });
+
+    it('should emit CLEANUP with the zombie reason string for each failed session', () => {
+      // Verify the reason field propagates correctly from cleanupZombie to the event.
+      const session = makeSession();
+      sessionService.getAll.mockReturnValue([session]);
+      // PID not alive → failed
+      const esrch = new Error('No such process') as NodeJS.ErrnoException;
+      esrch.code = 'ESRCH';
+      jest.spyOn(process, 'kill').mockImplementation(() => {
+        throw esrch;
+      });
+      // cleanupZombie: terminal still in map for kill step
+      terminalService.hasSession.mockReturnValueOnce(true).mockReturnValueOnce(true);
+
+      service.checkHealth();
+
+      expect(eventEmitter.emit).toHaveBeenCalledWith(
+        InternalZombieEvents.CLEANUP,
+        expect.objectContaining({
+          reason: 'Terminal process terminated unexpectedly',
+        })
+      );
+    });
+  });
 });
