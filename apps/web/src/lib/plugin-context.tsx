@@ -116,7 +116,7 @@ export function createFrontendPluginContext(
       // tears both down atomically.
       const Icon = reg.icon ?? Newspaper;
       const inferredCategory =
-        reg.categoryId ?? pluginId.replace(/^provider-/, '') ?? 'integrations';
+        reg.categoryId ?? (pluginId.replace(/^provider-/, '') || 'integrations');
       const sectionId = `changelog:${reg.id}`;
       const label = reg.label;
       const viewUrl = reg.source.viewUrl;
