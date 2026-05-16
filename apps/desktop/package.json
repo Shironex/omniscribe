@@ -49,7 +49,7 @@
   "devDependencies": {
     "@nestjs/testing": "^10.4.22",
     "@types/jest": "^30.0.0",
-    "@types/node": "^25.6.0",
+    "@types/node": "^25.8.0",
     "@types/semver": "^7.7.1",
     "cross-env": "^10.1.0",
     "electron": "^41.5.1",
