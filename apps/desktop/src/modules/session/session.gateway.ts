@@ -11,14 +11,11 @@ import { SkipThrottle } from '@nestjs/throttler';
 import { WsThrottlerGuard } from '../shared/ws-throttler.guard';
 import { Server, Socket } from 'socket.io';
 import { OnEvent } from '@nestjs/event-emitter';
-import * as crypto from 'crypto';
 import { validatePath } from '../shared/validation';
 import { SessionService } from './session.service';
 import { SessionLauncherService } from './session-launcher.service';
 import { BackendSessionConfig } from './types';
 import { TerminalGateway } from '../terminal';
-import { WorktreeService, GitService } from '../git';
-import { WorkspaceService } from '../workspace';
 import { PluginRegistryService } from '../plugin';
 import {
   AiMode,
@@ -35,14 +32,8 @@ import {
   ForkSessionPayload,
   ContinueLastSessionPayload,
   SessionHookEndedPayload,
-  WorktreeSettings,
-  DEFAULT_WORKTREE_SETTINGS,
-  SessionSettings,
-  DEFAULT_SESSION_SETTINGS,
-  MAX_CONCURRENT_SESSIONS,
   MAX_MODEL_LENGTH,
   MAX_SYSTEM_PROMPT_LENGTH,
-  MAX_SESSION_NAME_LENGTH,
   SessionEvents,
   ZombieEvents,
   createLogger,
@@ -86,10 +77,6 @@ export class SessionGateway implements OnGatewayInit {
     private readonly sessionLauncherService: SessionLauncherService,
     @Inject(forwardRef(() => TerminalGateway))
     private readonly terminalGateway: TerminalGateway,
-    private readonly worktreeService: WorktreeService,
-    private readonly gitService: GitService,
-    @Inject(forwardRef(() => WorkspaceService))
-    private readonly workspaceService: WorkspaceService,
     private readonly pluginRegistry: PluginRegistryService
   ) {}
 
@@ -372,7 +359,8 @@ export class SessionGateway implements OnGatewayInit {
 
   /**
    * Shared helper for all session launches (new, resume, fork, continue-last).
-   * Handles concurrency check, preferences, worktree setup, launch, and terminal room join.
+   * Delegates the full launch flow to SessionLauncherService and handles
+   * WebSocket-specific concerns (terminal-room join).
    */
   private async launchSessionWithWorktree(
     client: Socket,
@@ -381,134 +369,37 @@ export class SessionGateway implements OnGatewayInit {
     createOptions: Parameters<SessionService['create']>[2],
     errorPrefix: string
   ): Promise<CreateSessionResponse> {
-    // Validate name (covers all creation paths: new, resume, fork, continue-last)
-    if (payload.name && payload.name.length > MAX_SESSION_NAME_LENGTH) {
-      return { error: `name exceeds maximum length of ${MAX_SESSION_NAME_LENGTH} characters` };
-    }
-
-    // Validate mode via plugin registry (supports built-in and plugin-registered modes)
-    if (!this.pluginRegistry.isValidMode(mode)) {
-      return {
-        error: `Invalid AI mode: ${String(mode)}. No built-in or plugin provider registered for this mode.`,
-      };
-    }
-
-    // Validate projectPath
-    const pathError = validatePath(payload.projectPath);
-    if (pathError) {
-      return { error: pathError };
-    }
-
-    // Check concurrency limit
-    const runningSessions = this.sessionService.getRunningSessions();
-    if (runningSessions.length >= MAX_CONCURRENT_SESSIONS) {
-      const idleSessions = this.sessionService.getIdleSessions();
-      this.logger.warn(
-        `[${errorPrefix}] Session limit reached: ${runningSessions.length}/${MAX_CONCURRENT_SESSIONS} running`
-      );
-      return {
-        error: `Session limit reached (${runningSessions.length}/${MAX_CONCURRENT_SESSIONS}). Close a session to start a new one.`,
-        idleSessions: idleSessions.map(s => s.name),
-      };
-    }
-
-    const preferences = this.workspaceService.getPreferences();
-    const worktreeSettings: WorktreeSettings = preferences.worktree ?? DEFAULT_WORKTREE_SETTINGS;
-    const sessionSettings: SessionSettings = preferences.session ?? DEFAULT_SESSION_SETTINGS;
-    const skipPermissions = mode !== 'plain' && sessionSettings.skipPermissions ? true : undefined;
-
-    const session = this.sessionService.create(mode, payload.projectPath, {
-      ...createOptions,
-      skipPermissions,
+    const outcome = await this.sessionLauncherService.launch({
+      projectPath: payload.projectPath,
+      mode,
+      branch: payload.branch,
+      name: payload.name,
+      source: 'gateway',
+      createOptions,
     });
 
-    // Worktree setup (use currentBranch fallback when branch is absent)
-    let worktreePath: string | null = null;
-    let worktreeWarning: string | undefined;
-
-    if (worktreeSettings.mode !== 'never') {
-      // Fetch currentBranch once to avoid TOCTOU race (Bug #8)
-      // Wrapped in try-catch so a git failure doesn't block session creation
-      let currentBranch: string | undefined;
-      try {
-        currentBranch = await this.gitService.getCurrentBranch(payload.projectPath);
-      } catch (error) {
-        const errorMessage = extractErrorMessage(error);
-        this.logger.warn(`Failed to get current branch for worktree setup: ${errorMessage}`);
-        worktreeWarning = `Could not determine current branch: ${errorMessage}. Skipping worktree setup.`;
+    if (outcome.error) {
+      const response: CreateSessionResponse = { error: outcome.error };
+      if (outcome.idleSessions) {
+        response.idleSessions = outcome.idleSessions;
       }
-
-      if (currentBranch) {
-        const branchToUse = payload.branch ?? currentBranch;
-
-        try {
-          if (worktreeSettings.mode === 'always') {
-            const uniqueSuffix = crypto.randomUUID().slice(0, 8);
-            const isolatedBranch = `${branchToUse}-${uniqueSuffix}`;
-            worktreePath = await this.worktreeService.prepare(
-              payload.projectPath,
-              isolatedBranch,
-              worktreeSettings.location,
-              currentBranch
-            );
-          } else if (worktreeSettings.mode === 'branch' && branchToUse !== currentBranch) {
-            worktreePath = await this.worktreeService.prepare(
-              payload.projectPath,
-              branchToUse,
-              worktreeSettings.location,
-              currentBranch
-            );
-          }
-        } catch (error) {
-          const errorMessage = extractErrorMessage(error);
-          this.logger.warn(`Failed to create worktree for session ${session.id}: ${errorMessage}`);
-          worktreeWarning = `Worktree creation failed: ${errorMessage}. Running in main project directory.`;
-        }
-
-        // Assign branch (only when worktrees are enabled)
-        if (payload.branch) {
-          this.sessionService.assignBranch(session.id, payload.branch, worktreePath ?? undefined);
-        } else if (worktreePath) {
-          this.sessionService.assignBranch(session.id, currentBranch, worktreePath);
-        } else {
-          // No worktree needed (e.g., already on the target branch) — still label the session
-          this.sessionService.assignBranch(session.id, currentBranch);
-        }
-      } else if (payload.branch) {
-        // getCurrentBranch failed but user specified a branch — assign it without worktree
-        this.sessionService.assignBranch(session.id, payload.branch);
-      }
+      return response;
     }
 
-    // Launch
-    const workingDir = worktreePath ?? session.workingDirectory;
-    const launchResult = await this.sessionLauncherService.launchSession(
-      session.id,
-      payload.projectPath,
-      workingDir,
-      mode
-    );
-
-    if (!launchResult.success) {
-      return { error: launchResult.error ?? `Failed to launch ${errorPrefix} session` };
-    }
-
-    // Join terminal room
-    if (launchResult.terminalSessionId !== undefined) {
-      client.join(`terminal:${launchResult.terminalSessionId}`);
-      this.terminalGateway.registerClientSession(client.id, launchResult.terminalSessionId);
+    if (outcome.terminalSessionId !== undefined) {
+      client.join(`terminal:${outcome.terminalSessionId}`);
+      this.terminalGateway.registerClientSession(client.id, outcome.terminalSessionId);
       this.logger.log(
-        `Client ${client.id} joined terminal room terminal:${launchResult.terminalSessionId} (${errorPrefix})`
+        `Client ${client.id} joined terminal room terminal:${outcome.terminalSessionId} (${errorPrefix})`
       );
     }
 
     const result: CreateSessionResponse = {
-      session: this.sessionService.get(session.id) ?? session,
+      session: outcome.session,
     };
 
-    // Notify frontend about worktree creation failure (Bug #7)
-    if (worktreeWarning) {
-      result.warning = worktreeWarning;
+    if (outcome.worktreeWarning) {
+      result.warning = outcome.worktreeWarning;
     }
 
     return result;

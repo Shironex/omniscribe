@@ -25,9 +25,6 @@ import { SessionGateway } from './session.gateway';
 import { SessionService } from './session.service';
 import { SessionLauncherService } from './session-launcher.service';
 import { TerminalGateway } from '../terminal/terminal.gateway';
-import { WorktreeService } from '../git/worktree.service';
-import { GitService } from '../git/git.service';
-import { WorkspaceService } from '../workspace/workspace.service';
 import { PluginRegistryService } from '../plugin';
 
 const mockSession = {
@@ -66,27 +63,12 @@ describe('SessionGateway (integration)', () => {
     };
 
     mockSessionLauncherService = {
-      launchSession: jest.fn().mockResolvedValue({ success: true, terminalSessionId: 1 }),
+      launch: jest.fn().mockResolvedValue({ session: mockSession, terminalSessionId: 1 }),
     };
 
     const mockTerminalGateway = {
       registerClientSession: jest.fn(),
       getClientSocket: jest.fn(),
-    };
-
-    const mockWorktreeService = {
-      prepare: jest.fn().mockResolvedValue('/tmp/worktree'),
-      list: jest.fn().mockResolvedValue([]),
-      cleanup: jest.fn().mockResolvedValue(undefined),
-    };
-
-    const mockGitService = {
-      getCurrentBranch: jest.fn().mockResolvedValue('main'),
-      getBranches: jest.fn().mockResolvedValue([]),
-    };
-
-    const mockWorkspaceService = {
-      getPreferences: jest.fn().mockReturnValue({ theme: 'dark' }),
     };
 
     const mockPluginRegistry = {
@@ -111,9 +93,6 @@ describe('SessionGateway (integration)', () => {
         { provide: SessionService, useValue: mockSessionService },
         { provide: SessionLauncherService, useValue: mockSessionLauncherService },
         { provide: TerminalGateway, useValue: mockTerminalGateway },
-        { provide: WorktreeService, useValue: mockWorktreeService },
-        { provide: GitService, useValue: mockGitService },
-        { provide: WorkspaceService, useValue: mockWorkspaceService },
         { provide: PluginRegistryService, useValue: mockPluginRegistry },
       ],
     })
@@ -140,8 +119,8 @@ describe('SessionGateway (integration)', () => {
     mockSessionService.getForProject.mockReturnValue([mockSession]);
     mockSessionService.getRunningSessions.mockReturnValue([]);
     mockSessionService.remove.mockResolvedValue(true);
-    mockSessionLauncherService.launchSession.mockResolvedValue({
-      success: true,
+    mockSessionLauncherService.launch.mockResolvedValue({
+      session: mockSession,
       terminalSessionId: 1,
     });
   });
@@ -163,10 +142,13 @@ describe('SessionGateway (integration)', () => {
 
     expect(response.session).toBeDefined();
     expect(response.error).toBeUndefined();
-    expect(mockSessionService.create).toHaveBeenCalledWith(
-      'claude',
-      '/tmp/test-project',
-      expect.objectContaining({ name: 'Test Session' })
+    expect(mockSessionLauncherService.launch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        mode: 'claude',
+        projectPath: '/tmp/test-project',
+        name: 'Test Session',
+        source: 'gateway',
+      })
     );
   });
 

@@ -10,7 +10,8 @@ import { SessionLauncherService } from './session-launcher.service';
 import { SessionService } from './session.service';
 import { TerminalService } from '../terminal/terminal.service';
 import { McpWriterService, McpDiscoveryService } from '../mcp';
-import { GitBaseService } from '../git';
+import { GitBaseService, GitService, WorktreeService } from '../git';
+import { WorkspaceService } from '../workspace';
 import { PluginRegistryService } from '../plugin';
 import { CliCommandService } from './cli-command.service';
 import type { BackendSessionConfig } from './types';
@@ -65,14 +66,21 @@ describe('SessionLauncherService', () => {
   let mcpDiscoveryService: jest.Mocked<McpDiscoveryService>;
   let cliCommandService: jest.Mocked<CliCommandService>;
   let eventEmitter: jest.Mocked<EventEmitter2>;
+  let worktreeService: { prepare: jest.Mock };
+  let gitService: { getCurrentBranch: jest.Mock };
+  let workspaceService: { getPreferences: jest.Mock };
 
   beforeEach(async () => {
     sessionService = {
       get: jest.fn(),
+      create: jest.fn(),
       updateStatus: jest.fn(),
       registerTerminal: jest.fn(),
       clearTerminalRef: jest.fn(),
       setClaudeSessionId: jest.fn(),
+      assignBranch: jest.fn(),
+      getRunningSessions: jest.fn().mockReturnValue([]),
+      getIdleSessions: jest.fn().mockReturnValue([]),
     } as unknown as jest.Mocked<SessionService>;
 
     terminalService = {
@@ -129,6 +137,27 @@ describe('SessionLauncherService', () => {
         { provide: CliCommandService, useValue: cliCommandService },
         { provide: PluginRegistryService, useValue: mockPluginRegistry },
         { provide: EventEmitter2, useValue: eventEmitter },
+        {
+          provide: WorktreeService,
+          useValue: (worktreeService = {
+            prepare: jest.fn().mockResolvedValue('/worktree'),
+          }),
+        },
+        {
+          provide: GitService,
+          useValue: (gitService = { getCurrentBranch: jest.fn().mockResolvedValue('main') }),
+        },
+        {
+          provide: WorkspaceService,
+          useValue: (workspaceService = {
+            getPreferences: jest
+              .fn()
+              .mockReturnValue({
+                worktree: { mode: 'never' },
+                session: { skipPermissions: false },
+              }),
+          }),
+        },
       ],
     }).compile();
 
@@ -333,6 +362,174 @@ describe('SessionLauncherService', () => {
 
       // Should still succeed -- snapshot failure is non-fatal
       expect(result.success).toBe(true);
+    });
+  });
+
+  describe('launch (top-level flow)', () => {
+    beforeEach(() => {
+      const session = createMockSession();
+      (sessionService.create as jest.Mock).mockReturnValue(session);
+      sessionService.get.mockReturnValue(session);
+    });
+
+    it('should reject invalid mode before creating a session', async () => {
+      mockPluginRegistry.isValidMode.mockReturnValue(false);
+
+      const result = await service.launch({
+        projectPath: '/project',
+        mode: 'unknown',
+        source: 'deeplink',
+      });
+
+      expect(result.error).toContain('Invalid AI mode');
+      expect(sessionService.create).not.toHaveBeenCalled();
+      mockPluginRegistry.isValidMode.mockImplementation(
+        (mode: string) => mode === 'claude' || mode === 'plain'
+      );
+    });
+
+    it('should reject invalid project path', async () => {
+      const result = await service.launch({
+        projectPath: 'relative/path',
+        mode: 'claude',
+        source: 'deeplink',
+      });
+
+      expect(result.error).toContain('absolute path');
+      expect(sessionService.create).not.toHaveBeenCalled();
+    });
+
+    it('should reject name exceeding MAX_SESSION_NAME_LENGTH', async () => {
+      const result = await service.launch({
+        projectPath: '/project',
+        mode: 'claude',
+        name: 'x'.repeat(300),
+        source: 'deeplink',
+      });
+
+      expect(result.error).toContain('exceeds maximum length');
+    });
+
+    it('should reject when concurrency limit is reached', async () => {
+      const running = Array.from({ length: 12 }, (_, i) => ({ id: `s-${i}`, name: `S${i}` }));
+      sessionService.getRunningSessions.mockReturnValue(running as never);
+      sessionService.getIdleSessions.mockReturnValue([{ name: 'Idle 1' }] as never);
+
+      const result = await service.launch({
+        projectPath: '/project',
+        mode: 'claude',
+        source: 'gateway',
+      });
+
+      expect(result.error).toContain('Session limit reached');
+      expect(result.idleSessions).toEqual(['Idle 1']);
+    });
+
+    it('should skip worktree setup when mode=never', async () => {
+      workspaceService.getPreferences.mockReturnValue({ worktree: { mode: 'never' } });
+
+      const result = await service.launch({
+        projectPath: '/project',
+        mode: 'claude',
+        source: 'deeplink',
+      });
+
+      expect(worktreeService.prepare).not.toHaveBeenCalled();
+      expect(gitService.getCurrentBranch).not.toHaveBeenCalled();
+      expect(result.session).toBeDefined();
+    });
+
+    it('should create an isolated worktree when mode=always', async () => {
+      workspaceService.getPreferences.mockReturnValue({
+        worktree: { mode: 'always', location: 'project', autoCleanup: false },
+      });
+      gitService.getCurrentBranch.mockResolvedValue('main');
+      worktreeService.prepare.mockResolvedValue('/project/.worktrees/main-deadbeef');
+
+      const result = await service.launch({
+        projectPath: '/project',
+        mode: 'claude',
+        source: 'gateway',
+      });
+
+      expect(worktreeService.prepare).toHaveBeenCalledWith(
+        '/project',
+        expect.stringMatching(/^main-/),
+        'project',
+        'main'
+      );
+      expect(result.session).toBeDefined();
+    });
+
+    it('should create a worktree for non-current branch when mode=branch', async () => {
+      workspaceService.getPreferences.mockReturnValue({
+        worktree: { mode: 'branch', location: 'project', autoCleanup: false },
+      });
+      gitService.getCurrentBranch.mockResolvedValue('main');
+      worktreeService.prepare.mockResolvedValue('/project/.worktrees/feature-x');
+
+      await service.launch({
+        projectPath: '/project',
+        mode: 'claude',
+        branch: 'feature-x',
+        source: 'deeplink',
+      });
+
+      expect(worktreeService.prepare).toHaveBeenCalledWith(
+        '/project',
+        'feature-x',
+        'project',
+        'main'
+      );
+    });
+
+    it('should fall back to project dir and return a warning when worktree creation fails', async () => {
+      workspaceService.getPreferences.mockReturnValue({
+        worktree: { mode: 'always', location: 'project', autoCleanup: false },
+      });
+      gitService.getCurrentBranch.mockResolvedValue('main');
+      worktreeService.prepare.mockRejectedValue(new Error('disk full'));
+
+      const result = await service.launch({
+        projectPath: '/project',
+        mode: 'claude',
+        source: 'gateway',
+      });
+
+      expect(result.session).toBeDefined();
+      expect(result.worktreeWarning).toContain('disk full');
+    });
+
+    it('should still launch and warn when getCurrentBranch fails', async () => {
+      workspaceService.getPreferences.mockReturnValue({
+        worktree: { mode: 'branch', location: 'project', autoCleanup: false },
+      });
+      gitService.getCurrentBranch.mockRejectedValue(new Error('not a git repo'));
+
+      const result = await service.launch({
+        projectPath: '/project',
+        mode: 'claude',
+        source: 'deeplink',
+      });
+
+      expect(worktreeService.prepare).not.toHaveBeenCalled();
+      expect(result.session).toBeDefined();
+      expect(result.worktreeWarning).toContain('not a git repo');
+    });
+
+    it('should propagate launch errors from launchSession', async () => {
+      workspaceService.getPreferences.mockReturnValue({ worktree: { mode: 'never' } });
+      terminalService.spawnCommand.mockImplementation(() => {
+        throw new Error('PTY spawn failed');
+      });
+
+      const result = await service.launch({
+        projectPath: '/project',
+        mode: 'claude',
+        source: 'deeplink',
+      });
+
+      expect(result.error).toBe('PTY spawn failed');
     });
   });
 });

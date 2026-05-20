@@ -92,8 +92,47 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+  streamdeck:
+    runs-on: ubuntu-latest
+
+    env:
+      HUSKY: 0
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Extract version from tag
+        id: version
+        shell: bash
+        env:
+          TAG_NAME: ${{ github.event.release.tag_name }}
+        run: |
+          VERSION="${TAG_NAME}"
+          VERSION="${VERSION#v}"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Update package.json versions
+        shell: bash
+        run: ./scripts/bump-version.sh "${{ steps.version.outputs.version }}"
+
+      - name: Setup project
+        uses: ./.github/actions/setup-project
+
+      - name: Pack Stream Deck plugin
+        shell: bash
+        run: pnpm --filter @omniscribe/streamdeck-plugin package
+
+      - name: Upload Stream Deck plugin artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: streamdeck-plugin
+          path: apps/streamdeck-plugin/dist/*.streamDeckPlugin
+          if-no-files-found: error
+          retention-days: 30
+
   upload:
-    needs: build
+    needs: [build, streamdeck]
     runs-on: ubuntu-latest
     if: github.event.release.draft == false
 
@@ -110,6 +149,12 @@ jobs:
           name: windows-builds
           path: artifacts/windows-builds
 
+      - name: Download Stream Deck plugin artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: streamdeck-plugin
+          path: artifacts/streamdeck-plugin
+
       - name: Upload to GitHub Release
         uses: softprops/action-gh-release@v3
         with:
@@ -119,6 +164,7 @@ jobs:
             artifacts/macos-builds/*-mac.yml
             artifacts/windows-builds/*.exe
             artifacts/windows-builds/*.yml
+            artifacts/streamdeck-plugin/*.streamDeckPlugin
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

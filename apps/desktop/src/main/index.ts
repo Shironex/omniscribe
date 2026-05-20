@@ -6,6 +6,7 @@ import { NestFactory } from '@nestjs/core';
 import { type INestApplication } from '@nestjs/common';
 import { CustomIoAdapter } from '../modules/shared/custom-io-adapter';
 import { AppModule } from '../modules/app.module';
+import { DeepLinkService } from '../modules/deep-link';
 import { createMainWindow } from './window';
 import { cleanupIpcHandlers } from './ipc-handlers';
 import { logger, getLogPath, flushLogs } from './logger';
@@ -210,6 +211,26 @@ for (const signal of ['SIGINT', 'SIGTERM'] as const) {
 const UUID_RE = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
 
 /**
+ * Make sure a renderer window exists and is on screen. Deep links can arrive
+ * while the previous window is destroyed but the Nest backend is still alive
+ * (zombie process during slow pty cleanup, or after window-all-closed on
+ * platforms where we keep the backend running). In those cases we must
+ * recreate the window or the deep-link session would launch invisibly.
+ */
+async function ensureWindowVisible(): Promise<void> {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    if (!mainWindow.isVisible()) mainWindow.show();
+    mainWindow.focus();
+    return;
+  }
+  cleanupIpcHandlers();
+  mainWindow = await createMainWindow();
+  setupAutoUpdater(mainWindow);
+  mainWindow.focus();
+}
+
+/**
  * Parse an omniscribe:// protocol URL and forward navigation data to the renderer.
  * URL format: omniscribe://session/{sessionId}?tab={tabId}
  *
@@ -221,6 +242,21 @@ function handleProtocolUrl(url: string): void {
   try {
     const parsed = new URL(url);
     if (parsed.protocol !== 'omniscribe:') return;
+
+    if (parsed.hostname === 'run' || parsed.pathname.startsWith('//run')) {
+      // omniscribe://run?project=...&provider=...&branch=...&name=...
+      if (!nestApp) {
+        logger.warn('Deep link arrived before NestJS was ready; ignoring');
+        return;
+      }
+      void ensureWindowVisible().then(() => {
+        nestApp
+          ?.get(DeepLinkService)
+          .handleRun(url)
+          .catch(error => logger.warn('Deep link handler failed', error));
+      });
+      return;
+    }
 
     if (parsed.hostname === 'session' || parsed.pathname.startsWith('//session/')) {
       const sessionId = parsed.pathname.replace(/^\/\/session\//, '').replace(/^\//, '');

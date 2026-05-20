@@ -1,14 +1,51 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject, forwardRef } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { AiMode, LaunchSessionResult, createLogger, extractErrorMessage } from '@omniscribe/shared';
+import * as crypto from 'crypto';
+import {
+  AiMode,
+  LaunchSessionResult,
+  WorktreeSettings,
+  SessionSettings,
+  DEFAULT_WORKTREE_SETTINGS,
+  DEFAULT_SESSION_SETTINGS,
+  MAX_CONCURRENT_SESSIONS,
+  MAX_SESSION_NAME_LENGTH,
+  createLogger,
+  extractErrorMessage,
+} from '@omniscribe/shared';
 import { TerminalService } from '../terminal';
 import { McpWriterService, McpDiscoveryService } from '../mcp';
-import { GitBaseService } from '../git';
+import { GitBaseService, GitService, WorktreeService } from '../git';
+import { WorkspaceService } from '../workspace';
 import { PluginRegistryService } from '../plugin';
+import { validatePath } from '../shared/validation';
 import { CliCommandService } from './cli-command.service';
 import { SessionService } from './session.service';
+import { BackendSessionConfig } from './types';
 import { InternalSessionEvents } from '../shared/events';
 import { hasProviderMethod } from '../shared/provider-guards';
+
+/**
+ * Input for the top-level launch flow used by both the WebSocket gateway
+ * and the omniscribe:// deep-link handler.
+ */
+export interface LaunchInput {
+  projectPath: string;
+  mode: AiMode;
+  branch?: string;
+  name?: string;
+  source: 'gateway' | 'deeplink';
+  createOptions?: Parameters<SessionService['create']>[2];
+}
+
+export interface LaunchOutcome {
+  session?: BackendSessionConfig;
+  terminalSessionId?: number;
+  worktreeWarning?: string;
+  error?: string;
+  /** When the concurrency limit is hit, names of idle sessions the user could close. */
+  idleSessions?: string[];
+}
 
 @Injectable()
 export class SessionLauncherService {
@@ -22,8 +59,130 @@ export class SessionLauncherService {
     private readonly gitBase: GitBaseService,
     private readonly cliCommandService: CliCommandService,
     private readonly pluginRegistry: PluginRegistryService,
-    private readonly eventEmitter: EventEmitter2
+    private readonly eventEmitter: EventEmitter2,
+    private readonly worktreeService: WorktreeService,
+    private readonly gitService: GitService,
+    @Inject(forwardRef(() => WorkspaceService))
+    private readonly workspaceService: WorkspaceService
   ) {}
+
+  /**
+   * Top-level launch flow: validate, enforce concurrency, resolve worktree preference,
+   * create the session, and spawn the AI CLI. Shared by SessionGateway (WebSocket
+   * create/resume/fork/continue-last) and DeepLinkService (omniscribe://run).
+   *
+   * The caller is still responsible for transport-specific work (e.g. joining
+   * Socket.io rooms) — this method only owns the session lifecycle.
+   */
+  async launch(input: LaunchInput): Promise<LaunchOutcome> {
+    const { projectPath, mode, branch, name, createOptions } = input;
+
+    if (name && name.length > MAX_SESSION_NAME_LENGTH) {
+      return { error: `name exceeds maximum length of ${MAX_SESSION_NAME_LENGTH} characters` };
+    }
+
+    if (!this.pluginRegistry.isValidMode(mode)) {
+      return {
+        error: `Invalid AI mode: ${String(mode)}. No built-in or plugin provider registered for this mode.`,
+      };
+    }
+
+    const pathError = validatePath(projectPath);
+    if (pathError) {
+      return { error: pathError };
+    }
+
+    const runningSessions = this.sessionService.getRunningSessions();
+    if (runningSessions.length >= MAX_CONCURRENT_SESSIONS) {
+      const idleSessions = this.sessionService.getIdleSessions();
+      this.logger.warn(
+        `[${input.source}] Session limit reached: ${runningSessions.length}/${MAX_CONCURRENT_SESSIONS} running`
+      );
+      return {
+        error: `Session limit reached (${runningSessions.length}/${MAX_CONCURRENT_SESSIONS}). Close a session to start a new one.`,
+        idleSessions: idleSessions.map(s => s.name),
+      };
+    }
+
+    const preferences = this.workspaceService.getPreferences();
+    const worktreeSettings: WorktreeSettings = preferences.worktree ?? DEFAULT_WORKTREE_SETTINGS;
+    const sessionSettings: SessionSettings = preferences.session ?? DEFAULT_SESSION_SETTINGS;
+    const skipPermissions = mode !== 'plain' && sessionSettings.skipPermissions ? true : undefined;
+
+    const session = this.sessionService.create(mode, projectPath, {
+      ...createOptions,
+      name: createOptions?.name ?? name,
+      skipPermissions,
+    });
+
+    let worktreePath: string | null = null;
+    let worktreeWarning: string | undefined;
+
+    if (worktreeSettings.mode !== 'never') {
+      let currentBranch: string | undefined;
+      try {
+        currentBranch = await this.gitService.getCurrentBranch(projectPath);
+      } catch (error) {
+        const errorMessage = extractErrorMessage(error);
+        this.logger.warn(`Failed to get current branch for worktree setup: ${errorMessage}`);
+        worktreeWarning = `Could not determine current branch: ${errorMessage}. Skipping worktree setup.`;
+      }
+
+      if (currentBranch) {
+        const branchToUse = branch ?? currentBranch;
+
+        try {
+          if (worktreeSettings.mode === 'always') {
+            const uniqueSuffix = crypto.randomUUID().slice(0, 8);
+            const isolatedBranch = `${branchToUse}-${uniqueSuffix}`;
+            worktreePath = await this.worktreeService.prepare(
+              projectPath,
+              isolatedBranch,
+              worktreeSettings.location,
+              currentBranch
+            );
+          } else if (worktreeSettings.mode === 'branch' && branchToUse !== currentBranch) {
+            worktreePath = await this.worktreeService.prepare(
+              projectPath,
+              branchToUse,
+              worktreeSettings.location,
+              currentBranch
+            );
+          }
+        } catch (error) {
+          const errorMessage = extractErrorMessage(error);
+          this.logger.warn(`Failed to create worktree for session ${session.id}: ${errorMessage}`);
+          worktreeWarning = `Worktree creation failed: ${errorMessage}. Running in main project directory.`;
+        }
+
+        if (branch) {
+          this.sessionService.assignBranch(session.id, branch, worktreePath ?? undefined);
+        } else if (worktreePath) {
+          this.sessionService.assignBranch(session.id, currentBranch, worktreePath);
+        } else {
+          this.sessionService.assignBranch(session.id, currentBranch);
+        }
+      } else if (branch) {
+        this.sessionService.assignBranch(session.id, branch);
+      }
+    }
+
+    const workingDir = worktreePath ?? session.workingDirectory;
+    const launchResult = await this.launchSession(session.id, projectPath, workingDir, mode);
+
+    if (!launchResult.success) {
+      return {
+        error: launchResult.error ?? 'Failed to launch session',
+        worktreeWarning,
+      };
+    }
+
+    return {
+      session: this.sessionService.get(session.id) ?? session,
+      terminalSessionId: launchResult.terminalSessionId,
+      worktreeWarning,
+    };
+  }
 
   /**
    * Launch a session by spawning the appropriate AI CLI in a terminal.

@@ -15,6 +15,7 @@ PACKAGES=(
   "$ROOT_DIR/apps/desktop/package.json"
   "$ROOT_DIR/apps/web/package.json"
   "$ROOT_DIR/apps/mcp-server/package.json"
+  "$ROOT_DIR/apps/streamdeck-plugin/package.json"
   "$ROOT_DIR/packages/shared/package.json"
 )
 

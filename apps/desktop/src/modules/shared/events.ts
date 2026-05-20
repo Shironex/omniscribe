@@ -59,6 +59,15 @@ export const InternalUpdaterEvents = {
 } as const;
 
 // ============================================
+// Workspace Internal Events
+// ============================================
+export const InternalWorkspaceEvents = {
+  /** Emitted when tabs are mutated outside the WorkspaceGateway (e.g. deep links).
+   *  WorkspaceGateway listens and broadcasts WorkspaceEvents.TABS_UPDATED. */
+  TABS_UPDATED: 'workspace.tabs.updated',
+} as const;
+
+// ============================================
 // Plugin Internal Events
 // ============================================
 export const InternalPluginEvents = {

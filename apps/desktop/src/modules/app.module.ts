@@ -11,6 +11,7 @@ import { ChangelogModule } from './changelog';
 import { HealthModule } from './health';
 import { NotificationModule } from './notification';
 import { PluginModule } from './plugin';
+import { DeepLinkModule } from './deep-link';
 import { ClaudeProviderPlugin } from '@omniscribe/provider-claude';
 import { CodexProviderPlugin } from '@omniscribe/provider-codex';
 
@@ -75,6 +76,7 @@ import { CodexProviderPlugin } from '@omniscribe/provider-codex';
     ChangelogModule,
     HealthModule,
     NotificationModule,
+    DeepLinkModule,
   ],
   controllers: [],
   providers: [],

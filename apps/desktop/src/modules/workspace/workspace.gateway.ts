@@ -35,7 +35,7 @@ import {
   QuickActionEvents,
   createLogger,
 } from '@omniscribe/shared';
-import { InternalQuickActionEvents } from '../shared/events';
+import { InternalQuickActionEvents, InternalWorkspaceEvents } from '../shared/events';
 import { QuickActionService, QuickActionResult } from './quick-action.service';
 import { WorkspaceService, WorkspaceState } from './workspace.service';
 import { CORS_CONFIG } from '../shared/cors.config';
@@ -183,6 +183,16 @@ export class WorkspaceGateway implements OnGatewayInit {
   @OnEvent(InternalQuickActionEvents.AI_PROMPT)
   onAiPrompt(event: AiPromptEvent): void {
     this.server.emit(QuickActionEvents.AI_PROMPT, event);
+  }
+
+  /**
+   * Broadcast tab changes that originated outside the gateway (deep links).
+   * Gateway-driven mutations broadcast directly to peers; this handles
+   * everything else by fanning out to all connected renderers.
+   */
+  @OnEvent(InternalWorkspaceEvents.TABS_UPDATED)
+  onTabsUpdated(payload: { tabs: ProjectTabDTO[]; activeTabId: string | null }): void {
+    this.server.emit(WorkspaceEvents.TABS_UPDATED, payload);
   }
 
   // ============================================

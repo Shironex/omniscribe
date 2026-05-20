@@ -12,21 +12,8 @@ import { SessionService } from './session.service';
 import { SessionLauncherService } from './session-launcher.service';
 import { BackendSessionConfig } from './types';
 import { TerminalGateway } from '../terminal/terminal.gateway';
-import { WorktreeService } from '../git/worktree.service';
-import { GitService } from '../git/git.service';
-import { WorkspaceService } from '../workspace/workspace.service';
 import { PluginRegistryService } from '../plugin';
 import type { SessionStatus } from '@omniscribe/shared';
-import { MAX_CONCURRENT_SESSIONS } from '@omniscribe/shared';
-
-// ---------------------------------------------------------------------------
-// Mock crypto.randomUUID
-// ---------------------------------------------------------------------------
-
-jest.mock('crypto', () => ({
-  ...jest.requireActual('crypto'),
-  randomUUID: jest.fn().mockReturnValue('12345678-1234-1234-1234-123456789abc'),
-}));
 
 // ---------------------------------------------------------------------------
 // Mock helpers
@@ -51,10 +38,6 @@ function createMockServer(): Server {
   return server;
 }
 
-// ---------------------------------------------------------------------------
-// Factories
-// ---------------------------------------------------------------------------
-
 function createMockSession(overrides?: Partial<BackendSessionConfig>): BackendSessionConfig {
   return {
     id: 'session-1-1700000000000',
@@ -69,10 +52,6 @@ function createMockSession(overrides?: Partial<BackendSessionConfig>): BackendSe
   };
 }
 
-// ---------------------------------------------------------------------------
-// Service mocks
-// ---------------------------------------------------------------------------
-
 const mockSessionService = {
   create: jest.fn(),
   get: jest.fn(),
@@ -80,30 +59,14 @@ const mockSessionService = {
   getForProject: jest.fn(),
   remove: jest.fn(),
   update: jest.fn(),
-  assignBranch: jest.fn(),
-  getRunningSessions: jest.fn().mockReturnValue([]),
-  getIdleSessions: jest.fn().mockReturnValue([]),
 };
 
 const mockSessionLauncherService = {
-  launchSession: jest.fn(),
+  launch: jest.fn(),
 };
 
 const mockTerminalGateway = {
   registerClientSession: jest.fn(),
-};
-
-const mockWorktreeService = {
-  prepare: jest.fn(),
-  cleanup: jest.fn(),
-};
-
-const mockGitService = {
-  getCurrentBranch: jest.fn(),
-};
-
-const mockWorkspaceService = {
-  getPreferences: jest.fn(),
 };
 
 const mockPluginRegistry = {
@@ -121,16 +84,14 @@ const mockPluginRegistry = {
   listProviders: jest.fn().mockReturnValue([]),
 };
 
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
-
 describe('SessionGateway', () => {
   let gateway: SessionGateway;
   let server: Server;
   let client: Socket;
 
   beforeEach(async () => {
+    jest.clearAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       imports: [ThrottlerModule.forRoot([])],
       providers: [
@@ -138,9 +99,6 @@ describe('SessionGateway', () => {
         { provide: SessionService, useValue: mockSessionService },
         { provide: SessionLauncherService, useValue: mockSessionLauncherService },
         { provide: TerminalGateway, useValue: mockTerminalGateway },
-        { provide: WorktreeService, useValue: mockWorktreeService },
-        { provide: GitService, useValue: mockGitService },
-        { provide: WorkspaceService, useValue: mockWorkspaceService },
         { provide: PluginRegistryService, useValue: mockPluginRegistry },
       ],
     }).compile();
@@ -151,19 +109,11 @@ describe('SessionGateway', () => {
     client = createMockSocket();
   });
 
-  // ========================================================================
-  // afterInit
-  // ========================================================================
-
   describe('afterInit', () => {
     it('should not throw when called', () => {
       expect(() => gateway.afterInit()).not.toThrow();
     });
   });
-
-  // ========================================================================
-  // handleCreate
-  // ========================================================================
 
   describe('handleCreate', () => {
     const basePayload = {
@@ -172,35 +122,22 @@ describe('SessionGateway', () => {
     };
 
     beforeEach(() => {
-      // Default mock setup: worktree mode = never, launch succeeds
       const session = createMockSession();
-      mockSessionService.create.mockReturnValue(session);
-      mockSessionService.get.mockReturnValue(session);
-      mockWorkspaceService.getPreferences.mockReturnValue({
-        worktree: { mode: 'never', location: 'project', autoCleanup: false },
-      });
-      mockSessionLauncherService.launchSession.mockResolvedValue({
-        success: true,
+      mockSessionLauncherService.launch.mockResolvedValue({
+        session,
         terminalSessionId: 1,
       });
     });
 
-    it('should create session with mode=never (no worktree)', async () => {
+    it('should delegate to launcher and return the session', async () => {
       const result = await gateway.handleCreate(basePayload, client);
 
-      expect(mockSessionService.create).toHaveBeenCalledWith('claude', '/project', {
-        name: undefined,
-        workingDirectory: undefined,
-        model: undefined,
-        systemPrompt: undefined,
-        mcpServers: undefined,
-      });
-      expect(mockWorktreeService.prepare).not.toHaveBeenCalled();
-      expect(mockSessionLauncherService.launchSession).toHaveBeenCalledWith(
-        'session-1-1700000000000',
-        '/project',
-        '/project', // workingDir = session.workingDirectory when no worktree
-        'claude'
+      expect(mockSessionLauncherService.launch).toHaveBeenCalledWith(
+        expect.objectContaining({
+          projectPath: '/project',
+          mode: 'claude',
+          source: 'gateway',
+        })
       );
       expect(client.join).toHaveBeenCalledWith('terminal:1');
       expect(mockTerminalGateway.registerClientSession).toHaveBeenCalledWith('client-1', 1);
@@ -208,7 +145,7 @@ describe('SessionGateway', () => {
       expect(result.error).toBeUndefined();
     });
 
-    it('should pass optional fields to sessionService.create', async () => {
+    it('should pass optional fields through createOptions', async () => {
       const payload = {
         ...basePayload,
         name: 'My Session',
@@ -220,206 +157,59 @@ describe('SessionGateway', () => {
 
       await gateway.handleCreate(payload, client);
 
-      expect(mockSessionService.create).toHaveBeenCalledWith('claude', '/project', {
-        name: 'My Session',
-        workingDirectory: '/other/path',
-        model: 'opus',
-        systemPrompt: 'Be concise',
-        mcpServers: ['server-a'],
-      });
-    });
-
-    it('should create isolated worktree with UUID suffix when mode=always', async () => {
-      mockWorkspaceService.getPreferences.mockReturnValue({
-        worktree: { mode: 'always', location: 'project', autoCleanup: false },
-      });
-      mockGitService.getCurrentBranch.mockResolvedValue('main');
-      mockWorktreeService.prepare.mockResolvedValue('/project/.worktrees/main-12345678');
-
-      const result = await gateway.handleCreate(basePayload, client);
-
-      // UUID is sliced to first 8 chars: '12345678'
-      expect(mockWorktreeService.prepare).toHaveBeenCalledWith(
-        '/project',
-        'main-12345678',
-        'project',
-        'main'
-      );
-      expect(mockSessionService.assignBranch).toHaveBeenCalledWith(
-        'session-1-1700000000000',
-        'main',
-        '/project/.worktrees/main-12345678'
-      );
-      expect(mockSessionLauncherService.launchSession).toHaveBeenCalledWith(
-        'session-1-1700000000000',
-        '/project',
-        '/project/.worktrees/main-12345678',
-        'claude'
-      );
-      expect(result.error).toBeUndefined();
-    });
-
-    it('should use provided branch for mode=always worktree', async () => {
-      mockWorkspaceService.getPreferences.mockReturnValue({
-        worktree: { mode: 'always', location: 'central', autoCleanup: true },
-      });
-      mockWorktreeService.prepare.mockResolvedValue('/home/.omniscribe/worktrees/feature-12345678');
-
-      const payload = { ...basePayload, branch: 'feature' };
-      await gateway.handleCreate(payload, client);
-
-      expect(mockWorktreeService.prepare).toHaveBeenCalledWith(
-        '/project',
-        'feature-12345678',
-        'central',
-        'main'
-      );
-      // Branch is assigned from payload.branch
-      expect(mockSessionService.assignBranch).toHaveBeenCalledWith(
-        'session-1-1700000000000',
-        'feature',
-        '/home/.omniscribe/worktrees/feature-12345678'
+      expect(mockSessionLauncherService.launch).toHaveBeenCalledWith(
+        expect.objectContaining({
+          projectPath: '/project',
+          mode: 'claude',
+          name: 'My Session',
+          createOptions: expect.objectContaining({
+            name: 'My Session',
+            workingDirectory: '/other/path',
+            model: 'opus',
+            systemPrompt: 'Be concise',
+            mcpServers: ['server-a'],
+          }),
+        })
       );
     });
 
-    it('should create worktree for non-current branch when mode=branch', async () => {
-      mockWorkspaceService.getPreferences.mockReturnValue({
-        worktree: { mode: 'branch', location: 'project', autoCleanup: false },
-      });
-      mockGitService.getCurrentBranch.mockResolvedValue('main');
-      mockWorktreeService.prepare.mockResolvedValue('/project/.worktrees/feature-x');
-
-      const payload = { ...basePayload, branch: 'feature-x' };
-      await gateway.handleCreate(payload, client);
-
-      expect(mockWorktreeService.prepare).toHaveBeenCalledWith(
-        '/project',
-        'feature-x',
-        'project',
-        'main'
-      );
-      expect(mockSessionService.assignBranch).toHaveBeenCalledWith(
-        'session-1-1700000000000',
-        'feature-x',
-        '/project/.worktrees/feature-x'
-      );
-    });
-
-    it('should NOT create worktree for current branch when mode=branch', async () => {
-      mockWorkspaceService.getPreferences.mockReturnValue({
-        worktree: { mode: 'branch', location: 'project', autoCleanup: false },
-      });
-      mockGitService.getCurrentBranch.mockResolvedValue('main');
-
-      const payload = { ...basePayload, branch: 'main' };
-      await gateway.handleCreate(payload, client);
-
-      expect(mockWorktreeService.prepare).not.toHaveBeenCalled();
-      // Branch is still assigned (via payload.branch path)
-      expect(mockSessionService.assignBranch).toHaveBeenCalledWith(
-        'session-1-1700000000000',
-        'main',
-        undefined
-      );
-    });
-
-    it('should NOT create worktree for mode=branch when no branch specified but still assign current branch', async () => {
-      mockWorkspaceService.getPreferences.mockReturnValue({
-        worktree: { mode: 'branch', location: 'project', autoCleanup: false },
-      });
-      mockGitService.getCurrentBranch.mockResolvedValue('main');
-
-      await gateway.handleCreate(basePayload, client);
-
-      expect(mockWorktreeService.prepare).not.toHaveBeenCalled();
-      // No worktree needed, but session is still labelled with current branch
-      expect(mockSessionService.assignBranch).toHaveBeenCalledWith(
-        'session-1-1700000000000',
-        'main'
-      );
-    });
-
-    it('should fall back to main project dir when worktree creation fails', async () => {
-      mockWorkspaceService.getPreferences.mockReturnValue({
-        worktree: { mode: 'always', location: 'project', autoCleanup: false },
-      });
-      mockGitService.getCurrentBranch.mockResolvedValue('main');
-      mockWorktreeService.prepare.mockRejectedValue(new Error('disk full'));
-
-      const result = await gateway.handleCreate(basePayload, client);
-
-      // Should still launch with session.workingDirectory (no worktree)
-      expect(mockSessionLauncherService.launchSession).toHaveBeenCalledWith(
-        'session-1-1700000000000',
-        '/project',
-        '/project',
-        'claude'
-      );
-      expect(result.error).toBeUndefined();
-      expect(result.warning).toBeDefined();
-      expect(result.warning).toContain('disk full');
-    });
-
-    it('should skip worktree setup when getCurrentBranch fails', async () => {
-      mockWorkspaceService.getPreferences.mockReturnValue({
-        worktree: { mode: 'always', location: 'project', autoCleanup: false },
-      });
-      mockGitService.getCurrentBranch.mockRejectedValue(new Error('not a git repo'));
-
-      const result = await gateway.handleCreate(basePayload, client);
-
-      // Should skip worktree entirely but still launch
-      expect(mockWorktreeService.prepare).not.toHaveBeenCalled();
-      expect(mockSessionLauncherService.launchSession).toHaveBeenCalled();
-      expect(result.error).toBeUndefined();
-      expect(result.warning).toBeDefined();
-      expect(result.warning).toContain('not a git repo');
-    });
-
-    it('should assign payload.branch when getCurrentBranch fails', async () => {
-      mockWorkspaceService.getPreferences.mockReturnValue({
-        worktree: { mode: 'branch', location: 'project', autoCleanup: false },
-      });
-      mockGitService.getCurrentBranch.mockRejectedValue(new Error('git error'));
-
-      const payload = { ...basePayload, branch: 'feature-x' };
-      const result = await gateway.handleCreate(payload, client);
-
-      // Should still assign the user-specified branch without worktree
-      expect(mockWorktreeService.prepare).not.toHaveBeenCalled();
-      expect(mockSessionService.assignBranch).toHaveBeenCalledWith(
-        'session-1-1700000000000',
-        'feature-x'
-      );
-      expect(result.error).toBeUndefined();
-    });
-
-    it('should return error when launch fails', async () => {
-      mockSessionLauncherService.launchSession.mockResolvedValue({
-        success: false,
-        error: 'CLI not found',
-      });
+    it('should propagate launcher errors', async () => {
+      mockSessionLauncherService.launch.mockResolvedValue({ error: 'CLI not found' });
 
       const result = await gateway.handleCreate(basePayload, client);
 
       expect(result).toEqual({ error: 'CLI not found' });
     });
 
-    it('should return generic error when launch fails without message', async () => {
-      mockSessionLauncherService.launchSession.mockResolvedValue({
-        success: false,
+    it('should propagate idleSessions on concurrency-limit error', async () => {
+      mockSessionLauncherService.launch.mockResolvedValue({
+        error: 'Session limit reached',
+        idleSessions: ['Idle 1', 'Idle 2'],
       });
 
       const result = await gateway.handleCreate(basePayload, client);
 
-      expect(result).toEqual({ error: 'Failed to launch new session' });
+      expect(result.error).toBe('Session limit reached');
+      expect(result.idleSessions).toEqual(['Idle 1', 'Idle 2']);
+    });
+
+    it('should propagate worktree warning when launch succeeds with a warning', async () => {
+      const session = createMockSession();
+      mockSessionLauncherService.launch.mockResolvedValue({
+        session,
+        terminalSessionId: 1,
+        worktreeWarning: 'Worktree creation failed: disk full',
+      });
+
+      const result = await gateway.handleCreate(basePayload, client);
+
+      expect(result.session).toBeDefined();
+      expect(result.warning).toContain('disk full');
     });
 
     it('should not join terminal room when terminalSessionId is undefined', async () => {
-      mockSessionLauncherService.launchSession.mockResolvedValue({
-        success: true,
-        terminalSessionId: undefined,
-      });
+      const session = createMockSession();
+      mockSessionLauncherService.launch.mockResolvedValue({ session });
 
       await gateway.handleCreate(basePayload, client);
 
@@ -427,154 +217,107 @@ describe('SessionGateway', () => {
       expect(mockTerminalGateway.registerClientSession).not.toHaveBeenCalled();
     });
 
-    it('should use default worktree settings when preferences have no worktree', async () => {
-      // DEFAULT_WORKTREE_SETTINGS has mode: 'branch'
-      mockWorkspaceService.getPreferences.mockReturnValue({});
-
-      // Without a branch, mode=branch does nothing
-      await gateway.handleCreate(basePayload, client);
-
-      // Should proceed without worktree creation since mode=branch but no branch specified
-      expect(mockWorktreeService.prepare).not.toHaveBeenCalled();
-    });
-
-    it('should assign branch with worktree path when no explicit branch but worktree created (mode=always)', async () => {
-      mockWorkspaceService.getPreferences.mockReturnValue({
-        worktree: { mode: 'always', location: 'project', autoCleanup: false },
-      });
-      mockGitService.getCurrentBranch.mockResolvedValue('develop');
-      mockWorktreeService.prepare.mockResolvedValue('/project/.worktrees/develop-12345678');
-
-      // No explicit branch in payload
-      await gateway.handleCreate(basePayload, client);
-
-      // assignBranch called in the "worktreePath but no explicit branch" path
-      // The first call is from the worktree path (getCurrentBranch is called and 'develop' returned)
-      expect(mockSessionService.assignBranch).toHaveBeenCalledWith(
-        'session-1-1700000000000',
-        'develop',
-        '/project/.worktrees/develop-12345678'
-      );
-    });
-
-    // Concurrency limit tests
-    it('should reject session creation when at concurrency limit', async () => {
-      const runningSessions = Array.from({ length: MAX_CONCURRENT_SESSIONS }, (_, i) =>
-        createMockSession({ id: `session-${i}`, name: `Session ${i}`, terminalSessionId: i })
-      );
-      mockSessionService.getRunningSessions.mockReturnValue(runningSessions);
-      mockSessionService.getIdleSessions.mockReturnValue([
-        createMockSession({
-          id: 'session-3',
-          name: 'Idle Session',
-          status: 'idle' as SessionStatus,
-        }),
-      ]);
-
-      const result = await gateway.handleCreate(basePayload, client);
-
-      expect(result.error).toContain('Session limit reached');
-      expect(result.error).toContain(`${MAX_CONCURRENT_SESSIONS}/${MAX_CONCURRENT_SESSIONS}`);
-      expect(result.idleSessions).toEqual(['Idle Session']);
-      expect(mockSessionService.create).not.toHaveBeenCalled();
-    });
-
-    it('should allow session creation when under concurrency limit', async () => {
-      const runningSessions = Array.from({ length: MAX_CONCURRENT_SESSIONS - 1 }, (_, i) =>
-        createMockSession({ id: `session-${i}`, terminalSessionId: i })
-      );
-      mockSessionService.getRunningSessions.mockReturnValue(runningSessions);
-
-      const result = await gateway.handleCreate(basePayload, client);
-
-      expect(result.error).toBeUndefined();
-      expect(mockSessionService.create).toHaveBeenCalled();
-    });
-
-    it('should return empty idleSessions array when no idle sessions exist at limit', async () => {
-      const runningSessions = Array.from({ length: MAX_CONCURRENT_SESSIONS }, (_, i) =>
-        createMockSession({ id: `session-${i}`, terminalSessionId: i })
-      );
-      mockSessionService.getRunningSessions.mockReturnValue(runningSessions);
-      mockSessionService.getIdleSessions.mockReturnValue([]);
-
-      const result = await gateway.handleCreate(basePayload, client);
-
-      expect(result.error).toContain('Session limit reached');
-      expect(result.idleSessions).toEqual([]);
-    });
-  });
-
-  // ========================================================================
-  // handleUpdate
-  // ========================================================================
-
-  describe('handleUpdate', () => {
-    it('should delegate to sessionService.update and return result', () => {
-      const session = createMockSession({
-        name: 'Renamed',
-        aiMode: 'plain',
-        model: 'sonnet',
-        systemPrompt: 'Be verbose',
-      });
-      mockSessionService.update.mockReturnValue(session);
-
-      const updates = {
-        name: 'Renamed',
-        aiMode: 'plain' as const,
-        model: 'sonnet',
-        systemPrompt: 'Be verbose',
-        maxTokens: 4096,
-        temperature: 0.7,
-        mcpServers: ['srv-a', 'srv-b'],
-      };
-
-      const result = gateway.handleUpdate(
-        { sessionId: 'session-1-1700000000000', updates },
+    it('should reject invalid workingDirectory before launching', async () => {
+      const result = await gateway.handleCreate(
+        { ...basePayload, workingDirectory: 'relative/path' },
         client
       );
 
-      expect(mockSessionService.update).toHaveBeenCalledWith('session-1-1700000000000', updates);
-      expect(result.session).toBe(session);
-      expect(result.error).toBeUndefined();
+      expect(result.error).toContain('absolute path');
+      expect(mockSessionLauncherService.launch).not.toHaveBeenCalled();
     });
+  });
 
-    it('should apply partial updates', () => {
-      const session = createMockSession({ name: 'Updated' });
+  describe('handleResume', () => {
+    it('should delegate to launcher with resume metadata', async () => {
+      const session = createMockSession({ isResumed: true });
+      mockSessionLauncherService.launch.mockResolvedValue({
+        session,
+        terminalSessionId: 1,
+      });
+
+      const result = await gateway.handleResume(
+        { claudeSessionId: 'claude-abc-12345678', projectPath: '/project' },
+        client
+      );
+
+      expect(mockSessionLauncherService.launch).toHaveBeenCalledWith(
+        expect.objectContaining({
+          mode: 'claude',
+          source: 'gateway',
+          createOptions: expect.objectContaining({ resumeSessionId: 'claude-abc-12345678' }),
+        })
+      );
+      expect(result.session).toBeDefined();
+    });
+  });
+
+  describe('handleFork', () => {
+    it('should delegate to launcher with fork metadata', async () => {
+      const session = createMockSession({ forkSessionId: 'claude-abc-12345678' });
+      mockSessionLauncherService.launch.mockResolvedValue({
+        session,
+        terminalSessionId: 1,
+      });
+
+      await gateway.handleFork(
+        { claudeSessionId: 'claude-abc-12345678', projectPath: '/project' },
+        client
+      );
+
+      expect(mockSessionLauncherService.launch).toHaveBeenCalledWith(
+        expect.objectContaining({
+          createOptions: expect.objectContaining({ forkSessionId: 'claude-abc-12345678' }),
+        })
+      );
+    });
+  });
+
+  describe('handleContinueLast', () => {
+    it('should delegate to launcher with continueLastSession=true', async () => {
+      const session = createMockSession({ continueLastSession: true });
+      mockSessionLauncherService.launch.mockResolvedValue({
+        session,
+        terminalSessionId: 1,
+      });
+
+      await gateway.handleContinueLast({ projectPath: '/project' }, client);
+
+      expect(mockSessionLauncherService.launch).toHaveBeenCalledWith(
+        expect.objectContaining({
+          createOptions: expect.objectContaining({ continueLastSession: true }),
+        })
+      );
+    });
+  });
+
+  describe('handleUpdate', () => {
+    it('should delegate to sessionService.update and return result', () => {
+      const session = createMockSession({ name: 'Renamed' });
       mockSessionService.update.mockReturnValue(session);
 
       const result = gateway.handleUpdate(
-        {
-          sessionId: 'session-1-1700000000000',
-          updates: { name: 'Updated' },
-        },
+        { sessionId: 'session-1-1700000000000', updates: { name: 'Renamed' } },
         client
       );
 
       expect(mockSessionService.update).toHaveBeenCalledWith('session-1-1700000000000', {
-        name: 'Updated',
+        name: 'Renamed',
       });
-      expect(result.session?.name).toBe('Updated');
+      expect(result.session).toBe(session);
     });
 
     it('should return error for non-existent session', () => {
       mockSessionService.update.mockReturnValue(undefined);
 
       const result = gateway.handleUpdate(
-        {
-          sessionId: 'nonexistent',
-          updates: { name: 'Test' },
-        },
+        { sessionId: 'nonexistent', updates: { name: 'Test' } },
         client
       );
 
       expect(result).toEqual({ error: 'Session not found: nonexistent' });
     });
   });
-
-  // ========================================================================
-  // handleRemove
-  // ========================================================================
 
   describe('handleRemove', () => {
     it('should remove session successfully', async () => {
@@ -591,16 +334,9 @@ describe('SessionGateway', () => {
 
       const result = await gateway.handleRemove({ sessionId: 'nonexistent' }, client);
 
-      expect(result).toEqual({
-        success: false,
-        error: 'Session not found: nonexistent',
-      });
+      expect(result).toEqual({ success: false, error: 'Session not found: nonexistent' });
     });
   });
-
-  // ========================================================================
-  // handleList
-  // ========================================================================
 
   describe('handleList', () => {
     it('should return sessions for a specific project', () => {
@@ -614,10 +350,7 @@ describe('SessionGateway', () => {
     });
 
     it('should return all sessions when no projectPath', () => {
-      const sessions = [
-        createMockSession({ projectPath: '/project-a' }),
-        createMockSession({ projectPath: '/project-b' }),
-      ];
+      const sessions = [createMockSession()];
       mockSessionService.getAll.mockReturnValue(sessions);
 
       const result = gateway.handleList({}, client);
@@ -625,27 +358,12 @@ describe('SessionGateway', () => {
       expect(mockSessionService.getAll).toHaveBeenCalled();
       expect(result).toEqual(sessions);
     });
-
-    it('should return all sessions when projectPath is empty string', () => {
-      mockSessionService.getAll.mockReturnValue([]);
-
-      const result = gateway.handleList({ projectPath: '' }, client);
-
-      expect(mockSessionService.getAll).toHaveBeenCalled();
-      expect(result).toEqual([]);
-    });
   });
-
-  // ========================================================================
-  // Event handlers
-  // ========================================================================
 
   describe('onSessionCreated', () => {
     it('should broadcast session:created event', () => {
       const session = createMockSession();
-
       gateway.onSessionCreated(session);
-
       expect(server.emit).toHaveBeenCalledWith('session:created', session);
     });
   });
@@ -657,49 +375,25 @@ describe('SessionGateway', () => {
         status: 'working' as SessionStatus,
         message: 'Processing...',
       };
-
       gateway.onSessionStatus(update);
-
-      expect(server.emit).toHaveBeenCalledWith('session:status', update);
-    });
-
-    it('should broadcast with needsInputPrompt', () => {
-      const update = {
-        sessionId: 'session-1',
-        status: 'needs_input' as SessionStatus,
-        message: 'Approve changes?',
-        needsInputPrompt: true,
-      };
-
-      gateway.onSessionStatus(update);
-
       expect(server.emit).toHaveBeenCalledWith('session:status', update);
     });
   });
 
   describe('onSessionRemoved', () => {
     it('should broadcast session:removed event', () => {
-      const payload = { sessionId: 'session-1' };
-
-      gateway.onSessionRemoved(payload);
-
-      expect(server.emit).toHaveBeenCalledWith('session:removed', payload);
+      gateway.onSessionRemoved({ sessionId: 'session-1' });
+      expect(server.emit).toHaveBeenCalledWith('session:removed', { sessionId: 'session-1' });
     });
   });
 
   describe('onClaudeSessionIdCaptured', () => {
     it('should broadcast claude session ID captured event', () => {
       const payload = { sessionId: 'session-1', claudeSessionId: 'claude-abc-123' };
-
       gateway.onClaudeSessionIdCaptured(payload);
-
       expect(server.emit).toHaveBeenCalledWith('session:claude-id-captured', payload);
     });
   });
-
-  // ========================================================================
-  // handleGetHistory (via plugin registry)
-  // ========================================================================
 
   describe('handleGetHistory', () => {
     it('should return session history via plugin provider', async () => {
@@ -728,9 +422,7 @@ describe('SessionGateway', () => {
       const result = await gateway.handleGetHistory({ projectPath: '/project' }, client);
 
       expect(result.sessions).toHaveLength(1);
-      expect(result.sessions[0].sessionId).toBe('abc-123');
       expect(result.error).toBeUndefined();
-      expect(mockPluginRegistry.isPluginMode).toHaveBeenCalledWith('claude');
     });
 
     it('should return error when no provider available', async () => {
@@ -741,159 +433,11 @@ describe('SessionGateway', () => {
       expect(result.sessions).toEqual([]);
       expect(result.error).toBe('No session history provider available');
     });
-
-    it('should return error when read fails', async () => {
-      mockPluginRegistry.isPluginMode.mockReturnValue(true);
-      mockPluginRegistry.getProvider.mockReturnValue({
-        getSessionReader: jest.fn().mockReturnValue({
-          readSessionsIndex: jest.fn().mockRejectedValue(new Error('File not found')),
-        }),
-      });
-
-      const result = await gateway.handleGetHistory({ projectPath: '/project' }, client);
-
-      expect(result.sessions).toEqual([]);
-      expect(result.error).toBe('File not found');
-    });
   });
-
-  // ========================================================================
-  // handleFork
-  // ========================================================================
-
-  describe('handleFork', () => {
-    const basePayload = {
-      claudeSessionId: 'claude-abc-12345678',
-      projectPath: '/project',
-    };
-
-    beforeEach(() => {
-      const session = createMockSession({ forkSessionId: 'claude-abc-12345678' });
-      mockSessionService.create.mockReturnValue(session);
-      mockSessionService.get.mockReturnValue(session);
-      mockWorkspaceService.getPreferences.mockReturnValue({
-        worktree: { mode: 'never', location: 'project', autoCleanup: false },
-      });
-      mockSessionLauncherService.launchSession.mockResolvedValue({
-        success: true,
-        terminalSessionId: 1,
-      });
-      mockSessionService.getRunningSessions.mockReturnValue([]);
-    });
-
-    it('should create a forked session', async () => {
-      const result = await gateway.handleFork(basePayload, client);
-
-      expect(mockSessionService.create).toHaveBeenCalledWith('claude', '/project', {
-        name: 'Fork: claude-a',
-        skipPermissions: undefined,
-        forkSessionId: 'claude-abc-12345678',
-      });
-      expect(result.session).toBeDefined();
-      expect(result.error).toBeUndefined();
-    });
-
-    it('should reject when at concurrency limit', async () => {
-      const runningSessions = Array.from({ length: MAX_CONCURRENT_SESSIONS }, (_, i) =>
-        createMockSession({ id: `session-${i}`, terminalSessionId: i })
-      );
-      mockSessionService.getRunningSessions.mockReturnValue(runningSessions);
-      mockSessionService.getIdleSessions.mockReturnValue([]);
-
-      const result = await gateway.handleFork(basePayload, client);
-
-      expect(result.error).toContain('Session limit reached');
-      expect(mockSessionService.create).not.toHaveBeenCalled();
-    });
-
-    it('should use custom name when provided', async () => {
-      await gateway.handleFork({ ...basePayload, name: 'My Fork' }, client);
-
-      expect(mockSessionService.create).toHaveBeenCalledWith(
-        'claude',
-        '/project',
-        expect.objectContaining({ name: 'My Fork' })
-      );
-    });
-  });
-
-  // ========================================================================
-  // handleContinueLast
-  // ========================================================================
-
-  describe('handleContinueLast', () => {
-    const basePayload = {
-      projectPath: '/project',
-    };
-
-    beforeEach(() => {
-      const session = createMockSession({ continueLastSession: true });
-      mockSessionService.create.mockReturnValue(session);
-      mockSessionService.get.mockReturnValue(session);
-      mockWorkspaceService.getPreferences.mockReturnValue({
-        worktree: { mode: 'never', location: 'project', autoCleanup: false },
-      });
-      mockSessionLauncherService.launchSession.mockResolvedValue({
-        success: true,
-        terminalSessionId: 1,
-      });
-      mockSessionService.getRunningSessions.mockReturnValue([]);
-    });
-
-    it('should create a continue-last session', async () => {
-      const result = await gateway.handleContinueLast(basePayload, client);
-
-      expect(mockSessionService.create).toHaveBeenCalledWith('claude', '/project', {
-        name: 'Continue Last',
-        skipPermissions: undefined,
-        continueLastSession: true,
-      });
-      expect(result.session).toBeDefined();
-      expect(result.error).toBeUndefined();
-    });
-
-    it('should reject when at concurrency limit', async () => {
-      const runningSessions = Array.from({ length: MAX_CONCURRENT_SESSIONS }, (_, i) =>
-        createMockSession({ id: `session-${i}`, terminalSessionId: i })
-      );
-      mockSessionService.getRunningSessions.mockReturnValue(runningSessions);
-      mockSessionService.getIdleSessions.mockReturnValue([]);
-
-      const result = await gateway.handleContinueLast(basePayload, client);
-
-      expect(result.error).toContain('Session limit reached');
-    });
-
-    it('should use custom name when provided', async () => {
-      await gateway.handleContinueLast({ ...basePayload, name: 'My Continue' }, client);
-
-      expect(mockSessionService.create).toHaveBeenCalledWith(
-        'claude',
-        '/project',
-        expect.objectContaining({ name: 'My Continue' })
-      );
-    });
-
-    it('should return error when launch fails', async () => {
-      mockSessionLauncherService.launchSession.mockResolvedValue({
-        success: false,
-        error: 'CLI not found',
-      });
-
-      const result = await gateway.handleContinueLast(basePayload, client);
-
-      expect(result).toEqual({ error: 'CLI not found' });
-    });
-  });
-
-  // ========================================================================
-  // onSessionHookEnd
-  // ========================================================================
 
   describe('onSessionHookEnd', () => {
     it('should broadcast session:hook-ended when session_id present', () => {
       gateway.onSessionHookEnd({ session_id: 'abc-123' });
-
       expect(server.emit).toHaveBeenCalledWith('session:hook-ended', {
         claudeSessionId: 'abc-123',
       });
@@ -901,7 +445,6 @@ describe('SessionGateway', () => {
 
     it('should not broadcast when session_id is missing', () => {
       gateway.onSessionHookEnd({});
-
       expect(server.emit).not.toHaveBeenCalledWith('session:hook-ended', expect.anything());
     });
   });

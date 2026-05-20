@@ -51,7 +51,7 @@
     "format:check": "prettier --check .",
     "test": "pnpm build:packages && pnpm -r run test",
     "test:cov": "pnpm build:packages && pnpm -r run test:cov",
-    "typecheck": "pnpm build:packages && pnpm --filter @omniscribe/web typecheck && pnpm --filter @omniscribe/mcp-server typecheck && pnpm --filter @omniscribe/desktop typecheck",
+    "typecheck": "pnpm build:packages && pnpm --filter @omniscribe/web typecheck && pnpm --filter @omniscribe/mcp-server typecheck && pnpm --filter @omniscribe/desktop typecheck && pnpm --filter @omniscribe/streamdeck-plugin typecheck",
     "docs:dev": "pnpm --filter @omniscribe/docs dev",
     "docs:build": "pnpm build:packages && pnpm --filter @omniscribe/docs build",
     "docs:serve": "pnpm --filter @omniscribe/docs start",

@@ -1,0 +1,24 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Omniscribe Launch</title>
+    <script src="https://sdpi-components.dev/releases/v4/sdpi-components.js"></script>
+  </head>
+  <body>
+    <sdpi-item label="Project path">
+      <sdpi-textfield
+        setting="projectPath"
+        placeholder="C:\path\to\your\project"
+      ></sdpi-textfield>
+    </sdpi-item>
+
+    <sdpi-item label="Provider">
+      <sdpi-select setting="provider" default="claude">
+        <option value="claude">Claude Code</option>
+        <option value="codex">Codex</option>
+        <option value="plain">Plain Terminal</option>
+      </sdpi-select>
+    </sdpi-item>
+  </body>
+</html>

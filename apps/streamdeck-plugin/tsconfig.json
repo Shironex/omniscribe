@@ -1,0 +1,18 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "com.taketach.omniscribe.sdPlugin/bin",
+    "rootDir": "src",
+    "module": "Node16",
+    "moduleResolution": "Node16",
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "types": ["node"],
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false
+  },
+  "include": ["src/**/*.ts"]
+}
