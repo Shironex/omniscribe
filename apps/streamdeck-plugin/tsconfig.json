@@ -1,7 +1,7 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "outDir": "com.taketach.omniscribe.sdPlugin/bin",
+    "outDir": "com.shironex.omniscribe.sdPlugin/bin",
     "rootDir": "src",
     "module": "Node16",
     "moduleResolution": "Node16",

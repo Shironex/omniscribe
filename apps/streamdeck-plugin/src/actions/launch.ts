@@ -9,7 +9,7 @@ type LaunchSettings = {
   [key: string]: string | undefined;
 };
 
-@action({ UUID: 'com.taketach.omniscribe.launch' })
+@action({ UUID: 'com.shironex.omniscribe.launch' })
 export class LaunchOmniscribe extends SingletonAction<LaunchSettings> {
   override async onKeyDown(ev: KeyDownEvent<LaunchSettings>): Promise<void> {
     const settings = ev.payload.settings ?? {};

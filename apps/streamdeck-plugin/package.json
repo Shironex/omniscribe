@@ -1,15 +1,16 @@
 {
   "name": "@omniscribe/streamdeck-plugin",
-  "version": "1.7.0",
+  "version": "1.0.0",
   "description": "Stream Deck plugin that launches Omniscribe AI sessions via omniscribe:// deep links",
+  "author": "Shironex",
   "private": true,
   "type": "module",
   "scripts": {
     "build": "node esbuild.config.mjs",
     "typecheck": "tsc -p tsconfig.build.json --noEmit",
-    "validate": "streamdeck validate com.taketach.omniscribe.sdPlugin",
-    "package": "pnpm run build && streamdeck pack com.taketach.omniscribe.sdPlugin --force --output dist",
-    "clean": "node -e \"require('fs').rmSync('com.taketach.omniscribe.sdPlugin/bin',{recursive:true,force:true});require('fs').rmSync('dist',{recursive:true,force:true})\""
+    "validate": "streamdeck validate com.shironex.omniscribe.sdPlugin",
+    "package": "pnpm run build && streamdeck pack com.shironex.omniscribe.sdPlugin --force --output dist",
+    "clean": "node -e \"require('fs').rmSync('com.shironex.omniscribe.sdPlugin/bin',{recursive:true,force:true});require('fs').rmSync('dist',{recursive:true,force:true})\""
   },
   "dependencies": {
     "@elgato/streamdeck": "^2.0.0"

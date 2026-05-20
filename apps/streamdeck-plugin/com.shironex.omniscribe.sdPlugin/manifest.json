@@ -1,13 +1,13 @@
 {
   "Name": "Omniscribe",
-  "Version": "1.7.0.0",
-  "Author": "Omniscribe",
+  "Version": "1.0.0.0",
+  "Author": "Shironex",
   "Description": "Launch Omniscribe AI sessions from a Stream Deck key.",
   "Category": "Omniscribe",
   "CategoryIcon": "imgs/category-icon",
   "Icon": "imgs/plugin-icon",
   "URL": "https://github.com/Shironex/omniscribe",
-  "UUID": "com.taketach.omniscribe",
+  "UUID": "com.shironex.omniscribe",
   "CodePath": "bin/plugin.cjs",
   "PropertyInspectorPath": "ui/launch.html",
   "SDKVersion": 2,
@@ -31,7 +31,7 @@
   "Actions": [
     {
       "Name": "Launch Session",
-      "UUID": "com.taketach.omniscribe.launch",
+      "UUID": "com.shironex.omniscribe.launch",
       "Icon": "imgs/actions/launch/icon",
       "Tooltip": "Launch a configured Omniscribe AI session.",
       "PropertyInspectorPath": "ui/launch.html",
