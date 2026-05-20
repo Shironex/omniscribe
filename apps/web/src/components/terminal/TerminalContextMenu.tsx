@@ -2,7 +2,6 @@ import { useCallback, useState } from 'react';
 import type { Terminal } from '@xterm/xterm';
 import { Copy, ClipboardPaste, MousePointerClick, Eraser } from 'lucide-react';
 import { toast } from 'sonner';
-import { writeToTerminal, writeToTerminalChunked } from '@/lib/terminal';
 import { copyTerminalSelection } from '@/lib/terminal-clipboard';
 import { LARGE_PASTE_WARNING_THRESHOLD } from '@/lib/terminal-constants';
 import {
@@ -22,7 +21,7 @@ interface TerminalContextMenuProps {
 export function TerminalContextMenu({
   children,
   xtermRef,
-  sessionIdRef,
+  sessionIdRef: _sessionIdRef,
 }: TerminalContextMenuProps) {
   const handleCopy = useCallback(() => {
     const terminal = xtermRef.current;
@@ -36,15 +35,13 @@ export function TerminalContextMenu({
       .then(text => {
         if (text.length > LARGE_PASTE_WARNING_THRESHOLD) {
           toast.warning('Large paste detected — sending in chunks');
-          writeToTerminalChunked(sessionIdRef.current, text);
-        } else {
-          writeToTerminal(sessionIdRef.current, text);
         }
+        xtermRef.current?.paste(text);
       })
       .catch(() => {
         toast.error('Failed to read clipboard');
       });
-  }, [sessionIdRef]);
+  }, [xtermRef]);
 
   const handleSelectAll = useCallback(() => {
     xtermRef.current?.selectAll();

@@ -3,7 +3,8 @@ import { createLogger } from '@omniscribe/shared';
 import type { Terminal } from '@xterm/xterm';
 import type { FitAddon } from '@xterm/addon-fit';
 import type { SearchAddon } from '@xterm/addon-search';
-import { writeToTerminal, resizeTerminal } from '@/lib/terminal';
+import { writeToTerminal, writeToTerminalChunked, resizeTerminal } from '@/lib/terminal';
+import { PASTE_CHUNK_SIZE } from '@/lib/terminal-constants';
 import { getTerminalTheme } from '@/lib/terminal-themes';
 import { safeFit } from './useTerminalResize';
 import { createTerminalInstance } from '@/lib/createTerminalInstance';
@@ -122,10 +123,16 @@ export function useTerminalInitialization(
 
       requestAnimationFrame(() => performInitialFit(20));
 
-      // Handle user input
+      // Handle user input. Large pastes (via terminal.paste()) arrive here as a
+      // single onData call; chunk them so no single socket emit exceeds the
+      // backend's MAX_INPUT_SIZE cap while preserving bracketed-paste marker order.
       terminal.onData(data => {
         if (!isDisposedRef.current) {
-          writeToTerminal(sessionId, data);
+          if (data.length > PASTE_CHUNK_SIZE) {
+            writeToTerminalChunked(sessionId, data);
+          } else {
+            writeToTerminal(sessionId, data);
+          }
         }
       });
     };

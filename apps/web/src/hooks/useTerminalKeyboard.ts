@@ -2,23 +2,20 @@ import { useCallback } from 'react';
 import { createLogger } from '@omniscribe/shared';
 import type { Terminal } from '@xterm/xterm';
 import { toast } from 'sonner';
-import { writeToTerminal, writeToTerminalChunked } from '@/lib/terminal';
 import { copyTerminalSelection } from '@/lib/terminal-clipboard';
 import { LARGE_PASTE_WARNING_THRESHOLD } from '@/lib/terminal-constants';
 import { IS_MAC } from '@/lib/platform';
 
 const logger = createLogger('TerminalKeyboard');
 
-function pasteFromClipboard(sessionIdRef: React.MutableRefObject<number>): void {
+function pasteFromClipboard(terminal: Terminal): void {
   navigator.clipboard
     .readText()
     .then(text => {
       if (text.length > LARGE_PASTE_WARNING_THRESHOLD) {
         toast.warning('Large paste detected — sending in chunks');
-        writeToTerminalChunked(sessionIdRef.current, text);
-      } else {
-        writeToTerminal(sessionIdRef.current, text);
       }
+      terminal.paste(text);
     })
     .catch(() => {
       logger.debug('Clipboard read failed (permission denied or unavailable)');
@@ -30,7 +27,7 @@ function pasteFromClipboard(sessionIdRef: React.MutableRefObject<number>): void 
  * Handles Cmd/Ctrl+C/V/A/F/L, paste chunking, and modifier passthrough.
  */
 export function useTerminalKeyboard(
-  sessionIdRef: React.MutableRefObject<number>,
+  _sessionIdRef: React.MutableRefObject<number>,
   setShowSearch: React.Dispatch<React.SetStateAction<boolean>>
 ): (terminal: Terminal) => void {
   const attachKeyboardHandler = useCallback(
@@ -62,7 +59,7 @@ export function useTerminalKeyboard(
           e.type === 'keydown'
         ) {
           e.preventDefault();
-          pasteFromClipboard(sessionIdRef);
+          pasteFromClipboard(terminal);
           return false;
         }
 
@@ -94,7 +91,7 @@ export function useTerminalKeyboard(
         return true;
       });
     },
-    [sessionIdRef, setShowSearch]
+    [setShowSearch]
   );
 
   return attachKeyboardHandler;
