@@ -104,8 +104,8 @@ export function initializeAutoUpdater(
     let isDowngrade = false;
     try {
       isDowngrade = semver.lt(info.version, app.getVersion());
-    } catch {
-      logger.warn(`Could not compare versions: ${info.version} vs ${app.getVersion()}`);
+    } catch (error) {
+      logger.warn(`Could not compare versions: ${info.version} vs ${app.getVersion()}`, error);
     }
     mainWindow.webContents.send('updater:update-available', {
       version: info.version,
