@@ -560,6 +560,14 @@ export class WorkspaceService implements OnModuleInit {
    * Prunes oldest entries when exceeding MAX_SESSION_HISTORY.
    */
   addSessionHistory(entry: SessionHistoryEntry): void {
+    // Guard: dedup keys on claudeSessionId, so an entry without one would collapse
+    // every other id-less entry via `undefined === undefined`. Callers must capture
+    // the id before recording history.
+    if (!entry.claudeSessionId) {
+      this.logger.warn('Ignoring session history entry with no claudeSessionId');
+      return;
+    }
+
     const history = this.store.get('sessionHistory', []);
 
     // Avoid duplicates (same claudeSessionId)
