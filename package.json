@@ -39,8 +39,10 @@
   },
   "scripts": {
     "dev": "pnpm build:packages && concurrently -k -n web,desktop -c cyan,yellow \"pnpm dev:web\" \"wait-on http://localhost:15174 && pnpm --filter @omniscribe/mcp-server build:dev && pnpm --filter @omniscribe/desktop dev\"",
+    "dev:inspect": "pnpm build:packages && concurrently -k -n web,desktop -c cyan,yellow \"pnpm dev:web\" \"wait-on http://localhost:15174 && pnpm --filter @omniscribe/mcp-server build:dev && pnpm --filter @omniscribe/desktop dev:inspect\"",
     "dev:debug": "LOG_LEVEL=debug pnpm dev",
     "dev:web": "pnpm --filter @omniscribe/web dev",
+    "screenshots": "node scripts/screenshot-app.mjs",
     "build": "pnpm build:packages && pnpm --filter @omniscribe/web build && pnpm --filter @omniscribe/mcp-server build && pnpm --filter @omniscribe/desktop build",
     "build:packages": "pnpm --filter @omniscribe/shared build && pnpm --filter @omniscribe/plugin-api build && concurrently \"pnpm --filter @omniscribe/provider-claude build\" \"pnpm --filter @omniscribe/provider-codex build\"",
     "package": "pnpm build && pnpm --filter @omniscribe/desktop package",
