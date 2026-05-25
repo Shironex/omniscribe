@@ -34,7 +34,6 @@ jest.mock('@omniscribe/shared', () => {
 import { CodexCliCommandService } from '../services/cli-command.service';
 import { execFileSync } from 'child_process';
 import * as fs from 'fs';
-import * as path from 'path';
 import type { LaunchContext } from '@omniscribe/plugin-api';
 
 const mockedExecFileSync = execFileSync as jest.MockedFunction<typeof execFileSync>;
@@ -306,7 +305,8 @@ describe('CodexCliCommandService', () => {
         throw new Error('not found');
       });
 
-      const expectedPath = path.join(appData, 'npm', 'codex.cmd');
+      // The canonical getCodexCliPaths() normalizes separators to forward slashes.
+      const expectedPath = 'C:/Users/test/AppData/Roaming/npm/codex.cmd';
       mockedExistsSync.mockImplementation((p: unknown) => {
         return p === expectedPath;
       });
