@@ -164,17 +164,23 @@ export class SessionLauncherService {
         .execGit(worktreePath, ['rev-parse', 'HEAD'])
         .then(({ stdout }) => {
           const hash = stdout.trim();
-          if (hash) {
-            session.baselineCommitHash = hash;
-            this.logger.debug(`Captured baseline commit for ${sessionId}: ${hash}`);
-            // Broadcast to frontend so DiffPanel can use the baseline
-            this.eventEmitter.emit(InternalSessionEvents.STATUS, {
-              sessionId,
-              status: session.status,
-              message: session.statusMessage,
-              baselineCommitHash: hash,
-            });
+          if (!hash) return;
+          // Re-fetch: the session may have been removed during the async git call.
+          // Mutating/broadcasting a stale reference would resurrect a dropped session.
+          const current = this.sessionService.get(sessionId);
+          if (!current) {
+            this.logger.debug(`Skipping baseline for ${sessionId}: session no longer exists`);
+            return;
           }
+          current.baselineCommitHash = hash;
+          this.logger.debug(`Captured baseline commit for ${sessionId}: ${hash}`);
+          // Broadcast to frontend so DiffPanel can use the baseline
+          this.eventEmitter.emit(InternalSessionEvents.STATUS, {
+            sessionId,
+            status: current.status,
+            message: current.statusMessage,
+            baselineCommitHash: hash,
+          });
         })
         .catch(() => {
           // Not a git repo or no commits — baseline stays undefined
