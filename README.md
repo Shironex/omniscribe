@@ -7,10 +7,10 @@
 
 [![GitHub Release](https://img.shields.io/github/v/release/Shironex/omniscribe?style=flat&color=blue)](https://github.com/Shironex/omniscribe/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/Shironex/omniscribe/total?style=flat&color=green)](https://github.com/Shironex/omniscribe/releases/latest)
-[![Electron](https://img.shields.io/badge/Electron-40.2-47848F?logo=electron&logoColor=white)](https://www.electronjs.org/)
+[![Electron](https://img.shields.io/badge/Electron-41.5-47848F?logo=electron&logoColor=white)](https://www.electronjs.org/)
 [![React](https://img.shields.io/badge/React-18.3-61DAFB?logo=react&logoColor=white)](https://react.dev/)
 [![NestJS](https://img.shields.io/badge/NestJS-10.4-E0234E?logo=nestjs&logoColor=white)](https://nestjs.com/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![OS](https://img.shields.io/badge/OS-Windows%20%7C%20macOS-0078D4)](https://github.com/Shironex/omniscribe)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
@@ -42,39 +42,50 @@ Omniscribe is a desktop application for managing multiple AI coding assistant se
 
 ## Screenshots
 
-### Multi-Session Grid with Quick Actions
-
-![Multi-session grid with quick actions menu](assets/quick_actions.png)
-
-### Main View
-
-![Main grid view with 6 parallel sessions](assets/main.png)
-
-### Settings
-
-![Settings view with Claude CLI integration](assets/settings.png)
+<table>
+  <tr>
+    <td colspan="2" align="center"><img src="assets/screenshots/main.png" alt="Multi-session workspace — parallel AI coding sessions in a terminal grid" /></td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center"><sub>Workspace — run up to 12 AI sessions in parallel, each in its own GPU-accelerated terminal.</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="assets/screenshots/settings.png" alt="Settings — themes, terminal, and integrations" /></td>
+    <td width="50%"><img src="assets/screenshots/history.png" alt="Session history panel with branch filtering" /></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Settings — 10 UI themes, terminal tuning, and per-project AI capabilities.</sub></td>
+    <td align="center"><sub>Session History — search, filter by branch, and resume or fork past sessions.</sub></td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center"><img src="assets/screenshots/quick_actions.png" alt="Quick actions menu — git and AI shortcuts" /></td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center"><sub>Quick Actions — one-click git workflows (commit, push, resolve conflicts) and AI shortcuts.</sub></td>
+  </tr>
+</table>
 
 ## Features
 
-| Feature                | Description                                                                                          |
-| ---------------------- | ---------------------------------------------------------------------------------------------------- |
-| **Multi-Session Grid** | Run up to 12 AI sessions in parallel with GPU-accelerated terminal views                             |
-| **Real-Time Status**   | Track session states: idle, working, planning, needs_input, finished                                 |
-| **Session History**    | Browse, search, and filter past Claude Code sessions with branch filtering and sort controls         |
-| **Resume & Fork**      | Resume any previous session or fork it into a new conversation branch                                |
-| **Continue Last**      | One-click button to continue the most recent Claude Code conversation                                |
-| **Drag & Drop**        | Rearrange terminals by dragging; resizable panels with drag dividers                                 |
-| **Terminal Search**    | Ctrl+Shift+F search bar with regex and case-sensitive modes                                          |
-| **12 Terminal Themes** | dracula, nord, gruvbox, and more                                                                     |
-| **8 UI Themes**        | Forge (default, dark), Carbon, Ember, Iceberg, Nord, Gruvbox, Dracula, Paper (light)                 |
-| **Terminal Settings**  | Font family/size, cursor style, scrollback, theme — all applied live                                 |
-| **Smart Copy/Paste**   | Ctrl+C copies selection or sends ^C; Ctrl+V pastes from clipboard                                    |
-| **Quick Actions**      | AI-powered shortcuts for git workflows (commit, push, pull, resolve conflicts) and development tasks |
-| **Git Worktrees**      | Isolate each session in its own git worktree for parallel development                                |
-| **MCP Integration**    | Configure Model Context Protocol servers per session                                                 |
-| **Hooks Integration**  | Automatic Claude Code hooks for instant session detection via SessionStart/SessionEnd events         |
-| **Project Tabs**       | Manage multiple projects with persistent recent history                                              |
-| **Cross-Platform**     | Native support for Windows and macOS                                                                 |
+| Feature                | Description                                                                                                                        |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| **Multi-Session Grid** | Run up to 12 AI sessions in parallel with GPU-accelerated terminal views                                                           |
+| **Real-Time Status**   | Track session states: idle, working, planning, needs_input, finished                                                               |
+| **Session History**    | Browse, search, and filter past Claude Code sessions with branch filtering and sort controls                                       |
+| **Resume & Fork**      | Resume any previous session or fork it into a new conversation branch                                                              |
+| **Continue Last**      | One-click button to continue the most recent Claude Code conversation                                                              |
+| **Drag & Drop**        | Rearrange terminals by dragging; resizable panels with drag dividers                                                               |
+| **Terminal Search**    | Ctrl+Shift+F search bar with regex and case-sensitive modes                                                                        |
+| **12 Terminal Themes** | dracula, nord, gruvbox, and more                                                                                                   |
+| **10 UI Themes**       | Forge (default, dark), Carbon, Ember, Iceberg, Nord, Gruvbox, Dracula, Plum, Abyss, Paper (light) — plus plugin-contributed themes |
+| **Terminal Settings**  | Font family/size, cursor style, scrollback, theme — all applied live                                                               |
+| **Smart Copy/Paste**   | Ctrl+C copies selection or sends ^C; Ctrl+V pastes from clipboard                                                                  |
+| **Quick Actions**      | AI-powered shortcuts for git workflows (commit, push, pull, resolve conflicts) and development tasks                               |
+| **Git Worktrees**      | Isolate each session in its own git worktree for parallel development                                                              |
+| **MCP Integration**    | Configure Model Context Protocol servers per session                                                                               |
+| **Hooks Integration**  | Automatic Claude Code hooks for instant session detection via SessionStart/SessionEnd events                                       |
+| **Project Tabs**       | Manage multiple projects with persistent recent history                                                                            |
+| **Cross-Platform**     | Native support for Windows and macOS                                                                                               |
 
 ## Keyboard Shortcuts
 
@@ -141,6 +152,20 @@ pnpm format
 pnpm format:check
 ```
 
+### Capturing README screenshots
+
+The README screenshots are captured from the live app over the Chrome DevTools Protocol:
+
+```bash
+# Terminal 1 — launch the app with CDP exposed on 127.0.0.1:9222
+pnpm dev:inspect
+
+# Terminal 2 — attach via Playwright and write assets/screenshots/<view>.png
+pnpm screenshots
+```
+
+`dev:inspect` mirrors `pnpm dev` but adds `--remote-debugging-port=9222 --remote-allow-origins=*` so a Playwright client can attach. The capture script forces a deterministic 1400×900 viewport, so docked DevTools never affects the output. Open a project and launch a few sessions before running it to capture the multi-session grid.
+
 ## Architecture
 
 ```
@@ -183,7 +208,7 @@ omniscribe/
 
 | Layer    | Technology                 |
 | -------- | -------------------------- |
-| Desktop  | Electron 40                |
+| Desktop  | Electron 41                |
 | Backend  | NestJS 10                  |
 | Frontend | React 18, Zustand 5        |
 | Terminal | xterm.js (WebGL), node-pty |
@@ -207,21 +232,11 @@ Beta releases are tagged with a `-beta` suffix (e.g. `v0.5.0-beta.1`) and marked
 
 ## Roadmap
 
-Track our progress on the [public project board](https://github.com/users/Shironex/projects/7).
+Track active work on the [public project board](https://github.com/users/Shironex/projects/7).
 
-### v1.1 — Plugin System & Multi-Provider Support
+Omniscribe is a **universal AI coding orchestrator** built on a plugin architecture. The plugin system and multi-provider support have shipped — both **Claude Code** and **OpenAI Codex CLI** are available as first-class provider plugins, complete with slot-based UI injection, dynamic per-provider settings, and an in-app marketplace.
 
-Omniscribe is now a **universal AI coding orchestrator** with a plugin architecture supporting multiple providers.
-
-| Phase                      | Description                                                   | Status      |
-| -------------------------- | ------------------------------------------------------------- | ----------- |
-| Plugin API Contracts       | Typed interfaces and manifest format for provider plugins     | Done        |
-| Backend Infrastructure     | Plugin registry, dynamic module loading, service delegation   | Done        |
-| Claude Provider Extraction | Move Claude-specific logic into a plugin package              | Done        |
-| Frontend Extensions        | Slot-based UI injection, dynamic settings, in-app marketplace | Done        |
-| Codex Provider             | Second provider (OpenAI Codex CLI) proving the architecture   | In Progress |
-
-The Codex provider is functional for session management and usage tracking. MCP integration for Codex is still in development.
+The one known gap: MCP server configuration for the Codex provider. Codex reads MCP servers from a TOML-based `~/.codex/config.toml` rather than `.mcp.json`, and that bridge isn't wired up yet. Everything else — session management, usage tracking, hooks — works across both providers.
 
 **Want to add a provider?** See the [Creating a Provider](https://shironex.github.io/omniscribe/sdk/creating-a-provider) guide and the [API Reference](https://shironex.github.io/omniscribe/docs/api).
 
