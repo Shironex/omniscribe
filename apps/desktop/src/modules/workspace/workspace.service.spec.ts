@@ -1,6 +1,18 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { WorkspaceService } from './workspace.service';
 import type { ProjectTabDTO, QuickAction, SessionHistoryEntry } from '@omniscribe/shared';
+import * as fs from 'fs';
+
+jest.mock('electron', () => ({
+  app: { getPath: jest.fn(() => '/mock/userData') },
+}));
+
+jest.mock('fs', () => ({
+  existsSync: jest.fn(() => false),
+  copyFileSync: jest.fn(),
+}));
+
+const mockedFs = fs as jest.Mocked<typeof fs>;
 
 // Mock electron-store with an in-memory implementation
 jest.mock('electron-store', () => {
@@ -62,6 +74,31 @@ describe('WorkspaceService', () => {
 
       const quickActions = service.getQuickActions();
       expect(quickActions.length).toBeGreaterThan(0);
+    });
+  });
+
+  // Regression: clearInvalidConfig wipes the entire workspace on a parse failure,
+  // so the bad file must be preserved first for recovery.
+  describe('backupCorruptStore', () => {
+    type WithBackup = { backupCorruptStore: () => void };
+
+    it('copies the workspace file to a timestamped backup when it exists', () => {
+      mockedFs.existsSync.mockReturnValue(true);
+
+      (service as unknown as WithBackup).backupCorruptStore();
+
+      expect(mockedFs.copyFileSync).toHaveBeenCalledWith(
+        '/mock/userData/workspace.json',
+        expect.stringMatching(/workspace\.corrupt-\d+\.json$/)
+      );
+    });
+
+    it('does nothing when there is no store file to back up', () => {
+      mockedFs.existsSync.mockReturnValue(false);
+
+      (service as unknown as WithBackup).backupCorruptStore();
+
+      expect(mockedFs.copyFileSync).not.toHaveBeenCalled();
     });
   });
 
