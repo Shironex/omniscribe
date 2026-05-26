@@ -1,6 +1,5 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import Store from 'electron-store';
-import { app } from 'electron';
 import * as crypto from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -245,6 +244,9 @@ export class WorkspaceService implements OnModuleInit {
    */
   private backupCorruptStore(): void {
     try {
+      // Lazy require: WorkspaceService is transitively imported by many specs;
+      // a static `import from 'electron'` would force them all to mock electron.
+      const { app } = require('electron') as typeof import('electron');
       const userData = app.getPath('userData');
       const src = path.join(userData, 'workspace.json');
       if (!fs.existsSync(src)) {
