@@ -436,6 +436,13 @@ export class SessionGateway implements OnGatewayInit {
       });
 
       return await this.runLaunch(client, payload, mode, session, worktreeSettings, errorPrefix);
+    } catch (error) {
+      // Without this, an uncaught throw escapes the @SubscribeMessage handler;
+      // NestJS's WS filter never invokes the Socket.io ack, so the renderer hangs
+      // its full request timeout and surfaces an opaque error with no session.
+      const message = extractErrorMessage(error);
+      this.logger.error(`[${errorPrefix}] Unexpected error launching session:`, error);
+      return { error: message };
     } finally {
       this.launchesInFlight--;
     }

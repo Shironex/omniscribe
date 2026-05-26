@@ -527,6 +527,18 @@ describe('SessionGateway', () => {
 
       void inFlight; // intentionally left pending; the test asserts the rejection
     });
+
+    // Regression: an uncaught throw would escape the handler and never invoke the
+    // Socket.io ack, hanging the renderer's request. It must resolve to { error }.
+    it('returns an error response instead of throwing when launch fails unexpectedly', async () => {
+      mockSessionService.create.mockImplementationOnce(() => {
+        throw new Error('boom while creating session');
+      });
+
+      const result = await gateway.handleCreate(basePayload, client);
+
+      expect(result.error).toContain('boom while creating session');
+    });
   });
 
   // ========================================================================
