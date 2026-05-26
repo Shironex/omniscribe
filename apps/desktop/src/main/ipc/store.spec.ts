@@ -219,6 +219,30 @@ describe('IPC:Store', () => {
       handlers['store:set'](mockEvent, 'workspace.preferences.extra', 'tiny');
       expect(mockLogger.warn).not.toHaveBeenCalled();
     });
+
+    // Regression: the renderer relies on this result to surface failures to the
+    // user instead of silently dropping persisted state.
+    it('returns { ok: true } on a successful write', () => {
+      const result = handlers['store:set'](mockEvent, 'preferences.theme', 'dark');
+      expect(result).toEqual({ ok: true });
+    });
+
+    it('returns { ok: false, reason: "unauthorized" } for a blocked key', () => {
+      const result = handlers['store:set'](mockEvent, 'system.internal', 'value');
+      expect(result).toEqual({ ok: false, reason: 'unauthorized' });
+    });
+
+    it('returns { ok: false, reason: "oversize" } when the cap is exceeded', () => {
+      const result = handlers['store:set'](mockEvent, 'preferences.theme', 'x'.repeat(4096));
+      expect(result).toEqual({ ok: false, reason: 'oversize' });
+    });
+
+    it('returns { ok: false, reason: "unserializable" } for cyclic values', () => {
+      const cyclic: Record<string, unknown> = {};
+      cyclic.self = cyclic;
+      const result = handlers['store:set'](mockEvent, 'preferences.theme', cyclic);
+      expect(result).toEqual({ ok: false, reason: 'unserializable' });
+    });
   });
 
   // ================================================================

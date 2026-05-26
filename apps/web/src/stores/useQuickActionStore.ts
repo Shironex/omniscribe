@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage, StateStorage } from 'zustand/middleware';
+import { toast } from 'sonner';
 import { devtools } from './utils/devtools';
 import { QuickAction, createLogger } from '@omniscribe/shared';
 import { createMemoizedSelector } from './utils';
@@ -159,7 +160,18 @@ const electronStorage: StateStorage = {
   setItem: async (name: string, value: string): Promise<void> => {
     logger.debug('Storage setItem:', name);
     if (typeof window !== 'undefined' && window.electronAPI?.store) {
-      await window.electronAPI.store.set(name, value);
+      const result = await window.electronAPI.store.set(name, value);
+      // A rejected write (size cap / unserializable / unauthorized) used to be a
+      // silent no-op, so quick actions appeared saved but vanished on reload.
+      if (result && result.ok === false) {
+        logger.error(`Failed to persist "${name}": ${result.reason}`);
+        toast.error('Quick actions could not be saved', {
+          description:
+            result.reason === 'oversize'
+              ? 'You have too many or too large quick actions to store.'
+              : 'Your latest quick-action changes were not persisted.',
+        });
+      }
     } else {
       // Fallback to localStorage for web-only mode
       localStorage.setItem(name, value);
