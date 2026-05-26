@@ -11,6 +11,34 @@ import { createLogger } from '@omniscribe/shared';
 export class PluginStorageService {
   private readonly logger = createLogger('PluginStorage');
   private stores = new Map<string, Store>();
+  /** Host-level store for cross-plugin state (e.g. user enable/disable choices). */
+  private hostStore: Store | undefined;
+
+  private getHostStore(): Store {
+    if (this.hostStore) {
+      return this.hostStore;
+    }
+    const store = new Store({ name: 'plugin-host', defaults: {} });
+    this.hostStore = store;
+    return store;
+  }
+
+  /**
+   * Read a plugin's persisted enabled state. Returns undefined when the user has
+   * never toggled it, so the caller can fall back to the definition's autoEnable.
+   */
+  getEnabledState(pluginId: string): boolean | undefined {
+    const state = (this.getHostStore().get('enabledState', {}) ?? {}) as Record<string, boolean>;
+    return state[pluginId];
+  }
+
+  /** Persist a plugin's enabled state so it survives app restarts. */
+  setEnabledState(pluginId: string, enabled: boolean): void {
+    const store = this.getHostStore();
+    const state = (store.get('enabledState', {}) ?? {}) as Record<string, boolean>;
+    state[pluginId] = enabled;
+    store.set('enabledState', state);
+  }
 
   /** Get or create an isolated store for a plugin */
   getStore(pluginId: string): Store {

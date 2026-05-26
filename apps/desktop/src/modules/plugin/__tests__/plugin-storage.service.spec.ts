@@ -158,4 +158,28 @@ describe('PluginStorageService', () => {
       expect(() => service.clearStore('nonexistent')).not.toThrow();
     });
   });
+
+  // Regression: provider enable/disable used to live only in memory and reset to
+  // autoEnable on every restart. The host store must persist the user's choice.
+  describe('enabled-state persistence', () => {
+    it('round-trips a persisted enabled state', () => {
+      service.setEnabledState('provider-codex', false);
+      expect(service.getEnabledState('provider-codex')).toBe(false);
+
+      service.setEnabledState('provider-codex', true);
+      expect(service.getEnabledState('provider-codex')).toBe(true);
+    });
+
+    it('returns undefined for a plugin the user never toggled', () => {
+      expect(service.getEnabledState('never-toggled')).toBeUndefined();
+    });
+
+    it('tracks multiple plugins independently', () => {
+      service.setEnabledState('provider-a', true);
+      service.setEnabledState('provider-b', false);
+
+      expect(service.getEnabledState('provider-a')).toBe(true);
+      expect(service.getEnabledState('provider-b')).toBe(false);
+    });
+  });
 });

@@ -60,6 +60,7 @@ const mockLoaderService = {
   activateProvider: jest.fn().mockResolvedValue(true),
   deactivateProvider: jest.fn().mockResolvedValue(true),
   refreshCliDetection: jest.fn().mockResolvedValue(undefined),
+  persistEnabledState: jest.fn(),
 };
 
 // ---------------------------------------------------------------------------
