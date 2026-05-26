@@ -503,6 +503,30 @@ describe('SessionGateway', () => {
       expect(result.error).toContain('Session limit reached');
       expect(result.idleSessions).toEqual([]);
     });
+
+    // Regression: a freshly created session has no terminal until several awaits
+    // later, so getRunningSessions() can't see in-flight launches. The in-flight
+    // counter must close that window so N concurrent creates can't over-spawn.
+    it('counts in-flight launches so concurrent creates cannot exceed the limit', async () => {
+      mockSessionService.getRunningSessions.mockReturnValue([]); // none have a terminal yet
+      // Launches never complete, so they stay in-flight (no terminal registered).
+      mockSessionLauncherService.launchSession.mockReturnValue(new Promise(() => {}));
+
+      // Fire MAX concurrent launches; each parks inside the in-flight window.
+      const inFlight = Array.from({ length: MAX_CONCURRENT_SESSIONS }, () =>
+        gateway.handleCreate(basePayload, client)
+      );
+      await new Promise(resolve => setImmediate(resolve));
+
+      // The next create must be rejected by the in-flight count, even though
+      // getRunningSessions() still reports zero active terminals.
+      const result = await gateway.handleCreate(basePayload, client);
+
+      expect(result.error).toContain('Session limit reached');
+      expect(mockSessionService.create).toHaveBeenCalledTimes(MAX_CONCURRENT_SESSIONS);
+
+      void inFlight; // intentionally left pending; the test asserts the rejection
+    });
   });
 
   // ========================================================================
