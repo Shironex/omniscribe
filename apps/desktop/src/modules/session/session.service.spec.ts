@@ -679,6 +679,31 @@ describe('SessionService', () => {
     });
   });
 
+  describe('onMcpStatusReceived', () => {
+    it('applies the status when the session has a live terminal', () => {
+      const session = service.create('claude', '/project');
+      service.registerTerminal(session.id, 1, '/worktree');
+      terminalService.hasSession.mockReturnValue(true);
+
+      service.onMcpStatusReceived({ sessionId: session.id, status: 'working' });
+
+      expect(service.get(session.id)?.status).toBe('working');
+    });
+
+    // Regression: a late MCP POST from a dying subprocess must not flip a
+    // finished/error session back to "working" once its terminal is gone.
+    it('ignores a late MCP status when the terminal is gone (no resurrection)', () => {
+      const session = service.create('claude', '/project');
+      service.registerTerminal(session.id, 1, '/worktree');
+      // Terminal has exited — the PTY is no longer tracked.
+      terminalService.hasSession.mockReturnValue(false);
+
+      service.onMcpStatusReceived({ sessionId: session.id, status: 'working' });
+
+      expect(service.get(session.id)?.status).not.toBe('working');
+    });
+  });
+
   describe('stopSession', () => {
     it('should stop a running session', async () => {
       const session = service.create('claude', '/project');
