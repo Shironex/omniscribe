@@ -7,10 +7,7 @@ jest.mock('electron', () => ({
   app: { getPath: jest.fn(() => '/mock/userData') },
 }));
 
-jest.mock('fs', () => ({
-  existsSync: jest.fn(() => false),
-  copyFileSync: jest.fn(),
-}));
+jest.mock('fs', () => require('../../../test/mocks/fs.mock').createFsMock());
 
 const mockedFs = fs as jest.Mocked<typeof fs>;
 
