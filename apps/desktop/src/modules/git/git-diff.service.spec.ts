@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { GitDiffService } from './git-diff.service';
 import { GitBaseService } from './git-base.service';
 import { GitStatusService } from './git-status.service';
+import { createGitStatusServiceMock } from '../../../test/mocks';
 
 describe('GitDiffService', () => {
   let service: GitDiffService;
@@ -20,10 +21,7 @@ describe('GitDiffService', () => {
         },
         {
           provide: GitStatusService,
-          useValue: {
-            getStatus: jest.fn(),
-            getUntrackedFiles: jest.fn().mockResolvedValue([]),
-          },
+          useValue: createGitStatusServiceMock(),
         },
       ],
     }).compile();
