@@ -179,7 +179,7 @@ export class GitStatusService {
       '--others',
       '--exclude-standard',
     ]);
-    return stdout.split('\n').filter(Boolean);
+    return stdout.split(/\r?\n/).filter(Boolean);
   }
 
   /**
