@@ -145,7 +145,7 @@ export const SidebarProjectItem = React.memo(function SidebarProjectItem({
                   {...listeners}
                   role="tab"
                   aria-selected={isActive}
-                  tabIndex={isActive ? 0 : -1}
+                  tabIndex={0}
                   onClick={handleClick}
                   onKeyDown={handleKeyDown}
                   aria-label={label}
@@ -212,7 +212,7 @@ export const SidebarProjectItem = React.memo(function SidebarProjectItem({
           <div
             role="tab"
             aria-selected={isActive}
-            tabIndex={isActive ? 0 : -1}
+            tabIndex={0}
             onClick={handleClick}
             onKeyDown={handleKeyDown}
             className={cn(
