@@ -132,6 +132,7 @@ describe('PluginGateway', () => {
 
       expect(result).toEqual({ success: true });
       expect(mockRegistryService.setEnabled).toHaveBeenCalledWith('test-mode', true);
+      expect(mockLoaderService.persistEnabledState).toHaveBeenCalledWith('test-mode', true);
       expect(mockLoaderService.activateProvider).toHaveBeenCalledWith('test-mode');
       expect(mockServer.emit).toHaveBeenCalledWith('plugin:provider-enabled', {
         aiMode: 'test-mode',
@@ -147,6 +148,7 @@ describe('PluginGateway', () => {
 
       expect(result).toEqual({ success: true });
       expect(mockRegistryService.setEnabled).toHaveBeenCalledWith('test-mode', false);
+      expect(mockLoaderService.persistEnabledState).toHaveBeenCalledWith('test-mode', false);
       expect(mockLoaderService.deactivateProvider).toHaveBeenCalledWith('test-mode');
       expect(mockLoaderService.activateProvider).not.toHaveBeenCalled();
       expect(mockServer.emit).toHaveBeenCalledWith('plugin:provider-enabled', {
