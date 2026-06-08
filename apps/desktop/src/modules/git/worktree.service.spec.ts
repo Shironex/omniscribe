@@ -155,6 +155,41 @@ describe('WorktreeService', () => {
       ]);
     });
 
+    // Regression: concurrent prepare() on the same repo must serialize, or the
+    // list -> probe -> `worktree add` sequences race on git's index/worktree locks.
+    it('serializes concurrent prepare() calls on the same repo', async () => {
+      let abbrevRefCalls = 0;
+      let releaseFirst: (() => void) | undefined;
+      const gate = new Promise<void>(resolve => {
+        releaseFirst = resolve;
+      });
+
+      mockGitBase.execGit.mockImplementation(async (_repo: string, args: string[]) => {
+        if (args[0] === 'rev-parse' && args[1] === '--abbrev-ref') {
+          abbrevRefCalls++;
+          // Hold the first call (the lock holder) until released.
+          if (abbrevRefCalls === 1) await gate;
+          return { stdout: 'main\n', stderr: '' };
+        }
+        // worktree list / rev-parse --verify / worktree add all succeed.
+        return { stdout: '', stderr: '' };
+      });
+
+      const pA = service.prepare('/repo', 'feat-a');
+      const pB = service.prepare('/repo', 'feat-b');
+
+      // Flush microtasks: A is parked inside the lock; B must be queued behind
+      // the mutex and not have started its own getCurrentBranch yet.
+      await new Promise(resolve => setImmediate(resolve));
+      expect(abbrevRefCalls).toBe(1);
+
+      releaseFirst?.();
+      await Promise.all([pA, pB]);
+
+      // B only ran after A released the lock.
+      expect(abbrevRefCalls).toBe(2);
+    });
+
     it('should create a new branch with worktree when branch does not exist', async () => {
       // getCurrentBranch
       mockGitBase.execGit.mockResolvedValueOnce({ stdout: 'main\n', stderr: '' });

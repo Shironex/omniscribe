@@ -1,6 +1,8 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import Store from 'electron-store';
 import * as crypto from 'crypto';
+import * as fs from 'fs';
+import * as path from 'path';
 import {
   QuickAction,
   ProjectTabDTO,
@@ -209,6 +211,9 @@ export class WorkspaceService implements OnModuleInit {
       this.logger.debug(`Store initialized at ${this.store.path}`);
     } catch (error) {
       this.logger.error('Failed to initialize workspace store, resetting to defaults:', error);
+      // Preserve the bad file before clearInvalidConfig wipes the user's entire
+      // workspace (tabs, history, preferences, capabilities) — best-effort.
+      this.backupCorruptStore();
       // Corruption or schema mismatch — clear and retry
       try {
         this.store = new Store<StoreSchema>({
@@ -230,6 +235,28 @@ export class WorkspaceService implements OnModuleInit {
         this.logger.error('Failed to initialize workspace store on retry:', retryError);
         throw retryError;
       }
+    }
+  }
+
+  /**
+   * Best-effort copy of the workspace store file before clearInvalidConfig
+   * wipes it, so a user can recover corrupted or hand-edited state.
+   */
+  private backupCorruptStore(): void {
+    try {
+      // Lazy require: WorkspaceService is transitively imported by many specs;
+      // a static `import from 'electron'` would force them all to mock electron.
+      const { app } = require('electron') as typeof import('electron');
+      const userData = app.getPath('userData');
+      const src = path.join(userData, 'workspace.json');
+      if (!fs.existsSync(src)) {
+        return;
+      }
+      const backup = path.join(userData, `workspace.corrupt-${Date.now()}.json`);
+      fs.copyFileSync(src, backup);
+      this.logger.warn(`Backed up corrupt workspace store to ${backup}`);
+    } catch (backupError) {
+      this.logger.warn('Failed to back up corrupt workspace store', backupError);
     }
   }
 
@@ -560,6 +587,14 @@ export class WorkspaceService implements OnModuleInit {
    * Prunes oldest entries when exceeding MAX_SESSION_HISTORY.
    */
   addSessionHistory(entry: SessionHistoryEntry): void {
+    // Guard: dedup keys on claudeSessionId, so an entry without one would collapse
+    // every other id-less entry via `undefined === undefined`. Callers must capture
+    // the id before recording history.
+    if (!entry.claudeSessionId) {
+      this.logger.warn('Ignoring session history entry with no claudeSessionId');
+      return;
+    }
+
     const history = this.store.get('sessionHistory', []);
 
     // Avoid duplicates (same claudeSessionId)

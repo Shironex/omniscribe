@@ -106,6 +106,7 @@ export const TerminalSearchBar: React.FC<TerminalSearchBarProps> = ({
         onClick={onPrevious}
         className="p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
         title="Previous (Shift+Enter)"
+        aria-label="Previous match"
       >
         <ChevronUp size={14} />
       </button>
@@ -115,6 +116,7 @@ export const TerminalSearchBar: React.FC<TerminalSearchBarProps> = ({
         onClick={onNext}
         className="p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
         title="Next (Enter)"
+        aria-label="Next match"
       >
         <ChevronDown size={14} />
       </button>
@@ -124,6 +126,7 @@ export const TerminalSearchBar: React.FC<TerminalSearchBarProps> = ({
         onClick={onClose}
         className="p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
         title="Close (Escape)"
+        aria-label="Close search"
       >
         <X size={14} />
       </button>

@@ -629,6 +629,39 @@ describe('PluginLoaderService', () => {
       expect(providers[0].activated).toBe(false);
     });
 
+    // Regression: a user who disabled a provider must stay disabled across
+    // restarts — the persisted choice wins over the definition's autoEnable.
+    it('restores a persisted disabled state over autoEnable=true', async () => {
+      const def = createValidDefinition();
+      def.autoEnable = true; // would normally register enabled
+      const module = await buildModule([def]);
+      const loader = module.get<PluginLoaderService>(PluginLoaderService);
+      const reg = module.get<PluginRegistryService>(PluginRegistryService);
+      const storage = module.get<PluginStorageService>(PluginStorageService);
+
+      // The user previously turned this provider off.
+      storage.setEnabledState(def.manifest.id, false);
+
+      await loader.onModuleInit();
+
+      expect(reg.listProviders()[0].enabled).toBe(false);
+    });
+
+    it('restores a persisted enabled state over autoEnable=false', async () => {
+      const def = createValidDefinition();
+      // autoEnable defaults to false (undefined)
+      const module = await buildModule([def]);
+      const loader = module.get<PluginLoaderService>(PluginLoaderService);
+      const reg = module.get<PluginRegistryService>(PluginRegistryService);
+      const storage = module.get<PluginStorageService>(PluginStorageService);
+
+      storage.setEnabledState(def.manifest.id, true);
+
+      await loader.onModuleInit();
+
+      expect(reg.listProviders()[0].enabled).toBe(true);
+    });
+
     it('should register plugin as disabled when autoEnable is false (default)', async () => {
       const def = createValidDefinition();
       // autoEnable defaults to false (undefined)

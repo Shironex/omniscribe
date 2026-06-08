@@ -86,6 +86,10 @@ export class PluginGateway implements OnGatewayInit {
         return { success: false, error: `No provider registered for aiMode: ${aiMode}` };
       }
 
+      // Persist the choice so it survives a restart (in-memory registry resets to
+      // autoEnable otherwise).
+      this.loaderService.persistEnabledState(aiMode, enabled);
+
       // If enabling, also activate the provider if not already activated
       if (enabled) {
         const entry = this.registryService.getProviderEntry(aiMode);

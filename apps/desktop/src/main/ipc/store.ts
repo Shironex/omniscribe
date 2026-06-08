@@ -112,6 +112,15 @@ const STORE_DEFAULT_CAP_BYTES = 4_194_304; // 4 MB hard ceiling for nested write
 type SizeCheckResult = 'ok' | 'oversize' | 'unserializable';
 
 /**
+ * Result of a `store:set`. Returned to the renderer so a rejected write
+ * (unauthorized key, size cap, unserializable value) surfaces to the user
+ * instead of silently dropping persisted state.
+ */
+export type StoreSetResult =
+  | { ok: true }
+  | { ok: false; reason: 'unauthorized' | 'oversize' | 'unserializable' };
+
+/**
  * Find the nearest registered size cap walking up the key tree.
  * Returns `[capKey, capBytes]` where `capKey` is the segment-prefix
  * that owns the cap (may equal `key`), or `undefined` if none.
@@ -223,21 +232,22 @@ export function registerStoreHandlers(): void {
     return store.get(key);
   });
 
-  ipcMain.handle('store:set', (_event, key: string, value: unknown) => {
+  ipcMain.handle('store:set', (_event, key: string, value: unknown): StoreSetResult => {
     if (!isKeyAllowed(key)) {
       logger.warn(`Blocked store:set for unauthorized key: ${key}`);
-      return;
+      return { ok: false, reason: 'unauthorized' };
     }
     const sizeCheck = checkSizeCap(key, value);
     if (sizeCheck === 'unserializable') {
       logger.warn(`Blocked store:set for "${key}" — value is not JSON-serializable`);
-      return;
+      return { ok: false, reason: 'unserializable' };
     }
     if (sizeCheck === 'oversize') {
       logger.warn(`Blocked store:set for "${key}" — value exceeds size cap`);
-      return;
+      return { ok: false, reason: 'oversize' };
     }
     store.set(key, value);
+    return { ok: true };
   });
 
   ipcMain.handle('store:delete', (_event, key: string) => {

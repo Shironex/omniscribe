@@ -46,6 +46,15 @@ interface NodePtyModule {
   spawn: (file: string, args: string[], options: IPtyForkOptions) => IPty;
 }
 
+// Timing for driving the Claude CLI PTY through trust/REPL prompts to the /usage output.
+// These are deliberate human-paced delays to let the interactive CLI settle between writes.
+const FETCH_TIMEOUT_MS = 45_000;
+const USAGE_OUTPUT_SETTLE_MS = 3_000; // wait for full usage output before sending ESC
+const FORCE_KILL_FALLBACK_MS = 2_000; // force-kill if ESC doesn't exit the REPL
+const TRUST_DIALOG_ENTER_MS = 1_000; // pause before approving the trust dialog
+const REPL_SETTLE_MS = 1_500; // let the REPL settle before sending /usage
+const AUTOCOMPLETE_CONFIRM_MS = 1_200; // second Enter to confirm any autocomplete
+
 /**
  * Claude Usage Fetcher Service.
  *
@@ -55,7 +64,7 @@ interface NodePtyModule {
  */
 export class ClaudeUsageFetcherService {
   private readonly logger = createLogger('ClaudeUsageFetcher');
-  private readonly timeout = 45000; // 45 second timeout
+  private readonly timeout = FETCH_TIMEOUT_MS;
   private readonly isWindows = os.platform() === 'win32';
   private readonly parser = new ClaudeUsageParserService();
 
@@ -221,14 +230,14 @@ export class ClaudeUsageFetcherService {
             if (!settled && ptyProcess) {
               ptyProcess.write('\x1b'); // Send escape key
 
-              // Fallback: force kill after 2s if ESC doesn't work
+              // Fallback: force kill if ESC doesn't work
               setTimeout(() => {
                 if (!settled && ptyProcess) {
                   this.killPtyProcess(ptyProcess);
                 }
-              }, 2000);
+              }, FORCE_KILL_FALLBACK_MS);
             }
-          }, 3000);
+          }, USAGE_OUTPUT_SETTLE_MS);
         }
 
         // Handle Trust Dialog
@@ -245,7 +254,7 @@ export class ClaudeUsageFetcherService {
             if (!settled && ptyProcess) {
               ptyProcess.write('\r');
             }
-          }, 1000);
+          }, TRUST_DIALOG_ENTER_MS);
         }
 
         // Detect REPL prompt and send /usage command
@@ -269,9 +278,9 @@ export class ClaudeUsageFetcherService {
                 if (!settled && ptyProcess) {
                   ptyProcess.write('\r');
                 }
-              }, 1200);
+              }, AUTOCOMPLETE_CONFIRM_MS);
             }
-          }, 1500);
+          }, REPL_SETTLE_MS);
         }
       });
 

@@ -13,11 +13,10 @@
  * - No system prompt flags (Codex uses AGENTS.md and config)
  */
 
-import * as os from 'os';
-import * as path from 'path';
 import type { CliCommandConfig, LaunchContext } from '@omniscribe/plugin-api';
 import { createLogger } from '@omniscribe/shared';
 import { findCliCommandSync } from '@omniscribe/shared/node';
+import { getCodexCliPaths } from './cli-detection.service';
 
 const logger = createLogger('CodexCliCommand');
 
@@ -115,59 +114,8 @@ export class CodexCliCommandService {
    * to the bare 'codex' command if nothing is found.
    */
   resolveCodexCommand(): string {
-    return findCliCommandSync('codex', this.getCodexCliPaths(), logger);
-  }
-
-  /**
-   * Get common paths where Codex CLI might be installed.
-   *
-   * Covers standard locations, npm global, Volta, pnpm, Yarn,
-   * Homebrew, and Linuxbrew paths. NVM/fnm dynamic scanning is
-   * handled by the detection service (this uses static paths only
-   * for synchronous resolution).
-   */
-  private getCodexCliPaths(): string[] {
-    const homeDir = os.homedir();
-
-    if (os.platform() === 'win32') {
-      const appData = process.env['APPDATA'] || path.join(homeDir, 'AppData', 'Roaming');
-      const localAppData = process.env['LOCALAPPDATA'] || path.join(homeDir, 'AppData', 'Local');
-
-      return [
-        // Local bin
-        path.join(homeDir, '.local', 'bin', 'codex.exe'),
-        // npm global installations
-        path.join(appData, 'npm', 'codex.cmd'),
-        path.join(appData, 'npm', 'codex'),
-        path.join(appData, '.npm-global', 'bin', 'codex.cmd'),
-        path.join(appData, '.npm-global', 'bin', 'codex'),
-        // Volta
-        path.join(homeDir, '.volta', 'bin', 'codex.exe'),
-        // pnpm global
-        path.join(localAppData, 'pnpm', 'codex.cmd'),
-        path.join(localAppData, 'pnpm', 'codex'),
-      ];
-    }
-
-    // macOS and Linux paths
-    return [
-      // Standard locations
-      path.join(homeDir, '.local', 'bin', 'codex'),
-      '/opt/homebrew/bin/codex',
-      '/usr/local/bin/codex',
-      '/usr/bin/codex',
-      path.join(homeDir, '.npm-global', 'bin', 'codex'),
-      // Linuxbrew
-      '/home/linuxbrew/.linuxbrew/bin/codex',
-      // Volta
-      path.join(homeDir, '.volta', 'bin', 'codex'),
-      // pnpm global
-      path.join(homeDir, '.local', 'share', 'pnpm', 'codex'),
-      // Yarn global
-      path.join(homeDir, '.yarn', 'bin', 'codex'),
-      path.join(homeDir, '.config', 'yarn', 'global', 'node_modules', '.bin', 'codex'),
-      // Snap packages
-      '/snap/bin/codex',
-    ];
+    // Reuse the canonical path list from the detection service (incl. NVM/fnm
+    // dynamic paths) rather than maintaining a second, drift-prone copy.
+    return findCliCommandSync('codex', getCodexCliPaths(), logger);
   }
 }

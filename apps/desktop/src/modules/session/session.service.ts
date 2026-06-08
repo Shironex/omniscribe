@@ -315,6 +315,17 @@ export class SessionService {
     message?: string;
     needsInputPrompt?: string;
   }): void {
+    // The MCP status server runs inside the CLI subprocess. If the terminal is
+    // gone, the subprocess is dead and this is a late/stale report — applying it
+    // would resurrect a finished/error session back to "working" (the transition
+    // table permits idle/error/finished -> working). Reject it.
+    if (!this.isSessionRunning(event.sessionId)) {
+      this.logger.debug(
+        `Ignoring MCP status for ${event.sessionId}: no active terminal (stale/late report)`
+      );
+      return;
+    }
+
     const updated = this.updateStatus(
       event.sessionId,
       event.status as SessionStatus,

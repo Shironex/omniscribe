@@ -9,12 +9,11 @@
  * Pure TypeScript class with no NestJS dependencies.
  */
 
-import * as os from 'os';
-import * as path from 'path';
 import type { CliCommandConfig, LaunchContext } from '@omniscribe/plugin-api';
 import { createLogger } from '@omniscribe/shared';
 import { findCliCommandSync } from '@omniscribe/shared/node';
 import { OMNISCRIBE_SYSTEM_PROMPT } from './system-prompt';
+import { getClaudeCliPaths } from './cli-detection.service';
 
 const logger = createLogger('ClaudeCliCommand');
 
@@ -132,55 +131,8 @@ export class ClaudeCliCommandService {
    * to the bare 'claude' command if nothing is found.
    */
   resolveClaudeCommand(): string {
-    return findCliCommandSync('claude', this.getClaudeCliPaths(), logger);
-  }
-
-  /**
-   * Get common paths where Claude CLI might be installed.
-   */
-  private getClaudeCliPaths(): string[] {
-    const homeDir = os.homedir();
-
-    if (os.platform() === 'win32') {
-      const appData = process.env.APPDATA || path.join(homeDir, 'AppData', 'Roaming');
-      const localAppData = process.env.LOCALAPPDATA || path.join(homeDir, 'AppData', 'Local');
-
-      return [
-        // npm global installations
-        path.join(appData, 'npm', 'claude.cmd'),
-        path.join(appData, 'npm', 'claude'),
-        path.join(appData, '.npm-global', 'bin', 'claude.cmd'),
-        path.join(appData, '.npm-global', 'bin', 'claude'),
-        // Local bin
-        path.join(homeDir, '.local', 'bin', 'claude.exe'),
-        path.join(homeDir, '.local', 'bin', 'claude'),
-        // pnpm global
-        path.join(localAppData, 'pnpm', 'claude.cmd'),
-        path.join(localAppData, 'pnpm', 'claude'),
-        // Volta
-        path.join(homeDir, '.volta', 'bin', 'claude.exe'),
-      ];
-    }
-
-    // macOS and Linux paths
-    return [
-      // npm global installations
-      '/usr/local/bin/claude',
-      '/usr/bin/claude',
-      path.join(homeDir, '.npm-global', 'bin', 'claude'),
-      // Local bin
-      path.join(homeDir, '.local', 'bin', 'claude'),
-      // nvm installations
-      path.join(homeDir, '.nvm', 'versions', 'node', '*', 'bin', 'claude'),
-      // pnpm global
-      path.join(homeDir, 'Library', 'pnpm', 'claude'),
-      path.join(homeDir, '.local', 'share', 'pnpm', 'claude'),
-      // Homebrew
-      '/opt/homebrew/bin/claude',
-      // Volta
-      path.join(homeDir, '.volta', 'bin', 'claude'),
-      // Bun
-      path.join(homeDir, '.bun', 'bin', 'claude'),
-    ];
+    // Reuse the canonical path list from the detection service (incl. NVM/fnm
+    // dynamic paths) rather than maintaining a second, drift-prone copy.
+    return findCliCommandSync('claude', getClaudeCliPaths(), logger);
   }
 }

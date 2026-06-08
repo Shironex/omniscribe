@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { GitDiffService } from './git-diff.service';
 import { GitBaseService } from './git-base.service';
 import { GitStatusService } from './git-status.service';
+import { createGitStatusServiceMock } from '../../../test/mocks';
 
 describe('GitDiffService', () => {
   let service: GitDiffService;
@@ -20,9 +21,7 @@ describe('GitDiffService', () => {
         },
         {
           provide: GitStatusService,
-          useValue: {
-            getStatus: jest.fn(),
-          },
+          useValue: createGitStatusServiceMock(),
         },
       ],
     }).compile();
@@ -412,18 +411,6 @@ describe('GitDiffService', () => {
       ].join('\n');
 
       gitBase.execGit.mockResolvedValueOnce({ stdout: rawDiff, stderr: '' });
-      gitStatus.getStatus.mockResolvedValueOnce({
-        isRepo: true,
-        isClean: true,
-        staged: [],
-        unstaged: [],
-        untracked: [],
-        hasConflicts: false,
-        isRebasing: false,
-        isMerging: false,
-        stashCount: 0,
-      });
-
       const result = await service.getDiff('/repo');
 
       expect(result.files).toHaveLength(1);
@@ -439,18 +426,6 @@ describe('GitDiffService', () => {
 
     it('should use provided baseCommit ref', async () => {
       gitBase.execGit.mockResolvedValueOnce({ stdout: '', stderr: '' });
-      gitStatus.getStatus.mockResolvedValueOnce({
-        isRepo: true,
-        isClean: true,
-        staged: [],
-        unstaged: [],
-        untracked: [],
-        hasConflicts: false,
-        isRebasing: false,
-        isMerging: false,
-        stashCount: 0,
-      });
-
       await service.getDiff('/repo', 'abc123');
 
       expect(gitBase.execGit).toHaveBeenCalledWith('/repo', [
@@ -465,18 +440,6 @@ describe('GitDiffService', () => {
       gitBase.execGit
         .mockRejectedValueOnce(new Error('bad ref'))
         .mockResolvedValueOnce({ stdout: '', stderr: '' });
-      gitStatus.getStatus.mockResolvedValueOnce({
-        isRepo: true,
-        isClean: true,
-        staged: [],
-        unstaged: [],
-        untracked: [],
-        hasConflicts: false,
-        isRebasing: false,
-        isMerging: false,
-        stashCount: 0,
-      });
-
       await service.getDiff('/repo');
 
       // First call fails, second call is the fallback
@@ -493,18 +456,6 @@ describe('GitDiffService', () => {
       gitBase.execGit
         .mockRejectedValueOnce(new Error('bad ref'))
         .mockRejectedValueOnce(new Error('no index'));
-      gitStatus.getStatus.mockResolvedValueOnce({
-        isRepo: true,
-        isClean: true,
-        staged: [],
-        unstaged: [],
-        untracked: [],
-        hasConflicts: false,
-        isRebasing: false,
-        isMerging: false,
-        stashCount: 0,
-      });
-
       const result = await service.getDiff('/repo');
 
       expect(result.files).toHaveLength(0);
@@ -518,26 +469,16 @@ describe('GitDiffService', () => {
       const result = await service.getDiff('/repo', undefined, false);
 
       expect(result.files).toHaveLength(0);
-      // getStatus should not be called when includeUntracked=false
-      expect(gitStatus.getStatus).not.toHaveBeenCalled();
+      // The untracked lookup should be skipped when includeUntracked=false
+      expect(gitStatus.getUntrackedFiles).not.toHaveBeenCalled();
     });
 
     it('should generate synthetic diffs for untracked text files', async () => {
       // Main diff returns nothing
       gitBase.execGit.mockResolvedValueOnce({ stdout: '', stderr: '' });
 
-      // getStatus returns untracked files
-      gitStatus.getStatus.mockResolvedValueOnce({
-        isRepo: true,
-        isClean: false,
-        staged: [],
-        unstaged: [],
-        untracked: ['newfile.ts'],
-        hasConflicts: false,
-        isRebasing: false,
-        isMerging: false,
-        stashCount: 0,
-      });
+      // untracked file present
+      gitStatus.getUntrackedFiles.mockResolvedValueOnce(['newfile.ts']);
 
       // Synthetic diff for untracked file
       const syntheticDiff = [
@@ -561,17 +502,7 @@ describe('GitDiffService', () => {
     it('should create binary marker for untracked binary extension files', async () => {
       gitBase.execGit.mockResolvedValueOnce({ stdout: '', stderr: '' });
 
-      gitStatus.getStatus.mockResolvedValueOnce({
-        isRepo: true,
-        isClean: false,
-        staged: [],
-        unstaged: [],
-        untracked: ['photo.png'],
-        hasConflicts: false,
-        isRebasing: false,
-        isMerging: false,
-        stashCount: 0,
-      });
+      gitStatus.getUntrackedFiles.mockResolvedValueOnce(['photo.png']);
 
       const result = await service.getDiff('/repo');
 
@@ -589,17 +520,7 @@ describe('GitDiffService', () => {
       gitBase.execGit.mockResolvedValueOnce({ stdout: '', stderr: '' });
 
       const binaryFiles = ['a.jpg', 'b.wasm', 'c.exe', 'd.pdf', 'e.zip'];
-      gitStatus.getStatus.mockResolvedValueOnce({
-        isRepo: true,
-        isClean: false,
-        staged: [],
-        unstaged: [],
-        untracked: binaryFiles,
-        hasConflicts: false,
-        isRebasing: false,
-        isMerging: false,
-        stashCount: 0,
-      });
+      gitStatus.getUntrackedFiles.mockResolvedValueOnce(binaryFiles);
 
       const result = await service.getDiff('/repo');
 
@@ -612,17 +533,7 @@ describe('GitDiffService', () => {
     it('should handle untracked file without extension as non-binary', async () => {
       gitBase.execGit.mockResolvedValueOnce({ stdout: '', stderr: '' });
 
-      gitStatus.getStatus.mockResolvedValueOnce({
-        isRepo: true,
-        isClean: false,
-        staged: [],
-        unstaged: [],
-        untracked: ['Makefile'],
-        hasConflicts: false,
-        isRebasing: false,
-        isMerging: false,
-        stashCount: 0,
-      });
+      gitStatus.getUntrackedFiles.mockResolvedValueOnce(['Makefile']);
 
       // Synthetic diff for the file
       const syntheticDiff = [
@@ -641,13 +552,13 @@ describe('GitDiffService', () => {
       expect(result.files[0].isBinary).toBeFalsy();
     });
 
-    it('should handle getStatus failure gracefully for untracked files', async () => {
+    it('should handle untracked-file lookup failure gracefully', async () => {
       gitBase.execGit.mockResolvedValueOnce({ stdout: '', stderr: '' });
-      gitStatus.getStatus.mockRejectedValueOnce(new Error('git status failed'));
+      gitStatus.getUntrackedFiles.mockRejectedValueOnce(new Error('git ls-files failed'));
 
       const result = await service.getDiff('/repo');
 
-      // Should return empty when status fails
+      // Should return empty when the untracked lookup fails
       expect(result.files).toHaveLength(0);
     });
 
@@ -672,18 +583,6 @@ describe('GitDiffService', () => {
       ].join('\n');
 
       gitBase.execGit.mockResolvedValueOnce({ stdout: rawDiff, stderr: '' });
-      gitStatus.getStatus.mockResolvedValueOnce({
-        isRepo: true,
-        isClean: false,
-        staged: [],
-        unstaged: [],
-        untracked: [],
-        hasConflicts: false,
-        isRebasing: false,
-        isMerging: false,
-        stashCount: 0,
-      });
-
       const result = await service.getDiff('/repo');
 
       expect(result.totalAdditions).toBe(1);

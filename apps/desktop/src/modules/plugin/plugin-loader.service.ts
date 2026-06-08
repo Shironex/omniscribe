@@ -138,6 +138,16 @@ export class PluginLoaderService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
+   * Persist a provider's enabled state (keyed by plugin id) so the user's
+   * choice survives a restart. No-op if the aiMode is unknown.
+   */
+  persistEnabledState(aiMode: string, enabled: boolean): void {
+    const entry = this.registry.getProviderEntry(aiMode);
+    if (!entry) return;
+    this.storageService.setEnabledState(entry.manifest.id, enabled);
+  }
+
+  /**
    * Load a single plugin definition: validate manifest, instantiate plugin,
    * run CLI detection, and register the provider.
    */
@@ -202,8 +212,10 @@ export class PluginLoaderService implements OnModuleInit, OnModuleDestroy {
       cliStatus = { installed: false, error: msg };
     }
 
-    // Register the provider (honor autoEnable flag, default disabled)
-    const enabled = definition.autoEnable ?? false;
+    // Register the provider. Prefer the user's persisted choice over the
+    // definition's autoEnable default so enable/disable survives a restart.
+    const enabled =
+      this.storageService.getEnabledState(manifest.id) ?? definition.autoEnable ?? false;
     this.registry.registerProvider(
       {
         manifest,

@@ -239,8 +239,9 @@ export class GitDiffService {
 
   private async getUntrackedFiles(projectPath: string): Promise<string[]> {
     try {
-      const status = await this.gitStatus.getStatus(projectPath);
-      return status.untracked;
+      // Lightweight: only the untracked set is needed here, so avoid the full
+      // status scan (branch/rebase/merge/stash) that getStatus() would run.
+      return await this.gitStatus.getUntrackedFiles(projectPath);
     } catch {
       return [];
     }

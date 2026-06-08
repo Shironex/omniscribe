@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Mutex } from 'async-mutex';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as os from 'os';
@@ -62,7 +63,27 @@ function sanitizeBranchForPath(branch: string): string | null {
 export class WorktreeService {
   private readonly logger = createLogger('WorktreeService');
 
+  /**
+   * Per-repo locks. Worktree mutations (`prepare`/`cleanup`) for the same repo
+   * must be serialized: git serializes index/worktree changes via on-disk locks,
+   * so concurrent operations race into cryptic "already exists / locked" errors
+   * or a silent `--detach` fallback that changes the session's branch semantics.
+   * Keyed by normalized projectPath; intentionally never pruned (bounded by the
+   * number of open repos, and dropping a lock mid-flight would defeat it).
+   */
+  private readonly repoLocks = new Map<string, Mutex>();
+
   constructor(private readonly gitBase: GitBaseService) {}
+
+  private getRepoMutex(projectPath: string): Mutex {
+    const key = normalizePath(projectPath);
+    let mutex = this.repoLocks.get(key);
+    if (!mutex) {
+      mutex = new Mutex();
+      this.repoLocks.set(key, mutex);
+    }
+    return mutex;
+  }
 
   /**
    * Compute the worktree path for a given project, branch, and location preference
@@ -119,6 +140,23 @@ export class WorktreeService {
       return null;
     }
 
+    // Serialize worktree mutations per repo to avoid git index/worktree lock races.
+    return this.getRepoMutex(projectPath).runExclusive(() =>
+      this.prepareLocked(projectPath, branch, location, currentBranchOverride)
+    );
+  }
+
+  /**
+   * Internal worktree preparation. Runs while holding the per-repo lock so the
+   * list -> branch-probe -> `worktree add` sequence is atomic against other
+   * sessions targeting the same repo.
+   */
+  private async prepareLocked(
+    projectPath: string,
+    branch: string,
+    location: WorktreeLocation,
+    currentBranchOverride?: string
+  ): Promise<string | null> {
     // Use provided currentBranch to avoid redundant git calls (Bug #8: TOCTOU race)
     let currentBranch: string;
     if (currentBranchOverride) {
@@ -271,19 +309,22 @@ export class WorktreeService {
   async cleanup(projectPath: string, worktreePath: string): Promise<void> {
     this.validateWorktreePath(projectPath, worktreePath);
     this.logger.info(`Cleaning up worktree at ${worktreePath}`);
-    // Remove the worktree
-    try {
-      await this.gitBase.execGit(projectPath, ['worktree', 'remove', worktreePath, '--force']);
-    } catch (error) {
-      this.logger.warn(`git worktree remove failed for ${worktreePath}`, error);
-      // If git worktree remove fails, try manual cleanup
+    // Serialize against prepare()/other cleanups on the same repo (git lock races).
+    await this.getRepoMutex(projectPath).runExclusive(async () => {
+      // Remove the worktree
       try {
-        await fs.rm(worktreePath, { recursive: true, force: true });
-        await this.gitBase.execGit(projectPath, ['worktree', 'prune']);
-      } catch (innerError) {
-        this.logger.warn(`Manual worktree cleanup failed for ${worktreePath}:`, innerError);
+        await this.gitBase.execGit(projectPath, ['worktree', 'remove', worktreePath, '--force']);
+      } catch (error) {
+        this.logger.warn(`git worktree remove failed for ${worktreePath}`, error);
+        // If git worktree remove fails, try manual cleanup
+        try {
+          await fs.rm(worktreePath, { recursive: true, force: true });
+          await this.gitBase.execGit(projectPath, ['worktree', 'prune']);
+        } catch (innerError) {
+          this.logger.warn(`Manual worktree cleanup failed for ${worktreePath}:`, innerError);
+        }
       }
-    }
+    });
   }
 
   /**

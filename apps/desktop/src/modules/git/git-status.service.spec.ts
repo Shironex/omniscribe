@@ -353,6 +353,28 @@ describe('GitStatusService', () => {
     });
   });
 
+  describe('getUntrackedFiles', () => {
+    it('lists untracked files via a single ls-files spawn', async () => {
+      gitBase.execGit.mockResolvedValue({ stdout: 'a.ts\nsub/b.ts\n', stderr: '' });
+
+      const result = await service.getUntrackedFiles('/repo');
+
+      expect(result).toEqual(['a.ts', 'sub/b.ts']);
+      expect(gitBase.execGit).toHaveBeenCalledTimes(1);
+      expect(gitBase.execGit).toHaveBeenCalledWith('/repo', [
+        'ls-files',
+        '--others',
+        '--exclude-standard',
+      ]);
+    });
+
+    it('returns an empty array when there are no untracked files', async () => {
+      gitBase.execGit.mockResolvedValue({ stdout: '', stderr: '' });
+
+      expect(await service.getUntrackedFiles('/repo')).toEqual([]);
+    });
+  });
+
   describe('parseStatusCode', () => {
     it('should parse M as modified', () => {
       expect(service.parseStatusCode('M')).toBe('modified');

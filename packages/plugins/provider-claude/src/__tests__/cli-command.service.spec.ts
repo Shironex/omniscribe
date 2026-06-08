@@ -34,7 +34,6 @@ jest.mock('@omniscribe/shared', () => {
 import { ClaudeCliCommandService } from '../services/cli-command.service';
 import { execFileSync } from 'child_process';
 import * as fs from 'fs';
-import * as path from 'path';
 import type { LaunchContext } from '@omniscribe/plugin-api';
 
 const mockedExecFileSync = execFileSync as jest.MockedFunction<typeof execFileSync>;
@@ -351,7 +350,8 @@ describe('ClaudeCliCommandService', () => {
         throw new Error('not found');
       });
 
-      const expectedPath = path.join(appData, 'npm', 'claude.cmd');
+      // The canonical getClaudeCliPaths() normalizes separators to forward slashes.
+      const expectedPath = 'C:/Users/test/AppData/Roaming/npm/claude.cmd';
       mockedExistsSync.mockImplementation((p: unknown) => {
         return p === expectedPath;
       });

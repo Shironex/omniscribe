@@ -21,6 +21,9 @@ import {
   isWindows,
   findCliInPath,
   findCliInLocalPaths,
+  getNvmBinPaths,
+  getFnmBinPaths,
+  getNvmWindowsCliPaths,
 } from '@omniscribe/shared/node';
 
 const logger = createLogger('ClaudeCliDetection');
@@ -178,26 +181,10 @@ export class ClaudeCliDetectionService {
 
   /**
    * Get common Claude CLI installation paths (cross-platform).
+   * Delegates to the standalone `getClaudeCliPaths()` function.
    */
   getClaudeCliPaths(): string[] {
-    const home = getHomeDir();
-
-    if (isWindows()) {
-      const appData = process.env['APPDATA'] || joinPaths(home, 'AppData/Roaming');
-      const localAppData = process.env['LOCALAPPDATA'] || joinPaths(home, 'AppData/Local');
-      return [
-        joinPaths(home, '.local/bin/claude.exe'),
-        joinPaths(appData, 'npm/claude.cmd'),
-        joinPaths(appData, 'npm/claude'),
-        joinPaths(localAppData, 'Programs/claude/claude.exe'),
-      ];
-    }
-
-    return [
-      joinPaths(home, '.local/bin/claude'),
-      '/usr/local/bin/claude',
-      joinPaths(home, '.npm-global/bin/claude'),
-    ];
+    return getClaudeCliPaths();
   }
 
   /**
@@ -232,4 +219,65 @@ export class ClaudeCliDetectionService {
       return false;
     }
   }
+}
+
+/**
+ * Get common Claude CLI installation paths across all platforms.
+ *
+ * Union of the standard locations, npm global, pnpm, Volta, Bun, Homebrew,
+ * and dynamically-resolved NVM/fnm bin paths.
+ *
+ * Standalone function so that the command service (synchronous path
+ * resolution) and the detection service share a single source of truth —
+ * a CLI found by detection must also be found at launch time.
+ */
+export function getClaudeCliPaths(): string[] {
+  const home = getHomeDir();
+
+  if (isWindows()) {
+    const appData = process.env['APPDATA'] || joinPaths(home, 'AppData/Roaming');
+    const localAppData = process.env['LOCALAPPDATA'] || joinPaths(home, 'AppData/Local');
+    return [
+      joinPaths(home, '.local/bin/claude.exe'),
+      joinPaths(home, '.local/bin/claude'),
+      joinPaths(appData, 'npm/claude.cmd'),
+      joinPaths(appData, 'npm/claude'),
+      joinPaths(appData, '.npm-global/bin/claude.cmd'),
+      joinPaths(appData, '.npm-global/bin/claude'),
+      // pnpm on Windows
+      joinPaths(localAppData, 'pnpm/claude.cmd'),
+      joinPaths(localAppData, 'pnpm/claude'),
+      // Volta on Windows
+      joinPaths(home, '.volta/bin/claude.exe'),
+      // Native installer
+      joinPaths(localAppData, 'Programs/claude/claude.exe'),
+      // NVM for Windows symlink paths
+      ...getNvmWindowsCliPaths('claude'),
+    ];
+  }
+
+  // macOS and Linux paths
+  const nvmBinPaths = getNvmBinPaths().map(binPath => joinPaths(binPath, 'claude'));
+  const fnmBinPaths = getFnmBinPaths().map(binPath => joinPaths(binPath, 'claude'));
+
+  return [
+    // Standard locations
+    joinPaths(home, '.local/bin/claude'),
+    '/usr/local/bin/claude',
+    '/usr/bin/claude',
+    joinPaths(home, '.npm-global/bin/claude'),
+    // Homebrew
+    '/opt/homebrew/bin/claude',
+    // Volta
+    joinPaths(home, '.volta/bin/claude'),
+    // pnpm global
+    joinPaths(home, 'Library/pnpm/claude'),
+    joinPaths(home, '.local/share/pnpm/claude'),
+    // Bun
+    joinPaths(home, '.bun/bin/claude'),
+    // NVM paths (dynamically resolved)
+    ...nvmBinPaths,
+    // fnm paths (dynamically resolved)
+    ...fnmBinPaths,
+  ];
 }

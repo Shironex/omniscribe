@@ -169,6 +169,20 @@ export class GitStatusService {
   }
 
   /**
+   * List untracked files (respecting .gitignore). Lightweight alternative to
+   * getStatus() when only the untracked set is needed — one git spawn instead
+   * of the full branch/rebase/merge/stash scan.
+   */
+  async getUntrackedFiles(repoPath: string): Promise<string[]> {
+    const { stdout } = await this.gitBase.execGit(repoPath, [
+      'ls-files',
+      '--others',
+      '--exclude-standard',
+    ]);
+    return stdout.split(/\r?\n/).filter(Boolean);
+  }
+
+  /**
    * Parse git status code to GitFileStatus
    */
   parseStatusCode(code: string): GitFileStatus {

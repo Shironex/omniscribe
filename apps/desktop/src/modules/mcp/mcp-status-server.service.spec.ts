@@ -292,6 +292,45 @@ describe('McpStatusServerService - Request Handling', () => {
     });
   });
 
+  // Regression: the /status body is untrusted loopback input. A forged or
+  // malformed payload must be rejected (400) and must NOT emit a session event.
+  it('should return 400 and not emit for an invalid state value', async () => {
+    sessionRegistry.getProjectPath.mockReturnValue('/project');
+
+    await initService();
+
+    const payload = JSON.stringify({
+      sessionId: 'session-1',
+      instanceId: 'test-uuid-1234',
+      state: 'hacked', // not a SessionStatusState
+      timestamp: new Date().toISOString(),
+    });
+
+    const { res } = simulateRequest('POST', '/status', payload);
+
+    expect(res.writeHead as jest.Mock).toHaveBeenCalledWith(400, {
+      'Content-Type': 'application/json',
+    });
+    expect(eventEmitter.emit).not.toHaveBeenCalled();
+  });
+
+  it('should return 400 and not emit for a status payload missing sessionId', async () => {
+    await initService();
+
+    const payload = JSON.stringify({
+      instanceId: 'test-uuid-1234',
+      state: 'working',
+      timestamp: new Date().toISOString(),
+    });
+
+    const { res } = simulateRequest('POST', '/status', payload);
+
+    expect(res.writeHead as jest.Mock).toHaveBeenCalledWith(400, {
+      'Content-Type': 'application/json',
+    });
+    expect(eventEmitter.emit).not.toHaveBeenCalled();
+  });
+
   it('should reject status update with wrong instance ID', async () => {
     await initService();
 
@@ -494,6 +533,26 @@ describe('McpStatusServerService - Request Handling', () => {
       const responseBody = JSON.parse((res.end as jest.Mock).mock.calls[0][0]);
       expect(responseBody.accepted).toBe(false);
       expect(responseBody.reason).toBe('unknown_session');
+      expect(eventEmitter.emit).not.toHaveBeenCalled();
+    });
+
+    it('should return 400 and not emit for a malformed task item', async () => {
+      sessionRegistry.getProjectPath.mockReturnValue('/project');
+
+      await initService();
+
+      const payload = JSON.stringify({
+        sessionId: 'session-1',
+        instanceId: 'test-uuid-1234',
+        tasks: [{ id: 'task-1', subject: 'Do something', status: 'bogus-status' }],
+        timestamp: new Date().toISOString(),
+      });
+
+      const { res } = simulateRequest('POST', '/tasks', payload);
+
+      expect(res.writeHead as jest.Mock).toHaveBeenCalledWith(400, {
+        'Content-Type': 'application/json',
+      });
       expect(eventEmitter.emit).not.toHaveBeenCalled();
     });
 

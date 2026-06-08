@@ -55,6 +55,18 @@ export const SidebarProjectItem = React.memo(function SidebarProjectItem({
     onSelect(id);
   }, [id, onSelect]);
 
+  // The sidebar uses a PointerSensor only (no KeyboardSensor), so these tab divs
+  // need their own keyboard activation to be reachable without a mouse.
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        onSelect(id);
+      }
+    },
+    [id, onSelect]
+  );
+
   const handleClose = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
@@ -133,8 +145,11 @@ export const SidebarProjectItem = React.memo(function SidebarProjectItem({
                   {...listeners}
                   role="tab"
                   aria-selected={isActive}
+                  tabIndex={0}
                   onClick={handleClick}
-                  className="no-drag relative w-8 h-8 mx-auto cursor-pointer"
+                  onKeyDown={handleKeyDown}
+                  aria-label={label}
+                  className="no-drag relative w-8 h-8 mx-auto cursor-pointer rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-1 focus-visible:ring-offset-sidebar"
                 >
                   <div
                     className={cn(
@@ -197,7 +212,9 @@ export const SidebarProjectItem = React.memo(function SidebarProjectItem({
           <div
             role="tab"
             aria-selected={isActive}
+            tabIndex={0}
             onClick={handleClick}
+            onKeyDown={handleKeyDown}
             className={cn(
               'no-drag group flex items-center gap-2 px-2 py-1.5 mx-1 rounded-lg cursor-pointer',
               'transition-colors duration-150 ease-out relative',

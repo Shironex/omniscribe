@@ -78,6 +78,14 @@ interface UpdateSessionResponse {
 export class SessionGateway implements OnGatewayInit {
   private readonly logger = createLogger('SessionGateway');
 
+  /**
+   * Launches that have passed the concurrency check but not yet registered a
+   * terminal. A freshly created session has no terminalSessionId until several
+   * awaits later, so getRunningSessions() alone can't see it — without counting
+   * these, N concurrent creates all slip past the limit and over-spawn PTYs.
+   */
+  private launchesInFlight = 0;
+
   @WebSocketServer()
   server!: Server;
 
@@ -399,12 +407,14 @@ export class SessionGateway implements OnGatewayInit {
       return { error: pathError };
     }
 
-    // Check concurrency limit
+    // Check concurrency limit. Count in-flight launches that haven't registered
+    // a terminal yet (check + increment below are synchronous, so concurrent
+    // creates observe each other and can't all slip past the limit).
     const runningSessions = this.sessionService.getRunningSessions();
-    if (runningSessions.length >= MAX_CONCURRENT_SESSIONS) {
+    if (runningSessions.length + this.launchesInFlight >= MAX_CONCURRENT_SESSIONS) {
       const idleSessions = this.sessionService.getIdleSessions();
       this.logger.warn(
-        `[${errorPrefix}] Session limit reached: ${runningSessions.length}/${MAX_CONCURRENT_SESSIONS} running`
+        `[${errorPrefix}] Session limit reached: ${runningSessions.length}/${MAX_CONCURRENT_SESSIONS} running, ${this.launchesInFlight} launching`
       );
       return {
         error: `Session limit reached (${runningSessions.length}/${MAX_CONCURRENT_SESSIONS}). Close a session to start a new one.`,
@@ -412,16 +422,45 @@ export class SessionGateway implements OnGatewayInit {
       };
     }
 
-    const preferences = this.workspaceService.getPreferences();
-    const worktreeSettings: WorktreeSettings = preferences.worktree ?? DEFAULT_WORKTREE_SETTINGS;
-    const sessionSettings: SessionSettings = preferences.session ?? DEFAULT_SESSION_SETTINGS;
-    const skipPermissions = mode !== 'plain' && sessionSettings.skipPermissions ? true : undefined;
+    this.launchesInFlight++;
+    try {
+      const preferences = this.workspaceService.getPreferences();
+      const worktreeSettings: WorktreeSettings = preferences.worktree ?? DEFAULT_WORKTREE_SETTINGS;
+      const sessionSettings: SessionSettings = preferences.session ?? DEFAULT_SESSION_SETTINGS;
+      const skipPermissions =
+        mode !== 'plain' && sessionSettings.skipPermissions ? true : undefined;
 
-    const session = this.sessionService.create(mode, payload.projectPath, {
-      ...createOptions,
-      skipPermissions,
-    });
+      const session = this.sessionService.create(mode, payload.projectPath, {
+        ...createOptions,
+        skipPermissions,
+      });
 
+      return await this.runLaunch(client, payload, mode, session, worktreeSettings, errorPrefix);
+    } catch (error) {
+      // Without this, an uncaught throw escapes the @SubscribeMessage handler;
+      // NestJS's WS filter never invokes the Socket.io ack, so the renderer hangs
+      // its full request timeout and surfaces an opaque error with no session.
+      const message = extractErrorMessage(error);
+      this.logger.error(`[${errorPrefix}] Unexpected error launching session:`, error);
+      return { error: message };
+    } finally {
+      this.launchesInFlight--;
+    }
+  }
+
+  /**
+   * Worktree setup, launch, and terminal-room join for an already-created
+   * session. Extracted so launchSessionWithWorktree can hold the in-flight
+   * counter across the whole async body via try/finally.
+   */
+  private async runLaunch(
+    client: Socket,
+    payload: { projectPath: string; branch?: string; name?: string },
+    mode: AiMode,
+    session: BackendSessionConfig,
+    worktreeSettings: WorktreeSettings,
+    errorPrefix: string
+  ): Promise<CreateSessionResponse> {
     // Worktree setup (use currentBranch fallback when branch is absent)
     let worktreePath: string | null = null;
     let worktreeWarning: string | undefined;
