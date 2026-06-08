@@ -12,7 +12,7 @@
     "@types/mdx": "^2.0.13",
     "framer-motion": "^12.38.0",
     "fumadocs-core": "^16.8.11",
-    "fumadocs-mdx": "^14.3.1",
+    "fumadocs-mdx": "^15.0.11",
     "fumadocs-ui": "^16.8.11",
     "next": "^16.2.6",
     "react": "^19.2.4",
