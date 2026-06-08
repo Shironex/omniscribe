@@ -28,7 +28,7 @@
   "dependencies": {
     "@nestjs/common": "^11.1.25",
     "@nestjs/core": "^11.1.25",
-    "@nestjs/event-emitter": "^2.1.1",
+    "@nestjs/event-emitter": "^3.1.0",
     "@nestjs/platform-express": "^11.1.25",
     "@nestjs/platform-socket.io": "^11.1.25",
     "@nestjs/schedule": "^6.1.3",
