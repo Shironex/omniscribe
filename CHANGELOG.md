@@ -2,11 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 1.8.0 (2026-06-08)
+
+### Security
+
+- **Fixed `@nestjs/core` SSE injection (CVE-2026-35515)** — The moderate SSE-injection advisory (GHSA-36xv-jgw5-4q75) is fixed only in `@nestjs/core@11.1.18`, so the NestJS stack was upgraded to v11 (11.1.25) to clear it. `pnpm audit` now reports no known vulnerabilities.
 
 ### Behavior changes
 
 - **Terminal shell flag changed from `--login` to `-i`** — Spawned `bash` and `zsh` sessions now run interactively instead of as login shells, matching VS Code and iTerm. Interactive shells source `~/.bashrc` / `~/.zshrc`, the files where most users set PATH and aliases. If your PATH or aliases live exclusively in `~/.bash_profile` or `~/.zprofile` (the login-shell startup files), tools such as `node`, `git`, or `claude` may appear to vanish from terminal sessions on upgrade. To restore them, source your login config from `~/.bashrc` / `~/.zshrc` (e.g. add `[ -f ~/.bash_profile ] && source ~/.bash_profile` to `~/.bashrc`) or move the relevant exports across. PowerShell, `cmd`, and `sh` are unaffected.
+
+### Dependencies
+
+- **NestJS 10 → 11** — Upgraded the entire `@nestjs/*` stack (common, core, platform-express, platform-socket.io, websockets, testing) to v11 and `@nestjs/event-emitter` to v3. This pulls Express 5 under the hood; no app-level controller/route changes were required, and a wildcard event-routing regression test was added.
+- **Vite 7 → 8 (+ `@vitejs/plugin-react` 6)** — The renderer now builds on Vite 8 (Rolldown default bundler, Oxc JS / Lightning CSS minifiers). No renderer config changes were needed.
+- **Tooling majors** — `lint-staged` 17, `concurrently` 10, and `fumadocs-mdx` 15 (docs site).
+- **Safe dependency refresh + override hardening** — Refreshed in-range dependencies (electron 41.7.1, electron-builder 26.15.2, the Radix UI group, lucide-react, the vite/vitest tooling, etc.) and bounded the `undici` pnpm override to prevent an unintended major.
+
+### Internal
+
+- **Lint scope** — ESLint now ignores generated build output (`.next`, `.source`, `coverage`).
+- **Renderer chunking** — Renamed the `motion` vendor chunk to match the declared package (was `framer-motion`).
 
 ## 1.7.0 (2026-05-08)
 
