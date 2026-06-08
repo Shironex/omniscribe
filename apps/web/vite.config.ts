@@ -63,7 +63,12 @@ export default defineConfig({
           if (/node_modules\/(react|react-dom)\//.test(id)) return 'vendor';
           if (id.includes('node_modules/@xterm/')) return 'xterm';
           if (id.includes('node_modules/@dnd-kit/')) return 'dndkit';
-          if (id.includes('node_modules/framer-motion/')) return 'framer-motion';
+          // The app imports `motion/react`; `motion` is a thin re-export shim
+          // that depends on `framer-motion` (where the actual code lives). Group
+          // both into one chunk named for the package we actually declare.
+          if (id.includes('node_modules/motion/') || id.includes('node_modules/framer-motion/')) {
+            return 'motion';
+          }
           if (id.includes('node_modules/@radix-ui/')) return 'radix';
           if (id.includes('node_modules/@floating-ui/')) return 'floating-ui';
           if (
