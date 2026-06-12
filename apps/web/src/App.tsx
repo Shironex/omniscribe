@@ -4,6 +4,7 @@ import { ContentToolbar } from '@/components/sidebar/ContentToolbar';
 import { IdleLandingView } from '@/components/shared/IdleLandingView';
 import { WelcomeView } from '@/components/shared/WelcomeView';
 import { PersistentProjectGrid } from '@/components/terminal/PersistentProjectGrid';
+import { FileExplorerPanel } from '@/components/explorer';
 import { useAppInitialization } from '@/hooks/useAppInitialization';
 import { useWorkspaceTabs } from '@/hooks/useWorkspaceTabs';
 import { useWorkspacePreferences } from '@/hooks/useWorkspacePreferences';
@@ -246,6 +247,10 @@ function App() {
         />
 
         <main className="flex-1 flex overflow-hidden bg-background">
+          {/* Collapsible file explorer (WS3) — self-contained, persists its own
+              open/closed state + width in localStorage. */}
+          <FileExplorerPanel projectPath={activeProjectPath} />
+
           {/* Main content area — relative container for stacked persistent grids */}
           <div className="flex-1 min-w-0 relative">
             {/* Persistent terminal grids for all projects with sessions */}

@@ -41,6 +41,16 @@ export const InternalTerminalEvents = {
 } as const;
 
 // ============================================
+// FS Internal Events
+// ============================================
+export const InternalFsEvents = {
+  /** Emitted by FsWatchService after debounce-batching a project's filesystem
+   *  changes. FsGateway listens and broadcasts `fs:changed` to the project room.
+   *  Payload: { projectPath: string; paths: string[] }. */
+  CHANGED: 'fs.changed',
+} as const;
+
+// ============================================
 // Quick Action Internal Events
 // ============================================
 export const InternalQuickActionEvents = {

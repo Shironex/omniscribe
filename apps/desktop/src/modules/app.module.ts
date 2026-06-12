@@ -5,6 +5,7 @@ import { TerminalModule } from './terminal';
 import { WorkspaceModule } from './workspace';
 import { SessionModule } from './session';
 import { GitModule } from './git';
+import { FsModule } from './fs';
 import { McpModule } from './mcp';
 import { UsageModule } from './usage';
 import { ChangelogModule } from './changelog';
@@ -70,6 +71,7 @@ import { CodexProviderPlugin } from '@omniscribe/provider-codex';
     WorkspaceModule,
     SessionModule,
     GitModule,
+    FsModule,
     McpModule,
     UsageModule,
     ChangelogModule,
