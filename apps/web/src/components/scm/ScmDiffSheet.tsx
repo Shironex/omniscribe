@@ -52,6 +52,9 @@ export function ScmDiffSheet() {
       <DialogPortal>
         <DialogOverlay />
         <DialogPrimitive.Content
+          // Title doubles as the description (file path + ref) — suppress
+          // Radix's missing-Description console warning.
+          aria-describedby={undefined}
           className={cn(
             'fixed left-1/2 top-1/2 z-50 flex h-[90vh] w-[92vw] max-w-6xl -translate-x-1/2 -translate-y-1/2',
             'flex-col overflow-hidden rounded-lg border border-border bg-card shadow-lg',

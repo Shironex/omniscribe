@@ -17,6 +17,8 @@ import {
   createSocketListeners,
 } from './utils';
 import { useFsStore } from './useFsStore';
+import { useAppUIStore } from './useAppUIStore';
+import { useSettingsStore } from './useSettingsStore';
 
 const logger = createLogger('EditorStore');
 
@@ -478,6 +480,11 @@ useFsStore.subscribe((state, prevState) => {
     if (projectPath) {
       useEditorStore.getState().setProject(projectPath);
       void useEditorStore.getState().openFile(projectPath, path);
+      // Opening a file surfaces the editor (closing settings if it was open).
+      if (useSettingsStore.getState().isOpen) {
+        useSettingsStore.getState().closeSettings();
+      }
+      useAppUIStore.getState().setShellView('editor');
     }
     // Clear the one-shot slot so re-opening the same file later re-triggers.
     useFsStore.getState().clearRequestedOpen();
@@ -489,6 +496,35 @@ useFsStore.subscribe((state, prevState) => {
 useFsStore.subscribe((state, prevState) => {
   if (state.projectPath !== prevState.projectPath) {
     useEditorStore.getState().setProject(state.projectPath);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// shellView wiring: keep the workspace surface (terminal / editor / settings)
+// in lockstep with the editor stack and the settings modal. Mirrors the
+// store-to-store subscription pattern above so the shell stays decoupled from
+// the individual stores that drive it.
+// ---------------------------------------------------------------------------
+
+// Closing the last open file while focused on the editor falls back to the
+// terminal grid (there is no editor surface left to show). Switching projects
+// resets the stack to empty via setProject — same fallback applies.
+useEditorStore.subscribe((state, prevState) => {
+  const wentEmpty = prevState.files.length > 0 && state.files.length === 0;
+  if (wentEmpty && useAppUIStore.getState().shellView === 'editor') {
+    useAppUIStore.getState().setShellView('terminal');
+  }
+});
+
+// Settings open ⇒ 'settings'. Settings close ⇒ back to the editor if a file is
+// still focused, otherwise the terminal grid.
+useSettingsStore.subscribe((state, prevState) => {
+  if (state.isOpen === prevState.isOpen) return;
+  if (state.isOpen) {
+    useAppUIStore.getState().setShellView('settings');
+  } else {
+    const hasActiveFile = useEditorStore.getState().activePath !== null;
+    useAppUIStore.getState().setShellView(hasActiveFile ? 'editor' : 'terminal');
   }
 });
 

@@ -1,4 +1,4 @@
-import { GitBranch, Settings } from 'lucide-react';
+import { GitBranch, Settings, PanelLeft } from 'lucide-react';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
 import { UsagePopover } from '@/components/shared/UsagePopover';
@@ -11,9 +11,21 @@ const SETTINGS_SHORTCUT = IS_MAC ? '⌘ ,' : 'Ctrl+,';
 interface SidebarFooterProps {
   currentBranch: string;
   collapsed: boolean;
+  /** Whether the attached side panel is open (drives the toggle icon state). */
+  sidePanelOpen?: boolean;
+  /** Toggle the attached side panel (Files / Source Control). */
+  onToggleSidePanel?: () => void;
+  /** Whether a project is active (the side-panel toggle is hidden otherwise). */
+  hasProject?: boolean;
 }
 
-export function SidebarFooter({ currentBranch, collapsed }: SidebarFooterProps) {
+export function SidebarFooter({
+  currentBranch,
+  collapsed,
+  sidePanelOpen,
+  onToggleSidePanel,
+  hasProject,
+}: SidebarFooterProps) {
   const openSettings = useSettingsStore(state => state.openSettings);
 
   return (
@@ -43,7 +55,7 @@ export function SidebarFooter({ currentBranch, collapsed }: SidebarFooterProps) 
         </Tooltip>
       )}
 
-      {/* Usage + Settings row */}
+      {/* Usage + panel toggle + Settings row */}
       <div className={cn('flex items-center', collapsed ? 'flex-col gap-1' : 'justify-between')}>
         <UsagePopover
           anchoring={{
@@ -53,25 +65,50 @@ export function SidebarFooter({ currentBranch, collapsed }: SidebarFooterProps) 
           }}
         />
 
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => openSettings()}
-              className="w-7 h-7 text-muted-foreground hover:text-foreground"
-              aria-label="Settings"
-            >
-              <Settings size={15} />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side={collapsed ? 'right' : 'top'}>
-            Settings
-            <kbd className="ml-1.5 px-1 py-0.5 text-[10px] bg-foreground/10 rounded">
-              {SETTINGS_SHORTCUT}
-            </kbd>
-          </TooltipContent>
-        </Tooltip>
+        <div className={cn('flex items-center', collapsed ? 'flex-col gap-1' : 'gap-0.5')}>
+          {hasProject && onToggleSidePanel && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={onToggleSidePanel}
+                  className={cn(
+                    'w-7 h-7 text-muted-foreground hover:text-foreground',
+                    sidePanelOpen && 'text-foreground'
+                  )}
+                  aria-label={sidePanelOpen ? 'Hide side panel' : 'Show side panel'}
+                  aria-pressed={sidePanelOpen}
+                >
+                  <PanelLeft size={15} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side={collapsed ? 'right' : 'top'}>
+                {sidePanelOpen ? 'Hide side panel' : 'Show side panel'}
+              </TooltipContent>
+            </Tooltip>
+          )}
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => openSettings()}
+                className="w-7 h-7 text-muted-foreground hover:text-foreground"
+                aria-label="Settings"
+              >
+                <Settings size={15} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side={collapsed ? 'right' : 'top'}>
+              Settings
+              <kbd className="ml-1.5 px-1 py-0.5 text-[10px] bg-foreground/10 rounded">
+                {SETTINGS_SHORTCUT}
+              </kbd>
+            </TooltipContent>
+          </Tooltip>
+        </div>
       </div>
     </div>
   );

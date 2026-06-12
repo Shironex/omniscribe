@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Files, GitBranch, PanelLeft } from 'lucide-react';
+import { Files, GitBranch, PanelLeftClose } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { useScmStore, selectStatusByPath, selectChangedCount } from '@/stores/useScmStore';
 import { statusColorClass } from '@/components/scm/scmStatus';
 import { ScmView } from '@/components/scm';
-import { FileExplorer } from './FileExplorer';
+import { FileExplorer } from '@/components/explorer';
 import {
   loadExplorerLayout,
   saveExplorerLayout,
@@ -14,27 +14,36 @@ import {
   EXPLORER_MIN_WIDTH,
   EXPLORER_MAX_WIDTH,
   type ExplorerTab,
-} from './explorerLayout';
+} from '@/components/explorer/explorerLayout';
 
-export interface FileExplorerPanelProps {
+export interface SidePanelProps {
   /** Active project root, or null when no project is selected. */
   projectPath: string | null;
+  /** Whether the panel is open (lifted to the shell so the rail can reopen it). */
+  open: boolean;
+  /** Toggle open/closed (collapse button + rail toggle drive this). */
+  onOpenChange: (open: boolean) => void;
+}
+
+/** Derive a display name (folder basename) from a project root path. */
+function projectName(path: string): string {
+  const trimmed = path.replace(/[\\/]+$/, '');
+  return trimmed.split(/[\\/]/).pop() || trimmed;
 }
 
 /**
- * Collapsible left-side panel for the project view, tabbed into Files and
- * Source Control.
+ * Full-height side panel attached to the project rail — together they read as a
+ * single sidebar unit (shared `bg-sidebar` + one right border). Tabbed into
+ * Files and Source Control via a terax-style segmented switcher at the BOTTOM.
  *
- * Self-contained: owns its open/closed state, width, and active tab (persisted
- * to localStorage under `omniscribe-explorer`), renders a drag-to-resize
- * handle, and shows a thin reveal rail when collapsed. The Source Control tab
- * binds itself to the active project; the Files tab receives git-status colors
- * derived from the SCM snapshot so the surrounding layout needs to mount only
- * this one component.
+ * Owns its width (persisted to localStorage under `omniscribe-explorer`),
+ * renders a drag-to-resize handle, and keeps both views mounted (only the
+ * active one shown) so the explorer tree + SCM listeners stay warm. Open/closed
+ * state is lifted to the shell (a footer rail button reopens it when collapsed).
+ * Width/tab changes dispatch `terminal-refit-all` so terminals refit.
  */
-export function FileExplorerPanel({ projectPath }: FileExplorerPanelProps) {
+export function SidePanel({ projectPath, open, onOpenChange }: SidePanelProps) {
   const initial = useRef(loadExplorerLayout());
-  const [open, setOpen] = useState(initial.current.open);
   const [width, setWidth] = useState(initial.current.width);
   const [tab, setTab] = useState<ExplorerTab>(initial.current.tab);
   const draggingRef = useRef(false);
@@ -56,8 +65,8 @@ export function FileExplorerPanel({ projectPath }: FileExplorerPanelProps) {
     saveExplorerLayout({ open, width, tab });
   }, [open, width, tab]);
 
-  // Notify terminals to refit when the panel toggles or resizes (layout width
-  // of the grid changes). Two rAFs so the DOM has settled.
+  // Notify terminals to refit when the panel toggles or resizes (the grid's
+  // available width changes). Two rAFs so the DOM has settled.
   useEffect(() => {
     const id = requestAnimationFrame(() => {
       requestAnimationFrame(() => {
@@ -94,49 +103,44 @@ export function FileExplorerPanel({ projectPath }: FileExplorerPanelProps) {
     [width]
   );
 
-  // No project → nothing to explore.
-  if (!projectPath) return null;
+  // No project, or collapsed → render nothing (the rail's footer toggle reopens).
+  if (!projectPath || !open) return null;
 
-  if (!open) {
-    return (
-      <div className="flex w-8 shrink-0 flex-col items-center border-r border-border bg-card/30 pt-2">
+  return (
+    <div
+      className="relative flex shrink-0 flex-col border-r border-sidebar-border bg-sidebar"
+      style={{ width, minWidth: EXPLORER_MIN_WIDTH, maxWidth: EXPLORER_MAX_WIDTH }}
+    >
+      {/* Header: project folder name + collapse. */}
+      <div className="flex h-9 shrink-0 items-center justify-between gap-1 border-b border-sidebar-border/60 px-2">
+        <span
+          className="truncate text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+          title={projectPath}
+        >
+          {projectName(projectPath)}
+        </span>
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
               variant="ghost"
               size="icon"
               className="h-6 w-6 text-muted-foreground hover:text-foreground"
-              onClick={() => setOpen(true)}
-              aria-label="Open side panel"
+              onClick={() => onOpenChange(false)}
+              aria-label="Collapse side panel"
             >
-              <PanelLeft className="h-4 w-4" />
+              <PanelLeftClose className="h-4 w-4" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent side="right">Open side panel</TooltipContent>
+          <TooltipContent side="bottom">Collapse</TooltipContent>
         </Tooltip>
       </div>
-    );
-  }
 
-  return (
-    <div
-      className="relative flex shrink-0 flex-col border-r border-border"
-      style={{ width, minWidth: EXPLORER_MIN_WIDTH, maxWidth: EXPLORER_MAX_WIDTH }}
-    >
-      <PanelTabs
-        tab={tab}
-        onChange={setTab}
-        changedCount={changedCount}
-        onClose={() => setOpen(false)}
-      />
-
+      {/* Body: both views stay mounted; only the active one is shown. */}
       <div className="min-h-0 flex-1">
-        {/* Both tabs stay mounted; only the active one is shown — keeps the
-            explorer tree + SCM listeners warm across tab switches. */}
         <div className={cn('h-full', tab === 'files' ? 'block' : 'hidden')}>
           <FileExplorer
             projectPath={projectPath}
-            onClose={() => setOpen(false)}
+            onClose={() => onOpenChange(false)}
             statusByPath={statusByPath}
             hideHeader
           />
@@ -145,6 +149,9 @@ export function FileExplorerPanel({ projectPath }: FileExplorerPanelProps) {
           <ScmView projectPath={projectPath} />
         </div>
       </div>
+
+      {/* Bottom switcher: two equal-width segmented buttons (terax-style). */}
+      <BottomSwitcher tab={tab} onChange={setTab} changedCount={changedCount} />
 
       {/* Resize handle */}
       <div
@@ -161,14 +168,13 @@ export function FileExplorerPanel({ projectPath }: FileExplorerPanelProps) {
   );
 }
 
-interface PanelTabsProps {
+interface BottomSwitcherProps {
   tab: ExplorerTab;
   onChange: (tab: ExplorerTab) => void;
   changedCount: number;
-  onClose: () => void;
 }
 
-function PanelTabs({ tab, onChange, changedCount, onClose }: PanelTabsProps) {
+function BottomSwitcher({ tab, onChange, changedCount }: BottomSwitcherProps) {
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
       e.preventDefault();
@@ -181,40 +187,26 @@ function PanelTabs({ tab, onChange, changedCount, onClose }: PanelTabsProps) {
       role="tablist"
       aria-label="Side panel"
       onKeyDown={handleKeyDown}
-      className="flex items-center gap-0.5 border-b border-border px-1.5 py-1"
+      className="flex shrink-0 items-stretch border-t border-sidebar-border/60"
     >
-      <TabButton
+      <SwitcherButton
         active={tab === 'files'}
         onClick={() => onChange('files')}
         icon={<Files className="h-3.5 w-3.5" />}
         label="Files"
       />
-      <TabButton
+      <SwitcherButton
         active={tab === 'scm'}
         onClick={() => onChange('scm')}
         icon={<GitBranch className="h-3.5 w-3.5" />}
         label="Source Control"
         badge={changedCount > 0 ? changedCount : undefined}
       />
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="ml-auto h-6 w-6 text-muted-foreground hover:text-foreground"
-            onClick={onClose}
-            aria-label="Collapse side panel"
-          >
-            <PanelLeft className="h-4 w-4" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent side="bottom">Collapse</TooltipContent>
-      </Tooltip>
     </div>
   );
 }
 
-function TabButton({
+function SwitcherButton({
   active,
   onClick,
   icon,
@@ -236,15 +228,17 @@ function TabButton({
       onClick={onClick}
       title={label}
       className={cn(
-        'relative flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium transition-colors',
+        'relative flex flex-1 items-center justify-center gap-1.5 px-2 py-1.5 text-xs font-medium transition-colors',
         'focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring',
-        active ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:text-foreground'
+        active
+          ? 'bg-accent text-accent-foreground'
+          : 'text-muted-foreground hover:bg-accent/40 hover:text-foreground'
       )}
     >
       {icon}
-      <span>{label}</span>
+      <span className="truncate">{label}</span>
       {badge !== undefined && (
-        <span className="ml-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground">
+        <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground">
           {badge > 99 ? '99+' : badge}
         </span>
       )}

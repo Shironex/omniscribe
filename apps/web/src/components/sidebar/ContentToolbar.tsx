@@ -12,6 +12,7 @@ import { IS_MAC } from '@/lib/platform';
 import { MAX_CONCURRENT_SESSIONS } from '@omniscribe/shared';
 import { CustomCommandsManager } from '@/components/custom-commands/CustomCommandsManager';
 import { selectCommandsForProject, useCustomCommandStore } from '@/stores/useCustomCommandStore';
+import { WorkspaceTabs } from '@/components/shell';
 
 const STOP_SHORTCUT = IS_MAC ? '⌘ K' : 'Ctrl+K';
 const HISTORY_SHORTCUT = IS_MAC ? '⌘ ⇧ H' : 'Ctrl+Shift+H';
@@ -30,6 +31,8 @@ interface ContentToolbarProps {
   isLaunching: boolean;
   hasActiveSessions: boolean;
   gitHubUrl?: string | null;
+  /** Shared dirty-close guard for the workspace tab strip. */
+  onRequestCloseFile: (path: string) => void;
 }
 
 export function ContentToolbar({
@@ -46,6 +49,7 @@ export function ContentToolbar({
   isLaunching,
   hasActiveSessions,
   gitHubUrl,
+  onRequestCloseFile,
 }: ContentToolbarProps) {
   const toggleHistory = useAppUIStore(state => state.toggleHistory);
   const isHistoryOpen = useAppUIStore(state => state.isHistoryOpen);
@@ -114,8 +118,8 @@ export function ContentToolbar({
         )}
       </div>
 
-      {/* Center spacer */}
-      <div className="flex-1 min-w-2" />
+      {/* Center: unified workspace tab strip (Terminal | files | Settings). */}
+      <WorkspaceTabs onRequestClose={onRequestCloseFile} />
 
       {/* Right: Status + Actions + Window controls */}
       <div className="no-drag flex items-center gap-1 px-2 shrink-0">

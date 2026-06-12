@@ -247,9 +247,16 @@ function tint(token: string, percent: number): string {
 const diffTheme = EditorView.theme({
   '&': { fontSize: '12px' },
   '.cm-changedLine': { backgroundColor: tint('--status-success', 12) },
-  '.cm-changedText': { background: tint('--status-success', 30) },
+  // The merge package styles intra-line marks with two-class selectors
+  // (.cm-insertedLine .cm-changedText) carrying a dotted-underline
+  // background-image — match that specificity to actually override it.
+  '.cm-changedText, .cm-insertedLine .cm-changedText': {
+    background: tint('--status-success', 30),
+  },
   '.cm-deletedChunk': { backgroundColor: tint('--status-error', 10) },
-  '.cm-deletedText': { background: tint('--status-error', 30) },
+  '.cm-deletedText, .cm-deletedChunk .cm-deletedText': {
+    background: tint('--status-error', 30),
+  },
   '.cm-changedLineGutter': { backgroundColor: tint('--status-success', 35) },
   '.cm-deletedLineGutter': { backgroundColor: tint('--status-error', 35) },
   '.cm-collapsedLines': {

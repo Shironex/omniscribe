@@ -1,35 +1,34 @@
-import { useCallback, useEffect, useState } from 'react';
-import { useShallow } from 'zustand/react/shallow';
-import { useEditorStore, selectActiveFile, type OpenFile } from '@/stores/useEditorStore';
-import { EditorTabs } from './EditorTabs';
+import { useCallback, useEffect } from 'react';
+import { useEditorStore, selectActiveFile } from '@/stores/useEditorStore';
 import { EditorPane } from './EditorPane';
-import { CloseConfirmDialog } from './CloseConfirmDialog';
 import { ExternalChangeBanner } from './ExternalChangeBanner';
 
-function basename(path: string): string {
-  return path.split(/[\\/]/).pop() ?? path;
+interface EditorPanelProps {
+  /**
+   * Shared dirty-close guard. Called for the editor-scoped Cmd/Ctrl+W; closing
+   * a clean file is immediate, a dirty file routes through the confirm dialog
+   * owned by the host (App) so the strip × and Cmd+W share one flow.
+   */
+  onRequestClose: (path: string) => void;
 }
 
 /**
- * The editor surface: tab strip + active pane + conflict banner + dirty-close
- * confirmation. Rendered by {@link EditorSplit} only when ≥1 file is open, so
- * it owns no visibility logic of its own.
+ * The editor surface: active pane + conflict banner. The tab strip now lives in
+ * {@link WorkspaceTabs} (in the content toolbar) and the dirty-close confirm
+ * dialog is owned by the host, so this component renders only the focused
+ * editor and its external-change banner.
  *
- * Self-contained wiring:
- *  - initializes the editor store's `fs:changed` listener on mount (external
- *    change detection for open files), tearing it down on unmount.
- *  - drives save (Cmd/Ctrl+S) and close (Cmd/Ctrl+W) from {@link EditorPane}'s
- *    editor-scoped key handler.
+ * Self-contained wiring: initializes the editor store's `fs:changed` listener on
+ * mount (external-change detection for open files), tearing it down on unmount.
+ * Save (Cmd/Ctrl+S) and close (Cmd/Ctrl+W) are driven from {@link EditorPane}'s
+ * editor-scoped key handler.
  */
-export function EditorPanel() {
-  const files = useEditorStore(useShallow(state => state.files));
-  const activePath = useEditorStore(state => state.activePath);
+export function EditorPanel({ onRequestClose }: EditorPanelProps) {
+  const files = useEditorStore(state => state.files);
   const activeFile = useEditorStore(selectActiveFile);
 
-  const setActivePath = useEditorStore(state => state.setActivePath);
   const setContent = useEditorStore(state => state.setContent);
   const save = useEditorStore(state => state.save);
-  const closeFile = useEditorStore(state => state.closeFile);
   const reloadFromDisk = useEditorStore(state => state.reloadFromDisk);
   const keepLocal = useEditorStore(state => state.keepLocal);
 
@@ -43,37 +42,6 @@ export function EditorPanel() {
     };
   }, []);
 
-  // Pending dirty-close confirmation (path awaiting Save/Discard/Cancel).
-  const [pendingClose, setPendingClose] = useState<string | null>(null);
-
-  const requestClose = useCallback(
-    (path: string) => {
-      const file = useEditorStore.getState().files.find((f: OpenFile) => f.path === path);
-      if (file?.dirty) {
-        setPendingClose(path);
-      } else {
-        closeFile(path);
-      }
-    },
-    [closeFile]
-  );
-
-  const handleConfirmSave = useCallback(async () => {
-    if (!pendingClose) return;
-    const path = pendingClose;
-    setPendingClose(null);
-    const ok = await save(path);
-    if (ok) closeFile(path);
-  }, [pendingClose, save, closeFile]);
-
-  const handleConfirmDiscard = useCallback(() => {
-    if (!pendingClose) return;
-    closeFile(pendingClose);
-    setPendingClose(null);
-  }, [pendingClose, closeFile]);
-
-  const handleConfirmCancel = useCallback(() => setPendingClose(null), []);
-
   // Save / close the active file (driven by the editor-scoped keymap).
   const handleSaveActive = useCallback(() => {
     const path = useEditorStore.getState().activePath;
@@ -82,8 +50,8 @@ export function EditorPanel() {
 
   const handleCloseActive = useCallback(() => {
     const path = useEditorStore.getState().activePath;
-    if (path) requestClose(path);
-  }, [requestClose]);
+    if (path) onRequestClose(path);
+  }, [onRequestClose]);
 
   const handleChange = useCallback(
     (content: string) => {
@@ -97,13 +65,6 @@ export function EditorPanel() {
 
   return (
     <div className="flex h-full min-h-0 w-full flex-col bg-background">
-      <EditorTabs
-        files={files}
-        activePath={activePath}
-        onSelect={setActivePath}
-        onClose={requestClose}
-      />
-
       {activeFile?.externallyChanged && (
         <ExternalChangeBanner
           onReload={() => reloadFromDisk(activeFile.path)}
@@ -127,13 +88,6 @@ export function EditorPanel() {
           </div>
         )}
       </div>
-
-      <CloseConfirmDialog
-        fileName={pendingClose ? basename(pendingClose) : null}
-        onSave={handleConfirmSave}
-        onDiscard={handleConfirmDiscard}
-        onCancel={handleConfirmCancel}
-      />
     </div>
   );
 }
