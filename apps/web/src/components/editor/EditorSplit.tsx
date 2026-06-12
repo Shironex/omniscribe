@@ -69,11 +69,13 @@ export function EditorSplit({ children }: EditorSplitProps) {
       onLayoutChange={handleLayoutChange}
       className="h-full w-full min-h-0 min-w-0"
     >
+      {/* RRP v4 treats bare numbers as pixel flex-basis — sizes must be
+          percent STRINGS or the editor pane collapses to ~size px. */}
       <Panel
         id="editor"
-        defaultSize={initialSize.current}
-        minSize={EDITOR_MIN_SIZE}
-        maxSize={EDITOR_MAX_SIZE}
+        defaultSize={`${initialSize.current}%`}
+        minSize={`${EDITOR_MIN_SIZE}%`}
+        maxSize={`${EDITOR_MAX_SIZE}%`}
         className="min-h-0 min-w-0 overflow-hidden"
       >
         <EditorPanel />
@@ -81,7 +83,7 @@ export function EditorSplit({ children }: EditorSplitProps) {
       <Separator className="h-1.5 flex items-center justify-center group">
         <div className="w-10 h-0.5 bg-border/60 rounded-full group-hover:bg-primary/60 group-hover:w-12 transition-all duration-200" />
       </Separator>
-      <Panel id="sessions" minSize={20} className="relative min-h-0 min-w-0 overflow-hidden">
+      <Panel id="sessions" minSize="20%" className="relative min-h-0 min-w-0 overflow-hidden">
         {children}
       </Panel>
     </Group>
