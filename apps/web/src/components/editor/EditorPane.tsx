@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 import CodeMirror, { EditorView, type ReactCodeMirrorRef } from '@uiw/react-codemirror';
 import { loadLanguage } from '@uiw/codemirror-extensions-langs';
 import type { Extension } from '@codemirror/state';
 import { cn } from '@/lib/utils';
-import { buildEditorTheme, observeEditorTheme } from './editorTheme';
+import { useEditorThemeExtension } from './editorTheme';
 import type { OpenFile } from '@/stores/useEditorStore';
 import { BinaryPlaceholder } from './BinaryPlaceholder';
 
@@ -33,14 +33,8 @@ function extensionOf(path: string): string {
 export function EditorPane({ file, onChange, onSave, onClose }: EditorPaneProps) {
   const editorRef = useRef<ReactCodeMirrorRef>(null);
 
-  // Rebuild the theme extension whenever the active theme class changes.
-  const [themeExt, setThemeExt] = useState<Extension>(() => buildEditorTheme());
-  useEffect(() => {
-    const dispose = observeEditorTheme(() => {
-      setThemeExt(buildEditorTheme());
-    });
-    return dispose;
-  }, []);
+  // Rebuilt whenever the active theme class changes.
+  const themeExt = useEditorThemeExtension();
 
   // Resolve the language extension for this file (memoized on its extension).
   const ext = extensionOf(file.path);

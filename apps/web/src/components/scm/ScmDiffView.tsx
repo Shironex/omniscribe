@@ -7,6 +7,7 @@ import { Plus, Minus, FileX, Loader2 } from 'lucide-react';
 import type { GitDiffHunk, GitFileDiff } from '@omniscribe/shared';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { useEditorThemeExtension } from '@/components/editor/editorTheme';
 import { hunkSides, hunkLineRange } from './scmDiffText';
 import { buildHunkPatch, type BuildHunkPatchOptions } from './buildHunkPatch';
 import { languageExtensionForFile } from './languageForFile';
@@ -45,6 +46,10 @@ export function ScmDiffView({
   onUnstageHunk,
   hunkBusy,
 }: ScmDiffViewProps) {
+  // Token-derived CodeMirror theme shared with the editor panes, so the diff
+  // tracks the active app theme (incl. live theme switches).
+  const themeExt = useEditorThemeExtension();
+
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center text-muted-foreground">
@@ -105,6 +110,7 @@ export function ScmDiffView({
           staged={staged}
           patchOptions={patchOptions}
           hunkBusy={hunkBusy}
+          themeExt={themeExt}
           onStageHunk={onStageHunk}
           onUnstageHunk={onUnstageHunk}
         />
@@ -138,6 +144,7 @@ interface HunkBlockProps {
   staged?: boolean;
   patchOptions: BuildHunkPatchOptions;
   hunkBusy?: boolean;
+  themeExt: Extension;
   onStageHunk?: (patch: string) => void;
   onUnstageHunk?: (patch: string) => void;
 }
@@ -148,6 +155,7 @@ function HunkBlock({
   staged,
   patchOptions,
   hunkBusy,
+  themeExt,
   onStageHunk,
   onUnstageHunk,
 }: HunkBlockProps) {
@@ -167,10 +175,11 @@ function HunkBlock({
         highlightChanges: true,
         collapseUnchanged: { margin: 3, minSize: 4 },
       }),
-      cmTheme,
+      themeExt,
+      diffTheme,
       ...(lang ? [lang] : []),
     ];
-  }, [oldText, file.path]);
+  }, [oldText, file.path, themeExt]);
 
   const canStage = !staged && onStageHunk;
   const canUnstage = staged && onUnstageHunk;
@@ -209,6 +218,7 @@ function HunkBlock({
       </div>
       <CodeMirror
         value={newText}
+        theme="none"
         extensions={extensions}
         editable={false}
         basicSetup={{
@@ -224,24 +234,27 @@ function HunkBlock({
   );
 }
 
+/** Translucent tint derived from a theme token (tokens are full oklch colors). */
+function tint(token: string, percent: number): string {
+  return `color-mix(in srgb, var(${token}) ${percent}%, transparent)`;
+}
+
 /**
- * Theme bridging CodeMirror to the app's CSS custom-property tokens so the diff
- * matches the active Omniscribe theme. Colors reference the same tokens the
- * rest of the UI uses (resolved at paint via the cascade).
+ * Diff-specific styling layered over the shared editor theme: tints the
+ * `@codemirror/merge` unified-view surfaces with the app's status tokens so
+ * inserted/deleted regions stay legible on any theme, dark or light.
  */
-const cmTheme = EditorView.theme({
-  '&': {
-    backgroundColor: 'transparent',
-    color: 'hsl(var(--foreground))',
-    fontSize: '12px',
+const diffTheme = EditorView.theme({
+  '&': { fontSize: '12px' },
+  '.cm-changedLine': { backgroundColor: tint('--status-success', 12) },
+  '.cm-changedText': { background: tint('--status-success', 30) },
+  '.cm-deletedChunk': { backgroundColor: tint('--status-error', 10) },
+  '.cm-deletedText': { background: tint('--status-error', 30) },
+  '.cm-changedLineGutter': { backgroundColor: tint('--status-success', 35) },
+  '.cm-deletedLineGutter': { backgroundColor: tint('--status-error', 35) },
+  '.cm-collapsedLines': {
+    background: tint('--muted', 60),
+    color: 'var(--muted-foreground)',
+    padding: '3px 12px',
   },
-  '.cm-gutters': {
-    backgroundColor: 'transparent',
-    color: 'hsl(var(--muted-foreground))',
-    border: 'none',
-  },
-  '.cm-content': { fontFamily: 'var(--font-mono, ui-monospace, monospace)' },
-  '.cm-changedLine': { backgroundColor: 'hsl(var(--status-success-bg, 142 30% 20% / 0.25))' },
-  '.cm-deletedChunk': { backgroundColor: 'hsl(var(--status-error-bg, 0 40% 25% / 0.25))' },
-  '.cm-activeLine': { backgroundColor: 'transparent' },
 });

@@ -21,6 +21,7 @@
  * by bucketing each spec's default color — keeping us inside the already-
  * installed `@codemirror/language`.
  */
+import { useEffect, useState } from 'react';
 import { EditorView } from '@codemirror/view';
 import { HighlightStyle, syntaxHighlighting, defaultHighlightStyle } from '@codemirror/language';
 import type { Extension } from '@codemirror/state';
@@ -278,6 +279,17 @@ export function buildEditorTheme(): Extension {
   const tokens = probeEditorTokens();
   const dark = isDarkActive();
   return [buildViewTheme(tokens, dark), buildHighlightStyle(tokens)];
+}
+
+/**
+ * React hook: the live token-derived editor theme, rebuilt whenever the active
+ * theme class on documentElement changes. Shared by every CodeMirror surface
+ * (editor panes, SCM diff views) so they all re-skin together.
+ */
+export function useEditorThemeExtension(): Extension {
+  const [themeExt, setThemeExt] = useState<Extension>(() => buildEditorTheme());
+  useEffect(() => observeEditorTheme(() => setThemeExt(buildEditorTheme())), []);
+  return themeExt;
 }
 
 /**
