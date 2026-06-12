@@ -174,6 +174,54 @@ export const DEFAULT_CHROME_SETTINGS: ChromeSettings = {
 };
 
 /**
+ * Background surface kind for the appearance "blend" layer.
+ * - 'none': plain theme background (default)
+ * - 'image': user-supplied image rendered as a translucent overlay
+ */
+export type BackgroundKind = 'none' | 'image';
+
+/**
+ * Appearance background ("blend") settings. The image itself is stored
+ * in IndexedDB and referenced by `imageId`; only this small config blob
+ * is persisted to localStorage so the surface can paint on first frame.
+ */
+export interface AppearanceBackgroundSettings {
+  kind: BackgroundKind;
+  /** IndexedDB record id of the active background image, if any. */
+  imageId: string | null;
+  /** User-facing opacity 0..1. Rendered opacity is capped via {@link BG_OPACITY_RENDER_FACTOR}. */
+  opacity: number;
+  /** Blur radius in px applied to the background image (0 = off). */
+  blur: number;
+}
+
+/**
+ * Hard cap factor between the user's opacity slider and the rendered
+ * overlay opacity, so the background can never fully obscure the UI
+ * (rendered = opacity × factor, i.e. max 50%).
+ */
+export const BG_OPACITY_RENDER_FACTOR = 0.5;
+
+export const DEFAULT_APPEARANCE_BACKGROUND: AppearanceBackgroundSettings = {
+  kind: 'none',
+  imageId: null,
+  opacity: 0.5,
+  blur: 0,
+};
+
+/**
+ * Native window background effect.
+ * - 'none': opaque themed window (default)
+ * - 'vibrancy': macOS NSVisualEffectView blur of the desktop behind the window
+ * - 'acrylic': Windows 11 acrylic material
+ * Linux has no native effect; the renderer must treat unsupported
+ * effects as 'none'.
+ */
+export type WindowEffect = 'none' | 'vibrancy' | 'acrylic';
+
+export const DEFAULT_WINDOW_EFFECT: WindowEffect = 'none';
+
+/**
  * Claude CLI Status
  */
 export interface ClaudeCliStatus {

@@ -9,6 +9,8 @@ import { ThemeGrid } from '@/components/shared/theme/ThemeGrid';
 import { ThemeSwatchCard } from '@/components/shared/theme/ThemeSwatchCard';
 import { SettingsCard, SettingsToggleRow } from '@/components/settings/SettingsCard';
 import { AppearancePreview } from '@/components/settings/previews/AppearancePreview';
+import { BackgroundCard } from '@/components/settings/sections/appearance/BackgroundCard';
+import { WindowEffectCard } from '@/components/settings/sections/appearance/WindowEffectCard';
 
 function pluginThemeToOption(plugin: {
   id: string;
@@ -108,6 +110,10 @@ export function AppearanceSection() {
           </div>
         )}
       </SettingsCard>
+
+      <BackgroundCard />
+
+      <WindowEffectCard />
 
       <SettingsCard
         icon={LayoutGrid}
