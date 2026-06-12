@@ -15,11 +15,20 @@ import {
   extractErrorMessage,
   normalizePath,
 } from '@omniscribe/shared';
-import { TerminalService } from '../terminal';
+import { TerminalService, OscTransition } from '../terminal';
 import { WorktreeService } from '../git';
 import { WorkspaceService } from '../workspace';
 import { InternalSessionEvents, InternalTerminalEvents } from '../shared/events';
-import { BackendSessionConfig } from './types';
+import { BackendSessionConfig, StatusSource } from './types';
+
+/**
+ * Source-precedence window. After an MCP-channel status update, OSC
+ * (terminal-stream) signals are suppressed for this long so the more precise
+ * in-CLI MCP reports aren't clobbered by coarser terminal-derived signals.
+ * MCP and OSC describe the same agent from two channels; when both are live,
+ * MCP wins.
+ */
+const MCP_PRECEDENCE_WINDOW_MS = 10_000;
 
 // Re-export for backwards compatibility
 export type { BackendSessionConfig } from './types';
@@ -246,7 +255,8 @@ export class SessionService {
     sessionId: string,
     status: SessionStatus,
     message?: string,
-    needsInputPrompt?: boolean
+    needsInputPrompt?: boolean,
+    source: StatusSource = 'system'
   ): BackendSessionConfig | undefined {
     const session = this.sessions.get(sessionId);
 
@@ -256,6 +266,10 @@ export class SessionService {
 
     // MCP re-emits the current status frequently by design — short-circuit before validation
     if (status === session.status) {
+      // Always record the source/time so the precedence window is refreshed
+      // even when an MCP re-emit carries no metadata change.
+      session.lastStatusSource = source;
+      session.lastStatusAt = Date.now();
       const messageChanged = message !== session.statusMessage;
       const promptChanged = needsInputPrompt !== session.needsInputPrompt;
       if (!messageChanged && !promptChanged) {
@@ -290,6 +304,8 @@ export class SessionService {
     session.statusMessage = message;
     session.needsInputPrompt = needsInputPrompt;
     session.lastActiveAt = new Date();
+    session.lastStatusSource = source;
+    session.lastStatusAt = Date.now();
 
     const statusUpdate: SessionStatusUpdate = {
       sessionId,
@@ -330,13 +346,123 @@ export class SessionService {
       event.sessionId,
       event.status as SessionStatus,
       event.message,
-      event.needsInputPrompt ? true : undefined
+      event.needsInputPrompt ? true : undefined,
+      'mcp'
     );
 
     if (!updated) {
       this.logger.debug(
         `MCP status update not applied for ${event.sessionId} (session not found or invalid transition)`
       );
+    }
+  }
+
+  /**
+   * Handle OSC agent-status signals emitted by the terminal's per-PTY OSC
+   * detector (OSC 133/777/9 sequences on the raw stream). Maps the terminal id
+   * to a session and translates the signal into a validated status update.
+   *
+   * Signal → status mapping:
+   *  - `working`   → working
+   *  - `attention` → needs_input
+   *  - `finished`  → finished
+   *  - `exited`    → finished (only if the session was mid-work); ignored if
+   *                  already in a terminal state (idle/finished/error)
+   *  - `started`   → working (only if currently idle; otherwise treated as a
+   *                  no-op so a mid-session re-arm doesn't reset progress)
+   *
+   * Source precedence: the MCP channel is authoritative. If an MCP update
+   * landed within {@link MCP_PRECEDENCE_WINDOW_MS}, the OSC signal is dropped —
+   * MCP and OSC report the same agent and MCP is more precise.
+   */
+  @OnEvent(InternalTerminalEvents.OSC_SIGNAL)
+  onTerminalOscSignal(event: { terminalId: number; signal: OscTransition }): void {
+    const sessionId = this.terminalToSession.get(event.terminalId);
+    if (!sessionId) {
+      // OSC signal from a terminal not bound to a session (e.g. a plain shell
+      // tab). Nothing to update.
+      return;
+    }
+
+    const session = this.sessions.get(sessionId);
+    if (!session) return;
+
+    // Source precedence: MCP wins over OSC for a short window after an MCP update.
+    if (
+      session.lastStatusSource === 'mcp' &&
+      session.lastStatusAt !== undefined &&
+      Date.now() - session.lastStatusAt < MCP_PRECEDENCE_WINDOW_MS
+    ) {
+      this.logger.debug(
+        `Ignoring OSC signal '${event.signal.kind}' for ${sessionId}: within MCP precedence window`
+      );
+      return;
+    }
+
+    const target = this.oscSignalToStatus(event.signal.kind, session.status);
+    if (!target) {
+      return;
+    }
+
+    this.updateStatus(
+      sessionId,
+      target,
+      this.oscSignalMessage(event.signal.kind),
+      undefined,
+      'osc'
+    );
+  }
+
+  /**
+   * Translate an OSC transition kind into a target session status given the
+   * current status. Returns undefined when the signal should be ignored.
+   */
+  private oscSignalToStatus(
+    kind: OscTransition['kind'],
+    current: SessionStatus
+  ): SessionStatus | undefined {
+    switch (kind) {
+      case 'working':
+        return 'working';
+      case 'attention':
+        return 'needs_input';
+      case 'finished':
+        return 'finished';
+      case 'started':
+        // Only promote idle → working; mid-session re-arms shouldn't reset state.
+        return current === 'idle' ? 'working' : undefined;
+      case 'exited':
+        // Only finalize when the agent was actively working/waiting. If the
+        // session is already in a terminal state, leave it (the PTY-close path
+        // owns idle/error transitions).
+        if (
+          current === 'working' ||
+          current === 'planning' ||
+          current === 'thinking' ||
+          current === 'needs_input'
+        ) {
+          return 'finished';
+        }
+        return undefined;
+      default:
+        return undefined;
+    }
+  }
+
+  /** Human-readable status message for an OSC-driven transition. */
+  private oscSignalMessage(kind: OscTransition['kind']): string {
+    switch (kind) {
+      case 'working':
+      case 'started':
+        return 'Agent working';
+      case 'attention':
+        return 'Agent needs input';
+      case 'finished':
+        return 'Agent finished';
+      case 'exited':
+        return 'Agent command exited';
+      default:
+        return '';
     }
   }
 

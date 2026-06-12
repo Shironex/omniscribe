@@ -33,6 +33,11 @@ export const InternalSessionEvents = {
 export const InternalTerminalEvents = {
   OUTPUT: 'terminal.output',
   CLOSED: 'terminal.closed',
+  /** Emitted by TerminalService when the per-PTY OSC agent detector observes an
+   *  agent-status transition (OSC 133/777/9). SessionService listens, maps the
+   *  terminal id to a session, and translates the signal into a status update.
+   *  Payload: { terminalId: number; signal: TerminalOscSignal }. */
+  OSC_SIGNAL: 'terminal.oscSignal',
 } as const;
 
 // ============================================

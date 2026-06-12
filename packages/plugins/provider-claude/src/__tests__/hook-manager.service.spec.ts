@@ -7,6 +7,7 @@ const mockFsPromises = {
   writeFile: jest.fn().mockResolvedValue(undefined),
   readFile: jest.fn().mockResolvedValue('{}'),
   unlink: jest.fn().mockResolvedValue(undefined),
+  rename: jest.fn().mockResolvedValue(undefined),
 };
 
 const mockWatcherClose = jest.fn();
@@ -143,6 +144,159 @@ describe('ClaudeHookManagerService', () => {
       mockFsPromises.mkdir.mockRejectedValueOnce(new Error('Permission denied'));
 
       await expect(service.registerHooks('/my/project')).resolves.toBeUndefined();
+    });
+  });
+
+  // ==================================================================
+  // registerHooks — OSC 777 marker channel
+  // ==================================================================
+  describe('registerHooks — OSC marker channel', () => {
+    /** Find and parse the settings.local.json the atomic write produced. */
+    function writtenSettings(): Record<string, unknown> {
+      const writeCall = mockFsPromises.writeFile.mock.calls.find((call: unknown[]) =>
+        (call[0] as string).includes('settings.local.json')
+      );
+      expect(writeCall).toBeDefined();
+      return JSON.parse(writeCall![1] as string);
+    }
+
+    it('writes OSC marker hooks for UserPromptSubmit/Notification/Stop', async () => {
+      mockFsPromises.readFile.mockRejectedValueOnce(new Error('ENOENT'));
+
+      await service.registerHooks('/my/project');
+
+      const written = writtenSettings();
+      const hooks = written.hooks as Record<string, Array<{ hooks: Array<{ command: string }> }>>;
+
+      expect(hooks.UserPromptSubmit).toHaveLength(1);
+      expect(hooks.Notification).toHaveLength(1);
+      expect(hooks.Stop).toHaveLength(1);
+
+      expect(hooks.UserPromptSubmit[0].hooks[0].command).toContain('notify;omniscribe;working');
+      expect(hooks.Notification[0].hooks[0].command).toContain('notify;omniscribe;attention');
+      expect(hooks.Stop[0].hooks[0].command).toContain('notify;omniscribe;finished');
+    });
+
+    it('emits the marker via terminalSequence gated on OMNISCRIBE_SESSION_ID', async () => {
+      mockFsPromises.readFile.mockRejectedValueOnce(new Error('ENOENT'));
+
+      await service.registerHooks('/my/project');
+
+      const written = writtenSettings();
+      const hooks = written.hooks as Record<string, Array<{ hooks: Array<{ command: string }> }>>;
+      const cmd = hooks.Stop[0].hooks[0].command;
+
+      expect(cmd).toContain('terminalSequence');
+      expect(cmd).toContain('$OMNISCRIBE_SESSION_ID');
+      // OSC 777 BEL-terminated sequence (escaped for JSON output).
+      expect(cmd).toContain('\\u001b]777;notify;omniscribe;finished\\u0007');
+      // Must not depend on /dev/tty (lost in newer Claude Code).
+      expect(cmd).not.toContain('/dev/tty');
+    });
+
+    it('uses an atomic temp+rename write', async () => {
+      mockFsPromises.readFile.mockRejectedValueOnce(new Error('ENOENT'));
+
+      await service.registerHooks('/my/project');
+
+      const tmpWrite = mockFsPromises.writeFile.mock.calls.find((call: unknown[]) =>
+        (call[0] as string).includes('settings.local.json.omniscribe-tmp')
+      );
+      expect(tmpWrite).toBeDefined();
+      expect(mockFsPromises.rename).toHaveBeenCalledWith(
+        expect.stringContaining('settings.local.json.omniscribe-tmp'),
+        expect.stringContaining('settings.local.json')
+      );
+    });
+
+    it('is idempotent — re-install does not accumulate OSC hooks', async () => {
+      mockFsPromises.readFile.mockRejectedValueOnce(new Error('ENOENT'));
+      await service.registerHooks('/my/project');
+      const first = writtenSettings();
+
+      mockFsPromises.writeFile.mockClear();
+      mockFsPromises.readFile.mockResolvedValueOnce(JSON.stringify(first));
+      await service.registerHooks('/my/project');
+      const second = writtenSettings();
+
+      const hooks = second.hooks as Record<string, unknown[]>;
+      expect(hooks.UserPromptSubmit).toHaveLength(1);
+      expect(hooks.Notification).toHaveLength(1);
+      expect(hooks.Stop).toHaveLength(1);
+    });
+
+    it('preserves foreign hooks on the OSC events', async () => {
+      const existing = {
+        hooks: {
+          Stop: [{ hooks: [{ type: 'command', command: 'my-own-stop-hook' }] }],
+        },
+      };
+      mockFsPromises.readFile.mockResolvedValueOnce(JSON.stringify(existing));
+
+      await service.registerHooks('/my/project');
+
+      const written = writtenSettings();
+      const hooks = written.hooks as Record<string, Array<{ hooks: Array<{ command: string }> }>>;
+      expect(hooks.Stop).toHaveLength(2);
+      expect(hooks.Stop[0].hooks[0].command).toBe('my-own-stop-hook');
+      expect(hooks.Stop[1].hooks[0].command).toContain('notify;omniscribe;finished');
+    });
+
+    it('refuses to clobber an unparseable settings file', async () => {
+      mockFsPromises.readFile.mockResolvedValueOnce('{ this is not json');
+
+      await service.registerHooks('/my/project');
+
+      // No settings write at all (the hook-script write may still happen, but
+      // never the settings file).
+      const settingsWrite = mockFsPromises.writeFile.mock.calls.find((call: unknown[]) =>
+        (call[0] as string).includes('settings.local.json')
+      );
+      expect(settingsWrite).toBeUndefined();
+      expect(mockFsPromises.rename).not.toHaveBeenCalled();
+    });
+
+    it('cleans up the temp file when rename fails', async () => {
+      mockFsPromises.readFile.mockRejectedValueOnce(new Error('ENOENT'));
+      mockFsPromises.rename.mockRejectedValueOnce(new Error('EXDEV'));
+
+      // registerHooks swallows the error (logged warn), so this resolves.
+      await expect(service.registerHooks('/my/project')).resolves.toBeUndefined();
+
+      expect(mockFsPromises.unlink).toHaveBeenCalledWith(
+        expect.stringContaining('settings.local.json.omniscribe-tmp')
+      );
+    });
+
+    it('removes OSC marker hooks on unregister', async () => {
+      const settings = {
+        hooks: {
+          Stop: [
+            { hooks: [{ type: 'command', command: 'my-own-stop-hook' }] },
+            {
+              hooks: [
+                {
+                  type: 'command',
+                  command:
+                    '[ -n "$OMNISCRIBE_SESSION_ID" ] && printf \'{"terminalSequence":"\\u001b]777;notify;omniscribe;finished\\u0007"}\' || true',
+                },
+              ],
+            },
+          ],
+        },
+      };
+      mockFsPromises.readFile.mockResolvedValueOnce(JSON.stringify(settings));
+
+      await service.unregisterHooks('/my/project');
+
+      const writeCall = mockFsPromises.writeFile.mock.calls.find((call: unknown[]) =>
+        (call[0] as string).includes('settings.local.json')
+      );
+      expect(writeCall).toBeDefined();
+      const written = JSON.parse(writeCall![1] as string);
+      // Foreign hook preserved; ours stripped.
+      expect(written.hooks.Stop).toHaveLength(1);
+      expect(written.hooks.Stop[0].hooks[0].command).toBe('my-own-stop-hook');
     });
   });
 

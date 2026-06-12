@@ -815,4 +815,122 @@ describe('SessionService', () => {
       expect(service.get(session.id)?.claudeSessionId).toBe('claude-abc-123');
     });
   });
+
+  describe('onTerminalOscSignal', () => {
+    /** Create a session and bind a terminal id so OSC signals can route to it. */
+    function sessionWithTerminal(terminalId = 7): string {
+      const session = service.create('claude', '/project');
+      service.registerTerminal(session.id, terminalId, '/worktree');
+      return session.id;
+    }
+
+    it('maps working signal to working status', () => {
+      const id = sessionWithTerminal();
+      service.onTerminalOscSignal({ terminalId: 7, signal: { kind: 'working' } });
+      expect(service.get(id)?.status).toBe('working');
+    });
+
+    it('maps attention signal to needs_input status', () => {
+      const id = sessionWithTerminal();
+      service.updateStatus(id, 'working');
+      service.onTerminalOscSignal({ terminalId: 7, signal: { kind: 'attention' } });
+      expect(service.get(id)?.status).toBe('needs_input');
+    });
+
+    it('maps finished signal to finished status', () => {
+      const id = sessionWithTerminal();
+      service.updateStatus(id, 'working');
+      service.onTerminalOscSignal({ terminalId: 7, signal: { kind: 'finished' } });
+      expect(service.get(id)?.status).toBe('finished');
+    });
+
+    it('maps started signal to working only from idle', () => {
+      const id = sessionWithTerminal();
+      service.onTerminalOscSignal({ terminalId: 7, signal: { kind: 'started', agent: 'claude' } });
+      expect(service.get(id)?.status).toBe('working');
+    });
+
+    it('does not reset progress when started arrives mid-session', () => {
+      const id = sessionWithTerminal();
+      service.updateStatus(id, 'working');
+      service.updateStatus(id, 'needs_input');
+      service.onTerminalOscSignal({ terminalId: 7, signal: { kind: 'started', agent: 'claude' } });
+      // started is a no-op when not idle.
+      expect(service.get(id)?.status).toBe('needs_input');
+    });
+
+    it('finalizes a working session to finished on exited', () => {
+      const id = sessionWithTerminal();
+      service.updateStatus(id, 'working');
+      service.onTerminalOscSignal({ terminalId: 7, signal: { kind: 'exited' } });
+      expect(service.get(id)?.status).toBe('finished');
+    });
+
+    it('ignores exited when the session is already terminal (idle)', () => {
+      const id = sessionWithTerminal();
+      // session starts idle
+      service.onTerminalOscSignal({ terminalId: 7, signal: { kind: 'exited' } });
+      expect(service.get(id)?.status).toBe('idle');
+    });
+
+    it('ignores signals from a terminal not bound to a session', () => {
+      const id = sessionWithTerminal(7);
+      service.onTerminalOscSignal({ terminalId: 999, signal: { kind: 'working' } });
+      // unrelated terminal — bound session stays idle
+      expect(service.get(id)?.status).toBe('idle');
+    });
+
+    it('records osc as the status source', () => {
+      const id = sessionWithTerminal();
+      service.onTerminalOscSignal({ terminalId: 7, signal: { kind: 'working' } });
+      expect(service.get(id)?.lastStatusSource).toBe('osc');
+    });
+  });
+
+  describe('OSC/MCP source precedence', () => {
+    function sessionWithTerminal(terminalId = 7): string {
+      const session = service.create('claude', '/project');
+      service.registerTerminal(session.id, terminalId, '/worktree');
+      return session.id;
+    }
+
+    it('drops OSC signals within the MCP precedence window', () => {
+      const id = sessionWithTerminal();
+      // MCP says needs_input
+      service.onMcpStatusReceived({ sessionId: id, status: 'needs_input' });
+      expect(service.get(id)?.status).toBe('needs_input');
+      expect(service.get(id)?.lastStatusSource).toBe('mcp');
+
+      // OSC immediately tries to override with working — must be ignored.
+      service.onTerminalOscSignal({ terminalId: 7, signal: { kind: 'working' } });
+      expect(service.get(id)?.status).toBe('needs_input');
+      expect(service.get(id)?.lastStatusSource).toBe('mcp');
+    });
+
+    it('applies OSC signals once the MCP window has elapsed', () => {
+      const id = sessionWithTerminal();
+      const nowSpy = jest.spyOn(Date, 'now');
+
+      // MCP update at t=0
+      nowSpy.mockReturnValue(1_000_000);
+      service.onMcpStatusReceived({ sessionId: id, status: 'working' });
+      expect(service.get(id)?.status).toBe('working');
+
+      // OSC attention 11s later — outside the 10s window, so it applies.
+      nowSpy.mockReturnValue(1_000_000 + 11_000);
+      service.onTerminalOscSignal({ terminalId: 7, signal: { kind: 'attention' } });
+      expect(service.get(id)?.status).toBe('needs_input');
+      expect(service.get(id)?.lastStatusSource).toBe('osc');
+
+      nowSpy.mockRestore();
+    });
+
+    it('OSC signals apply freely when MCP has never spoken', () => {
+      const id = sessionWithTerminal();
+      service.onTerminalOscSignal({ terminalId: 7, signal: { kind: 'working' } });
+      service.onTerminalOscSignal({ terminalId: 7, signal: { kind: 'attention' } });
+      expect(service.get(id)?.status).toBe('needs_input');
+      expect(service.get(id)?.lastStatusSource).toBe('osc');
+    });
+  });
 });

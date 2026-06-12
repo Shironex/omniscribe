@@ -708,4 +708,90 @@ describe('TerminalService', () => {
       });
     });
   });
+
+  describe('OSC agent detection', () => {
+    const ESC = '\x1b';
+    const ST = '\x1b\\';
+
+    /** Collect terminal.oscSignal emits from the event emitter mock. */
+    function oscEmits(): Array<{ terminalId: number; signal: { kind: string; agent?: string } }> {
+      return (eventEmitter.emit as jest.Mock).mock.calls
+        .filter(call => call[0] === 'terminal.oscSignal')
+        .map(call => call[1]);
+    }
+
+    it('emits a started oscSignal when an agent command arms the detector', () => {
+      const sessionId = service.spawnCommand('bash', [], '/project');
+      const ptyInstance = mockPtyInstances[0];
+
+      ptyInstance.simulateData(`${ESC}]133;C;claude -p hi${ST}`);
+
+      const signals = oscEmits();
+      expect(signals).toContainEqual({
+        terminalId: sessionId,
+        signal: { kind: 'started', agent: 'claude' },
+      });
+    });
+
+    it('emits attention from a self-arming omniscribe 777 marker', () => {
+      const sessionId = service.spawnCommand('bash', [], '/project');
+      const ptyInstance = mockPtyInstances[0];
+
+      ptyInstance.simulateData(`${ESC}]777;notify;omniscribe;attention\x07`);
+
+      const signals = oscEmits();
+      // Self-arm emits started(claude) then attention.
+      expect(signals).toContainEqual({
+        terminalId: sessionId,
+        signal: { kind: 'started', agent: 'claude' },
+      });
+      expect(signals).toContainEqual({ terminalId: sessionId, signal: { kind: 'attention' } });
+    });
+
+    it('does not emit oscSignal for plain output (no ESC)', () => {
+      service.spawnCommand('bash', [], '/project');
+      const ptyInstance = mockPtyInstances[0];
+
+      ptyInstance.simulateData('just some normal terminal output\n');
+
+      expect(oscEmits()).toHaveLength(0);
+    });
+
+    it('still emits terminal.output alongside OSC detection', () => {
+      service.spawnCommand('bash', [], '/project');
+      const ptyInstance = mockPtyInstances[0];
+
+      ptyInstance.simulateData(`${ESC}]133;C;claude${ST}`);
+      jest.advanceTimersByTime(50);
+
+      // Output path is unaffected by the detector.
+      expect(eventEmitter.emit).toHaveBeenCalledWith('terminal.output', expect.anything());
+    });
+
+    it('emits exited from the detector when an armed PTY exits', () => {
+      const sessionId = service.spawnCommand('bash', [], '/project');
+      const ptyInstance = mockPtyInstances[0];
+
+      ptyInstance.simulateData(`${ESC}]133;C;claude${ST}`);
+      ptyInstance.simulateExit(0);
+
+      expect(oscEmits()).toContainEqual({
+        terminalId: sessionId,
+        signal: { kind: 'exited' },
+      });
+    });
+
+    it('handles an OSC sequence split across two data chunks', () => {
+      const sessionId = service.spawnCommand('bash', [], '/project');
+      const ptyInstance = mockPtyInstances[0];
+
+      ptyInstance.simulateData(`${ESC}]133;C;cla`);
+      ptyInstance.simulateData(`ude${ST}`);
+
+      expect(oscEmits()).toContainEqual({
+        terminalId: sessionId,
+        signal: { kind: 'started', agent: 'claude' },
+      });
+    });
+  });
 });
