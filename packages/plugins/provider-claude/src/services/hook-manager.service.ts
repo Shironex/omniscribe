@@ -298,6 +298,103 @@ export class ClaudeHookManagerService {
   }
 
   /**
+   * Absolute path to the Omniscribe hook script for a project.
+   */
+  getHookScriptPath(projectPath: string): string {
+    return path.join(projectPath, '.claude', 'hooks', 'omniscribe-notify.js');
+  }
+
+  /**
+   * Absolute path to the Claude settings file we install hooks into.
+   */
+  getSettingsPath(projectPath: string): string {
+    return path.join(projectPath, '.claude', 'settings.local.json');
+  }
+
+  /**
+   * Detect Omniscribe's hook footprint in a project without mutating anything.
+   *
+   * Returns whether Omniscribe-owned hook entries are present in
+   * `.claude/settings.local.json` (tmpdir lifecycle hooks matched by the
+   * exact `node "<script>"` command, plus OSC marker hooks matched by the
+   * owned-marker substring), the count of such entries, and whether the hook
+   * script file exists on disk. Ownership is gated by the same signatures
+   * `registerHooks`/`unregisterHooks` use, so detection can never report a
+   * foreign hook as Omniscribe's.
+   */
+  async detectFootprint(projectPath: string): Promise<{
+    hooksPresent: boolean;
+    hookCount: number;
+    scriptPresent: boolean;
+  }> {
+    const scriptPath = this.getHookScriptPath(projectPath);
+    let scriptPresent: boolean;
+    try {
+      await fs.promises.access(scriptPath);
+      scriptPresent = true;
+    } catch {
+      scriptPresent = false;
+    }
+
+    let hookCount = 0;
+    try {
+      const settings = await this.readSettings(this.getSettingsPath(projectPath));
+      if (settings && settings.hooks) {
+        const ownedCommand = `node "${normalizePath(scriptPath)}"`;
+
+        // Channel 1: tmpdir lifecycle hooks matched by exact command.
+        for (const eventName of ['SessionStart', 'SessionEnd'] as const) {
+          const groups = settings.hooks[eventName];
+          if (!groups) continue;
+          for (const matcher of groups) {
+            if (matcher.hooks?.some(h => h.command === ownedCommand)) {
+              hookCount++;
+            }
+          }
+        }
+
+        // Channel 2: OSC marker hooks matched by the owned-marker substring.
+        for (const [eventName] of OSC_HOOK_EVENTS) {
+          const groups = settings.hooks[eventName];
+          if (!groups) continue;
+          for (const matcher of groups) {
+            if (this.isOscOwned(matcher)) {
+              hookCount++;
+            }
+          }
+        }
+      }
+    } catch (error) {
+      const msg = extractErrorMessage(error);
+      this.logger.warn(`Failed to detect hook footprint for ${projectPath}: ${msg}`);
+    }
+
+    return { hooksPresent: hookCount > 0, hookCount, scriptPresent };
+  }
+
+  /**
+   * Remove only the Omniscribe hook script file, preserving the rest of the
+   * `.claude/` tree. Best-effort: a missing file is a no-op. Returns true when
+   * a script file was actually deleted.
+   */
+  async removeHookScript(projectPath: string): Promise<boolean> {
+    const scriptPath = this.getHookScriptPath(projectPath);
+    try {
+      await fs.promises.unlink(scriptPath);
+      this.logger.info(`Removed hook script ${scriptPath}`);
+      return true;
+    } catch (error) {
+      const err = error as NodeJS.ErrnoException;
+      if (err.code === 'ENOENT') {
+        return false;
+      }
+      const msg = extractErrorMessage(error);
+      this.logger.warn(`Failed to remove hook script for ${projectPath}: ${msg}`);
+      return false;
+    }
+  }
+
+  /**
    * Remove Omniscribe hooks from the project's .claude/settings.local.json.
    */
   async unregisterHooks(projectPath: string): Promise<void> {

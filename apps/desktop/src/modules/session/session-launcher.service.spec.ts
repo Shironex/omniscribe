@@ -6,12 +6,19 @@ jest.mock('../plugin', () => ({
   PluginRegistryService: jest.fn(),
 }));
 
+// Mock ../workspace barrel for the same reason (it transitively imports
+// electron-store via WorkspaceService). Only FootprintService is needed here.
+jest.mock('../workspace', () => ({
+  FootprintService: jest.fn(),
+}));
+
 import { SessionLauncherService } from './session-launcher.service';
 import { SessionService } from './session.service';
 import { TerminalService } from '../terminal/terminal.service';
 import { McpWriterService, McpDiscoveryService } from '../mcp';
 import { GitBaseService } from '../git';
 import { PluginRegistryService } from '../plugin';
+import { FootprintService } from '../workspace';
 import { CliCommandService } from './cli-command.service';
 import type { BackendSessionConfig } from './types';
 import { InternalSessionEvents } from '../shared/events';
@@ -55,6 +62,10 @@ const mockPluginRegistry = {
   getProvider: jest.fn().mockReturnValue(mockProvider),
   getProviderEntry: jest.fn().mockReturnValue(undefined),
   listProviders: jest.fn().mockReturnValue([]),
+};
+
+const mockFootprintService = {
+  isPassiveMode: jest.fn().mockReturnValue(false),
 };
 
 describe('SessionLauncherService', () => {
@@ -105,6 +116,9 @@ describe('SessionLauncherService', () => {
     mockPluginRegistry.isPluginMode.mockReturnValue(true);
     mockPluginRegistry.getProvider.mockReturnValue(mockProvider);
 
+    // Reset footprint mock (passive mode off by default)
+    mockFootprintService.isPassiveMode.mockReturnValue(false);
+
     // Reset provider mocks
     mockProvider.readSessionHistory.mockResolvedValue([]);
     mockProvider.getHookManager.mockReturnValue({
@@ -128,6 +142,7 @@ describe('SessionLauncherService', () => {
         },
         { provide: CliCommandService, useValue: cliCommandService },
         { provide: PluginRegistryService, useValue: mockPluginRegistry },
+        { provide: FootprintService, useValue: mockFootprintService },
         { provide: EventEmitter2, useValue: eventEmitter },
       ],
     }).compile();
@@ -256,6 +271,40 @@ describe('SessionLauncherService', () => {
       await service.launchSession(session.id, '/project', '/worktree', 'claude');
 
       expect(mockProvider.readSessionHistory).toHaveBeenCalledWith('/project');
+    });
+
+    describe('passive mode enforcement', () => {
+      it('skips hook registration and MCP config write when passive mode is on', async () => {
+        const session = createMockSession();
+        sessionService.get.mockReturnValue(session);
+        const hookMgr = {
+          registerHooks: jest.fn().mockResolvedValue(undefined),
+          startWatching: jest.fn(),
+        };
+        mockProvider.getHookManager.mockReturnValue(hookMgr);
+        mockFootprintService.isPassiveMode.mockReturnValue(true);
+
+        const result = await service.launchSession(session.id, '/project', '/worktree', 'claude');
+
+        // Launch still succeeds — only project writes are suppressed.
+        expect(result.success).toBe(true);
+        expect(mockFootprintService.isPassiveMode).toHaveBeenCalledWith('/project');
+        expect(hookMgr.registerHooks).not.toHaveBeenCalled();
+        expect(mcpWriterService.writeConfig).not.toHaveBeenCalled();
+        expect(mcpDiscoveryService.discoverServers).not.toHaveBeenCalled();
+        // The terminal is still spawned.
+        expect(terminalService.spawnCommand).toHaveBeenCalled();
+      });
+
+      it('writes hooks and MCP config when passive mode is off', async () => {
+        const session = createMockSession();
+        sessionService.get.mockReturnValue(session);
+        mockFootprintService.isPassiveMode.mockReturnValue(false);
+
+        await service.launchSession(session.id, '/project', '/worktree', 'claude');
+
+        expect(mcpWriterService.writeConfig).toHaveBeenCalled();
+      });
     });
 
     it('should snapshot sessions for fork sessions', async () => {

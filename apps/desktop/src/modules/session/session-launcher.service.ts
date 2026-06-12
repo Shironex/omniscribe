@@ -1,10 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, forwardRef } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { AiMode, LaunchSessionResult, createLogger, extractErrorMessage } from '@omniscribe/shared';
 import { TerminalService } from '../terminal';
 import { McpWriterService, McpDiscoveryService } from '../mcp';
 import { GitBaseService } from '../git';
 import { PluginRegistryService } from '../plugin';
+import { FootprintService } from '../workspace';
 import { CliCommandService } from './cli-command.service';
 import { SessionService } from './session.service';
 import { InternalSessionEvents } from '../shared/events';
@@ -22,6 +23,8 @@ export class SessionLauncherService {
     private readonly gitBase: GitBaseService,
     private readonly cliCommandService: CliCommandService,
     private readonly pluginRegistry: PluginRegistryService,
+    @Inject(forwardRef(() => FootprintService))
+    private readonly footprintService: FootprintService,
     private readonly eventEmitter: EventEmitter2
   ) {}
 
@@ -63,6 +66,22 @@ export class SessionLauncherService {
     // Update status to connecting
     this.sessionService.updateStatus(sessionId, 'connecting', 'Starting AI session...');
 
+    // Passive mode: when on for this project, Omniscribe writes NOTHING into
+    // the project (no Claude hooks, no .mcp.json). Status then relies solely on
+    // the OSC 777 marker path (hooks absent is a supported fallback). In-app-only
+    // behaviour the user explicitly configures (e.g. worktrees) is NOT blocked.
+    let passiveMode = false;
+    try {
+      passiveMode = this.footprintService.isPassiveMode(projectPath);
+    } catch (error) {
+      this.logger.warn(
+        `Failed to read passive mode for ${projectPath}: ${extractErrorMessage(error)}`
+      );
+    }
+    if (passiveMode) {
+      this.logger.log(`Passive mode ON for ${projectPath} — skipping project writes (hooks, MCP)`);
+    }
+
     // Snapshot current sessions for tracking (if provider supports it)
     let previousSessionIds: Set<string> | null = null;
     const shouldTrackSession = aiMode !== 'plain' && this.pluginRegistry.isPluginMode(aiMode);
@@ -87,8 +106,9 @@ export class SessionLauncherService {
     }
 
     try {
-      // Register provider-specific hooks (fire-and-forget)
-      if (aiMode !== 'plain' && this.pluginRegistry.isPluginMode(aiMode)) {
+      // Register provider-specific hooks (fire-and-forget).
+      // Skipped entirely in passive mode — no hook files written into the project.
+      if (!passiveMode && aiMode !== 'plain' && this.pluginRegistry.isPluginMode(aiMode)) {
         try {
           const provider = this.pluginRegistry.getProvider(aiMode);
           if (hasProviderMethod(provider, 'getHookManager')) {
@@ -107,8 +127,9 @@ export class SessionLauncherService {
         }
       }
 
-      // MCP config for all provider modes
-      if (aiMode !== 'plain' && this.pluginRegistry.isPluginMode(aiMode)) {
+      // MCP config for all provider modes.
+      // Skipped in passive mode — no .mcp.json written into the project.
+      if (!passiveMode && aiMode !== 'plain' && this.pluginRegistry.isPluginMode(aiMode)) {
         try {
           const provider = this.pluginRegistry.getProvider(aiMode);
           if (provider.capabilities.supportsMcp) {

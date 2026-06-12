@@ -8,6 +8,7 @@ const mockFsPromises = {
   readFile: jest.fn().mockResolvedValue('{}'),
   unlink: jest.fn().mockResolvedValue(undefined),
   rename: jest.fn().mockResolvedValue(undefined),
+  access: jest.fn().mockResolvedValue(undefined),
 };
 
 const mockWatcherClose = jest.fn();
@@ -467,6 +468,164 @@ describe('ClaudeHookManagerService', () => {
       service.destroy();
 
       expect(mockWatcherClose).toHaveBeenCalled();
+    });
+  });
+
+  // ==================================================================
+  // detectFootprint
+  // ==================================================================
+  describe('detectFootprint', () => {
+    it('reports no footprint for a clean project', async () => {
+      mockFsPromises.access.mockRejectedValueOnce(new Error('ENOENT'));
+      mockFsPromises.readFile.mockResolvedValueOnce('{}');
+
+      const result = await service.detectFootprint('/my/project');
+
+      expect(result).toEqual({ hooksPresent: false, hookCount: 0, scriptPresent: false });
+    });
+
+    it('detects the hook script file when present', async () => {
+      mockFsPromises.access.mockResolvedValueOnce(undefined);
+      mockFsPromises.readFile.mockResolvedValueOnce('{}');
+
+      const result = await service.detectFootprint('/my/project');
+
+      expect(result.scriptPresent).toBe(true);
+      expect(mockFsPromises.access).toHaveBeenCalledWith(
+        expect.stringContaining('omniscribe-notify.js')
+      );
+    });
+
+    it('counts tmpdir lifecycle hooks (matched by exact command)', async () => {
+      mockFsPromises.access.mockRejectedValueOnce(new Error('ENOENT'));
+      const settings = {
+        hooks: {
+          SessionStart: [
+            {
+              hooks: [
+                {
+                  type: 'command',
+                  command: 'node "/my/project/.claude/hooks/omniscribe-notify.js"',
+                },
+              ],
+            },
+          ],
+          SessionEnd: [
+            {
+              hooks: [
+                {
+                  type: 'command',
+                  command: 'node "/my/project/.claude/hooks/omniscribe-notify.js"',
+                },
+              ],
+            },
+          ],
+        },
+      };
+      mockFsPromises.readFile.mockResolvedValueOnce(JSON.stringify(settings));
+
+      const result = await service.detectFootprint('/my/project');
+
+      expect(result.hooksPresent).toBe(true);
+      expect(result.hookCount).toBe(2);
+    });
+
+    it('counts OSC marker hooks (matched by owned marker substring)', async () => {
+      mockFsPromises.access.mockRejectedValueOnce(new Error('ENOENT'));
+      const settings = {
+        hooks: {
+          Stop: [
+            {
+              hooks: [
+                {
+                  type: 'command',
+                  command:
+                    '[ -n "$OMNISCRIBE_SESSION_ID" ] && printf \'{"terminalSequence":"\\u001b]777;notify;omniscribe;finished\\u0007"}\' || true',
+                },
+              ],
+            },
+          ],
+        },
+      };
+      mockFsPromises.readFile.mockResolvedValueOnce(JSON.stringify(settings));
+
+      const result = await service.detectFootprint('/my/project');
+
+      expect(result.hooksPresent).toBe(true);
+      expect(result.hookCount).toBe(1);
+    });
+
+    it('does NOT count foreign hooks as Omniscribe-owned', async () => {
+      mockFsPromises.access.mockRejectedValueOnce(new Error('ENOENT'));
+      const settings = {
+        hooks: {
+          SessionStart: [{ hooks: [{ type: 'command', command: 'some-other-tool' }] }],
+          Stop: [{ hooks: [{ type: 'command', command: 'my-own-stop-hook' }] }],
+        },
+      };
+      mockFsPromises.readFile.mockResolvedValueOnce(JSON.stringify(settings));
+
+      const result = await service.detectFootprint('/my/project');
+
+      expect(result.hooksPresent).toBe(false);
+      expect(result.hookCount).toBe(0);
+    });
+
+    it('does not crash on an unparseable settings file', async () => {
+      mockFsPromises.access.mockRejectedValueOnce(new Error('ENOENT'));
+      mockFsPromises.readFile.mockResolvedValueOnce('{ not json');
+
+      const result = await service.detectFootprint('/my/project');
+
+      expect(result.hooksPresent).toBe(false);
+      expect(result.hookCount).toBe(0);
+    });
+  });
+
+  // ==================================================================
+  // removeHookScript
+  // ==================================================================
+  describe('removeHookScript', () => {
+    it('unlinks the hook script and returns true', async () => {
+      mockFsPromises.unlink.mockResolvedValueOnce(undefined);
+
+      const removed = await service.removeHookScript('/my/project');
+
+      expect(removed).toBe(true);
+      expect(mockFsPromises.unlink).toHaveBeenCalledWith(
+        expect.stringContaining('omniscribe-notify.js')
+      );
+    });
+
+    it('returns false (no-op) when the script is missing (ENOENT)', async () => {
+      const enoent = Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
+      mockFsPromises.unlink.mockRejectedValueOnce(enoent);
+
+      const removed = await service.removeHookScript('/my/project');
+
+      expect(removed).toBe(false);
+    });
+
+    it('returns false and does not throw on other unlink errors', async () => {
+      const eacces = Object.assign(new Error('EACCES'), { code: 'EACCES' });
+      mockFsPromises.unlink.mockRejectedValueOnce(eacces);
+
+      await expect(service.removeHookScript('/my/project')).resolves.toBe(false);
+    });
+  });
+
+  // ==================================================================
+  // path helpers
+  // ==================================================================
+  describe('path helpers', () => {
+    it('getHookScriptPath points at .claude/hooks/omniscribe-notify.js', () => {
+      const p = service.getHookScriptPath('/my/project');
+      expect(p).toContain(path.join('.claude', 'hooks', 'omniscribe-notify.js'));
+    });
+
+    it('getSettingsPath points at .claude/settings.local.json', () => {
+      const p = service.getSettingsPath('/my/project');
+      expect(p).toContain(path.join('.claude', 'settings.local.json'));
     });
   });
 
