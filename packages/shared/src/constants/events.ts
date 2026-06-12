@@ -188,6 +188,67 @@ export const SystemEvents = {
 } as const;
 
 // ============================================
+// File System Events (file explorer / editor)
+// ============================================
+export const FsEvents = {
+  // Client -> Server (requests)
+  READ_DIR: 'fs:read-dir',
+  STAT: 'fs:stat',
+  READ_FILE: 'fs:read-file',
+  WRITE_FILE: 'fs:write-file',
+  CREATE_FILE: 'fs:create-file',
+  CREATE_DIR: 'fs:create-dir',
+  RENAME: 'fs:rename',
+  DELETE: 'fs:delete',
+  SEARCH: 'fs:search',
+  GREP: 'fs:grep',
+  WATCH: 'fs:watch',
+  UNWATCH: 'fs:unwatch',
+
+  // Server -> Client (broadcasts)
+  CHANGED: 'fs:changed',
+} as const;
+
+// ============================================
+// SCM Events (staging / commit / history — extends the Git domain)
+// ============================================
+export const ScmEvents = {
+  // Client -> Server (requests)
+  PANEL_SNAPSHOT: 'scm:panel-snapshot',
+  STATUS: 'scm:status',
+  STAGE: 'scm:stage',
+  UNSTAGE: 'scm:unstage',
+  DISCARD: 'scm:discard',
+  STAGE_HUNK: 'scm:stage-hunk',
+  UNSTAGE_HUNK: 'scm:unstage-hunk',
+  COMMIT: 'scm:commit',
+  FETCH: 'scm:fetch',
+  PULL: 'scm:pull',
+  PUSH: 'scm:push',
+  LOG: 'scm:log',
+  SHOW_COMMIT: 'scm:show-commit',
+  COMMIT_FILE_DIFF: 'scm:commit-file-diff',
+  FILE_DIFF: 'scm:file-diff',
+
+  // Server -> Client (broadcasts)
+  CHANGED: 'scm:changed',
+} as const;
+
+// ============================================
+// Footprint Events (Omniscribe project-write tracking & cleanup)
+// ============================================
+export const FootprintEvents = {
+  // Client -> Server (requests)
+  GET: 'footprint:get',
+  REMOVE: 'footprint:remove',
+  SET_PASSIVE_MODE: 'footprint:set-passive-mode',
+  GET_PASSIVE_MODE: 'footprint:get-passive-mode',
+
+  // Server -> Client (broadcasts)
+  CHANGED: 'footprint:changed',
+} as const;
+
+// ============================================
 // Plugin Events
 // ============================================
 export const PluginEvents = {

@@ -1135,3 +1135,35 @@ export interface PluginSetEnabledPayload {
   aiMode: string;
   enabled: boolean;
 }
+
+// ============================================================
+// FS payloads (file explorer / editor) — owned by the WS3 lane.
+// Edit ONLY between these markers in parallel-lane work.
+// ============================================================
+// (WS3 lane: define FsReadDirPayload/Response, FsEntry, FsReadFilePayload/Response,
+//  FsWriteFilePayload, FsMutatePayloads, FsSearchPayload, FsGrepPayload,
+//  FsWatchPayload, FsChangedEvent here.)
+// ============================================================
+// END FS payloads
+// ============================================================
+
+// ============================================================
+// SCM payloads (staging/commit/history) — owned by the WS5 lane.
+// Edit ONLY between these markers in parallel-lane work.
+// ============================================================
+// (WS5 lane: define ScmPanelSnapshotPayload/Response, ScmFileStatus,
+//  ScmStagePayload, ScmCommitPayload, ScmLogPayload/Response,
+//  ScmShowCommitResponse, ScmDiffPayload/Response here.)
+// ============================================================
+// END SCM payloads
+// ============================================================
+
+// ============================================================
+// Footprint payloads (project-write tracking & cleanup) — owned by the WS7 lane.
+// Edit ONLY between these markers in parallel-lane work.
+// ============================================================
+// (WS7 lane: define FootprintEntry, FootprintGetPayload/Response,
+//  FootprintRemovePayload/Response, PassiveModePayloads here.)
+// ============================================================
+// END Footprint payloads
+// ============================================================
