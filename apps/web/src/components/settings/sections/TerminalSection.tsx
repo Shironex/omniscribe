@@ -34,7 +34,7 @@ export function TerminalSection() {
   const resetToDefaults = useTerminalStore(s => s.resetToDefaults);
 
   return (
-    <div className="space-y-4">
+    <div className="@container/settings space-y-4">
       <SettingsCard
         icon={Eye}
         tone="blue"
@@ -138,7 +138,11 @@ export function TerminalSection() {
             title="Terminal theme"
             description="Pick a color scheme for terminal output."
           />
-          <div role="radiogroup" aria-label="Terminal theme" className="grid grid-cols-3 gap-2">
+          <div
+            role="radiogroup"
+            aria-label="Terminal theme"
+            className="grid grid-cols-2 @lg/settings:grid-cols-3 gap-2"
+          >
             {(Object.keys(terminalThemes) as TerminalThemeName[]).map(key => {
               const theme = terminalThemes[key];
               const isSelected = themeName === key;

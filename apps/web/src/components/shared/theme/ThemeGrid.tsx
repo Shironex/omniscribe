@@ -20,8 +20,15 @@ interface ThemeGridProps {
 }
 
 /**
- * 4-column palette swatch grid. Mirrors screenshot 1 — four cards across,
- * stacked rows underneath, with an editorial mono header above.
+ * Palette swatch grid. Mirrors screenshot 1 — cards across with stacked rows
+ * underneath and an editorial mono header above.
+ *
+ * Columns respond to the width of the surrounding settings container (not the
+ * viewport) via container queries, so the grid degrades to two columns — with
+ * intact labels — when Settings is docked into a narrow workspace tab. It
+ * scales back up to four columns only when the content column is genuinely
+ * wide. The `@container/settings` context is declared on each settings section
+ * root (see `SettingsCard` consumers).
  */
 export function ThemeGrid({
   themes,
@@ -46,7 +53,7 @@ export function ThemeGrid({
         </div>
       )}
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 @md/settings:grid-cols-3 @2xl/settings:grid-cols-4 gap-3">
         {themes.map(opt => (
           <ThemeSwatchCard
             key={opt.value}

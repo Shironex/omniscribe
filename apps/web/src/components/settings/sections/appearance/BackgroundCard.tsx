@@ -115,8 +115,13 @@ export function BackgroundCard() {
         disabled={!hasImage}
       />
 
-      {/* Image picker + thumbnail / remove */}
-      <SettingsRow divider>
+      {/* Image picker + thumbnail / remove. Stacks the controls under the
+          label when the settings container is narrow so the buttons never
+          crush the description or overflow the card. */}
+      <SettingsRow
+        divider
+        className="flex-col items-stretch @sm/settings:flex-row @sm/settings:items-center @sm/settings:justify-between"
+      >
         <SettingsRowLabel
           title="Background image"
           description={
@@ -125,7 +130,7 @@ export function BackgroundCard() {
               : 'Choose an image to blend behind the workspace.'
           }
         />
-        <div className="flex items-center gap-2.5 flex-shrink-0">
+        <div className="flex items-center flex-wrap gap-2.5 flex-shrink-0">
           {thumbUrl && (
             <div
               className="size-9 rounded-md border border-border-glass bg-cover bg-center shadow-sm"

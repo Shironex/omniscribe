@@ -68,7 +68,7 @@ export function AppearanceSection() {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="@container/settings space-y-6">
       <SettingsCard
         icon={Eye}
         tone="blue"
@@ -98,7 +98,7 @@ export function AppearanceSection() {
               </span>
               <span className="flex-1 h-px bg-border-glass" />
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 @md/settings:grid-cols-3 @2xl/settings:grid-cols-4 gap-3">
               {pluginThemeOptions.map(opt => (
                 <ThemeSwatchCard
                   key={opt.value}

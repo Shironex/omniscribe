@@ -165,7 +165,7 @@ export function CustomThemesCard() {
           No custom themes yet. Download a starter, tweak its colors, then import it back here.
         </p>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 pt-1">
+        <div className="grid grid-cols-2 @md/settings:grid-cols-3 @2xl/settings:grid-cols-4 gap-3 pt-1">
           {options.map((opt, idx) => {
             const theme = customThemes[idx];
             return (
