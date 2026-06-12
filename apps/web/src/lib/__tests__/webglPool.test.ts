@@ -307,6 +307,68 @@ describe('webglPool', () => {
     });
   });
 
+  describe('shellView occlusion (an active grid hidden behind editor/settings)', () => {
+    // TerminalView gates the pool signal on (grid active AND shellView ===
+    // 'terminal'). When the editor/settings tab takes over, every terminal in
+    // the active grid is occluded and reports notifyHidden even though its grid
+    // is still "active". These tests assert the pool can then reclaim those
+    // slots — the bug the gating fixes (an occluded terminal that still reports
+    // visible would wedge a slot nothing could steal).
+    it('reclaims an occluded full grid for a newly-visible terminal', async () => {
+      // A full grid of terminals, all visible on the terminal surface.
+      for (let i = 0; i < MAX_WEBGL_CONTEXTS; i++) {
+        requestWebgl(`grid${i}`, fakeTerminal(), true);
+      }
+      await flush();
+      expect(state().attached).toBe(MAX_WEBGL_CONTEXTS);
+
+      // Editor tab takes over → TerminalView marks every grid terminal hidden.
+      for (let i = 0; i < MAX_WEBGL_CONTEXTS; i++) {
+        notifyHidden(`grid${i}`);
+      }
+
+      // A different surface's terminal (or a freshly-visible one) now needs a
+      // slot — it must be able to steal from the occluded grid (all hidden).
+      const newcomer = fakeTerminal();
+      requestWebgl('newcomer', newcomer, true);
+      await flush();
+
+      expect(holders()).toContain('newcomer');
+      expect(newcomer.loadedAddon).not.toBeNull();
+      expect(state().attached).toBe(MAX_WEBGL_CONTEXTS);
+    });
+
+    it('a terminal that initializes while occluded does not steal a slot', async () => {
+      // Pool full of genuinely-visible terminals.
+      for (let i = 0; i < MAX_WEBGL_CONTEXTS; i++) {
+        requestWebgl(`v${i}`, fakeTerminal(), true);
+      }
+      await flush();
+
+      // A session launched while the editor tab is foreground seeds isVisible:
+      // false (effective visibility) — it must open on the default renderer,
+      // never stealing from a visible terminal.
+      const occluded = fakeTerminal();
+      requestWebgl('occluded', occluded, false);
+      await flush();
+
+      expect(holders()).not.toContain('occluded');
+      expect(occluded.loadedAddon).toBeNull();
+      expect(state().attached).toBe(MAX_WEBGL_CONTEXTS);
+
+      // Returning to the terminal surface marks it visible → it now steals one
+      // of the (now-hidden, since they'd also be occluded) holders. Here we hide
+      // one to model the LRU victim and confirm reclaim works.
+      notifyHidden('v0');
+      notifyVisible('occluded');
+      await flush();
+
+      expect(holders()).toContain('occluded');
+      expect(holders()).not.toContain('v0');
+      expect(state().attached).toBe(MAX_WEBGL_CONTEXTS);
+    });
+  });
+
   describe('proactive hand-off on hide', () => {
     it('hands a slot off to a waiting terminal when a holder is hidden', async () => {
       for (let i = 0; i < MAX_WEBGL_CONTEXTS; i++) {

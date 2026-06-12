@@ -104,6 +104,7 @@ function createRefs() {
     isDisposedRef: { current: false },
     isReadyRef: { current: false },
     isActiveRef: { current: true },
+    isVisibleRef: { current: true },
     resizeDebounceRef: { current: null },
   };
 }

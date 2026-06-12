@@ -14,6 +14,7 @@ import { useTerminalKeyboard } from '@/hooks/useTerminalKeyboard';
 import { useTerminalConnection } from '@/hooks/useTerminalConnection';
 import { useTerminalInitialization } from '@/hooks/useTerminalInitialization';
 import { notifyVisible, notifyHidden } from '@/lib/webglPool';
+import { useAppUIStore, selectShellView } from '@/stores/useAppUIStore';
 import '@xterm/xterm/css/xterm.css';
 
 const logger = createLogger('TerminalView');
@@ -51,6 +52,23 @@ export const TerminalView: React.FC<TerminalViewProps> = React.memo(
 
     const onCloseRef = useRef(onClose);
     onCloseRef.current = onClose;
+
+    // The session grids stay mounted when the editor/settings tab is on screen,
+    // so a terminal whose project tab is `isActive` can still be fully occluded
+    // when `shellView !== 'terminal'`. The WebGL pool only steals slots from
+    // HIDDEN holders, so an occluded-but-"visible" terminal would wedge a slot
+    // nothing can reclaim. Gate the pool's visibility signal on shellView too:
+    // a terminal counts as visible only when its grid is active AND the terminal
+    // surface is the one on screen. (Returning to the terminal view re-marks
+    // these visible and dispatches `terminal-refit-all`, handled elsewhere.)
+    const shellView = useAppUIStore(selectShellView);
+    const isVisible = isActive && shellView === 'terminal';
+    // Mirror effective visibility into a ref so the init seed (which reads at
+    // mount, outside React's render flow) seeds the pool correctly even when a
+    // terminal initializes while occluded (e.g. a session launched while the
+    // editor/settings tab is foreground).
+    const isVisibleRef = useRef(isVisible);
+    isVisibleRef.current = isVisible;
 
     // Composed hooks
     const settings = useTerminalSettings();
@@ -96,6 +114,7 @@ export const TerminalView: React.FC<TerminalViewProps> = React.memo(
         isDisposedRef,
         isReadyRef,
         isActiveRef,
+        isVisibleRef,
         resizeDebounceRef,
       },
       handleResize,
@@ -151,19 +170,20 @@ export const TerminalView: React.FC<TerminalViewProps> = React.memo(
     }, [isActive, flushBuffer, handleResize]);
 
     // Keep the WebGL pool's LRU bookkeeping in sync with this terminal's
-    // visibility. On becoming visible the pool steals a slot from the
+    // effective visibility (grid active AND terminal surface on screen — see
+    // `isVisible` above). On becoming visible the pool steals a slot from the
     // least-recently-visible hidden holder (never from another visible
     // terminal); on becoming hidden it may hand its slot to a waiter. The pool
     // keys by sessionId and no-ops until the terminal has registered, so an
     // early notify before init is harmless.
     useEffect(() => {
       const terminalId = String(sessionIdRef.current);
-      if (isActive) {
+      if (isVisible) {
         notifyVisible(terminalId);
       } else {
         notifyHidden(terminalId);
       }
-    }, [isActive]);
+    }, [isVisible]);
 
     // Handle focus changes
     useEffect(() => {

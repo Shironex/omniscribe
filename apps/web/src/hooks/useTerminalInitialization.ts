@@ -26,6 +26,14 @@ export interface TerminalRefs {
   isDisposedRef: React.MutableRefObject<boolean>;
   isReadyRef: React.MutableRefObject<boolean>;
   isActiveRef: React.MutableRefObject<boolean>;
+  /**
+   * Effective visibility (grid active AND terminal surface on screen). Drives
+   * the WebGL pool's initial visibility seed so a terminal that initializes
+   * while occluded (e.g. a session launched while the editor tab is foreground)
+   * does not over-claim a pool slot. Distinct from {@link isActiveRef}, which
+   * tracks only whether the grid is the active project (resize/buffering).
+   */
+  isVisibleRef: React.MutableRefObject<boolean>;
   resizeDebounceRef: React.MutableRefObject<ReturnType<typeof setTimeout> | null>;
 }
 
@@ -51,6 +59,7 @@ export function useTerminalInitialization(
     isDisposedRef,
     isReadyRef,
     isActiveRef,
+    isVisibleRef,
     resizeDebounceRef,
   } = refs;
 
@@ -85,7 +94,10 @@ export function useTerminalInitialization(
       // Track this live instance so the readability contrast bump can be
       // applied/cleared retroactively when the background-blend layer toggles.
       unregisterContrast = registerTerminalForContrast(terminal);
-      const addons = loadTerminalAddons(terminal, container, sessionId, isActiveRef.current);
+      // Seed the WebGL pool with EFFECTIVE visibility (grid active AND terminal
+      // surface on screen), not just grid-active — an occluded terminal must not
+      // claim a slot it can't be preferentially relieved of. See isVisibleRef.
+      const addons = loadTerminalAddons(terminal, container, sessionId, isVisibleRef.current);
       fitAddon = addons.fitAddon;
 
       xtermRef.current = terminal;
