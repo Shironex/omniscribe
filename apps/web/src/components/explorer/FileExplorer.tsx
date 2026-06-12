@@ -31,10 +31,17 @@ export interface FileExplorerProps {
   /** Collapse the panel (hide). */
   onClose: () => void;
   /**
-   * Git status hook point. The SCM lane owns coloring; defaults to empty so the
-   * explorer ships without it. (absolute path → status code)
+   * Git status colors. Maps an absolute file path to a Tailwind text-color
+   * class derived from the SCM snapshot; applied to the matching tree row.
+   * Defaults to empty so the explorer ships without it.
    */
   statusByPath?: Record<string, string>;
+  /**
+   * Hide the explorer's own "Explorer" header row (New file/folder/Refresh/
+   * collapse). Used when the explorer is embedded in a tabbed panel that
+   * supplies its own header chrome. Defaults to false (header shown).
+   */
+  hideHeader?: boolean;
 }
 
 const ROW_HEIGHT = 28;
@@ -45,7 +52,12 @@ interface DraftState {
   kind: 'file' | 'dir';
 }
 
-export function FileExplorer({ projectPath, onClose, statusByPath = {} }: FileExplorerProps) {
+export function FileExplorer({
+  projectPath,
+  onClose,
+  statusByPath = {},
+  hideHeader = false,
+}: FileExplorerProps) {
   const setProject = useFsStore(state => state.setProject);
   const loadDir = useFsStore(state => state.loadDir);
   const toggleDir = useFsStore(state => state.toggleDir);
@@ -294,25 +306,27 @@ export function FileExplorer({ projectPath, onClose, statusByPath = {} }: FileEx
   return (
     <div className="flex h-full min-h-0 flex-col bg-card/40">
       {/* Header */}
-      <div className="flex h-9 items-center justify-between border-b border-border px-2">
-        <span className="truncate text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          Explorer
-        </span>
-        <div className="flex items-center gap-0.5">
-          <IconButton label="New file" onClick={handleRootNewFile}>
-            <FilePlus className="h-3.5 w-3.5" />
-          </IconButton>
-          <IconButton label="New folder" onClick={handleRootNewFolder}>
-            <FolderPlus className="h-3.5 w-3.5" />
-          </IconButton>
-          <IconButton label="Refresh" onClick={() => loadDir(projectPath)}>
-            <RefreshCw className="h-3.5 w-3.5" />
-          </IconButton>
-          <IconButton label="Collapse panel" onClick={onClose}>
-            <PanelLeftClose className="h-3.5 w-3.5" />
-          </IconButton>
+      {!hideHeader && (
+        <div className="flex h-9 items-center justify-between border-b border-border px-2">
+          <span className="truncate text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Explorer
+          </span>
+          <div className="flex items-center gap-0.5">
+            <IconButton label="New file" onClick={handleRootNewFile}>
+              <FilePlus className="h-3.5 w-3.5" />
+            </IconButton>
+            <IconButton label="New folder" onClick={handleRootNewFolder}>
+              <FolderPlus className="h-3.5 w-3.5" />
+            </IconButton>
+            <IconButton label="Refresh" onClick={() => loadDir(projectPath)}>
+              <RefreshCw className="h-3.5 w-3.5" />
+            </IconButton>
+            <IconButton label="Collapse panel" onClick={onClose}>
+              <PanelLeftClose className="h-3.5 w-3.5" />
+            </IconButton>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Tree */}
       <div

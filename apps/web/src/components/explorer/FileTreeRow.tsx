@@ -54,8 +54,9 @@ function FileTreeRowImpl({
   onCopyPath,
 }: FileTreeRowProps) {
   const padLeft = BASE_PAD_PX + row.depth * INDENT_PX;
-  // TODO(SCM lane): map statusByPath[row.path] → a color class once git status lands.
-  const status = statusByPath[row.path];
+  // SCM lane: statusByPath maps absolute path → a Tailwind text-color class
+  // derived from the git snapshot. Applied to the file name below.
+  const statusColor = statusByPath[row.path];
 
   const handleClick = () => {
     onSelect(row);
@@ -73,7 +74,7 @@ function FileTreeRowImpl({
           role="treeitem"
           aria-expanded={row.isDir ? row.expanded : undefined}
           aria-selected={selected}
-          data-status={status ?? undefined}
+          data-status={!row.isDir && statusColor ? '' : undefined}
           tabIndex={-1}
           className={cn(
             'flex h-7 items-center gap-1 pr-2 text-sm select-none cursor-pointer',
@@ -103,7 +104,7 @@ function FileTreeRowImpl({
           {renaming ? (
             <RenameInput initialName={row.name} onCommit={next => onRenameCommit(row, next)} />
           ) : (
-            <span className="truncate">{row.name}</span>
+            <span className={cn('truncate', !row.isDir && statusColor)}>{row.name}</span>
           )}
         </div>
       </ContextMenuTrigger>

@@ -5,9 +5,14 @@
 
 const STORAGE_KEY = 'omniscribe-explorer';
 
+/** Which tab of the side panel is active. */
+export type ExplorerTab = 'files' | 'scm';
+
 export interface ExplorerLayout {
   open: boolean;
   width: number;
+  /** Active side-panel tab (Files vs Source Control). */
+  tab: ExplorerTab;
 }
 
 export const EXPLORER_MIN_WIDTH = 180;
@@ -17,7 +22,12 @@ export const EXPLORER_DEFAULT_WIDTH = 260;
 const DEFAULT_LAYOUT: ExplorerLayout = {
   open: false,
   width: EXPLORER_DEFAULT_WIDTH,
+  tab: 'files',
 };
+
+function normalizeTab(value: unknown): ExplorerTab {
+  return value === 'scm' ? 'scm' : 'files';
+}
 
 export function loadExplorerLayout(): ExplorerLayout {
   if (typeof window === 'undefined') return { ...DEFAULT_LAYOUT };
@@ -28,6 +38,7 @@ export function loadExplorerLayout(): ExplorerLayout {
     return {
       open: typeof parsed.open === 'boolean' ? parsed.open : DEFAULT_LAYOUT.open,
       width: clampWidth(typeof parsed.width === 'number' ? parsed.width : DEFAULT_LAYOUT.width),
+      tab: normalizeTab(parsed.tab),
     };
   } catch {
     return { ...DEFAULT_LAYOUT };
@@ -39,7 +50,11 @@ export function saveExplorerLayout(layout: ExplorerLayout): void {
   try {
     window.localStorage.setItem(
       STORAGE_KEY,
-      JSON.stringify({ open: layout.open, width: clampWidth(layout.width) })
+      JSON.stringify({
+        open: layout.open,
+        width: clampWidth(layout.width),
+        tab: normalizeTab(layout.tab),
+      })
     );
   } catch {
     // Ignore quota / serialization failures — layout is non-critical.
