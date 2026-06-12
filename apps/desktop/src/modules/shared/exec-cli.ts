@@ -25,6 +25,13 @@ export interface ExecCliOptions {
    * - 'always-return': return stdout/stderr for any non-zero exit code (gh)
    */
   exitCodeStrategy: 'non-fatal-below-128' | 'always-return';
+  /**
+   * Optional data to write to the child's stdin (then close it). Used by
+   * commands that read a patch/payload from stdin (e.g. `git apply -`).
+   * When omitted, stdin behaves exactly as before (inherited from execFile
+   * defaults), so this field is fully backward-compatible.
+   */
+  stdin?: string;
 }
 
 export interface ExecCliResult {
@@ -51,13 +58,17 @@ export async function execCliCommand(options: ExecCliOptions): Promise<ExecCliRe
     maxBuffer = 10 * 1024 * 1024,
     logger,
     exitCodeStrategy,
+    stdin,
   } = options;
 
   const command = `${binary} ${args.join(' ')}`;
   const label = capitalize(binary);
 
   try {
-    const result = await execFileAsync(binary, args, {
+    // promisify(execFile) returns a promise with a `.child` property exposing
+    // the underlying ChildProcess. When stdin data is supplied we write it to
+    // the child's stdin and close the stream, then await the same promise.
+    const pending = execFileAsync(binary, args, {
       cwd,
       timeout,
       env: {
@@ -66,6 +77,19 @@ export async function execCliCommand(options: ExecCliOptions): Promise<ExecCliRe
       },
       maxBuffer,
     });
+
+    if (stdin !== undefined) {
+      const child = pending.child;
+      if (child.stdin) {
+        child.stdin.on('error', () => {
+          // Swallow EPIPE: if the child exits before consuming all input the
+          // write end errors. The real failure surfaces via the awaited result.
+        });
+        child.stdin.end(stdin);
+      }
+    }
+
+    const result = await pending;
 
     logger.debug(`[exec] completed: ${command}`);
     return {

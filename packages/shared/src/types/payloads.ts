@@ -5,7 +5,14 @@
 import type { ProjectTabDTO, UserPreferences } from './project-tab';
 import type { QuickAction } from './workspace';
 import type { CustomCommand, CustomCommandInput, CustomCommandUpdate } from './custom-command';
-import type { BranchInfo, CommitInfo, WorktreeInfo, GitFileDiff, RemoteInfo } from './git';
+import type {
+  BranchInfo,
+  CommitInfo,
+  WorktreeInfo,
+  GitFileDiff,
+  GitFileStatus,
+  RemoteInfo,
+} from './git';
 import type {
   TaskItem,
   McpServerConfig,
@@ -1140,9 +1147,208 @@ export interface PluginSetEnabledPayload {
 // FS payloads (file explorer / editor) — owned by the WS3 lane.
 // Edit ONLY between these markers in parallel-lane work.
 // ============================================================
-// (WS3 lane: define FsReadDirPayload/Response, FsEntry, FsReadFilePayload/Response,
-//  FsWriteFilePayload, FsMutatePayloads, FsSearchPayload, FsGrepPayload,
-//  FsWatchPayload, FsChangedEvent here.)
+
+/**
+ * Kind of a filesystem entry. Symlinks are reported as `symlink` regardless of
+ * their target so the renderer can badge them; size/mtime reflect the link's
+ * stat (lstat), not the resolved target.
+ */
+export type FsEntryKind = 'file' | 'dir' | 'symlink';
+
+/**
+ * A single directory entry returned by {@link FsReadDirResponse}.
+ * All paths are absolute and already validated against the project root.
+ */
+export interface FsEntry {
+  /** Base name (no directory component). */
+  name: string;
+  /** Absolute path of the entry. */
+  path: string;
+  /** Entry kind (file / dir / symlink). */
+  kind: FsEntryKind;
+  /** Size in bytes (0 for directories). */
+  size: number;
+  /** Last-modified time in epoch milliseconds. */
+  mtime: number;
+}
+
+/**
+ * Common shape for all FS requests: the authorized project root plus a target.
+ * `target` may be absolute (must resolve inside `projectPath`) or relative to it.
+ */
+export interface FsBasePayload {
+  /** Authorized project root — the security boundary for the operation. */
+  projectPath: string;
+}
+
+/** Request: list the entries of a directory. */
+export interface FsReadDirPayload extends FsBasePayload {
+  /** Directory to read. Defaults to the project root when omitted. */
+  target?: string;
+}
+
+/** Response: directory listing, sorted dirs-first then case-insensitive name. */
+export interface FsReadDirResponse {
+  /** Absolute path actually read (resolved). */
+  path?: string;
+  /** Directory entries. */
+  entries?: FsEntry[];
+  error?: string;
+}
+
+/** Request: stat a single path. */
+export interface FsStatPayload extends FsBasePayload {
+  target: string;
+}
+
+/** Response: stat result for a single path. */
+export interface FsStatResponse {
+  entry?: FsEntry;
+  error?: string;
+}
+
+/** Request: read a file's UTF-8 content (capped, binary-sniffed). */
+export interface FsReadFilePayload extends FsBasePayload {
+  target: string;
+}
+
+/** Response: file content, or a binary/too-large marker instead of content. */
+export interface FsReadFileResponse {
+  /** Absolute path read. */
+  path?: string;
+  /** UTF-8 content. Absent when `binary` or `tooLarge`. */
+  content?: string;
+  /** True when the file was detected as binary (NUL-byte sniff). */
+  binary?: boolean;
+  /** True when the file exceeded the size cap and was not read. */
+  tooLarge?: boolean;
+  /** Size in bytes. */
+  size?: number;
+  error?: string;
+}
+
+/** Request: write UTF-8 content to a file (atomic temp + rename). */
+export interface FsWriteFilePayload extends FsBasePayload {
+  target: string;
+  content: string;
+}
+
+/** Request: create a new empty file. */
+export interface FsCreateFilePayload extends FsBasePayload {
+  target: string;
+}
+
+/** Request: create a new directory (recursive). */
+export interface FsCreateDirPayload extends FsBasePayload {
+  target: string;
+}
+
+/** Request: rename / move within the project root. */
+export interface FsRenamePayload extends FsBasePayload {
+  /** Existing path. */
+  from: string;
+  /** New path. */
+  to: string;
+}
+
+/** Request: delete a path (sent to OS recycle bin, never hard-deleted). */
+export interface FsDeletePayload extends FsBasePayload {
+  target: string;
+}
+
+/** Generic FS mutation response carrying the affected absolute path. */
+export interface FsMutateResponse extends SuccessResponse {
+  /** Absolute path of the created / renamed / deleted entry. */
+  path?: string;
+}
+
+/** Request: fuzzy file-name search across the project (gitignore-aware). */
+export interface FsSearchPayload extends FsBasePayload {
+  /** Fuzzy query against relative file paths. Empty returns a bounded sample. */
+  query: string;
+  /** Max results to return (server-capped). */
+  limit?: number;
+}
+
+/** A single fuzzy file-search match. */
+export interface FsSearchMatch {
+  /** Absolute path. */
+  path: string;
+  /** Project-relative path (what the matcher scored). */
+  relativePath: string;
+  /** Match score (higher = better). */
+  score: number;
+}
+
+/** Response: ranked fuzzy file matches. */
+export interface FsSearchResponse {
+  matches?: FsSearchMatch[];
+  /** True when the walk hit its bound and results may be incomplete. */
+  truncated?: boolean;
+  error?: string;
+}
+
+/** Request: content grep across the project (ripgrep → git grep → JS scan). */
+export interface FsGrepPayload extends FsBasePayload {
+  /** Literal/regex query (passed through to the underlying engine). */
+  query: string;
+  /** Treat the query as a fixed string rather than a regex. */
+  fixedString?: boolean;
+  /** Case-insensitive match. */
+  caseInsensitive?: boolean;
+  /** Max matches to return (server-capped). */
+  limit?: number;
+}
+
+/** A single grep match (one line). */
+export interface FsGrepMatch {
+  /** Absolute path of the file containing the match. */
+  path: string;
+  /** Project-relative path. */
+  relativePath: string;
+  /** 1-based line number. */
+  line: number;
+  /** 1-based column of the first match on the line. */
+  column: number;
+  /** The full matching line text (trimmed of trailing newline). */
+  text: string;
+}
+
+/** Response: grep matches. */
+export interface FsGrepResponse {
+  matches?: FsGrepMatch[];
+  /** True when the match cap was reached and results may be incomplete. */
+  truncated?: boolean;
+  error?: string;
+}
+
+/** Request: start watching a project root for filesystem changes. */
+export interface FsWatchPayload extends FsBasePayload {
+  /** Stable client-chosen id so multiple watchers per client are refcounted. */
+  watchId: string;
+}
+
+/** Request: stop a previously-started watch. */
+export interface FsUnwatchPayload extends FsBasePayload {
+  watchId: string;
+}
+
+/** Response for watch / unwatch. */
+export interface FsWatchResponse extends SuccessResponse {
+  /** The watchId acknowledged. */
+  watchId?: string;
+}
+
+/**
+ * Broadcast: a batch of filesystem paths under `projectPath` changed.
+ * Emitted to the `fs:<projectPath>` room after debounce-batching.
+ */
+export interface FsChangedEvent {
+  projectPath: string;
+  /** Absolute paths that changed within the debounce window (deduplicated). */
+  paths: string[];
+}
+
 // ============================================================
 // END FS payloads
 // ============================================================
@@ -1151,9 +1357,235 @@ export interface PluginSetEnabledPayload {
 // SCM payloads (staging/commit/history) — owned by the WS5 lane.
 // Edit ONLY between these markers in parallel-lane work.
 // ============================================================
-// (WS5 lane: define ScmPanelSnapshotPayload/Response, ScmFileStatus,
-//  ScmStagePayload, ScmCommitPayload, ScmLogPayload/Response,
-//  ScmShowCommitResponse, ScmDiffPayload/Response here.)
+
+/**
+ * Machine-readable error codes the SCM panel can render distinct UI for.
+ * Returned as `errorCode` alongside the human-readable `error` string.
+ */
+export type ScmErrorCode =
+  | 'NOT_A_REPO' // path is not inside a git repository
+  | 'INVALID_PATH' // a supplied pathspec escaped the repo root or was malformed
+  | 'NOTHING_TO_COMMIT' // commit attempted with an empty index
+  | 'HOOK_FAILED' // a git hook (pre-commit, commit-msg, pre-push) rejected the operation
+  | 'NO_UPSTREAM' // pull/push needs an upstream that isn't configured
+  | 'NO_REMOTE' // no remote is configured for fetch/pull/push
+  | 'DIVERGED' // ff-only pull/push rejected because histories diverged
+  | 'AUTH_FAILED' // remote rejected credentials / authentication
+  | 'CONFLICT' // operation left or hit merge conflicts
+  | 'PATCH_FAILED' // git apply could not apply the supplied hunk patch
+  | 'GIT_ERROR'; // catch-all for an unmapped git failure
+
+/**
+ * A single changed file in an SCM panel snapshot. Mirrors the porcelain v2
+ * XY status semantics so the UI can render staged vs. unstaged state precisely.
+ */
+export interface ScmFileEntry {
+  /** Repo-root-relative path (the new path for renames). */
+  path: string;
+  /** Original path for renamed/copied entries. */
+  oldPath?: string;
+  /**
+   * Status as seen from the relevant side. For the staged list this is the
+   * index status; for the unstaged list this is the worktree status; for the
+   * untracked list it is always 'untracked'; for conflicts it is 'conflicted'.
+   */
+  status: GitFileStatus;
+  /** Raw porcelain v2 XY code (e.g. 'M.', '.M', 'R.', 'UU') for advanced UI. */
+  xy?: string;
+}
+
+/**
+ * Payload to request a batched SCM panel snapshot. One round trip returns
+ * everything the SCM panel needs to render its header + change lists.
+ */
+export interface ScmPanelSnapshotPayload {
+  projectPath: string;
+}
+
+/**
+ * Batched panel snapshot response — current branch, upstream tracking,
+ * ahead/behind, the three change buckets, and in-progress operation flags.
+ */
+export interface ScmPanelSnapshotResponse {
+  /** Whether projectPath is inside a git repository. */
+  isRepo: boolean;
+  /** Repository root path (absolute) when isRepo is true. */
+  rootPath?: string;
+  /** Current branch name, or undefined when HEAD is detached. */
+  branch?: string;
+  /** Short HEAD hash when detached (branch is undefined). */
+  detachedHead?: string;
+  /** Upstream tracking branch (e.g. 'origin/main') when configured. */
+  upstream?: string;
+  /** Commits ahead of upstream. */
+  ahead: number;
+  /** Commits behind upstream. */
+  behind: number;
+  /** Files with staged (index) changes. */
+  staged: ScmFileEntry[];
+  /** Files with unstaged (worktree) changes. */
+  unstaged: ScmFileEntry[];
+  /** Untracked files. */
+  untracked: ScmFileEntry[];
+  /** Conflicted (unmerged) files. */
+  conflicted: ScmFileEntry[];
+  /** Whether a merge is in progress. */
+  isMerging: boolean;
+  /** Whether a rebase is in progress. */
+  isRebasing: boolean;
+  error?: string;
+  errorCode?: ScmErrorCode;
+}
+
+/** Payload for stage / unstage / discard operations over a set of paths. */
+export interface ScmStagePayload {
+  projectPath: string;
+  /** Repo-root-relative paths to operate on. */
+  paths: string[];
+}
+
+/**
+ * Payload for a hunk-level stage/unstage. `patch` is a complete unified-diff
+ * patch (with `diff --git` + `@@` headers) for the selected hunk, generated by
+ * the renderer; the backend pipes it to `git apply --cached` via stdin.
+ */
+export interface ScmHunkPayload {
+  projectPath: string;
+  /** Repo-root-relative path the patch is expected to touch. */
+  filePath: string;
+  /** Unified-diff patch text for the hunk. */
+  patch: string;
+}
+
+/** Payload for creating a commit. */
+export interface ScmCommitPayload {
+  projectPath: string;
+  message: string;
+  /** Amend the previous commit instead of creating a new one. */
+  amend?: boolean;
+}
+
+/** Response for a commit mutation. */
+export interface ScmCommitResponse extends SuccessResponse {
+  /** Full hash of the new (or amended) commit. */
+  hash?: string;
+  errorCode?: ScmErrorCode;
+}
+
+/** Payload for fetch / pull / push remote operations. */
+export interface ScmRemotePayload {
+  projectPath: string;
+  /** Remote name; defaults to 'origin' when omitted. */
+  remote?: string;
+}
+
+/** Response for a remote operation (fetch/pull/push). */
+export interface ScmRemoteResponse extends SuccessResponse {
+  errorCode?: ScmErrorCode;
+}
+
+/** Generic SCM mutation response (stage/unstage/discard/hunk). */
+export interface ScmMutationResponse extends SuccessResponse {
+  errorCode?: ScmErrorCode;
+}
+
+/** Payload for a paginated commit-log page. */
+export interface ScmLogPayload {
+  projectPath: string;
+  /** Max commits to return (default 50). */
+  limit?: number;
+  /**
+   * Continue paging from BEFORE this commit (exclusive). Pass the last hash of
+   * the previous page to fetch the next page.
+   */
+  beforeSha?: string;
+}
+
+/** A single entry in the SCM commit log. */
+export interface ScmLogEntry {
+  hash: string;
+  shortHash: string;
+  /** Parent commit hashes (2+ for merge commits). */
+  parents: string[];
+  authorName: string;
+  authorEmail: string;
+  /** Authored date in ISO-8601. */
+  authoredDate: string;
+  subject: string;
+  /** Ref decorations (branches/tags/HEAD) from `--decorate=short`. */
+  refs: string[];
+}
+
+/** Response for a commit-log page. */
+export interface ScmLogResponse {
+  commits: ScmLogEntry[];
+  /**
+   * Hash to pass as `beforeSha` for the next page, or undefined when the last
+   * page has been reached.
+   */
+  nextBeforeSha?: string;
+  error?: string;
+  errorCode?: ScmErrorCode;
+}
+
+/** Per-file change summary within a single commit. */
+export interface ScmCommitFile {
+  path: string;
+  oldPath?: string;
+  status: GitFileStatus;
+  additions: number;
+  deletions: number;
+  isBinary: boolean;
+}
+
+/** Payload to inspect the files changed by a single commit. */
+export interface ScmShowCommitPayload {
+  projectPath: string;
+  sha: string;
+}
+
+/** Response describing the files a commit changed. */
+export interface ScmShowCommitResponse {
+  hash: string;
+  files: ScmCommitFile[];
+  error?: string;
+  errorCode?: ScmErrorCode;
+}
+
+/** Payload for the diff of one file within a commit. */
+export interface ScmCommitFileDiffPayload {
+  projectPath: string;
+  sha: string;
+  path: string;
+}
+
+/**
+ * Payload for the working-tree diff of one file (staged or unstaged). Renders
+ * through the same diff component as commit diffs.
+ */
+export interface ScmFileDiffPayload {
+  projectPath: string;
+  path: string;
+  /** When true, diff the staged (index) version; otherwise the worktree. */
+  staged?: boolean;
+}
+
+/**
+ * Diff response shared by `scm:commit-file-diff` and `scm:file-diff`. Reuses
+ * the existing GitFileDiff structure so the UI renders both through one
+ * diff component. `file` is undefined when the path has no changes.
+ */
+export interface ScmDiffResponse {
+  file?: GitFileDiff;
+  error?: string;
+  errorCode?: ScmErrorCode;
+}
+
+/** Broadcast emitted after every mutating SCM op so panels can refresh. */
+export interface ScmChangedEvent {
+  projectPath: string;
+}
+
 // ============================================================
 // END SCM payloads
 // ============================================================
@@ -1162,8 +1594,123 @@ export interface PluginSetEnabledPayload {
 // Footprint payloads (project-write tracking & cleanup) — owned by the WS7 lane.
 // Edit ONLY between these markers in parallel-lane work.
 // ============================================================
-// (WS7 lane: define FootprintEntry, FootprintGetPayload/Response,
-//  FootprintRemovePayload/Response, PassiveModePayloads here.)
+
+/**
+ * The category of artifact Omniscribe writes into a user's project.
+ * Each kind maps to an owning service that knows how to detect and remove it.
+ *
+ * - `mcp-config`    — Omniscribe-managed entries in `.mcp.json` (marker-gated).
+ * - `claude-hooks`  — Omniscribe hooks in `.claude/settings.local.json`.
+ * - `hook-script`   — The `.claude/hooks/omniscribe-notify.js` script file.
+ * - `worktrees`     — Git worktrees under the project's `.worktrees/` dir.
+ */
+export type FootprintKind = 'mcp-config' | 'claude-hooks' | 'hook-script' | 'worktrees';
+
+/**
+ * A single detected piece of Omniscribe's footprint in a project. Only
+ * provably Omniscribe-owned artifacts (marker / command-signature gated)
+ * are ever reported.
+ */
+export interface FootprintEntry {
+  /** Which category of artifact this entry represents. */
+  kind: FootprintKind;
+  /** Absolute path to the file or directory holding the artifact. */
+  path: string;
+  /** Human-readable summary shown in the cleanup preview. */
+  description: string;
+  /**
+   * Optional count of sub-items (e.g. number of managed `.mcp.json` entries,
+   * number of project worktrees). Omitted when a count is not meaningful.
+   */
+  count?: number;
+}
+
+/**
+ * Request the current Omniscribe footprint for a project.
+ */
+export interface FootprintGetPayload {
+  projectPath: string;
+}
+
+/**
+ * Response listing every detected footprint entry for a project.
+ */
+export interface FootprintGetResponse {
+  entries: FootprintEntry[];
+  error?: string;
+}
+
+/**
+ * Per-kind result of a removal request.
+ */
+export interface FootprintRemovalResult {
+  kind: FootprintKind;
+  /** True when the removal for this kind completed without error. */
+  ok: boolean;
+  /** Error message when `ok` is false. */
+  error?: string;
+}
+
+/**
+ * Request removal of the listed footprint kinds from a project. Only the
+ * requested kinds are touched; everything else is left intact.
+ */
+export interface FootprintRemovePayload {
+  projectPath: string;
+  kinds: FootprintKind[];
+}
+
+/**
+ * Response reporting the per-kind outcome of a removal request.
+ */
+export interface FootprintRemoveResponse {
+  success: boolean;
+  results: FootprintRemovalResult[];
+  error?: string;
+}
+
+/**
+ * Request to enable/disable passive mode for a project. When passive mode is
+ * on, Omniscribe does not write MCP config or Claude hooks into the project on
+ * session launch.
+ */
+export interface FootprintSetPassiveModePayload {
+  projectPath: string;
+  enabled: boolean;
+}
+
+/**
+ * Response confirming the new passive-mode state for a project.
+ */
+export interface FootprintSetPassiveModeResponse {
+  success: boolean;
+  enabled: boolean;
+  error?: string;
+}
+
+/**
+ * Request the current passive-mode state for a project.
+ */
+export interface FootprintGetPassiveModePayload {
+  projectPath: string;
+}
+
+/**
+ * Response reporting whether passive mode is enabled for a project.
+ */
+export interface FootprintGetPassiveModeResponse {
+  enabled: boolean;
+  error?: string;
+}
+
+/**
+ * Broadcast event emitted after a project's footprint changes (e.g. after a
+ * removal), so other windows can re-fetch the footprint for that project.
+ */
+export interface FootprintChangedEvent {
+  projectPath: string;
+}
+
 // ============================================================
 // END Footprint payloads
 // ============================================================

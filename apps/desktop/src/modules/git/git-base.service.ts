@@ -34,4 +34,29 @@ export class GitBaseService {
       exitCodeStrategy: 'non-fatal-below-128',
     });
   }
+
+  /**
+   * Execute a git command, piping `stdin` to the process (then closing it).
+   * Used by commands that read a payload from stdin, e.g.
+   * `git apply --cached -` for hunk-level staging.
+   */
+  async execGitWithStdin(
+    repoPath: string,
+    args: string[],
+    stdin: string,
+    timeoutMs: number = GIT_TIMEOUT_MS
+  ): Promise<ExecCliResult> {
+    this.logger.debug(`[execGit] starting (stdin): git ${args.join(' ')} (cwd: ${repoPath})`);
+
+    return execCliCommand({
+      binary: 'git',
+      args,
+      cwd: repoPath,
+      timeout: timeoutMs,
+      env: GIT_ENV,
+      logger: this.logger,
+      exitCodeStrategy: 'non-fatal-below-128',
+      stdin,
+    });
+  }
 }
