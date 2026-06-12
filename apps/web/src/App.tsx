@@ -5,6 +5,7 @@ import { IdleLandingView } from '@/components/shared/IdleLandingView';
 import { WelcomeView } from '@/components/shared/WelcomeView';
 import { PersistentProjectGrid } from '@/components/terminal/PersistentProjectGrid';
 import { FileExplorerPanel } from '@/components/explorer';
+import { EditorSplit } from '@/components/editor';
 import { useAppInitialization } from '@/hooks/useAppInitialization';
 import { useWorkspaceTabs } from '@/hooks/useWorkspaceTabs';
 import { useWorkspacePreferences } from '@/hooks/useWorkspacePreferences';
@@ -251,60 +252,67 @@ function App() {
               open/closed state + width in localStorage. */}
           <FileExplorerPanel projectPath={activeProjectPath} />
 
-          {/* Main content area — relative container for stacked persistent grids */}
-          <div className="flex-1 min-w-0 relative">
-            {/* Persistent terminal grids for all projects with sessions */}
-            {projectPathsWithGrids.map(projectPath => {
-              const isActiveGrid = projectPath === activeProjectPath;
-              return (
-                <PersistentProjectGrid
-                  key={projectPath}
-                  projectPath={projectPath}
-                  isActive={isActiveGrid}
-                  preLaunchSlots={isActiveGrid ? preLaunchSlots : undefined}
-                  launchingSlotIds={isActiveGrid ? launchingSlotIds : undefined}
-                  branches={isActiveGrid ? branches : undefined}
-                  worktreeMode={isActiveGrid ? worktreeMode : undefined}
-                  quickActions={isActiveGrid ? quickActionsForTerminal : undefined}
-                  onAddSlot={handleAddSession}
-                  onOpenLaunchModal={openLaunchModal}
-                  onRemoveSlot={handleRemoveSlot}
-                  onUpdateSlot={handleUpdateSlot}
-                  onLaunch={handleLaunchSlot}
-                  onKill={handleKillSession}
-                  onSessionClose={handleSessionClose}
-                  onQuickAction={handleQuickAction}
-                  onResume={handleResume}
-                  onOpenInEditor={handleOpenInEditor}
-                />
-              );
-            })}
+          {/* Editor split (WS4): when ≥1 file is open, splits this area
+              vertically — editor on top, sessions below. When nothing is open
+              it renders the grid container untouched (layout unchanged). */}
+          <div className="flex-1 min-w-0 flex">
+            <EditorSplit>
+              {/* Main content area — relative container for stacked persistent grids */}
+              <div className="h-full w-full min-w-0 relative">
+                {/* Persistent terminal grids for all projects with sessions */}
+                {projectPathsWithGrids.map(projectPath => {
+                  const isActiveGrid = projectPath === activeProjectPath;
+                  return (
+                    <PersistentProjectGrid
+                      key={projectPath}
+                      projectPath={projectPath}
+                      isActive={isActiveGrid}
+                      preLaunchSlots={isActiveGrid ? preLaunchSlots : undefined}
+                      launchingSlotIds={isActiveGrid ? launchingSlotIds : undefined}
+                      branches={isActiveGrid ? branches : undefined}
+                      worktreeMode={isActiveGrid ? worktreeMode : undefined}
+                      quickActions={isActiveGrid ? quickActionsForTerminal : undefined}
+                      onAddSlot={handleAddSession}
+                      onOpenLaunchModal={openLaunchModal}
+                      onRemoveSlot={handleRemoveSlot}
+                      onUpdateSlot={handleUpdateSlot}
+                      onLaunch={handleLaunchSlot}
+                      onKill={handleKillSession}
+                      onSessionClose={handleSessionClose}
+                      onQuickAction={handleQuickAction}
+                      onResume={handleResume}
+                      onOpenInEditor={handleOpenInEditor}
+                    />
+                  );
+                })}
 
-            {/* Overlay views shown on top of grids when appropriate */}
-            {activeProjectPath ? (
-              !hasContent && (
-                <div className="absolute inset-0 z-20">
-                  <IdleLandingView
-                    projectPath={activeProjectPath}
-                    onAddSession={handleAddSession}
-                    onOpenLaunchModal={openLaunchModal}
+                {/* Overlay views shown on top of grids when appropriate */}
+                {activeProjectPath ? (
+                  !hasContent && (
+                    <div className="absolute inset-0 z-20">
+                      <IdleLandingView
+                        projectPath={activeProjectPath}
+                        onAddSession={handleAddSession}
+                        onOpenLaunchModal={openLaunchModal}
+                      />
+                    </div>
+                  )
+                ) : (
+                  <WelcomeView
+                    onOpenProject={handleSelectDirectory}
+                    onSelectProject={handleSelectTab}
                   />
-                </div>
-              )
-            ) : (
-              <WelcomeView
-                onOpenProject={handleSelectDirectory}
-                onSelectProject={handleSelectTab}
-              />
-            )}
+                )}
 
-            {/* Settings view replaces the workspace pane while open. Mounted
+                {/* Settings view replaces the workspace pane while open. Mounted
                 here so the project rail + top toolbar stay visible. */}
-            {isSettingsOpen && (
-              <Suspense fallback={null}>
-                <SettingsView />
-              </Suspense>
-            )}
+                {isSettingsOpen && (
+                  <Suspense fallback={null}>
+                    <SettingsView />
+                  </Suspense>
+                )}
+              </div>
+            </EditorSplit>
           </div>
 
           {/* Session History Panel */}
