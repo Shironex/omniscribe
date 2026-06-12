@@ -189,6 +189,7 @@ vi.mock('@/hooks/useAppVersion', () => ({
 
 // Mock @/lib/platform
 vi.mock('@/lib/platform', () => ({
+  IS_ELECTRON: false,
   IS_MAC: false,
   IS_WINDOWS: false,
   IS_LINUX: true,

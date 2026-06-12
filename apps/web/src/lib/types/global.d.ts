@@ -20,6 +20,10 @@ interface ElectronAPI {
     close: () => void;
     isMaximized: () => Promise<boolean>;
     onMaximizedChange: (callback: (maximized: boolean) => void) => () => void;
+    setBackgroundEffect: (
+      effect: 'none' | 'vibrancy' | 'acrylic'
+    ) => Promise<{ ok: boolean; reason?: string }>;
+    getBackgroundEffectSupport: () => Promise<{ vibrancy: boolean; acrylic: boolean }>;
   };
   store: {
     get: <T>(key: string) => Promise<T | undefined>;

@@ -18,6 +18,12 @@ export interface ElectronAPI {
     close: () => void;
     isMaximized: () => Promise<boolean>;
     onMaximizedChange: (callback: (maximized: boolean) => void) => () => void;
+    /** Apply (or clear) a native window background effect. */
+    setBackgroundEffect: (
+      effect: 'none' | 'vibrancy' | 'acrylic'
+    ) => Promise<{ ok: boolean; reason?: string }>;
+    /** Query which native window effects the current platform supports. */
+    getBackgroundEffectSupport: () => Promise<{ vibrancy: boolean; acrylic: boolean }>;
   };
   store: {
     get: <T>(key: string) => Promise<T | undefined>;
@@ -109,6 +115,16 @@ const electronAPI: ElectronAPI = {
         ipcRenderer.removeListener('window:maximized-change', listener);
       };
     },
+    setBackgroundEffect: (effect: 'none' | 'vibrancy' | 'acrylic') =>
+      ipcRenderer.invoke('window:set-background-effect', effect) as Promise<{
+        ok: boolean;
+        reason?: string;
+      }>,
+    getBackgroundEffectSupport: () =>
+      ipcRenderer.invoke('window:get-background-effect-support') as Promise<{
+        vibrancy: boolean;
+        acrylic: boolean;
+      }>,
   },
   store: {
     get: <T>(key: string) => ipcRenderer.invoke('store:get', key) as Promise<T | undefined>,

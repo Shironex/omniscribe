@@ -16,6 +16,7 @@ import { useQuickActionExecution } from '@/hooks/useQuickActionExecution';
 import { useUpdateToast } from '@/hooks/useUpdateToast';
 import { useNotificationNavigation } from '@/hooks/useNotificationNavigation';
 import { useSessionOrderSync } from '@/hooks/useSessionOrderSync';
+import { useWindowEffect } from '@/hooks/useWindowEffect';
 import { useSessionActions } from '@/hooks/useSessionActions';
 import { useSessionStore, selectProjectPaths } from '@/stores/useSessionStore';
 import { useWorkspaceStore } from '@/stores/useWorkspaceStore';
@@ -50,6 +51,7 @@ function App() {
   useNotificationNavigation();
   useWorkspacePreferences();
   useSessionOrderSync();
+  useWindowEffect();
 
   const {
     tabs,

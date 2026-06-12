@@ -8,6 +8,7 @@ import { PASTE_CHUNK_SIZE } from '@/lib/terminal-constants';
 import { getTerminalTheme } from '@/lib/terminal-themes';
 import { safeFit } from './useTerminalResize';
 import { createTerminalInstance } from '@/lib/createTerminalInstance';
+import { registerTerminalForContrast } from '@/lib/background/terminalContrast';
 import { loadTerminalAddons } from '@/lib/loadTerminalAddons';
 import { useTerminalRefitListener } from './useTerminalRefitListener';
 import type { UseTerminalSettingsReturn } from './useTerminalSettings';
@@ -64,6 +65,7 @@ export function useTerminalInitialization(
     const container = terminalRef.current;
     let terminal: Terminal | null = null;
     let fitAddon: FitAddon | null = null;
+    let unregisterContrast: (() => void) | null = null;
     let isInitialized = false;
     let initRetryTimeout: ReturnType<typeof setTimeout> | null = null;
     const deferredFitTimeouts: ReturnType<typeof setTimeout>[] = [];
@@ -79,6 +81,9 @@ export function useTerminalInitialization(
       isInitialized = true;
 
       terminal = createTerminalInstance(settings, theme);
+      // Track this live instance so the readability contrast bump can be
+      // applied/cleared retroactively when the background-blend layer toggles.
+      unregisterContrast = registerTerminalForContrast(terminal);
       const addons = loadTerminalAddons(terminal, container, sessionId);
       fitAddon = addons.fitAddon;
 
@@ -183,6 +188,11 @@ export function useTerminalInitialization(
       if (connectionRef.current) {
         connectionRef.current.cleanup();
         connectionRef.current = null;
+      }
+
+      if (unregisterContrast) {
+        unregisterContrast();
+        unregisterContrast = null;
       }
 
       if (xtermRef.current) {

@@ -307,6 +307,26 @@
   }
 }
 
+/*
+ * Native window effect (vibrancy / acrylic) translucency.
+ *
+ * When `html[data-window-effect]` is present (set by the useWindowEffect hook),
+ * the OS paints a real blur of the desktop behind the window. For that blur to
+ * be visible, only the opaque BASE layers must become translucent — the body
+ * and the two `bg-background` app-shell surfaces (the rounded app root and the
+ * main content pane). Panels and cards keep their own (more opaque) surfaces so
+ * content stays readable. Unlayered so they win over Tailwind's `bg-background`
+ * utility regardless of cascade-layer ordering.
+ */
+html[data-window-effect] body {
+  background: color-mix(in srgb, var(--background) 62%, transparent);
+}
+
+html[data-window-effect] [data-testid='app-ready'],
+html[data-window-effect] [data-testid='app-ready'] main {
+  background-color: color-mix(in srgb, var(--background) 62%, transparent);
+}
+
 /* Custom utilities */
 @utility drag {
   -webkit-app-region: drag;
