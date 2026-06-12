@@ -6,6 +6,7 @@ import { TERM_PROGRAM, createLogger, normalizePath } from '@omniscribe/shared';
 import { InternalTerminalEvents } from '../shared/events';
 import { buildSafeEnv } from '../shared/env-utils';
 import { OscAgentDetector, OscTransition } from './osc-agent-detector';
+import { ShellIntegrationService } from './shell-integration.service';
 
 // Performance constants
 const OUTPUT_THROTTLE_MS = 32; // ~30fps — frontend RAF batches at 60fps anyway
@@ -41,7 +42,10 @@ export class TerminalService implements OnModuleDestroy {
   /** Timestamp of the last OSC-detector error warning (for rate limiting) */
   private lastOscWarnAt = 0;
 
-  constructor(private readonly eventEmitter: EventEmitter2) {}
+  constructor(
+    private readonly eventEmitter: EventEmitter2,
+    private readonly shellIntegration: ShellIntegrationService
+  ) {}
 
   /**
    * Spawn a new terminal session with a shell
@@ -132,13 +136,22 @@ export class TerminalService implements OnModuleDestroy {
       LC_ALL: process.env.LC_ALL || process.env.LANG || 'en_US.UTF-8',
     };
 
+    // App-owned shell integration for PLAIN shells (zsh/bash). Runs AFTER
+    // buildSafeEnv so our trusted ZDOTDIR / OMNISCRIBE_* survive the env filter
+    // (buildSafeEnv blocks ZDOTDIR from untrusted callers; the app setting its
+    // own is the intended trust boundary). For non-zsh/bash commands — including
+    // AI provider CLIs (claude/codex) — decorate() returns the spawn unchanged,
+    // so AI sessions keep their hook-based arming. Failure-safe: any error
+    // inside decorate() falls back to the original command/args/env.
+    const decorated = this.shellIntegration.decorate(command, args, finalEnv);
+
     // Build pty options with Windows-specific settings
     const ptyOptions: pty.IPtyForkOptions = {
       name: 'xterm-256color',
       cols: 80,
       rows: 24,
       cwd: resolvedCwd,
-      env: finalEnv,
+      env: decorated.env,
     };
 
     // On Windows, always use winpty instead of ConPTY
@@ -159,7 +172,7 @@ export class TerminalService implements OnModuleDestroy {
     let ptyProcess: pty.IPty;
     try {
       this.logger.debug(`[spawnCommand] Calling pty.spawn()...`);
-      ptyProcess = pty.spawn(command, args, ptyOptions);
+      ptyProcess = pty.spawn(decorated.command, decorated.args, ptyOptions);
       this.logger.log(`[spawnCommand] pty.spawn() succeeded, PID: ${ptyProcess.pid}`);
     } catch (spawnError) {
       this.logger.error('[spawnCommand] pty.spawn() FAILED', spawnError);

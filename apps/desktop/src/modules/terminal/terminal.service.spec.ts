@@ -1,7 +1,22 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { TerminalService } from './terminal.service';
+import { ShellIntegrationService } from './shell-integration.service';
 import { MockPty } from '../../../test/mocks';
+
+/**
+ * Pass-through ShellIntegrationService for these tests: returns the spawn
+ * UNCHANGED. Shell-integration decoration is covered exhaustively in
+ * shell-integration.service.spec.ts; here we keep spawn-arg/env assertions
+ * independent of it.
+ */
+const passthroughShellIntegration = {
+  decorate: (command: string, args: string[], env: Record<string, string>) => ({
+    command,
+    args,
+    env,
+  }),
+} as unknown as ShellIntegrationService;
 
 // Mock os module for platform-specific testing
 const mockOsPlatform = jest.fn().mockReturnValue(process.platform);
@@ -35,7 +50,11 @@ describe('TerminalService', () => {
     } as unknown as EventEmitter2;
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [TerminalService, { provide: EventEmitter2, useValue: eventEmitter }],
+      providers: [
+        TerminalService,
+        { provide: EventEmitter2, useValue: eventEmitter },
+        { provide: ShellIntegrationService, useValue: passthroughShellIntegration },
+      ],
     }).compile();
 
     service = module.get<TerminalService>(TerminalService);
@@ -533,7 +552,11 @@ describe('TerminalService', () => {
         } as unknown as EventEmitter2;
 
         const module: TestingModule = await Test.createTestingModule({
-          providers: [TerminalService, { provide: EventEmitter2, useValue: winEventEmitter }],
+          providers: [
+            TerminalService,
+            { provide: EventEmitter2, useValue: winEventEmitter },
+            { provide: ShellIntegrationService, useValue: passthroughShellIntegration },
+          ],
         }).compile();
 
         winService = module.get<TerminalService>(TerminalService);
@@ -626,7 +649,11 @@ describe('TerminalService', () => {
         } as unknown as EventEmitter2;
 
         const module: TestingModule = await Test.createTestingModule({
-          providers: [TerminalService, { provide: EventEmitter2, useValue: unixEventEmitter }],
+          providers: [
+            TerminalService,
+            { provide: EventEmitter2, useValue: unixEventEmitter },
+            { provide: ShellIntegrationService, useValue: passthroughShellIntegration },
+          ],
         }).compile();
 
         unixService = module.get<TerminalService>(TerminalService);
