@@ -72,7 +72,7 @@ describe('ShellIntegrationService', () => {
       expect(result.env.ZDOTDIR).toBe(DIR);
     });
 
-    it('materializes .zshrc and .zshenv with hooks + 777 marker', () => {
+    it('materializes .zshrc and .zshenv with OSC 133 prompt-cycle hooks', () => {
       service.decorate('/bin/zsh', ['-i'], {});
 
       const zshrc = writtenContent(path.join(DIR, '.zshrc'));
@@ -85,13 +85,21 @@ describe('ShellIntegrationService', () => {
       expect(zshrc).toContain('133;B');
       expect(zshrc).toContain('133;C;');
       expect(zshrc).toContain('133;D;');
-      // 777 omniscribe self-arm marker, gated on the session id.
-      expect(zshrc).toContain('777;notify;omniscribe;working');
-      expect(zshrc).toContain('OMNISCRIBE_SESSION_ID');
+      // Plain shells must NOT emit the 777 self-arm marker — it is reserved for
+      // the claude-hook path and would wrongly arm the session as an agent.
+      expect(zshrc).not.toContain('777;notify;omniscribe');
       // Sources the user's real config first.
       expect(zshrc).toContain('.zshrc');
       // .zshenv restores the user's real ZDOTDIR.
       expect(zshenv).toContain('OMNISCRIBE_USER_ZDOTDIR');
+    });
+
+    it('stamps the current integration version in the banner', () => {
+      service.decorate('/bin/zsh', ['-i'], {});
+      const zshrc = writtenContent(path.join(DIR, '.zshrc'));
+      // Version bumped to v2 when the 777 self-arm was removed — forces a
+      // rewrite of stale v1 materialized scripts.
+      expect(zshrc).toContain('v2');
     });
   });
 
@@ -119,8 +127,9 @@ describe('ShellIntegrationService', () => {
       expect(bashrc).toContain('133;A');
       expect(bashrc).toContain('133;C;');
       expect(bashrc).toContain('133;D;');
-      expect(bashrc).toContain('777;notify;omniscribe;working');
-      expect(bashrc).toContain('OMNISCRIBE_SESSION_ID');
+      // Plain shells must NOT emit the 777 self-arm marker (reserved for the
+      // claude-hook path).
+      expect(bashrc).not.toContain('777;notify;omniscribe');
       // Sources the user's real ~/.bashrc first.
       expect(bashrc).toContain('$HOME/.bashrc');
     });

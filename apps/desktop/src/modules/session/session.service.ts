@@ -363,13 +363,15 @@ export class SessionService {
    * to a session and translates the signal into a validated status update.
    *
    * Signal → status mapping:
-   *  - `working`   → working
-   *  - `attention` → needs_input
-   *  - `finished`  → finished
-   *  - `exited`    → finished (only if the session was mid-work); ignored if
-   *                  already in a terminal state (idle/finished/error)
-   *  - `started`   → working (only if currently idle; otherwise treated as a
-   *                  no-op so a mid-session re-arm doesn't reset progress)
+   *  - `working`    → working
+   *  - `attention`  → needs_input
+   *  - `finished`   → finished
+   *  - `exited`     → finished (only if the session was mid-work); ignored if
+   *                   already in a terminal state (idle/finished/error)
+   *  - `started`    → working (only if currently idle; otherwise treated as a
+   *                   no-op so a mid-session re-arm doesn't reset progress)
+   *  - `shell-busy` → working (UNARMED plain-shell cycle: a command started)
+   *  - `shell-idle` → idle    (UNARMED plain-shell cycle: shell at its prompt)
    *
    * Source precedence: the MCP channel is authoritative. If an MCP update
    * landed within {@link MCP_PRECEDENCE_WINDOW_MS}, the OSC signal is dropped —
@@ -423,11 +425,18 @@ export class SessionService {
   ): SessionStatus | undefined {
     switch (kind) {
       case 'working':
+      case 'shell-busy':
+        // shell-busy is the UNARMED plain-shell equivalent of working: a command
+        // is running. Same target so the prompt cycle drives the status pill.
         return 'working';
       case 'attention':
         return 'needs_input';
       case 'finished':
         return 'finished';
+      case 'shell-idle':
+        // UNARMED plain-shell cycle: the shell returned to its prompt. Map to
+        // idle so a plain session settles back from working after each command.
+        return 'idle';
       case 'started':
         // Only promote idle → working; mid-session re-arms shouldn't reset state.
         return current === 'idle' ? 'working' : undefined;
@@ -461,6 +470,10 @@ export class SessionService {
         return 'Agent finished';
       case 'exited':
         return 'Agent command exited';
+      case 'shell-busy':
+        return 'Running command';
+      case 'shell-idle':
+        return 'Shell ready';
       default:
         return '';
     }

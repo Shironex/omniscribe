@@ -20,9 +20,12 @@ import { createLogger, extractErrorMessage, normalizePath } from '@omniscribe/sh
  *  - `OSC 133;B`             — command line read / prompt end (preexec)
  *  - `OSC 133;C;<cmd>`       — command start, carrying the command line (preexec)
  *  - `OSC 133;D;<exit>`      — command finished with exit status (precmd)
- *  - `OSC 777;notify;omniscribe;working` — emitted ONCE at shell init, BEL
- *    terminated, gated on `$OMNISCRIBE_SESSION_ID`, to self-arm the detector so
- *    a plain shell session goes "active" even before the first command.
+ *
+ * Plain shells deliberately emit NO 777 marker. The detector's UNARMED regime
+ * turns the 133;C/133;D prompt cycle into shell-busy/shell-idle (→ Working/Idle)
+ * without arming. The `OSC 777;notify;omniscribe;<event>` marker is RESERVED for
+ * the Claude-hook self-arm path and must never come from a plain shell — emitting
+ * it here would wrongly arm the session as a claude agent and break the cycle.
  *
  * Design constraints:
  *  - **Idempotent + versioned**: snippet content is hashed; we only rewrite when
@@ -41,7 +44,7 @@ import { createLogger, extractErrorMessage, normalizePath } from '@omniscribe/sh
  */
 
 /** Bump when the rc snippet content format changes (forces a rewrite). */
-const SHELL_INTEGRATION_VERSION = 1;
+const SHELL_INTEGRATION_VERSION = 2;
 
 /** App-owned subdirectory under Electron `userData`. */
 const SHELL_INTEGRATION_DIR = 'shell-integration';
@@ -132,10 +135,9 @@ const ZSHRC_BODY = [
   '    preexec_functions+=(__omniscribe_preexec)',
   '  fi',
   '',
-  '  # Self-arm the detector once at init (only inside an Omniscribe session).',
-  '  if [[ -n "$OMNISCRIBE_SESSION_ID" ]]; then',
-  '    __omniscribe_osc "777;notify;omniscribe;working"',
-  '  fi',
+  '  # NOTE: plain shells emit NO 777 self-arm marker. The detector turns the',
+  '  # 133;C/133;D prompt cycle into shell-busy/shell-idle without arming; the',
+  '  # 777 marker stays reserved for the Claude-hook self-arm path.',
   'fi',
   '',
 ].join('\n');
@@ -207,10 +209,9 @@ const BASHRC_BODY = [
   '',
   "  trap '__omniscribe_preexec' DEBUG",
   '',
-  '  # Self-arm the detector once at init (only inside an Omniscribe session).',
-  '  if [ -n "$OMNISCRIBE_SESSION_ID" ]; then',
-  '    __omniscribe_osc "777;notify;omniscribe;working"',
-  '  fi',
+  '  # NOTE: plain shells emit NO 777 self-arm marker. The detector turns the',
+  '  # 133;C/133;D prompt cycle into shell-busy/shell-idle without arming; the',
+  '  # 777 marker stays reserved for the Claude-hook self-arm path.',
   'fi',
   '',
 ].join('\n');

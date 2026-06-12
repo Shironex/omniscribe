@@ -885,6 +885,43 @@ describe('SessionService', () => {
       service.onTerminalOscSignal({ terminalId: 7, signal: { kind: 'working' } });
       expect(service.get(id)?.lastStatusSource).toBe('osc');
     });
+
+    // --- UNARMED plain-shell cycle (shell-busy / shell-idle) -----------------
+    it('maps shell-busy signal to working status', () => {
+      const id = sessionWithTerminal();
+      service.onTerminalOscSignal({ terminalId: 7, signal: { kind: 'shell-busy' } });
+      expect(service.get(id)?.status).toBe('working');
+    });
+
+    it('maps shell-idle signal to idle status', () => {
+      const id = sessionWithTerminal();
+      service.updateStatus(id, 'working');
+      service.onTerminalOscSignal({ terminalId: 7, signal: { kind: 'shell-idle' } });
+      expect(service.get(id)?.status).toBe('idle');
+    });
+
+    it('cycles working ↔ idle for a plain shell (reproduces the live bug fix)', () => {
+      const id = sessionWithTerminal();
+      // First prompt: shell-idle while idle is a no-op stay.
+      service.onTerminalOscSignal({ terminalId: 7, signal: { kind: 'shell-idle' } });
+      expect(service.get(id)?.status).toBe('idle');
+      // Run a command → working.
+      service.onTerminalOscSignal({ terminalId: 7, signal: { kind: 'shell-busy' } });
+      expect(service.get(id)?.status).toBe('working');
+      // Prompt returns → idle.
+      service.onTerminalOscSignal({ terminalId: 7, signal: { kind: 'shell-idle' } });
+      expect(service.get(id)?.status).toBe('idle');
+      // Another command → working again (the old model got stuck after the
+      // first idle and never went working again).
+      service.onTerminalOscSignal({ terminalId: 7, signal: { kind: 'shell-busy' } });
+      expect(service.get(id)?.status).toBe('working');
+    });
+
+    it('records osc as the source for shell-cycle signals', () => {
+      const id = sessionWithTerminal();
+      service.onTerminalOscSignal({ terminalId: 7, signal: { kind: 'shell-busy' } });
+      expect(service.get(id)?.lastStatusSource).toBe('osc');
+    });
   });
 
   describe('OSC/MCP source precedence', () => {
@@ -931,6 +968,18 @@ describe('SessionService', () => {
       service.onTerminalOscSignal({ terminalId: 7, signal: { kind: 'attention' } });
       expect(service.get(id)?.status).toBe('needs_input');
       expect(service.get(id)?.lastStatusSource).toBe('osc');
+    });
+
+    it('drops shell-cycle signals within the MCP precedence window', () => {
+      const id = sessionWithTerminal();
+      // MCP says needs_input.
+      service.onMcpStatusReceived({ sessionId: id, status: 'needs_input' });
+      expect(service.get(id)?.status).toBe('needs_input');
+
+      // A plain-shell shell-busy must not clobber the more precise MCP report.
+      service.onTerminalOscSignal({ terminalId: 7, signal: { kind: 'shell-busy' } });
+      expect(service.get(id)?.status).toBe('needs_input');
+      expect(service.get(id)?.lastStatusSource).toBe('mcp');
     });
   });
 });

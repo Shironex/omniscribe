@@ -7,17 +7,37 @@
  * output heuristics — so a TUI agent (e.g. Claude Code) that repaints its
  * screen continuously never flaps between working/waiting.
  *
+ * The detector is a LAYERED state machine with two regimes:
+ *
+ *  UNARMED (no agent running) — plain-shell activity cycle. App-owned shell
+ *  integration (zsh/bash rc snippets) emits prompt-cycle marks for every
+ *  command, agent or not. A non-agent command produces a `shell-busy` /
+ *  `shell-idle` cycle that maps to a Working/Idle session status. This regime
+ *  never arms and cycles indefinitely.
+ *
+ *  ARMED (agent lifecycle) — a known agent (claude/codex) command, or our 777
+ *  self-arm marker, switches the detector into agent semantics: `started`,
+ *  777 status events (working/attention/finished), then `exited` on the
+ *  command's `D`. After disarm the UNARMED shell cycle resumes for the next
+ *  command.
+ *
  * Recognized sequences:
- *  - `OSC 133;C;<command>`  — command start (shell integration). Arms the
- *    detector when <command> resolves to a known agent (claude/codex),
- *    tolerating path prefixes (`/usr/local/bin/codex`), wrappers (`npx claude`),
- *    and dash-suffixed aliases (`claude-enigma`).
- *  - `OSC 133;D;<exit>`     — command done → emits `exited` (disarms).
+ *  - `OSC 133;C;<command>`  — command start (shell integration).
+ *      • ARMED case: <command> resolves to a known agent (claude/codex),
+ *        tolerating path prefixes (`/usr/local/bin/codex`), wrappers
+ *        (`npx claude`), and dash-suffixed aliases (`claude-enigma`) → arms and
+ *        emits `started`.
+ *      • UNARMED case: any other command → emits `shell-busy` (no arm).
+ *      • While already armed, `C` is ignored (the agent owns the cycle).
+ *  - `OSC 133;D;<exit>`     — command done.
+ *      • ARMED case → emits `exited` (disarms).
+ *      • UNARMED case → emits `shell-idle` (shell returned to its prompt).
  *  - `OSC 777;notify;omniscribe;<event>` — marker our Claude Code hooks emit
  *    via the `terminalSequence` field. <event> ∈ working|attention|finished.
  *    These SELF-ARM the detector even without a preceding 133;C, so
  *    notifications work in bash, Windows, tmux, and wrapper setups where no
- *    shell preexec fired.
+ *    shell preexec fired. RESERVED for the claude-hook path — plain shells must
+ *    never emit it.
  *  - `OSC 9;<text>`         — generic notification (treated as attention when
  *    armed). `OSC 9;4;...` is taskbar progress, not a notification — ignored.
  *
@@ -66,8 +86,24 @@ const enum ArmedStatus {
 /** Agents the detector recognizes. */
 export type DetectedAgent = 'claude' | 'codex';
 
-/** Kinds of transition the detector can emit. */
-export type OscTransitionKind = 'started' | 'working' | 'attention' | 'finished' | 'exited';
+/**
+ * Kinds of transition the detector can emit.
+ *
+ * Agent-lifecycle kinds (ARMED regime): `started`, `working`, `attention`,
+ * `finished`, `exited`.
+ *
+ * Plain-shell cycle kinds (UNARMED regime): `shell-busy` (a non-agent command
+ * started running), `shell-idle` (the shell returned to its prompt). These map
+ * to Working/Idle session status and never arm the detector.
+ */
+export type OscTransitionKind =
+  | 'started'
+  | 'working'
+  | 'attention'
+  | 'finished'
+  | 'exited'
+  | 'shell-busy'
+  | 'shell-idle';
 
 /**
  * A typed agent-status transition. `agent` is only present on `started`
@@ -244,6 +280,7 @@ export class OscAgentDetector {
   private handleOsc133(pt: number[], emit: OscTransitionHandler): void {
     const first = pt[0];
     if (first === 0x43 /* 'C' */) {
+      // While armed the agent owns the cycle; ignore intermediate C marks.
       if (this.armed) {
         return;
       }
@@ -251,13 +288,25 @@ export class OscAgentDetector {
       const cmd = this.startsWith(pt, 'C;') ? String.fromCharCode(...pt.slice(2)) : '';
       const agent = this.matchAgent(cmd);
       if (agent) {
+        // ARMED regime: a known agent command starts the agent lifecycle.
         this.armed = true;
         this.status = ArmedStatus.Working;
         emit({ kind: 'started', agent });
+      } else {
+        // UNARMED regime: a plain-shell command is now running. Does NOT arm —
+        // the shell cycle keeps emitting busy/idle for every subsequent command.
+        emit({ kind: 'shell-busy' });
       }
-    } else if (first === 0x44 /* 'D' */ && this.armed) {
-      this.disarm();
-      emit({ kind: 'exited' });
+    } else if (first === 0x44 /* 'D' */) {
+      if (this.armed) {
+        // ARMED regime: the agent command finished → disarm. The UNARMED shell
+        // cycle resumes for the next command.
+        this.disarm();
+        emit({ kind: 'exited' });
+      } else {
+        // UNARMED regime: the shell returned to its prompt.
+        emit({ kind: 'shell-idle' });
+      }
     }
   }
 
