@@ -16,10 +16,12 @@ export interface BuildHunkPatchOptions {
    */
   isDeletedFile?: boolean;
   /**
-   * Mark the old and/or new side as missing a trailing newline. When true the
-   * `\ No newline at end of file` marker is appended after the relevant final
-   * line. Omniscribe's diff parser strips this marker, so the caller must
-   * supply it explicitly when known (e.g. from a raw diff string).
+   * Explicitly mark the old and/or new side as missing a trailing newline. When
+   * set, the `\ No newline at end of file` marker is appended after the relevant
+   * final line. These options OVERRIDE the per-hunk `oldNoNewlineAtEof` /
+   * `newNoNewlineAtEof` flags carried on {@link GitDiffHunk} (which the diff
+   * parser now populates); leave them undefined to defer to the hunk's own
+   * flags, which is the normal path.
    */
   noNewlineOld?: boolean;
   noNewlineNew?: boolean;
@@ -58,7 +60,13 @@ export function buildHunkPatch(
   hunk: GitDiffHunk,
   options: BuildHunkPatchOptions = {}
 ): string {
-  const { isNewFile = false, isDeletedFile = false, noNewlineOld, noNewlineNew } = options;
+  const { isNewFile = false, isDeletedFile = false } = options;
+
+  // Per-side no-newline state: an explicit option wins; otherwise defer to the
+  // flags the diff parser stamped onto the hunk. This keeps the marker faithful
+  // by default while still letting callers force it from a raw diff string.
+  const noNewlineOld = options.noNewlineOld ?? hunk.oldNoNewlineAtEof ?? false;
+  const noNewlineNew = options.noNewlineNew ?? hunk.newNoNewlineAtEof ?? false;
 
   const newPath = file.path;
   // For renames the old side carries the original path; otherwise both sides

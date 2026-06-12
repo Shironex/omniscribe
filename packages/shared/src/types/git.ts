@@ -189,6 +189,24 @@ export interface GitDiffHunk {
 
   /** Diff lines */
   lines: GitDiffLine[];
+
+  /**
+   * The OLD side of this hunk ends without a trailing newline at EOF, i.e. the
+   * diff carried a `\ No newline at end of file` marker after its final old
+   * (context or deletion) line. Optional and defaults to falsy; only the
+   * EOF-touching hunk of a file ever sets it. Used to faithfully reconstruct a
+   * single-hunk patch for `git apply` so the marker is re-emitted in git's
+   * canonical position.
+   */
+  oldNoNewlineAtEof?: boolean;
+
+  /**
+   * The NEW side of this hunk ends without a trailing newline at EOF, i.e. the
+   * diff carried a `\ No newline at end of file` marker after its final new
+   * (context or addition) line. Optional and defaults to falsy. See
+   * {@link GitDiffHunk.oldNoNewlineAtEof}.
+   */
+  newNoNewlineAtEof?: boolean;
 }
 
 /**

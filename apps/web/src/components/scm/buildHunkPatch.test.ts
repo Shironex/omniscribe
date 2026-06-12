@@ -38,6 +38,8 @@ function hunk(
     newLines: partial.newLines ?? lines.filter(l => l.type !== 'deletion').length,
     header: partial.header ?? '',
     lines,
+    oldNoNewlineAtEof: partial.oldNoNewlineAtEof,
+    newNoNewlineAtEof: partial.newNoNewlineAtEof,
   };
 }
 
@@ -245,5 +247,117 @@ describe('buildHunkPatch', () => {
     // The blank addition becomes a bare '+' line.
     expect(lines).toContain('+');
     expect(lines).toContain('@@ -1,2 +1,3 @@');
+  });
+
+  describe('no-newline flags carried on the hunk (parser-populated path)', () => {
+    const MARKER = '\\ No newline at end of file';
+
+    it('emits the marker after the new side from hunk.newNoNewlineAtEof', () => {
+      const patch = buildHunkPatch(
+        { path: 'a.txt' },
+        hunk({
+          oldStart: 1,
+          newStart: 1,
+          lines: [del('old', 1), add('new no newline', 1)],
+          newNoNewlineAtEof: true,
+        })
+      );
+      const lines = patch.split('\n');
+      const addIdx = lines.indexOf('+new no newline');
+      expect(lines[addIdx + 1]).toBe(MARKER);
+      // Old side keeps its newline → no marker after the deletion.
+      const delIdx = lines.indexOf('-old');
+      expect(lines[delIdx + 1]).not.toBe(MARKER);
+    });
+
+    it('emits the marker after the old side from hunk.oldNoNewlineAtEof', () => {
+      const patch = buildHunkPatch(
+        { path: 'a.txt' },
+        hunk({
+          oldStart: 1,
+          newStart: 1,
+          lines: [del('old no newline', 1), add('new', 1)],
+          oldNoNewlineAtEof: true,
+        })
+      );
+      const lines = patch.split('\n');
+      const delIdx = lines.indexOf('-old no newline');
+      expect(lines[delIdx + 1]).toBe(MARKER);
+    });
+
+    it('emits a single marker for a trailing context line flagged on both sides', () => {
+      const patch = buildHunkPatch(
+        { path: 'a.txt' },
+        hunk({
+          oldStart: 1,
+          newStart: 1,
+          lines: [add('added', 1), ctx('trailing ctx', 2, 2)],
+          oldNoNewlineAtEof: true,
+          newNoNewlineAtEof: true,
+        })
+      );
+      const markerCount = patch.split('\n').filter(l => l === MARKER).length;
+      expect(markerCount).toBe(1);
+      // And it lands right after the trailing context line.
+      const lines = patch.split('\n');
+      const ctxIdx = lines.indexOf(' trailing ctx');
+      expect(lines[ctxIdx + 1]).toBe(MARKER);
+    });
+
+    it('emits no marker when neither flag is set', () => {
+      const patch = buildHunkPatch(
+        { path: 'a.txt' },
+        hunk({ oldStart: 1, newStart: 1, lines: [del('old', 1), add('new', 1)] })
+      );
+      expect(patch).not.toContain(MARKER);
+    });
+
+    it('lets an explicit option override the hunk flag (force on)', () => {
+      const patch = buildHunkPatch(
+        { path: 'a.txt' },
+        hunk({
+          oldStart: 1,
+          newStart: 1,
+          lines: [del('old', 1), add('new', 1)],
+          // Hunk says new side keeps its newline...
+          newNoNewlineAtEof: false,
+        }),
+        // ...but the caller forces the marker on.
+        { noNewlineNew: true }
+      );
+      const lines = patch.split('\n');
+      const addIdx = lines.indexOf('+new');
+      expect(lines[addIdx + 1]).toBe(MARKER);
+    });
+
+    it('round-trips parser flags into a both-sides single-line edit', () => {
+      // Mirrors `git diff` of editing the sole, newline-less line of a file:
+      // marker appears after BOTH the deletion and the addition in real git
+      // output, which the parser collapses to two flags → buildHunkPatch
+      // re-emits the marker after each side's final line.
+      const patch = buildHunkPatch(
+        { path: 'c.txt' },
+        hunk({
+          oldStart: 1,
+          newStart: 1,
+          lines: [del('before', 1), add('after', 1)],
+          oldNoNewlineAtEof: true,
+          newNoNewlineAtEof: true,
+        })
+      );
+      expect(patch).toBe(
+        [
+          'diff --git a/c.txt b/c.txt',
+          '--- a/c.txt',
+          '+++ b/c.txt',
+          '@@ -1,1 +1,1 @@',
+          '-before',
+          MARKER,
+          '+after',
+          MARKER,
+          '',
+        ].join('\n')
+      );
+    });
   });
 });
