@@ -17,6 +17,8 @@ import {
 import { themeOptions } from '@/lib/theme';
 import { persistTheme, getPersistedTheme } from '@/lib/theme-persistence';
 import { usePluginStore, getPluginTheme } from '@/stores/usePluginStore';
+import { useCustomThemesStore } from '@/lib/customThemes/store';
+import { getCustomTheme, customThemeDomClass } from '@/lib/customThemes/store';
 
 const logger = createLogger('Settings');
 
@@ -110,9 +112,20 @@ let currentBaseClass: string | null = null;
 
 /**
  * Apply theme class to document element.
- * For plugin themes, also adds a base 'dark' or 'light' class so the
- * plugin only needs to override brand-specific CSS variables while
- * inheriting the full set from the base theme.
+ *
+ * For plugin AND custom themes, also adds a base 'dark' or 'light' class so the
+ * theme only needs to override brand-specific CSS variables while inheriting
+ * the full set from the base theme.
+ *
+ * Built-in themes use their id directly as the class (`forge`, `paper`, …).
+ * Plugin themes use their bare id as the class. Custom themes are namespaced
+ * `custom:{slug}` at the persistence layer (so they can never collide), but a
+ * colon can't appear in a `:root.X` selector — so the DOM class is the
+ * sanitized `custom-{slug}` form ({@link customThemeDomClass}).
+ *
+ * Falls back to the default built-in theme when a custom theme id is applied
+ * that no longer exists (e.g. it was deleted but still persisted) — this keeps
+ * the app from rendering an un-themed root.
  */
 function applyThemeToDOM(theme: Theme) {
   logger.debug('applyThemeToDOM:', theme);
@@ -129,6 +142,19 @@ function applyThemeToDOM(theme: Theme) {
   // Also remove all known built-in theme classes (safety net for initial load)
   const allThemeClasses = themeOptions.map(t => t.value);
   root.classList.remove(...allThemeClasses);
+
+  // Custom theme? Resolve from the (non-reactive) custom-theme registry.
+  const customTheme = getCustomTheme(theme);
+  if (customTheme) {
+    const baseClass = customTheme.isDark ? 'dark' : 'light';
+    root.classList.add(baseClass);
+    currentBaseClass = baseClass;
+
+    const themeClass = customThemeDomClass(theme);
+    root.classList.add(themeClass);
+    currentThemeClass = themeClass;
+    return;
+  }
 
   // Check if this is a plugin theme that needs a base class
   const pluginTheme = getPluginTheme(theme);
@@ -346,6 +372,18 @@ export const useSettingsStore = create<SettingsStore>()(
 // Re-apply theme when plugin themes change (handles race condition on initial
 // load where applyThemeToDOM runs before plugins have registered their themes).
 usePluginStore.subscribe((state, prevState) => {
+  if (state.themes !== prevState.themes) {
+    const { theme, previewTheme } = useSettingsStore.getState();
+    applyThemeToDOM(previewTheme ?? theme);
+  }
+});
+
+// Re-apply theme when custom themes change. Covers two cases:
+//  1. Initial-load race — the custom-theme registry may hydrate after the
+//     settings store's first applyThemeToDOM run.
+//  2. The active custom theme is edited (re-injected with new colors) — the
+//     CSS changes but the class is unchanged, so a re-apply re-stamps cleanly.
+useCustomThemesStore.subscribe((state, prevState) => {
   if (state.themes !== prevState.themes) {
     const { theme, previewTheme } = useSettingsStore.getState();
     applyThemeToDOM(previewTheme ?? theme);

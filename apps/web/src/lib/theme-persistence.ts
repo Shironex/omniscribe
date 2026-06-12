@@ -5,6 +5,8 @@ import {
   type Theme,
 } from '@omniscribe/shared';
 import { themeOptions } from '@/lib/theme';
+import { isCustomThemeId } from '@/lib/customThemes/schema';
+import { getCustomTheme } from '@/lib/customThemes/store';
 
 /**
  * localStorage key for persisted theme.
@@ -47,6 +49,12 @@ export function persistTheme(theme: string): void {
  * Plugin themes (arbitrary IDs registered at runtime) are passed through so they
  * can hydrate after the plugin store loads.
  *
+ * Custom themes (namespaced `custom:{slug}`) are resolved against the
+ * custom-theme registry: a still-present custom theme is passed through; one
+ * that was deleted (id persisted but no longer registered) falls back to the
+ * default built-in theme so the next load can't strand the app on a missing
+ * theme.
+ *
  * Returns {@link DEFAULT_BUILT_IN_THEME} (`'forge'`) when nothing is stored or
  * localStorage is unavailable.
  */
@@ -54,8 +62,19 @@ export function getPersistedTheme(): string {
   try {
     const stored = localStorage.getItem(THEME_STORAGE_KEY);
 
+    if (!stored) {
+      return DEFAULT_BUILT_IN_THEME;
+    }
+
+    // Custom theme (`custom:{slug}`) — handled before VALID_THEME_ID because the
+    // namespace colon would otherwise fail that pattern. Fall back to default if
+    // the referenced custom theme no longer exists.
+    if (isCustomThemeId(stored)) {
+      return getCustomTheme(stored) ? stored : DEFAULT_BUILT_IN_THEME;
+    }
+
     // Empty / invalid → default
-    if (!stored || !VALID_THEME_ID.test(stored)) {
+    if (!VALID_THEME_ID.test(stored)) {
       return DEFAULT_BUILT_IN_THEME;
     }
 
@@ -80,9 +99,13 @@ export function getPersistedTheme(): string {
 
 /**
  * Check whether a given theme name corresponds to a dark theme.
- * Uses the dark theme set derived from the curated catalog.
+ * Uses the dark theme set derived from the curated catalog; custom themes
+ * report their own `isDark` flag from the registry.
  */
 export function isPersistedThemeDark(theme: string): boolean {
+  if (isCustomThemeId(theme)) {
+    return getCustomTheme(theme)?.isDark ?? true;
+  }
   return darkThemeSet.has(theme);
 }
 

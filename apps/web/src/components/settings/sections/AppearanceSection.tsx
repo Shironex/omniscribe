@@ -11,6 +11,7 @@ import { SettingsCard, SettingsToggleRow } from '@/components/settings/SettingsC
 import { AppearancePreview } from '@/components/settings/previews/AppearancePreview';
 import { BackgroundCard } from '@/components/settings/sections/appearance/BackgroundCard';
 import { WindowEffectCard } from '@/components/settings/sections/appearance/WindowEffectCard';
+import { CustomThemesCard } from '@/components/settings/sections/appearance/CustomThemesCard';
 
 function pluginThemeToOption(plugin: {
   id: string;
@@ -110,6 +111,8 @@ export function AppearanceSection() {
           </div>
         )}
       </SettingsCard>
+
+      <CustomThemesCard />
 
       <BackgroundCard />
 
