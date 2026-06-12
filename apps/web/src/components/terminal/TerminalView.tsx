@@ -13,6 +13,7 @@ import { useTerminalResize, safeFit } from '@/hooks/useTerminalResize';
 import { useTerminalKeyboard } from '@/hooks/useTerminalKeyboard';
 import { useTerminalConnection } from '@/hooks/useTerminalConnection';
 import { useTerminalInitialization } from '@/hooks/useTerminalInitialization';
+import { notifyVisible, notifyHidden } from '@/lib/webglPool';
 import '@xterm/xterm/css/xterm.css';
 
 const logger = createLogger('TerminalView');
@@ -148,6 +149,21 @@ export const TerminalView: React.FC<TerminalViewProps> = React.memo(
         handleResize();
       }
     }, [isActive, flushBuffer, handleResize]);
+
+    // Keep the WebGL pool's LRU bookkeeping in sync with this terminal's
+    // visibility. On becoming visible the pool steals a slot from the
+    // least-recently-visible hidden holder (never from another visible
+    // terminal); on becoming hidden it may hand its slot to a waiter. The pool
+    // keys by sessionId and no-ops until the terminal has registered, so an
+    // early notify before init is harmless.
+    useEffect(() => {
+      const terminalId = String(sessionIdRef.current);
+      if (isActive) {
+        notifyVisible(terminalId);
+      } else {
+        notifyHidden(terminalId);
+      }
+    }, [isActive]);
 
     // Handle focus changes
     useEffect(() => {

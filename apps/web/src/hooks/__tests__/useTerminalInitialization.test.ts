@@ -41,8 +41,12 @@ vi.mock('@xterm/addon-search', () => ({
 }));
 
 vi.mock('@xterm/addon-webgl', () => ({
+  // Pool-compatible double: onContextLoss returns a disposable, dispose is a fn.
   WebglAddon: vi.fn(function () {
-    return { onContextLoss: vi.fn() };
+    return {
+      onContextLoss: vi.fn(() => ({ dispose: vi.fn() })),
+      dispose: vi.fn(),
+    };
   }),
 }));
 

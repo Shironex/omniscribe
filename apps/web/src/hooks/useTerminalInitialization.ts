@@ -10,6 +10,7 @@ import { safeFit } from './useTerminalResize';
 import { createTerminalInstance } from '@/lib/createTerminalInstance';
 import { registerTerminalForContrast } from '@/lib/background/terminalContrast';
 import { loadTerminalAddons } from '@/lib/loadTerminalAddons';
+import { releaseWebgl } from '@/lib/webglPool';
 import { useTerminalRefitListener } from './useTerminalRefitListener';
 import type { UseTerminalSettingsReturn } from './useTerminalSettings';
 
@@ -84,7 +85,7 @@ export function useTerminalInitialization(
       // Track this live instance so the readability contrast bump can be
       // applied/cleared retroactively when the background-blend layer toggles.
       unregisterContrast = registerTerminalForContrast(terminal);
-      const addons = loadTerminalAddons(terminal, container, sessionId);
+      const addons = loadTerminalAddons(terminal, container, sessionId, isActiveRef.current);
       fitAddon = addons.fitAddon;
 
       xtermRef.current = terminal;
@@ -194,6 +195,10 @@ export function useTerminalInitialization(
         unregisterContrast();
         unregisterContrast = null;
       }
+
+      // Release the pooled WebGL addon (disposes it and frees its slot for a
+      // waiting terminal) before disposing the xterm instance it's bound to.
+      releaseWebgl(String(sessionId));
 
       if (xtermRef.current) {
         try {
