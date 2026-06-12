@@ -348,11 +348,16 @@ function App() {
             )}
 
             {/* Settings surface — fills the pane (absolute inset-0 z-30), covering
-                the hidden grid. Mounted only while open. */}
+                the hidden grid. Kept MOUNTED while settings is open so its internal
+                navigation state survives switching to another tab; hidden via CSS
+                when the settings view isn't the active surface so clicking the
+                Terminal / file tabs reveals the workspace beneath it. */}
             {isSettingsOpen && (
-              <Suspense fallback={null}>
-                <SettingsView />
-              </Suspense>
+              <div className={cn('absolute inset-0 z-30', shellView !== 'settings' && 'hidden')}>
+                <Suspense fallback={null}>
+                  <SettingsView />
+                </Suspense>
+              </div>
             )}
           </div>
 

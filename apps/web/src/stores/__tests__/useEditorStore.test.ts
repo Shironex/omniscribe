@@ -19,6 +19,7 @@ vi.mock('@/lib/socketHelpers', () => ({
 
 import { useEditorStore } from '../useEditorStore';
 import { useFsStore } from '../useFsStore';
+import { useAppUIStore } from '../useAppUIStore';
 
 const PROJECT = '/project';
 const FILE = '/project/src/a.ts';
@@ -35,6 +36,7 @@ const initialEditorState = {
   projectPath: null,
   files: [],
   activePath: null,
+  stacks: {},
   isLoading: false,
   error: null,
   listenersInitialized: false,
@@ -47,6 +49,7 @@ describe('useEditorStore', () => {
     // Reset the FS store too so its module-scope subscription can't leak across tests.
     useFsStore.setState({ projectPath: null, requestedOpenFile: null });
     useEditorStore.setState(initialEditorState);
+    useAppUIStore.setState({ shellView: 'terminal' });
   });
 
   afterEach(() => {
@@ -385,6 +388,199 @@ describe('useEditorStore', () => {
       expect(s.files.some(f => f.path === FILE)).toBe(true);
       // The one-shot slot is cleared after consumption.
       expect(useFsStore.getState().requestedOpenFile).toBeNull();
+    });
+  });
+
+  describe('per-project stacks (setProject)', () => {
+    const PROJECT_B = '/project-b';
+    const FILE_B = '/project-b/x.ts';
+
+    it('restores a project’s open tabs when switching back (A→B→A)', async () => {
+      routeEmit({ [FsEvents.READ_FILE]: () => ({ content: 'a' }) });
+      // Open a file in A.
+      await useEditorStore.getState().openFile(PROJECT, FILE);
+      expect(useEditorStore.getState().files).toHaveLength(1);
+
+      // Switch to B — A's stack is stashed, B starts empty.
+      useEditorStore.getState().setProject(PROJECT_B);
+      expect(useEditorStore.getState().projectPath).toBe(PROJECT_B);
+      expect(useEditorStore.getState().files).toHaveLength(0);
+      expect(useEditorStore.getState().activePath).toBeNull();
+
+      // Switch back to A — its tab returns.
+      useEditorStore.getState().setProject(PROJECT);
+      const s = useEditorStore.getState();
+      expect(s.projectPath).toBe(PROJECT);
+      expect(s.files.map(f => f.path)).toEqual([FILE]);
+      expect(s.activePath).toBe(FILE);
+    });
+
+    it('preserves an unsaved dirty buffer across a project round-trip', async () => {
+      routeEmit({ [FsEvents.READ_FILE]: () => ({ content: 'saved' }) });
+      await useEditorStore.getState().openFile(PROJECT, FILE);
+      useEditorStore.getState().setContent(FILE, 'unsaved-edits');
+      expect(useEditorStore.getState().files[0].dirty).toBe(true);
+
+      useEditorStore.getState().setProject(PROJECT_B);
+      // Switching back must NOT clobber the dirty buffer: reconcile reads the
+      // same disk content ('saved'), buffer diverges → externallyChanged banner,
+      // edits preserved.
+      useEditorStore.getState().setProject(PROJECT);
+      // Flush the async reconcile read.
+      await Promise.resolve();
+      await Promise.resolve();
+
+      const file = useEditorStore.getState().files.find(f => f.path === FILE);
+      expect(file).toBeTruthy();
+      expect(file!.content).toBe('unsaved-edits');
+      expect(file!.dirty).toBe(true);
+      // Disk was unchanged ('saved'), so no spurious external-change banner.
+      expect(file!.externallyChanged).toBeFalsy();
+    });
+
+    it('reconciles a clean restored file against disk (silent reload)', async () => {
+      let reads = 0;
+      routeEmit({
+        [FsEvents.READ_FILE]: () => {
+          reads += 1;
+          // First read on open = v1; reconcile-on-restore = v2.
+          return { content: reads === 1 ? 'v1' : 'v2' };
+        },
+      });
+      await useEditorStore.getState().openFile(PROJECT, FILE);
+      useEditorStore.getState().setProject(PROJECT_B);
+
+      useEditorStore.getState().setProject(PROJECT);
+      await Promise.resolve();
+      await Promise.resolve();
+
+      const file = useEditorStore.getState().files.find(f => f.path === FILE);
+      expect(file!.content).toBe('v2');
+      expect(file!.savedContent).toBe('v2');
+      expect(file!.dirty).toBe(false);
+      expect(file!.externallyChanged).toBeFalsy();
+    });
+
+    it('raises the external-change banner when a restored dirty file changed on disk', async () => {
+      let reads = 0;
+      routeEmit({
+        [FsEvents.READ_FILE]: () => {
+          reads += 1;
+          // open = v1; reconcile-on-restore sees disk moved to disk-v2.
+          return { content: reads === 1 ? 'v1' : 'disk-v2' };
+        },
+      });
+      await useEditorStore.getState().openFile(PROJECT, FILE);
+      useEditorStore.getState().setContent(FILE, 'my-edits');
+      useEditorStore.getState().setProject(PROJECT_B);
+
+      useEditorStore.getState().setProject(PROJECT);
+      await Promise.resolve();
+      await Promise.resolve();
+
+      const file = useEditorStore.getState().files.find(f => f.path === FILE);
+      expect(file!.externallyChanged).toBe(true);
+      expect(file!.externalContent).toBe('disk-v2');
+      expect(file!.content).toBe('my-edits');
+      expect(file!.dirty).toBe(true);
+    });
+
+    it('keeps each project’s stack independent', async () => {
+      routeEmit({ [FsEvents.READ_FILE]: () => ({ content: 'x' }) });
+      await useEditorStore.getState().openFile(PROJECT, FILE);
+      useEditorStore.getState().setProject(PROJECT_B);
+      await useEditorStore.getState().openFile(PROJECT_B, FILE_B);
+
+      // B sees only its own file.
+      expect(useEditorStore.getState().files.map(f => f.path)).toEqual([FILE_B]);
+
+      // Back to A — only A's file.
+      useEditorStore.getState().setProject(PROJECT);
+      expect(useEditorStore.getState().files.map(f => f.path)).toEqual([FILE]);
+    });
+
+    it('is a no-op when setting the same project', async () => {
+      routeEmit({ [FsEvents.READ_FILE]: () => ({ content: 'x' }) });
+      await useEditorStore.getState().openFile(PROJECT, FILE);
+      mockEmitAsync.mockClear();
+
+      useEditorStore.getState().setProject(PROJECT);
+
+      expect(useEditorStore.getState().files).toHaveLength(1);
+      expect(mockEmitAsync).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('reorderFiles', () => {
+    it('moves a tab to a new position, preserving the others', async () => {
+      routeEmit({ [FsEvents.READ_FILE]: () => ({ content: 'x' }) });
+      await useEditorStore.getState().openFile(PROJECT, '/project/a.ts');
+      await useEditorStore.getState().openFile(PROJECT, '/project/b.ts');
+      await useEditorStore.getState().openFile(PROJECT, '/project/c.ts');
+
+      // Drag a.ts onto c.ts → [b, c, a].
+      useEditorStore.getState().reorderFiles('/project/a.ts', '/project/c.ts');
+
+      expect(useEditorStore.getState().files.map(f => f.path)).toEqual([
+        '/project/b.ts',
+        '/project/c.ts',
+        '/project/a.ts',
+      ]);
+    });
+
+    it('does not change the active tab', async () => {
+      routeEmit({ [FsEvents.READ_FILE]: () => ({ content: 'x' }) });
+      await useEditorStore.getState().openFile(PROJECT, '/project/a.ts');
+      await useEditorStore.getState().openFile(PROJECT, '/project/b.ts');
+      useEditorStore.getState().setActivePath('/project/a.ts');
+
+      useEditorStore.getState().reorderFiles('/project/a.ts', '/project/b.ts');
+
+      expect(useEditorStore.getState().activePath).toBe('/project/a.ts');
+    });
+
+    it('ignores unknown or identical paths', async () => {
+      routeEmit({ [FsEvents.READ_FILE]: () => ({ content: 'x' }) });
+      await useEditorStore.getState().openFile(PROJECT, '/project/a.ts');
+      await useEditorStore.getState().openFile(PROJECT, '/project/b.ts');
+
+      useEditorStore.getState().reorderFiles('/project/a.ts', '/project/a.ts');
+      useEditorStore.getState().reorderFiles('/project/a.ts', '/project/missing.ts');
+
+      expect(useEditorStore.getState().files.map(f => f.path)).toEqual([
+        '/project/a.ts',
+        '/project/b.ts',
+      ]);
+    });
+  });
+
+  describe('shellView wiring on project switch', () => {
+    const PROJECT_B = '/project-b';
+
+    it('returns to the terminal view on a project switch even with restored files', async () => {
+      routeEmit({ [FsEvents.READ_FILE]: () => ({ content: 'x' }) });
+      await useEditorStore.getState().openFile(PROJECT, FILE);
+      // Simulate being in the editor view.
+      useAppUIStore.setState({ shellView: 'editor' });
+
+      // Switch to B and back; restored A files must not auto-jump into editor.
+      useEditorStore.getState().setProject(PROJECT_B);
+      expect(useAppUIStore.getState().shellView).toBe('terminal');
+
+      useAppUIStore.setState({ shellView: 'editor' });
+      useEditorStore.getState().setProject(PROJECT);
+      expect(useAppUIStore.getState().shellView).toBe('terminal');
+    });
+
+    it('falls back to terminal when the last file in the active project closes', async () => {
+      routeEmit({ [FsEvents.READ_FILE]: () => ({ content: 'x' }) });
+      await useEditorStore.getState().openFile(PROJECT, FILE);
+      useAppUIStore.setState({ shellView: 'editor' });
+
+      useEditorStore.getState().closeFile(FILE);
+
+      expect(useEditorStore.getState().files).toHaveLength(0);
+      expect(useAppUIStore.getState().shellView).toBe('terminal');
     });
   });
 });

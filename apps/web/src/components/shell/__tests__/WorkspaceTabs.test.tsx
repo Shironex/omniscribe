@@ -7,6 +7,7 @@ import type { ShellView } from '@/stores/useAppUIStore';
 // ─── Store mocks (selector style, mutable state per test) ────────────────────
 const setShellView = vi.fn();
 const setActivePath = vi.fn();
+const reorderFiles = vi.fn();
 const closeSettings = vi.fn();
 
 let appUIState: { shellView: ShellView; setShellView: typeof setShellView };
@@ -14,6 +15,7 @@ let editorState: {
   files: OpenFile[];
   activePath: string | null;
   setActivePath: typeof setActivePath;
+  reorderFiles: typeof reorderFiles;
 };
 let settingsState: { isOpen: boolean; closeSettings: typeof closeSettings };
 
@@ -60,7 +62,7 @@ describe('WorkspaceTabs', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     appUIState = { shellView: 'terminal', setShellView };
-    editorState = { files: [], activePath: null, setActivePath };
+    editorState = { files: [], activePath: null, setActivePath, reorderFiles };
     settingsState = { isOpen: false, closeSettings };
   });
 
@@ -152,6 +154,36 @@ describe('WorkspaceTabs', () => {
       editorState.files = [file('/p/a.ts', { readOnly: true })];
       renderTabs();
       expect(screen.getByLabelText('Read-only')).toBeTruthy();
+    });
+  });
+
+  describe('tab ordering (drag-reorder layout)', () => {
+    it('renders file tabs between the pinned Terminal tab and the Settings tab', () => {
+      editorState.files = [file('/p/a.ts'), file('/p/b.tsx')];
+      settingsState.isOpen = true;
+      renderTabs();
+
+      const tabs = screen.getAllByRole('tab');
+      const names = tabs.map(t => t.textContent ?? '');
+      // Terminal is first, Settings is last; file tabs sit in `files` order between.
+      expect(names[0]).toMatch(/terminal/i);
+      expect(names[names.length - 1]).toMatch(/settings/i);
+      const middle = names.slice(1, -1);
+      expect(middle[0]).toMatch(/a\.ts/);
+      expect(middle[1]).toMatch(/b\.tsx/);
+    });
+
+    it('renders file tabs in their store order', () => {
+      editorState.files = [file('/p/zebra.ts'), file('/p/alpha.ts')];
+      renderTabs();
+
+      const tabs = screen.getAllByRole('tab').filter(t => /\.ts/.test(t.textContent ?? ''));
+      expect(tabs.map(t => t.textContent)).toEqual(
+        expect.arrayContaining([expect.stringMatching(/zebra\.ts/)])
+      );
+      // First file tab is zebra (store order preserved, not alphabetized).
+      expect(tabs[0].textContent).toMatch(/zebra\.ts/);
+      expect(tabs[1].textContent).toMatch(/alpha\.ts/);
     });
   });
 

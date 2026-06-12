@@ -1,5 +1,16 @@
-import { useCallback } from 'react';
+import { forwardRef, useCallback } from 'react';
 import { Terminal as TerminalIcon, Settings as SettingsIcon, X, Lock } from 'lucide-react';
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DraggableAttributes,
+} from '@dnd-kit/core';
+import { SortableContext, horizontalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { cn } from '@/lib/utils';
 import { getFileIcon } from '@/components/explorer/fileIcon';
 import { useEditorStore, type OpenFile } from '@/stores/useEditorStore';
@@ -26,7 +37,12 @@ function basename(path: string): string {
  *
  *  - a pinned, non-closable **Terminal** tab (session grids),
  *  - one tab per open editor file (dirty dot ● swaps to a close × on hover),
+ *    drag-reorderable amongst themselves,
  *  - a **Settings** tab, shown only while settings is open.
+ *
+ * The Terminal tab stays first and Settings stays last — only the file tabs
+ * reorder (they live inside the dnd `SortableContext`). Reordering reuses the
+ * same `@dnd-kit` pattern as the sidebar project list for consistency.
  *
  * Compact, scrollable, theme-token only. Every interactive child is `no-drag`
  * so the surrounding toolbar stays a draggable window region.
@@ -38,9 +54,14 @@ export function WorkspaceTabs({ onRequestClose }: WorkspaceTabsProps) {
   const files = useEditorStore(useShallow(state => state.files));
   const activePath = useEditorStore(state => state.activePath);
   const setActivePath = useEditorStore(state => state.setActivePath);
+  const reorderFiles = useEditorStore(state => state.reorderFiles);
 
   const isSettingsOpen = useSettingsStore(state => state.isOpen);
   const closeSettings = useSettingsStore(state => state.closeSettings);
+
+  // PointerSensor with a small activation distance so a plain click still
+  // selects the tab — only a deliberate drag past the threshold reorders.
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   const handleSelectTerminal = useCallback(() => {
     setShellView('terminal');
@@ -65,6 +86,15 @@ export function WorkspaceTabs({ onRequestClose }: WorkspaceTabsProps) {
     [onRequestClose]
   );
 
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event;
+      if (!over || active.id === over.id) return;
+      reorderFiles(String(active.id), String(over.id));
+    },
+    [reorderFiles]
+  );
+
   const terminalActive = shellView === 'terminal';
   const settingsActive = shellView === 'settings';
 
@@ -74,7 +104,7 @@ export function WorkspaceTabs({ onRequestClose }: WorkspaceTabsProps) {
       aria-label="Workspace"
       className="no-drag flex min-w-0 flex-1 items-center gap-1 overflow-x-auto overflow-y-hidden px-1 scrollbar-thin"
     >
-      {/* Pinned Terminal tab — never closable. */}
+      {/* Pinned Terminal tab — never closable, never reorderable; stays first. */}
       <TabPill
         active={terminalActive}
         onClick={handleSelectTerminal}
@@ -83,25 +113,23 @@ export function WorkspaceTabs({ onRequestClose }: WorkspaceTabsProps) {
         icon={<TerminalIcon className="h-3.5 w-3.5 shrink-0" aria-hidden />}
       />
 
-      {/* One tab per open file. */}
-      {files.map(file => {
-        const isActive = shellView === 'editor' && file.path === activePath;
-        const Icon = getFileIcon(basename(file.path));
-        return (
-          <TabPill
-            key={file.path}
-            active={isActive}
-            onClick={() => handleSelectFile(file.path)}
-            onAuxClick={e => handleAuxClose(e, file.path)}
-            title={file.path}
-            label={basename(file.path)}
-            icon={<Icon className="h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden />}
-            trailing={<FileTrailing file={file} onClose={() => onRequestClose(file.path)} />}
-          />
-        );
-      })}
+      {/* File tabs — the only reorderable group. */}
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext items={files.map(f => f.path)} strategy={horizontalListSortingStrategy}>
+          {files.map(file => (
+            <SortableFileTab
+              key={file.path}
+              file={file}
+              active={shellView === 'editor' && file.path === activePath}
+              onSelect={() => handleSelectFile(file.path)}
+              onAuxClick={e => handleAuxClose(e, file.path)}
+              onClose={() => onRequestClose(file.path)}
+            />
+          ))}
+        </SortableContext>
+      </DndContext>
 
-      {/* Settings tab — present only while settings is open. */}
+      {/* Settings tab — present only while settings is open; stays last. */}
       {isSettingsOpen && (
         <TabPill
           active={settingsActive}
@@ -128,6 +156,49 @@ export function WorkspaceTabs({ onRequestClose }: WorkspaceTabsProps) {
   );
 }
 
+interface SortableFileTabProps {
+  file: OpenFile;
+  active: boolean;
+  onSelect: () => void;
+  onAuxClick: (e: React.MouseEvent) => void;
+  onClose: () => void;
+}
+
+/**
+ * A single draggable file tab. Wires `@dnd-kit`'s `useSortable` so file tabs
+ * reorder amongst themselves; the drag listeners ride on the pill while clicks
+ * (below the activation distance) still select the tab.
+ */
+function SortableFileTab({ file, active, onSelect, onAuxClick, onClose }: SortableFileTabProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: file.path,
+  });
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+  };
+
+  const Icon = getFileIcon(basename(file.path));
+
+  return (
+    <TabPill
+      ref={setNodeRef}
+      style={style}
+      dragAttributes={attributes}
+      dragListeners={listeners}
+      active={active}
+      onClick={onSelect}
+      onAuxClick={onAuxClick}
+      title={file.path}
+      label={basename(file.path)}
+      icon={<Icon className="h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden />}
+      trailing={<FileTrailing file={file} onClose={onClose} />}
+    />
+  );
+}
+
 interface TabPillProps {
   active: boolean;
   onClick: () => void;
@@ -136,16 +207,39 @@ interface TabPillProps {
   label: string;
   icon: React.ReactNode;
   trailing?: React.ReactNode;
+  style?: React.CSSProperties;
+  dragAttributes?: DraggableAttributes;
+  dragListeners?: ReturnType<typeof useSortable>['listeners'];
 }
 
-function TabPill({ active, onClick, onAuxClick, title, label, icon, trailing }: TabPillProps) {
+const TabPill = forwardRef<HTMLDivElement, TabPillProps>(function TabPill(
+  {
+    active,
+    onClick,
+    onAuxClick,
+    title,
+    label,
+    icon,
+    trailing,
+    style,
+    dragAttributes,
+    dragListeners,
+  },
+  ref
+) {
   return (
     <div
-      role="tab"
-      aria-selected={active}
+      ref={ref}
+      style={style}
       title={title}
       onClick={onClick}
       onAuxClick={onAuxClick}
+      {...dragAttributes}
+      {...dragListeners}
+      // role / aria-selected come AFTER the drag attributes so the tab semantics
+      // win over dnd-kit's default `role="button"` (it injects one via attributes).
+      role="tab"
+      aria-selected={active}
       className={cn(
         'group flex h-7 shrink-0 cursor-pointer items-center gap-1.5 rounded-md px-2.5 text-xs transition-colors',
         'focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring',
@@ -159,7 +253,7 @@ function TabPill({ active, onClick, onAuxClick, title, label, icon, trailing }: 
       {trailing}
     </div>
   );
-}
+});
 
 /**
  * Trailing affordance for a file tab: a read-only lock, then either the dirty

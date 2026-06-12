@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { arrayMove } from '@dnd-kit/sortable';
 import { devtools } from './utils/devtools';
 import { createLogger, extractErrorMessage, FsEvents } from '@omniscribe/shared';
 import type {
@@ -55,6 +56,14 @@ export interface OpenFile {
   readOnly?: boolean;
 }
 
+/** A persisted open-file stack for a single project root. */
+interface ProjectStack {
+  /** Open files, in tab order. */
+  files: OpenFile[];
+  /** Path of the focused tab, or null when nothing is open. */
+  activePath: string | null;
+}
+
 interface EditorState extends SocketStoreState {
   /** The project root the editor is bound to (used for FS scoping). */
   projectPath: string | null;
@@ -62,15 +71,27 @@ interface EditorState extends SocketStoreState {
   files: OpenFile[];
   /** Path of the focused tab, or null when nothing is open. */
   activePath: string | null;
+  /**
+   * Per-project open-file stacks. Switching project roots stashes the active
+   * stack here and restores the target's, so A→B→A brings back A's open tabs
+   * (including unsaved dirty buffers) instead of wiping them.
+   */
+  stacks: Record<string, ProjectStack>;
 }
 
 interface EditorActions extends SocketStoreActions {
-  /** Bind the editor to a project root (clears state on change). */
+  /**
+   * Bind the editor to a project root. Stashes the current project's open stack
+   * and restores the target project's previously-open files (reconciling each
+   * against disk) so switching projects preserves open tabs.
+   */
   setProject: (projectPath: string | null) => void;
   /** Open a file (read via FS); focuses the tab if already open. */
   openFile: (projectPath: string, path: string) => Promise<void>;
   /** Close a file. Dirty-confirm is handled by the UI before calling. */
   closeFile: (path: string) => void;
+  /** Reorder the open-file tabs (drag-and-drop), preserving the active tab. */
+  reorderFiles: (activePath: string, overPath: string) => void;
   /** Focus an already-open tab. */
   setActivePath: (path: string) => void;
   /** Replace a file's buffer content (recomputes dirty). */
@@ -92,10 +113,11 @@ interface EditorActions extends SocketStoreActions {
 
 type EditorStore = EditorState & EditorActions;
 
-const initialEditorState: Pick<EditorState, 'projectPath' | 'files' | 'activePath'> = {
+const initialEditorState: Pick<EditorState, 'projectPath' | 'files' | 'activePath' | 'stacks'> = {
   projectPath: null,
   files: [],
   activePath: null,
+  stacks: {},
 };
 
 /** A path is read-only at the UI level when it lives inside a `.git/` dir. */
@@ -163,7 +185,15 @@ export const useEditorStore = create<EditorStore>()(
           const latest = get().files.find(f => f.path === path);
           if (!latest) return;
           if (latest.dirty) {
-            get().markExternallyChanged(path, diskContent);
+            // Only flag an external change when the on-disk content actually
+            // diverged from the baseline the buffer was edited from — re-reading
+            // an unchanged file (e.g. when restoring a background project's stack)
+            // must not raise a spurious banner. Clear any stale banner otherwise.
+            if (diskContent !== latest.savedContent) {
+              get().markExternallyChanged(path, diskContent);
+            } else if (latest.externallyChanged) {
+              get().keepLocal(path);
+            }
           } else {
             set(
               state => ({
@@ -192,14 +222,49 @@ export const useEditorStore = create<EditorStore>()(
         cleanupListeners,
 
         setProject: (projectPath: string | null) => {
-          if (get().projectPath === projectPath) return;
-          // Switching project roots resets the open stack — buffers are scoped
-          // to a project's FS authorization boundary.
+          const prevProject = get().projectPath;
+          if (prevProject === projectPath) return;
+
+          const { files: prevFiles, activePath: prevActivePath, stacks } = get();
+
+          // Stash the outgoing project's stack so we can restore it later. We
+          // keep the in-memory buffers verbatim (including unsaved dirty edits);
+          // they are reconciled against disk when the project is restored.
+          const nextStacks: Record<string, ProjectStack> = { ...stacks };
+          if (prevProject) {
+            nextStacks[prevProject] = { files: prevFiles, activePath: prevActivePath };
+          }
+
+          // Restore the incoming project's previously-open stack (empty if it
+          // was never opened or has no remembered files).
+          const restored = (projectPath && nextStacks[projectPath]) || {
+            files: [],
+            activePath: null,
+          };
+
           set(
-            { projectPath, files: [], activePath: null, error: null },
+            {
+              projectPath,
+              files: restored.files,
+              activePath: restored.activePath,
+              stacks: nextStacks,
+              error: null,
+            },
             undefined,
             'editor/setProject'
           );
+
+          // Reconcile every restored, content-bearing file against disk so a
+          // background project's tabs reflect any edits made while it was away:
+          //  - clean buffer  → silently take the latest disk content.
+          //  - dirty buffer whose disk content changed → raise the
+          //    externallyChanged banner (handled inside reloadOpenFile).
+          if (projectPath) {
+            for (const file of restored.files) {
+              if (file.binary || file.tooLarge || file.loading) continue;
+              void reloadOpenFile(file.path);
+            }
+          }
         },
 
         openFile: async (projectPath: string, path: string) => {
@@ -316,6 +381,20 @@ export const useEditorStore = create<EditorStore>()(
             },
             undefined,
             'editor/closeFile'
+          );
+        },
+
+        reorderFiles: (activePath: string, overPath: string) => {
+          if (activePath === overPath) return;
+          set(
+            state => {
+              const oldIndex = state.files.findIndex(f => f.path === activePath);
+              const newIndex = state.files.findIndex(f => f.path === overPath);
+              if (oldIndex === -1 || newIndex === -1) return state;
+              return { files: arrayMove(state.files, oldIndex, newIndex) };
+            },
+            undefined,
+            'editor/reorderFiles'
           );
         },
 
@@ -506,10 +585,22 @@ useFsStore.subscribe((state, prevState) => {
 // the individual stores that drive it.
 // ---------------------------------------------------------------------------
 
-// Closing the last open file while focused on the editor falls back to the
-// terminal grid (there is no editor surface left to show). Switching projects
-// resets the stack to empty via setProject — same fallback applies.
+// Switching project roots always returns to the terminal grid — even when the
+// target project has restored open files — so a project switch never auto-jumps
+// the user into the editor. (The file tabs stay in the strip; clicking one
+// re-enters the editor view.)
 useEditorStore.subscribe((state, prevState) => {
+  if (state.projectPath !== prevState.projectPath) {
+    useAppUIStore.getState().setShellView('terminal');
+  }
+});
+
+// Closing the last open file while focused on the editor falls back to the
+// terminal grid (there is no editor surface left to show).
+useEditorStore.subscribe((state, prevState) => {
+  // Ignore stack swaps caused by a project switch (handled above); only react
+  // to the open stack genuinely emptying within the same project.
+  if (state.projectPath !== prevState.projectPath) return;
   const wentEmpty = prevState.files.length > 0 && state.files.length === 0;
   if (wentEmpty && useAppUIStore.getState().shellView === 'editor') {
     useAppUIStore.getState().setShellView('terminal');
