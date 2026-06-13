@@ -12,7 +12,7 @@ import {
 import { SortableContext, horizontalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { cn } from '@/lib/utils';
-import { getFileIcon } from '@/components/explorer/fileIcon';
+import { getFileIconStyle } from '@/components/explorer/fileIcon';
 import { useEditorStore, type OpenFile } from '@/stores/useEditorStore';
 import { useAppUIStore, selectShellView } from '@/stores/useAppUIStore';
 import { useSettingsStore } from '@/stores/useSettingsStore';
@@ -180,7 +180,7 @@ function SortableFileTab({ file, active, onSelect, onAuxClick, onClose }: Sortab
     opacity: isDragging ? 0.4 : 1,
   };
 
-  const Icon = getFileIcon(basename(file.path));
+  const { Icon, className: iconClassName } = getFileIconStyle(basename(file.path));
 
   return (
     <TabPill
@@ -193,7 +193,7 @@ function SortableFileTab({ file, active, onSelect, onAuxClick, onClose }: Sortab
       onAuxClick={onAuxClick}
       title={file.path}
       label={basename(file.path)}
-      icon={<Icon className="h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden />}
+      icon={<Icon className={cn('h-3.5 w-3.5 shrink-0 opacity-80', iconClassName)} aria-hidden />}
       trailing={<FileTrailing file={file} onClose={onClose} />}
     />
   );

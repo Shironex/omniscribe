@@ -8,7 +8,7 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
-import { getFileIcon } from './fileIcon';
+import { getFileIconStyle } from './fileIcon';
 import type { TreeRow } from './treeModel';
 
 export interface FileTreeRowProps {
@@ -143,8 +143,8 @@ function RowIcon({ row }: { row: TreeRow }) {
       <Folder className="h-4 w-4 shrink-0 text-icon-folder" />
     );
   }
-  const Icon = getFileIcon(row.name);
-  return <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />;
+  const { Icon, className } = getFileIconStyle(row.name);
+  return <Icon className={cn('h-4 w-4 shrink-0', className)} />;
 }
 
 interface RenameInputProps {

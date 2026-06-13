@@ -84,6 +84,14 @@
      per-theme later if a theme wants its own. */
   --color-icon-folder: var(--icon-folder);
   --color-icon-symlink: var(--icon-symlink);
+  --color-icon-code: var(--icon-code);
+  --color-icon-data: var(--icon-data);
+  --color-icon-style: var(--icon-style);
+  --color-icon-markup: var(--icon-markup);
+  --color-icon-doc: var(--icon-doc);
+  --color-icon-media: var(--icon-media);
+  --color-icon-shell: var(--icon-shell);
+  --color-icon-db: var(--icon-db);
 
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
@@ -145,6 +153,17 @@
      Constant across themes; a theme may override under its own :root.<theme>. */
   --icon-folder: oklch(0.74 0.13 75);
   --icon-symlink: oklch(0.68 0.12 220);
+  /* File-type icon families (code = blue, data/JS = gold, style = pink,
+     markup = orange, doc = slate-blue, media = purple, shell = green,
+     db = cyan). Mid-lightness so they read on both dark and light themes. */
+  --icon-code: oklch(0.66 0.14 250);
+  --icon-data: oklch(0.78 0.14 85);
+  --icon-style: oklch(0.72 0.16 350);
+  --icon-markup: oklch(0.7 0.16 45);
+  --icon-doc: oklch(0.7 0.06 245);
+  --icon-media: oklch(0.68 0.15 300);
+  --icon-shell: oklch(0.72 0.15 150);
+  --icon-db: oklch(0.7 0.12 200);
 
   /* Light mode defaults */
   --background: oklch(1 0 0);
