@@ -1,6 +1,3 @@
-export { TopBar } from './TopBar';
-export type { Tab } from './TopBar';
-
 export { StatusLegend, StatusDot } from './StatusLegend';
 export type { SessionStatus, StatusCounts } from './StatusLegend';
 
