@@ -40,7 +40,7 @@ function NavButton({
       type="button"
       onClick={() => onNavigate(item.id)}
       className={cn(
-        'group relative w-full flex items-center gap-2.5 px-3 py-1.5 rounded-md text-[13px] text-left transition-colors duration-200',
+        'group relative w-full flex items-center gap-2.5 px-3 py-1.5 rounded-md text-[13px] text-left transition-colors duration-200 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
         isActive
           ? 'text-foreground bg-primary/10'
           : 'text-muted-foreground hover:text-foreground hover:bg-muted/40'

@@ -145,7 +145,7 @@ export function WorkspaceTabs({ onRequestClose }: WorkspaceTabsProps) {
                 e.stopPropagation();
                 closeSettings();
               }}
-              className="ml-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-sm hover:bg-muted"
+              className="ml-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-sm hover:bg-muted focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             >
               <X className="h-3 w-3" />
             </button>
@@ -279,7 +279,7 @@ function FileTrailing({ file, onClose }: { file: OpenFile; onClose: () => void }
                 e.stopPropagation();
                 onClose();
               }}
-              className="hidden rounded-sm p-0.5 hover:bg-muted group-hover:flex"
+              className="hidden rounded-sm p-0.5 hover:bg-muted group-hover:flex focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             >
               <X className="h-3 w-3" />
             </button>
@@ -292,7 +292,7 @@ function FileTrailing({ file, onClose }: { file: OpenFile; onClose: () => void }
               e.stopPropagation();
               onClose();
             }}
-            className="rounded-sm p-0.5 opacity-0 hover:bg-muted group-hover:opacity-100"
+            className="rounded-sm p-0.5 opacity-0 hover:bg-muted group-hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           >
             <X className="h-3 w-3" />
           </button>

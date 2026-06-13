@@ -248,7 +248,7 @@ function BranchHeader({
 }: BranchHeaderProps) {
   const label = branch ?? (detachedHead ? `detached @ ${detachedHead}` : 'no branch');
   return (
-    <div className="flex items-center gap-1.5 border-b border-border px-3 py-2">
+    <div className="flex items-center gap-1.5 border-b border-sidebar-border px-3 py-2">
       <GitCommitHorizontal className="h-4 w-4 shrink-0 text-muted-foreground" />
       <span className="truncate text-sm font-medium" title={upstream ? `↑ ${upstream}` : label}>
         {label}
@@ -365,7 +365,7 @@ function CommitComposer({ hasStaged, committing, onCommit }: CommitComposerProps
   };
 
   return (
-    <div className="flex flex-col gap-2 border-b border-border px-3 py-2">
+    <div className="flex flex-col gap-2 border-b border-sidebar-border px-3 py-2">
       <textarea
         value={message}
         onChange={e => setMessage(e.target.value)}
@@ -442,12 +442,12 @@ function FileSection({
   if (files.length === 0) return null;
 
   return (
-    <div className="border-b border-border/40">
+    <div className="border-b border-sidebar-border">
       <div className="group flex items-center gap-1 px-2 py-1">
         <button
           type="button"
           onClick={() => setCollapsed(c => !c)}
-          className="flex flex-1 items-center gap-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+          className="flex flex-1 items-center gap-1 rounded-sm text-xs font-semibold uppercase tracking-wide text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           aria-expanded={!collapsed}
         >
           {collapsed ? (
@@ -509,7 +509,7 @@ function FileRow({ file, active, busy, onSelect, perFile }: FileRowProps) {
     <div
       className={cn(
         'group flex h-7 items-center gap-1.5 pl-6 pr-2 text-sm',
-        'cursor-pointer hover:bg-accent/50',
+        'cursor-pointer hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring',
         active && 'bg-accent text-accent-foreground'
       )}
       onClick={onSelect}

@@ -68,7 +68,7 @@ export function Sidebar({
       <SidebarHeader collapsed={collapsed} onToggle={toggleSidebar} onNewProject={onNewTab} />
 
       {/* Separator */}
-      <div className="mx-3 h-px bg-sidebar-border/60" />
+      <div className="mx-3 h-px bg-sidebar-border" />
 
       <SidebarProjectList
         tabs={tabs}

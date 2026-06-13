@@ -116,11 +116,11 @@ function CommitRow({
   onSelectFile,
 }: CommitRowProps) {
   return (
-    <div className="border-b border-border/40">
+    <div className="border-b border-sidebar-border">
       <button
         type="button"
         onClick={onToggle}
-        className="flex w-full items-start gap-1.5 px-2 py-1.5 text-left hover:bg-accent/40"
+        className="flex w-full items-start gap-1.5 px-2 py-1.5 text-left hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
         aria-expanded={expanded}
       >
         <span className="mt-0.5 text-muted-foreground">
@@ -196,7 +196,7 @@ function CommitFileRow({
         }
       }}
       className={cn(
-        'flex h-6 cursor-pointer items-center gap-1.5 pl-7 pr-2 text-xs hover:bg-accent/40',
+        'flex h-6 cursor-pointer items-center gap-1.5 pl-7 pr-2 text-xs hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring',
         active && 'bg-accent text-accent-foreground'
       )}
       title={file.path}

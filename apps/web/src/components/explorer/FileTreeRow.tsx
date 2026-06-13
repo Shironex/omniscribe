@@ -134,13 +134,13 @@ function FileTreeRowImpl({
 
 function RowIcon({ row }: { row: TreeRow }) {
   if (row.kind === 'symlink') {
-    return <Link2 className="h-4 w-4 shrink-0 text-cyan-400" />;
+    return <Link2 className="h-4 w-4 shrink-0 text-icon-symlink" />;
   }
   if (row.isDir) {
     return row.expanded ? (
-      <FolderOpen className="h-4 w-4 shrink-0 text-amber-400" />
+      <FolderOpen className="h-4 w-4 shrink-0 text-icon-folder" />
     ) : (
-      <Folder className="h-4 w-4 shrink-0 text-amber-400" />
+      <Folder className="h-4 w-4 shrink-0 text-icon-folder" />
     );
   }
   const Icon = getFileIcon(row.name);

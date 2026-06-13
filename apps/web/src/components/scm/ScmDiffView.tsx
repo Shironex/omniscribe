@@ -191,7 +191,7 @@ function HunkBlock({
   };
 
   return (
-    <div className="border-b border-border/60">
+    <div className="border-b border-border">
       <div className="flex items-center gap-2 bg-muted/30 px-3 py-1 font-mono text-[11px] text-muted-foreground">
         <span>
           @@ -{range.oldStart},{range.oldLines} +{range.newStart},{range.newLines} @@

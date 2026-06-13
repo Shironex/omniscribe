@@ -112,7 +112,7 @@ export function SidePanel({ projectPath, open, onOpenChange }: SidePanelProps) {
       style={{ width, minWidth: EXPLORER_MIN_WIDTH, maxWidth: EXPLORER_MAX_WIDTH }}
     >
       {/* Header: project folder name + collapse. */}
-      <div className="flex h-9 shrink-0 items-center justify-between gap-1 border-b border-sidebar-border/60 px-2">
+      <div className="flex h-9 shrink-0 items-center justify-between gap-1 border-b border-sidebar-border px-2">
         <span
           className="truncate text-xs font-semibold uppercase tracking-wide text-muted-foreground"
           title={projectPath}
@@ -187,7 +187,7 @@ function BottomSwitcher({ tab, onChange, changedCount }: BottomSwitcherProps) {
       role="tablist"
       aria-label="Side panel"
       onKeyDown={handleKeyDown}
-      className="flex shrink-0 items-stretch border-t border-sidebar-border/60"
+      className="flex shrink-0 items-stretch border-t border-sidebar-border"
     >
       <SwitcherButton
         active={tab === 'files'}

@@ -57,7 +57,7 @@ export function ScmDiffSheet() {
           aria-describedby={undefined}
           className={cn(
             'fixed left-1/2 top-1/2 z-50 flex h-[90vh] w-[92vw] max-w-6xl -translate-x-1/2 -translate-y-1/2',
-            'flex-col overflow-hidden rounded-lg border border-border bg-card shadow-lg',
+            'flex-col overflow-hidden rounded-xl border border-border bg-card shadow-lg',
             'duration-150 data-[state=open]:animate-in data-[state=closed]:animate-out'
           )}
           onOpenAutoFocus={e => e.preventDefault()}

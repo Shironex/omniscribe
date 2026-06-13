@@ -304,10 +304,10 @@ export function FileExplorer({
   const virtualItems = virtualizer.getVirtualItems();
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-card/40">
+    <div className="flex h-full min-h-0 flex-col bg-sidebar">
       {/* Header */}
       {!hideHeader && (
-        <div className="flex h-9 items-center justify-between border-b border-border px-2">
+        <div className="flex h-9 items-center justify-between border-b border-sidebar-border px-2">
           <span className="truncate text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Explorer
           </span>

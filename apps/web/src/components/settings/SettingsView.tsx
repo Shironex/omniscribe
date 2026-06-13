@@ -117,7 +117,7 @@ export function SettingsView() {
           type="button"
           onClick={closeSettings}
           aria-label="Close settings"
-          className="grid place-items-center size-7 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+          className="grid place-items-center size-7 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
         >
           <X className="w-4 h-4" />
         </button>

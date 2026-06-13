@@ -81,7 +81,7 @@ export function ContentToolbar({
     <div
       className={cn(
         'h-9 min-h-9 flex items-center select-none drag',
-        'border-b border-border/50 bg-background'
+        'border-b border-border bg-background'
       )}
     >
       {/* Left: Project breadcrumb */}
@@ -126,7 +126,7 @@ export function ContentToolbar({
         <StatusLegend counts={statusCounts} showCounts={true} className="gap-2" />
 
         {statusCounts && Object.values(statusCounts).some(v => v && v > 0) && (
-          <div className="w-px h-4 bg-border/50 mx-1" />
+          <div className="w-px h-4 bg-border mx-1" />
         )}
 
         {/* Custom Commands */}

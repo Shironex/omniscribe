@@ -31,7 +31,7 @@ export function SidebarFooter({
   return (
     <div
       className={cn(
-        'shrink-0 border-t border-border/50',
+        'shrink-0 border-t border-sidebar-border',
         collapsed ? 'px-1 py-2 flex flex-col items-center gap-1' : 'px-3 py-2 space-y-1'
       )}
     >

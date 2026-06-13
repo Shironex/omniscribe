@@ -79,6 +79,12 @@
   --color-status-accent: var(--status-accent);
   --color-status-accent-bg: var(--status-accent-bg);
 
+  /* File-explorer entry-type icons — tokenized so they stop using raw Tailwind
+     palette colors. Values live in :root (constant across themes), overridable
+     per-theme later if a theme wants its own. */
+  --color-icon-folder: var(--icon-folder);
+  --color-icon-symlink: var(--icon-symlink);
+
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
   --radius-sm: calc(var(--radius) - 4px);
@@ -134,6 +140,11 @@
 
 :root {
   --radius: 0.625rem;
+
+  /* File-explorer entry-type icon colors (folder = warm gold, symlink = cyan).
+     Constant across themes; a theme may override under its own :root.<theme>. */
+  --icon-folder: oklch(0.74 0.13 75);
+  --icon-symlink: oklch(0.68 0.12 220);
 
   /* Light mode defaults */
   --background: oklch(1 0 0);

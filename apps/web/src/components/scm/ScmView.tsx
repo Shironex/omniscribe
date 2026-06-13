@@ -58,7 +58,7 @@ export function ScmView({ projectPath }: ScmViewProps) {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center gap-1 border-b border-border px-2 py-1">
+      <div className="flex items-center gap-1 border-b border-sidebar-border px-2 py-1">
         <SubTabButton
           active={tab === 'changes'}
           onClick={() => setTab('changes')}
