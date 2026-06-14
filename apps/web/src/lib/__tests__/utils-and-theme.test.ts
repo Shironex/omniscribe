@@ -82,8 +82,8 @@ describe('theme options', () => {
     expect(themeOptions.length).toBeGreaterThan(0);
   });
 
-  it('contains exactly 10 curated themes (9 dark + 1 light)', () => {
-    expect(themeOptions.length).toBe(10);
+  it('contains exactly 14 curated themes (13 dark + 1 light)', () => {
+    expect(themeOptions.length).toBe(14);
   });
 
   it('every theme option has required properties', () => {
@@ -124,8 +124,8 @@ describe('darkThemes', () => {
     }
   });
 
-  it('has exactly 9 dark themes', () => {
-    expect(darkThemes.length).toBe(9);
+  it('has exactly 13 dark themes', () => {
+    expect(darkThemes.length).toBe(13);
   });
 
   it('starts with the default Forge theme', () => {

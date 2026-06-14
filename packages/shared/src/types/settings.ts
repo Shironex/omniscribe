@@ -8,8 +8,9 @@ import type { AiMode } from './session';
  * Theme - Curated set of built-in color themes.
  *
  * The catalog was simplified from 41 alphabetical themes (21 dark + 20 light)
- * down to 8 hand-tuned palettes. Persisted IDs from the old catalog are
- * remapped via {@link LEGACY_THEME_MIGRATION} on first load.
+ * down to a curated set of hand-tuned palettes (currently 14: 13 dark + 1 light).
+ * Persisted IDs from the old catalog are remapped via
+ * {@link LEGACY_THEME_MIGRATION} on first load.
  */
 export type Theme =
   | 'forge'
@@ -21,7 +22,11 @@ export type Theme =
   | 'gruvbox'
   | 'dracula'
   | 'plum'
-  | 'abyss';
+  | 'abyss'
+  | 'obsidian'
+  | 'crimson'
+  | 'tokyonight'
+  | 'matcha';
 
 /**
  * Theme metadata used by both the renderer (gradient swatches) and any
@@ -91,13 +96,37 @@ export const BUILT_IN_THEMES: readonly ThemeMeta[] = [
     value: 'plum',
     label: 'Plum',
     isDark: true,
-    swatch: { bg: '#1a161f', surface: '#241d2b', primary: '#d46cb1', accent: '#5b9cf2' },
+    swatch: { bg: '#1a161f', surface: '#241d2b', primary: '#d46cb1', accent: '#c061c4' },
   },
   {
     value: 'abyss',
     label: 'Abyss',
     isDark: true,
     swatch: { bg: '#0a1d1f', surface: '#0f292c', primary: '#5fc7bf', accent: '#e89143' },
+  },
+  {
+    value: 'obsidian',
+    label: 'Obsidian',
+    isDark: true,
+    swatch: { bg: '#040506', surface: '#131417', primary: '#3fc1e6', accent: '#7f8894' },
+  },
+  {
+    value: 'crimson',
+    label: 'Crimson',
+    isDark: true,
+    swatch: { bg: '#1f1013', surface: '#2b161a', primary: '#e84459', accent: '#e4ac57' },
+  },
+  {
+    value: 'tokyonight',
+    label: 'Tokyo Night',
+    isDark: true,
+    swatch: { bg: '#1a1b26', surface: '#24283b', primary: '#7aa2f7', accent: '#bb9af7' },
+  },
+  {
+    value: 'matcha',
+    label: 'Matcha',
+    isDark: true,
+    swatch: { bg: '#0f1a13', surface: '#17251b', primary: '#34c389', accent: '#dac987' },
   },
 ];
 
@@ -119,7 +148,6 @@ export const LEGACY_THEME_MIGRATION = {
   // ── Carbon-ish neutrals ───────────────────────────────────────────
   gray: 'carbon',
   onedark: 'carbon',
-  tokyonight: 'iceberg',
   // ── Warm / red palettes → Ember ───────────────────────────────────
   red: 'ember',
   sunset: 'ember',
@@ -132,7 +160,6 @@ export const LEGACY_THEME_MIGRATION = {
   solarized: 'iceberg',
   // ── Greens → Nord ─────────────────────────────────────────────────
   forest: 'nord',
-  matcha: 'nord',
   // ── Yellow/orange dark → Gruvbox ──────────────────────────────────
   'ayu-dark': 'gruvbox',
   // ── Light themes → Paper ──────────────────────────────────────────
