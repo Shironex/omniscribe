@@ -95,7 +95,10 @@ const initialFsState: Pick<FsState, 'projectPath' | 'dirs' | 'expanded' | 'reque
 
 function parentDirOf(targetPath: string): string {
   const idx = Math.max(targetPath.lastIndexOf('/'), targetPath.lastIndexOf('\\'));
-  return idx <= 0 ? targetPath : targetPath.slice(0, idx);
+  if (idx < 0) return targetPath;
+  // Root-level path (e.g. "/foo") — parent is the root separator, not the path itself.
+  if (idx === 0) return targetPath.slice(0, 1);
+  return targetPath.slice(0, idx);
 }
 
 function joinPath(dir: string, name: string): string {
