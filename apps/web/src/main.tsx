@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import App from './App';
 import { ErrorBoundary } from '@/components/shared/ErrorBoundary';
 import { SplashScreen } from '@/components/splash';
+import { SurfaceLayer } from '@/components/shared/SurfaceLayer';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { useWorkspaceStore } from '@/stores/useWorkspaceStore';
@@ -21,6 +22,7 @@ createRoot(rootElement).render(
       <TooltipProvider delayDuration={300}>
         <SplashScreen />
         <App />
+        <SurfaceLayer />
         <Toaster />
       </TooltipProvider>
     </ErrorBoundary>

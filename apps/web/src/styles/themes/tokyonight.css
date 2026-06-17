@@ -1,0 +1,110 @@
+/* Tokyo Night Theme — indigo-navy shell × periwinkle primary, violet accent */
+
+:root.tokyonight {
+  /* Backgrounds */
+  --background: oklch(0.2 0.03 277);
+  --background-50: oklch(0.2 0.03 277 / 0.5);
+  --background-80: oklch(0.2 0.03 277 / 0.8);
+
+  /* Text */
+  --foreground: oklch(0.84 0.04 270);
+  --foreground-secondary: oklch(0.68 0.04 270);
+  --foreground-muted: oklch(0.52 0.035 270);
+
+  /* Surfaces */
+  --card: oklch(0.24 0.035 277);
+  --card-foreground: oklch(0.84 0.04 270);
+  --popover: oklch(0.17 0.03 277);
+  --popover-foreground: oklch(0.84 0.04 270);
+
+  /* Brand — periwinkle blue */
+  --primary: oklch(0.69 0.12 265);
+  --primary-foreground: oklch(0.17 0.03 277);
+  --brand-400: oklch(0.73 0.1 265);
+  --brand-500: oklch(0.69 0.12 265);
+  --brand-600: oklch(0.63 0.14 265);
+
+  /* Muted/secondary */
+  --secondary: oklch(0.27 0.035 277);
+  --secondary-foreground: oklch(0.84 0.04 270);
+  --muted: oklch(0.3 0.03 277);
+  --muted-foreground: oklch(0.6 0.035 270);
+  --accent: oklch(0.75 0.11 300);
+  --accent-foreground: oklch(0.17 0.03 277);
+
+  /* Borders */
+  --destructive: oklch(0.68 0.17 15);
+  --border: oklch(0.32 0.03 277);
+  --border-glass: oklch(1 0 0 / 0.08);
+  --input: oklch(0.23 0.03 277);
+  --ring: oklch(0.69 0.12 265);
+
+  /* Charts */
+  --chart-1: oklch(0.69 0.12 265);
+  --chart-2: oklch(0.75 0.11 300);
+  --chart-3: oklch(0.8 0.15 135);
+  --chart-4: oklch(0.78 0.13 75);
+  --chart-5: oklch(0.78 0.1 215);
+
+  /* Sidebar */
+  --sidebar: oklch(0.17 0.03 277 / 0.6);
+  --sidebar-foreground: oklch(0.84 0.04 270);
+  --sidebar-primary: oklch(0.69 0.12 265);
+  --sidebar-primary-foreground: oklch(0.17 0.03 277);
+  --sidebar-accent: oklch(1 0 0 / 0.05);
+  --sidebar-accent-foreground: oklch(0.84 0.04 270);
+  --sidebar-border: oklch(1 0 0 / 0.08);
+  --sidebar-ring: oklch(0.69 0.12 265);
+
+  /* Actions */
+  --action-view: oklch(0.69 0.12 265);
+  --action-view-hover: oklch(0.64 0.14 265);
+  --action-followup: oklch(0.75 0.11 300);
+  --action-followup-hover: oklch(0.7 0.13 300);
+  --action-commit: oklch(0.8 0.15 135);
+  --action-commit-hover: oklch(0.74 0.17 135);
+  --action-verify: oklch(0.8 0.15 135);
+  --action-verify-hover: oklch(0.74 0.17 135);
+
+  --running-indicator: oklch(0.69 0.12 265);
+  --running-indicator-text: oklch(0.73 0.1 265);
+
+  /* Status */
+  --status-success: oklch(0.8 0.15 135);
+  --status-success-bg: oklch(0.8 0.15 135 / 0.2);
+  --status-warning: oklch(0.78 0.13 75);
+  --status-warning-bg: oklch(0.78 0.13 75 / 0.2);
+  --status-error: oklch(0.68 0.17 15);
+  --status-error-bg: oklch(0.68 0.17 15 / 0.2);
+  --status-info: oklch(0.69 0.12 265);
+  --status-info-bg: oklch(0.69 0.12 265 / 0.2);
+  --status-pending: oklch(0.75 0.11 300);
+  --status-pending-bg: oklch(0.75 0.11 300 / 0.2);
+  --status-accent: oklch(0.78 0.1 215);
+  --status-accent-bg: oklch(0.78 0.1 215 / 0.2);
+  --status-backlog: oklch(0.58 0.03 270);
+  --status-in-progress: oklch(0.78 0.13 75);
+  --status-waiting: oklch(0.75 0.13 60);
+
+  /* Shadows */
+  --shadow-xs: 0 1px 2px rgba(10, 11, 18, 0.4);
+  --shadow-sm: 0 1px 3px rgba(10, 11, 18, 0.45), 0 1px 2px rgba(10, 11, 18, 0.35);
+  --shadow-md: 0 4px 6px -1px rgba(10, 11, 18, 0.45), 0 2px 4px -1px rgba(10, 11, 18, 0.35);
+  --shadow-lg: 0 10px 15px -3px rgba(10, 11, 18, 0.5), 0 4px 6px -2px rgba(10, 11, 18, 0.3);
+  --shadow-xl: 0 20px 25px -5px rgba(10, 11, 18, 0.55), 0 10px 10px -5px rgba(10, 11, 18, 0.35);
+
+  /* Swatch quartet exposed for the appearance grid */
+  --swatch-1: #1a1b26;
+  --swatch-2: #24283b;
+  --swatch-3: #7aa2f7;
+  --swatch-4: #bb9af7;
+}
+
+.tokyonight .content-bg {
+  background: linear-gradient(
+    135deg,
+    oklch(0.2 0.03 277),
+    oklch(0.24 0.035 277),
+    oklch(0.2 0.03 277)
+  );
+}

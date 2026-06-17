@@ -4,6 +4,7 @@ import { X } from 'lucide-react';
 import { transitions } from '@/lib/animations';
 import { cn } from '@/lib/utils';
 import { useSettingsStore } from '@/stores/useSettingsStore';
+import { useAppUIStore } from '@/stores/useAppUIStore';
 import { usePluginStore } from '@/stores/usePluginStore';
 import { PluginErrorBoundary } from '@/components/plugin/PluginErrorBoundary';
 import { PluginMarketplace } from '@/components/plugin/PluginMarketplace';
@@ -59,13 +60,16 @@ export function SettingsView() {
   const settingsSections = usePluginStore(state => state.settingsSections);
 
   // Esc closes the view. Implemented manually because Radix' focus trap
-  // is no longer in play.
+  // is no longer in play. The view stays mounted (but CSS-hidden) when the
+  // user switches to the Terminal / editor tab, so gate the handler on the
+  // active shellView — Esc pressed in another surface must NOT close the
+  // hidden settings out from under it.
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.stopPropagation();
-        closeSettings();
-      }
+      if (e.key !== 'Escape') return;
+      if (useAppUIStore.getState().shellView !== 'settings') return;
+      e.stopPropagation();
+      closeSettings();
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
@@ -113,7 +117,7 @@ export function SettingsView() {
           type="button"
           onClick={closeSettings}
           aria-label="Close settings"
-          className="grid place-items-center size-7 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+          className="grid place-items-center size-7 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
         >
           <X className="w-4 h-4" />
         </button>

@@ -189,6 +189,7 @@ vi.mock('@/hooks/useAppVersion', () => ({
 
 // Mock @/lib/platform
 vi.mock('@/lib/platform', () => ({
+  IS_ELECTRON: false,
   IS_MAC: false,
   IS_WINDOWS: false,
   IS_LINUX: true,
@@ -202,11 +203,45 @@ vi.mock('@/lib/socket', () => ({
     off: vi.fn(),
     connected: true,
   },
+  getSocket: vi.fn(() => ({
+    emit: vi.fn(),
+    on: vi.fn(),
+    off: vi.fn(),
+    connected: true,
+  })),
 }));
 
 vi.mock('@/lib/socketHelpers', () => ({
   emitAsync: vi.fn(),
 }));
+
+// Footprint store (used by GeneralSection → ProjectFootprintCard).
+vi.mock('@/stores/useFootprintStore', () => {
+  const state = {
+    entries: [],
+    passiveMode: false,
+    projectPath: null,
+    isRemoving: false,
+    isLoading: false,
+    error: null,
+    fetchFootprint: vi.fn(),
+    setPassiveMode: vi.fn(),
+    removeFootprint: vi.fn(),
+    initListeners: vi.fn(),
+    cleanupListeners: vi.fn(),
+    clear: vi.fn(),
+  };
+  return {
+    useFootprintStore: vi.fn((sel?: unknown) =>
+      typeof sel === 'function' ? (sel as (s: typeof state) => unknown)(state) : state
+    ),
+    selectFootprintEntries: (s: typeof state) => s.entries,
+    selectFootprintPassiveMode: (s: typeof state) => s.passiveMode,
+    selectFootprintLoading: (s: typeof state) => s.isLoading,
+    selectFootprintRemoving: (s: typeof state) => s.isRemoving,
+    selectFootprintError: (s: typeof state) => s.error,
+  };
+});
 
 // Plugin store mock
 const mockPluginState: Record<string, unknown> = {

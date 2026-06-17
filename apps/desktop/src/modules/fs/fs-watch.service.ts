@@ -1,0 +1,228 @@
+import { Injectable, OnModuleDestroy } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import * as fs from 'fs';
+import * as path from 'path';
+import { createLogger } from '@omniscribe/shared';
+import type { FsChangedEvent } from '@omniscribe/shared';
+import { InternalFsEvents } from '../shared/events';
+import { resolveWithinRoot } from './fs-paths';
+import { SKIP_DIRS, WATCH_DEBOUNCE_QUIET_MS, WATCH_DEBOUNCE_MAX_MS } from './fs.constants';
+
+/**
+ * Per-project recursive filesystem watcher with refcounting and debounce-batch
+ * emission. Mirrors terax's `fs/watch.rs` design:
+ *
+ * - One native `fs.watch(root, { recursive: true })` per *project*, shared by
+ *   every (client, watchId) that subscribes to it — refcounted, torn down when
+ *   the last subscriber leaves or its client disconnects.
+ * - Raw events are filtered through {@link SKIP_DIRS} (heavy / VCS-internal
+ *   trees) and coalesced: a 150ms quiet window with a 1000ms hard ceiling, so a
+ *   burst of writes collapses into a single `fs.changed` internal event carrying
+ *   the deduplicated set of changed absolute paths.
+ *
+ * Node 22 supports recursive `fs.watch` natively on Linux, macOS and Windows.
+ */
+@Injectable()
+export class FsWatchService implements OnModuleDestroy {
+  private readonly logger = createLogger('FsWatchService');
+
+  /** projectPath (canonical root) -> live watcher state. */
+  private readonly watches = new Map<string, ProjectWatch>();
+
+  /** clientId -> set of "projectRoot::watchId" subscription keys it owns. */
+  private readonly clientSubscriptions = new Map<string, Set<string>>();
+
+  constructor(private readonly eventEmitter: EventEmitter2) {}
+
+  /**
+   * Subscribe a (client, watchId) to changes under `projectPath`. Idempotent:
+   * re-subscribing the same key is a no-op. Returns the canonical root watched.
+   */
+  watch(clientId: string, projectPath: string, watchId: string): string {
+    const root = resolveWithinRoot(projectPath);
+    const subKey = subscriptionKey(root, watchId);
+
+    let state = this.watches.get(root);
+    if (!state) {
+      state = this.createWatch(root);
+      this.watches.set(root, state);
+    }
+
+    if (!state.subscribers.has(subKey)) {
+      state.subscribers.add(subKey);
+    }
+
+    let owned = this.clientSubscriptions.get(clientId);
+    if (!owned) {
+      owned = new Set<string>();
+      this.clientSubscriptions.set(clientId, owned);
+    }
+    owned.add(`${root}\0${subKey}`);
+
+    return root;
+  }
+
+  /** Remove a single (client, watchId) subscription. */
+  unwatch(clientId: string, projectPath: string, watchId: string): void {
+    const root = resolveWithinRoot(projectPath);
+    this.removeSubscription(clientId, root, subscriptionKey(root, watchId));
+  }
+
+  /** Remove every subscription owned by a disconnected client. */
+  removeClient(clientId: string): void {
+    const owned = this.clientSubscriptions.get(clientId);
+    if (!owned) return;
+    for (const composite of owned) {
+      const sep = composite.indexOf('\0');
+      const root = composite.slice(0, sep);
+      const subKey = composite.slice(sep + 1);
+      this.removeSubscription(clientId, root, subKey, /* skipOwnerCleanup */ true);
+    }
+    this.clientSubscriptions.delete(clientId);
+  }
+
+  onModuleDestroy(): void {
+    for (const state of this.watches.values()) {
+      this.teardownWatch(state);
+    }
+    this.watches.clear();
+    this.clientSubscriptions.clear();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Internal
+  // ---------------------------------------------------------------------------
+
+  private createWatch(root: string): ProjectWatch {
+    const state: ProjectWatch = {
+      root,
+      subscribers: new Set(),
+      watcher: null,
+      pending: new Set(),
+      quietTimer: null,
+      maxTimer: null,
+    };
+
+    try {
+      state.watcher = fs.watch(root, { recursive: true }, (_eventType, filename) => {
+        this.onRawEvent(state, filename);
+      });
+      state.watcher.on('error', err => {
+        this.logger.warn(`Watcher error for ${root}:`, err);
+      });
+    } catch (err) {
+      this.logger.error(`Failed to start recursive watch for ${root}:`, err);
+      // Leave watcher null — subscriptions still tracked, just no events.
+    }
+    return state;
+  }
+
+  private onRawEvent(state: ProjectWatch, filename: string | Buffer | null): void {
+    if (!filename) return;
+    const rel = typeof filename === 'string' ? filename : filename.toString('utf8');
+
+    // Filter out anything under a skipped directory (.git, node_modules, …).
+    if (isInSkippedDir(rel)) return;
+
+    state.pending.add(path.join(state.root, rel));
+    this.scheduleFlush(state);
+  }
+
+  private scheduleFlush(state: ProjectWatch): void {
+    // Reset the quiet timer on every event.
+    if (state.quietTimer) clearTimeout(state.quietTimer);
+    state.quietTimer = setTimeout(() => this.flush(state), WATCH_DEBOUNCE_QUIET_MS);
+    state.quietTimer.unref?.();
+
+    // Ensure we emit at least once per max window under sustained churn.
+    if (!state.maxTimer) {
+      state.maxTimer = setTimeout(() => this.flush(state), WATCH_DEBOUNCE_MAX_MS);
+      state.maxTimer.unref?.();
+    }
+  }
+
+  private flush(state: ProjectWatch): void {
+    if (state.quietTimer) {
+      clearTimeout(state.quietTimer);
+      state.quietTimer = null;
+    }
+    if (state.maxTimer) {
+      clearTimeout(state.maxTimer);
+      state.maxTimer = null;
+    }
+
+    if (state.pending.size === 0) return;
+    const paths = [...state.pending];
+    state.pending.clear();
+
+    // Only emit if someone is still listening.
+    if (state.subscribers.size === 0) return;
+
+    const payload: FsChangedEvent = { projectPath: state.root, paths };
+    this.eventEmitter.emit(InternalFsEvents.CHANGED, payload);
+  }
+
+  private removeSubscription(
+    clientId: string,
+    root: string,
+    subKey: string,
+    skipOwnerCleanup = false
+  ): void {
+    const state = this.watches.get(root);
+    if (state) {
+      state.subscribers.delete(subKey);
+      if (state.subscribers.size === 0) {
+        this.teardownWatch(state);
+        this.watches.delete(root);
+      }
+    }
+
+    if (!skipOwnerCleanup) {
+      const owned = this.clientSubscriptions.get(clientId);
+      if (owned) {
+        owned.delete(`${root}\0${subKey}`);
+        if (owned.size === 0) this.clientSubscriptions.delete(clientId);
+      }
+    }
+  }
+
+  private teardownWatch(state: ProjectWatch): void {
+    if (state.quietTimer) clearTimeout(state.quietTimer);
+    if (state.maxTimer) clearTimeout(state.maxTimer);
+    state.quietTimer = null;
+    state.maxTimer = null;
+    state.pending.clear();
+    try {
+      state.watcher?.close();
+    } catch {
+      // ignore
+    }
+    state.watcher = null;
+  }
+}
+
+interface ProjectWatch {
+  root: string;
+  /** Set of "root::watchId" subscription keys (refcount). */
+  subscribers: Set<string>;
+  watcher: fs.FSWatcher | null;
+  pending: Set<string>;
+  quietTimer: ReturnType<typeof setTimeout> | null;
+  maxTimer: ReturnType<typeof setTimeout> | null;
+}
+
+function subscriptionKey(root: string, watchId: string): string {
+  return `${root}::${watchId}`;
+}
+
+/** True when the relative path has any path component listed in SKIP_DIRS. */
+function isInSkippedDir(relativePath: string): boolean {
+  const segments = relativePath.split(/[\\/]/);
+  // Drop the basename — only directory components gate skipping.
+  for (let i = 0; i < segments.length - 1; i++) {
+    if (SKIP_DIRS.has(segments[i])) return true;
+  }
+  // Also skip if the change is the skipped dir entry itself.
+  const last = segments[segments.length - 1];
+  return SKIP_DIRS.has(last) && segments.length === 1;
+}

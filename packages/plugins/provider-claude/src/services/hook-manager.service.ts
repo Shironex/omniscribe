@@ -2,12 +2,31 @@
  * Claude Hook Manager Service
  *
  * Registers and watches for Claude Code hooks that notify Omniscribe of
- * session lifecycle events (SessionStart, SessionEnd). Uses a temp directory
- * filesystem watcher to detect hook events.
+ * session lifecycle events. Two complementary channels are installed:
+ *
+ *  1. **Tmpdir channel** (SessionStart/SessionEnd): a small Node script writes
+ *     the hook JSON to a temp directory that this service watches. Used for
+ *     lifecycle correlation (capturing the Claude session id, etc.).
+ *
+ *  2. **OSC marker channel** (UserPromptSubmit/Notification/Stop): the hook
+ *     returns an `OSC 777;notify;omniscribe;<event>` escape sequence via Claude
+ *     Code's `terminalSequence` hook-output field. The sequence rides the PTY
+ *     output stream and is picked up by `OscAgentDetector`, driving the
+ *     session's working / needs_input / finished status. This works in bash,
+ *     Windows, tmux, and wrapper setups where no shell preexec fires, because
+ *     the marker self-arms the detector. Gated on `OMNISCRIBE_SESSION_ID` so it
+ *     is a no-op outside an Omniscribe-managed terminal.
+ *
+ * Both channels are written into the same `.claude/settings.local.json` with
+ * terax-grade safety: atomic temp+rename writes, never clobbering unparseable
+ * JSON, preserving foreign hooks, and idempotent re-install.
  *
  * Extracted from apps/desktop/src/modules/session/hook-manager.service.ts.
  * Pure TypeScript class with no NestJS dependencies. Uses a callback pattern
  * instead of NestJS EventEmitter2 for hook event notification.
+ *
+ * The OSC marker channel and its safety properties are adapted from terax-ai
+ * (Apache-2.0) — `src-tauri/src/modules/agent.rs`.
  */
 
 import * as fs from 'fs';
@@ -40,13 +59,43 @@ process.stdin.on('end', () => {
 `;
 
 /**
- * Hook configuration entry for Claude Code's settings.local.json
+ * OSC-marker hook events. Each Claude Code hook event maps to an Omniscribe
+ * agent-status event carried by the OSC 777 marker.
+ */
+const OSC_HOOK_EVENTS = [
+  ['UserPromptSubmit', 'working'],
+  ['Notification', 'attention'],
+  ['Stop', 'finished'],
+] as const;
+
+/**
+ * Substring that identifies a hook command as owned by Omniscribe's OSC marker
+ * channel. Used to strip/replace only our entries on re-install and removal.
+ */
+const OSC_OWNED_MARKER = 'notify;omniscribe;';
+
+/**
+ * Build the shell command for an OSC-marker hook.
+ *
+ * Gated on `OMNISCRIBE_SESSION_ID` so it is inert outside an Omniscribe
+ * terminal. Emits the marker via Claude Code's `terminalSequence` hook-output
+ * field (hooks lost direct `/dev/tty` access in newer Claude Code), where
+ * `]777;notify;omniscribe;<event>` is BEL-terminated. The `|| true`
+ * keeps a non-Omniscribe shell from surfacing a non-zero exit.
+ */
+function oscHookCommand(event: string): string {
+  return `[ -n "$OMNISCRIBE_SESSION_ID" ] && printf '{"terminalSequence":"\\u001b]777;notify;omniscribe;${event}\\u0007"}' || true`;
+}
+
+/**
+ * Hook configuration entry for Claude Code's settings.local.json.
+ * `timeout` / `async` are optional — the OSC-marker entries omit them.
  */
 interface ClaudeHookEntry {
   type: string;
   command: string;
-  timeout: number;
-  async: boolean;
+  timeout?: number;
+  async?: boolean;
 }
 
 interface ClaudeHookMatcher {
@@ -117,15 +166,16 @@ export class ClaudeHookManagerService {
       await fs.promises.writeFile(scriptPath, HOOK_SCRIPT, 'utf-8');
       this.logger.debug(`Wrote hook script to ${scriptPath}`);
 
-      // Read existing settings.local.json
+      // Read existing settings.local.json. A file that exists but is
+      // unparseable is NOT clobbered — abort the merge so we never destroy a
+      // user's (or another tool's) settings (terax safety property).
       const settingsPath = path.join(claudeDir, 'settings.local.json');
-      let settings: ClaudeSettingsLocal = {};
-
-      try {
-        const content = await fs.promises.readFile(settingsPath, 'utf-8');
-        settings = JSON.parse(content);
-      } catch (error) {
-        this.logger.debug('Settings file not found or invalid, starting fresh', error);
+      const settings = await this.readSettings(settingsPath);
+      if (settings === null) {
+        this.logger.warn(
+          `Refusing to register hooks: ${settingsPath} is not valid JSON (won't clobber)`
+        );
+        return;
       }
 
       // Build hook command
@@ -143,6 +193,7 @@ export class ClaudeHookManagerService {
         settings.hooks = {};
       }
 
+      // Channel 1: tmpdir lifecycle hooks (SessionStart/SessionEnd).
       for (const eventName of ['SessionStart', 'SessionEnd'] as const) {
         const existing = settings.hooks[eventName] ?? [];
 
@@ -158,11 +209,188 @@ export class ClaudeHookManagerService {
         }
       }
 
-      await fs.promises.writeFile(settingsPath, JSON.stringify(settings, null, 2), 'utf-8');
+      // Channel 2: OSC 777 marker hooks (UserPromptSubmit/Notification/Stop).
+      // Idempotent: strip any prior Omniscribe OSC entries (and inert empty
+      // groups) before re-adding, so re-install never accumulates duplicates
+      // while foreign hooks are preserved.
+      for (const [eventName, event] of OSC_HOOK_EVENTS) {
+        const existing = settings.hooks[eventName] ?? [];
+        const preserved = existing.filter(
+          matcher => !this.isOscOwned(matcher) && !this.isEmptyGroup(matcher)
+        );
+        preserved.push({
+          hooks: [{ type: 'command', command: oscHookCommand(event) }],
+        });
+        settings.hooks[eventName] = preserved;
+        this.logger.debug(`Registered ${eventName} OSC marker hook for ${projectPath}`);
+      }
+
+      // Atomic write: serialize to a sibling temp file then rename, so a crash
+      // mid-write can't leave a truncated settings.local.json.
+      await this.atomicWriteJson(settingsPath, settings);
       this.logger.info(`Hooks registered in ${settingsPath}`);
     } catch (error) {
       const msg = extractErrorMessage(error);
       this.logger.warn(`Failed to register hooks for ${projectPath}: ${msg}`);
+    }
+  }
+
+  /**
+   * Read settings.local.json into an object.
+   *
+   * @returns `{}` when the file is absent or empty (fresh start), the parsed
+   *   object when valid, or `null` when the file exists but is unparseable —
+   *   the caller must refuse to overwrite in that case.
+   */
+  private async readSettings(settingsPath: string): Promise<ClaudeSettingsLocal | null> {
+    let content: string;
+    try {
+      content = await fs.promises.readFile(settingsPath, 'utf-8');
+    } catch {
+      // Absent (or unreadable) → start fresh.
+      return {};
+    }
+    if (content.trim().length === 0) {
+      return {};
+    }
+    try {
+      const parsed = JSON.parse(content);
+      // A non-object root (array, string, number) is also unsafe to merge into.
+      if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+        return null;
+      }
+      return parsed as ClaudeSettingsLocal;
+    } catch {
+      return null;
+    }
+  }
+
+  /** True when a hook group is owned by Omniscribe's OSC marker channel. */
+  private isOscOwned(matcher: ClaudeHookMatcher): boolean {
+    return !!matcher.hooks?.some(
+      h => typeof h.command === 'string' && h.command.includes(OSC_OWNED_MARKER)
+    );
+  }
+
+  /**
+   * True when a hook group carries no hooks. Such groups are inert cruft (e.g.
+   * left behind when someone deletes a command but not its wrapper) — drop them
+   * so the file stays clean.
+   */
+  private isEmptyGroup(matcher: ClaudeHookMatcher): boolean {
+    return !matcher.hooks || matcher.hooks.length === 0;
+  }
+
+  /**
+   * Atomically write JSON: write to a sibling temp file, then rename over the
+   * target. On rename failure the temp file is cleaned up.
+   */
+  private async atomicWriteJson(targetPath: string, value: unknown): Promise<void> {
+    const out = JSON.stringify(value, null, 2);
+    const tmpPath = `${targetPath}.omniscribe-tmp`;
+    await fs.promises.writeFile(tmpPath, out, 'utf-8');
+    try {
+      await fs.promises.rename(tmpPath, targetPath);
+    } catch (error) {
+      await fs.promises.unlink(tmpPath).catch(() => {});
+      throw error;
+    }
+  }
+
+  /**
+   * Absolute path to the Omniscribe hook script for a project.
+   */
+  getHookScriptPath(projectPath: string): string {
+    return path.join(projectPath, '.claude', 'hooks', 'omniscribe-notify.js');
+  }
+
+  /**
+   * Absolute path to the Claude settings file we install hooks into.
+   */
+  getSettingsPath(projectPath: string): string {
+    return path.join(projectPath, '.claude', 'settings.local.json');
+  }
+
+  /**
+   * Detect Omniscribe's hook footprint in a project without mutating anything.
+   *
+   * Returns whether Omniscribe-owned hook entries are present in
+   * `.claude/settings.local.json` (tmpdir lifecycle hooks matched by the
+   * exact `node "<script>"` command, plus OSC marker hooks matched by the
+   * owned-marker substring), the count of such entries, and whether the hook
+   * script file exists on disk. Ownership is gated by the same signatures
+   * `registerHooks`/`unregisterHooks` use, so detection can never report a
+   * foreign hook as Omniscribe's.
+   */
+  async detectFootprint(projectPath: string): Promise<{
+    hooksPresent: boolean;
+    hookCount: number;
+    scriptPresent: boolean;
+  }> {
+    const scriptPath = this.getHookScriptPath(projectPath);
+    let scriptPresent: boolean;
+    try {
+      await fs.promises.access(scriptPath);
+      scriptPresent = true;
+    } catch {
+      scriptPresent = false;
+    }
+
+    let hookCount = 0;
+    try {
+      const settings = await this.readSettings(this.getSettingsPath(projectPath));
+      if (settings && settings.hooks) {
+        const ownedCommand = `node "${normalizePath(scriptPath)}"`;
+
+        // Channel 1: tmpdir lifecycle hooks matched by exact command.
+        for (const eventName of ['SessionStart', 'SessionEnd'] as const) {
+          const groups = settings.hooks[eventName];
+          if (!groups) continue;
+          for (const matcher of groups) {
+            if (matcher.hooks?.some(h => h.command === ownedCommand)) {
+              hookCount++;
+            }
+          }
+        }
+
+        // Channel 2: OSC marker hooks matched by the owned-marker substring.
+        for (const [eventName] of OSC_HOOK_EVENTS) {
+          const groups = settings.hooks[eventName];
+          if (!groups) continue;
+          for (const matcher of groups) {
+            if (this.isOscOwned(matcher)) {
+              hookCount++;
+            }
+          }
+        }
+      }
+    } catch (error) {
+      const msg = extractErrorMessage(error);
+      this.logger.warn(`Failed to detect hook footprint for ${projectPath}: ${msg}`);
+    }
+
+    return { hooksPresent: hookCount > 0, hookCount, scriptPresent };
+  }
+
+  /**
+   * Remove only the Omniscribe hook script file, preserving the rest of the
+   * `.claude/` tree. Best-effort: a missing file is a no-op. Returns true when
+   * a script file was actually deleted.
+   */
+  async removeHookScript(projectPath: string): Promise<boolean> {
+    const scriptPath = this.getHookScriptPath(projectPath);
+    try {
+      await fs.promises.unlink(scriptPath);
+      this.logger.info(`Removed hook script ${scriptPath}`);
+      return true;
+    } catch (error) {
+      const err = error as NodeJS.ErrnoException;
+      if (err.code === 'ENOENT') {
+        return false;
+      }
+      const msg = extractErrorMessage(error);
+      this.logger.warn(`Failed to remove hook script for ${projectPath}: ${msg}`);
+      return false;
     }
   }
 
@@ -173,12 +401,12 @@ export class ClaudeHookManagerService {
     try {
       const settingsPath = path.join(projectPath, '.claude', 'settings.local.json');
 
-      let settings: ClaudeSettingsLocal;
-      try {
-        const content = await fs.promises.readFile(settingsPath, 'utf-8');
-        settings = JSON.parse(content);
-      } catch (error) {
-        this.logger.debug('No settings file to unregister hooks from', error);
+      const settings = await this.readSettings(settingsPath);
+      if (settings === null) {
+        // Unparseable — leave it alone rather than risk destroying it.
+        this.logger.warn(
+          `Refusing to unregister hooks: ${settingsPath} is not valid JSON (won't clobber)`
+        );
         return;
       }
 
@@ -190,6 +418,8 @@ export class ClaudeHookManagerService {
       const hookCommand = `node "${scriptPath}"`;
 
       let changed = false;
+
+      // Channel 1: tmpdir lifecycle hooks (matched by exact command).
       for (const eventName of ['SessionStart', 'SessionEnd'] as const) {
         const existing = settings.hooks[eventName];
         if (!existing) continue;
@@ -204,8 +434,21 @@ export class ClaudeHookManagerService {
         }
       }
 
+      // Channel 2: OSC marker hooks (matched by owned marker substring).
+      for (const [eventName] of OSC_HOOK_EVENTS) {
+        const existing = settings.hooks[eventName];
+        if (!existing) continue;
+
+        const filtered = existing.filter(matcher => !this.isOscOwned(matcher));
+
+        if (filtered.length !== existing.length) {
+          settings.hooks[eventName] = filtered.length > 0 ? filtered : undefined;
+          changed = true;
+        }
+      }
+
       if (changed) {
-        await fs.promises.writeFile(settingsPath, JSON.stringify(settings, null, 2), 'utf-8');
+        await this.atomicWriteJson(settingsPath, settings);
         this.logger.info(`Hooks unregistered from ${settingsPath}`);
       }
     } catch (error) {

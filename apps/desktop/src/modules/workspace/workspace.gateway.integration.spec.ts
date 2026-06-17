@@ -18,6 +18,7 @@ import {
 import { WorkspaceGateway } from './workspace.gateway';
 import { WorkspaceService } from './workspace.service';
 import { QuickActionService } from './quick-action.service';
+import { FootprintService } from './footprint.service';
 
 const mockTabs = [
   {
@@ -70,11 +71,19 @@ describe('WorkspaceGateway (integration)', () => {
       executeAction: jest.fn().mockResolvedValue({ success: true, message: 'Action executed' }),
     };
 
+    const mockFootprintService = {
+      getFootprint: jest.fn().mockResolvedValue([]),
+      removeFootprint: jest.fn().mockResolvedValue([]),
+      setPassiveMode: jest.fn(),
+      isPassiveMode: jest.fn().mockReturnValue(false),
+    };
+
     @Module({
       providers: [
         WorkspaceGateway,
         { provide: WorkspaceService, useValue: mockWorkspaceService },
         { provide: QuickActionService, useValue: mockQuickActionService },
+        { provide: FootprintService, useValue: mockFootprintService },
       ],
     })
     class TestWorkspaceModule {}

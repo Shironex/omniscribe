@@ -8,7 +8,9 @@ import { PASTE_CHUNK_SIZE } from '@/lib/terminal-constants';
 import { getTerminalTheme } from '@/lib/terminal-themes';
 import { safeFit } from './useTerminalResize';
 import { createTerminalInstance } from '@/lib/createTerminalInstance';
+import { registerTerminalForContrast } from '@/lib/background/terminalContrast';
 import { loadTerminalAddons } from '@/lib/loadTerminalAddons';
+import { releaseWebgl } from '@/lib/webglPool';
 import { useTerminalRefitListener } from './useTerminalRefitListener';
 import type { UseTerminalSettingsReturn } from './useTerminalSettings';
 
@@ -24,6 +26,14 @@ export interface TerminalRefs {
   isDisposedRef: React.MutableRefObject<boolean>;
   isReadyRef: React.MutableRefObject<boolean>;
   isActiveRef: React.MutableRefObject<boolean>;
+  /**
+   * Effective visibility (grid active AND terminal surface on screen). Drives
+   * the WebGL pool's initial visibility seed so a terminal that initializes
+   * while occluded (e.g. a session launched while the editor tab is foreground)
+   * does not over-claim a pool slot. Distinct from {@link isActiveRef}, which
+   * tracks only whether the grid is the active project (resize/buffering).
+   */
+  isVisibleRef: React.MutableRefObject<boolean>;
   resizeDebounceRef: React.MutableRefObject<ReturnType<typeof setTimeout> | null>;
 }
 
@@ -49,6 +59,7 @@ export function useTerminalInitialization(
     isDisposedRef,
     isReadyRef,
     isActiveRef,
+    isVisibleRef,
     resizeDebounceRef,
   } = refs;
 
@@ -64,6 +75,7 @@ export function useTerminalInitialization(
     const container = terminalRef.current;
     let terminal: Terminal | null = null;
     let fitAddon: FitAddon | null = null;
+    let unregisterContrast: (() => void) | null = null;
     let isInitialized = false;
     let initRetryTimeout: ReturnType<typeof setTimeout> | null = null;
     const deferredFitTimeouts: ReturnType<typeof setTimeout>[] = [];
@@ -79,7 +91,13 @@ export function useTerminalInitialization(
       isInitialized = true;
 
       terminal = createTerminalInstance(settings, theme);
-      const addons = loadTerminalAddons(terminal, container, sessionId);
+      // Track this live instance so the readability contrast bump can be
+      // applied/cleared retroactively when the background-blend layer toggles.
+      unregisterContrast = registerTerminalForContrast(terminal);
+      // Seed the WebGL pool with EFFECTIVE visibility (grid active AND terminal
+      // surface on screen), not just grid-active — an occluded terminal must not
+      // claim a slot it can't be preferentially relieved of. See isVisibleRef.
+      const addons = loadTerminalAddons(terminal, container, sessionId, isVisibleRef.current);
       fitAddon = addons.fitAddon;
 
       xtermRef.current = terminal;
@@ -184,6 +202,15 @@ export function useTerminalInitialization(
         connectionRef.current.cleanup();
         connectionRef.current = null;
       }
+
+      if (unregisterContrast) {
+        unregisterContrast();
+        unregisterContrast = null;
+      }
+
+      // Release the pooled WebGL addon (disposes it and frees its slot for a
+      // waiting terminal) before disposing the xterm instance it's bound to.
+      releaseWebgl(String(sessionId));
 
       if (xtermRef.current) {
         try {

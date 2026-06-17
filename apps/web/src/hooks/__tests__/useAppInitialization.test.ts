@@ -28,7 +28,7 @@ const mockCleanupUpdate = vi.fn();
 const mockInitUpdate = vi.fn().mockReturnValue(mockCleanupUpdate);
 const mockConnectSocket = vi.fn().mockResolvedValue(undefined);
 const mockInitializeSocket = vi.fn();
-const mockGetSocket = vi.fn().mockReturnValue({ emit: vi.fn() });
+const mockGetSocket = vi.fn().mockReturnValue({ emit: vi.fn(), on: vi.fn(), off: vi.fn() });
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Selector = (state: any) => any;

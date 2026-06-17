@@ -4,6 +4,7 @@ import { GeneralPreview } from '@/components/settings/previews/GeneralPreview';
 import { AboutCard } from './AboutCard';
 import { DiagnosticsCard } from './DiagnosticsCard';
 import { UpdatesCard } from './UpdatesCard';
+import { ProjectFootprintCard } from './general/ProjectFootprintCard';
 
 export function GeneralSection() {
   return (
@@ -17,6 +18,7 @@ export function GeneralSection() {
         <GeneralPreview />
       </SettingsCard>
       <AboutCard />
+      <ProjectFootprintCard />
       <UpdatesCard />
       <DiagnosticsCard />
     </div>

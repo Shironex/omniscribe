@@ -6,6 +6,13 @@ import { logger } from './logger';
 import { getBackendPort } from './backend-port';
 
 /**
+ * Opaque window background color used when no native window effect is active.
+ * Shared with the window-effect IPC handler so toggling the effect off can
+ * restore the exact same color the window is born with.
+ */
+export const WINDOW_BACKGROUND_COLOR = '#0a0a0f';
+
+/**
  * Set Content Security Policy for the renderer process
  * This helps prevent XSS attacks and other injection vulnerabilities
  */
@@ -93,7 +100,7 @@ export async function createMainWindow(): Promise<BrowserWindow> {
     minHeight: 600,
     frame: false,
     titleBarStyle: 'hidden',
-    backgroundColor: '#0a0a0f',
+    backgroundColor: WINDOW_BACKGROUND_COLOR,
     icon: path.join(
       __dirname,
       `../../resources/icon.${process.platform === 'win32' ? 'ico' : 'png'}`

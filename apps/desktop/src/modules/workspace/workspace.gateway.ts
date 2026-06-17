@@ -33,11 +33,22 @@ import {
   QuickActionsResponse,
   WorkspaceEvents,
   QuickActionEvents,
+  FootprintEvents,
+  FootprintGetPayload,
+  FootprintGetResponse,
+  FootprintRemovePayload,
+  FootprintRemoveResponse,
+  FootprintSetPassiveModePayload,
+  FootprintSetPassiveModeResponse,
+  FootprintGetPassiveModePayload,
+  FootprintGetPassiveModeResponse,
   createLogger,
+  extractErrorMessage,
 } from '@omniscribe/shared';
 import { InternalQuickActionEvents } from '../shared/events';
 import { QuickActionService, QuickActionResult } from './quick-action.service';
 import { WorkspaceService, WorkspaceState } from './workspace.service';
+import { FootprintService } from './footprint.service';
 import { CORS_CONFIG } from '../shared/cors.config';
 
 /**
@@ -74,7 +85,8 @@ export class WorkspaceGateway implements OnGatewayInit {
 
   constructor(
     private readonly quickActionService: QuickActionService,
-    private readonly workspaceService: WorkspaceService
+    private readonly workspaceService: WorkspaceService,
+    private readonly footprintService: FootprintService
   ) {}
 
   afterInit(): void {
@@ -385,5 +397,133 @@ export class WorkspaceGateway implements OnGatewayInit {
   handleGetPreferences(@ConnectedSocket() _client: Socket): UserPreferences {
     this.logger.debug('[workspace:get-preferences] called');
     return this.workspaceService.getPreferences();
+  }
+
+  // ============================================
+  // Footprint Handlers (project-write tracking & cleanup)
+  // ============================================
+
+  /**
+   * Handle get footprint request — inspect a project for Omniscribe-owned
+   * artifacts (managed .mcp.json entries, Claude hooks, hook script, worktrees).
+   */
+  @SkipThrottle()
+  @SubscribeMessage(FootprintEvents.GET)
+  async handleGetFootprint(
+    @MessageBody() payload: FootprintGetPayload,
+    @ConnectedSocket() _client: Socket
+  ): Promise<FootprintGetResponse> {
+    const projectPath = payload?.projectPath;
+    if (!projectPath || typeof projectPath !== 'string') {
+      return { entries: [], error: 'Invalid projectPath: must be a non-empty string' };
+    }
+    try {
+      this.logger.debug(`[footprint:get] projectPath=${projectPath}`);
+      const entries = await this.footprintService.getFootprint(projectPath);
+      return { entries };
+    } catch (error) {
+      this.logger.error('Error getting footprint:', error);
+      return { entries: [], error: extractErrorMessage(error, 'Failed to read footprint') };
+    }
+  }
+
+  /**
+   * Handle remove footprint request — delegate per-kind removal to the owning
+   * services, then broadcast footprint:changed so other windows re-fetch.
+   */
+  @SubscribeMessage(FootprintEvents.REMOVE)
+  async handleRemoveFootprint(
+    @MessageBody() payload: FootprintRemovePayload,
+    @ConnectedSocket() _client: Socket
+  ): Promise<FootprintRemoveResponse> {
+    const projectPath = payload?.projectPath;
+    if (!projectPath || typeof projectPath !== 'string') {
+      return {
+        success: false,
+        results: [],
+        error: 'Invalid projectPath: must be a non-empty string',
+      };
+    }
+    if (!Array.isArray(payload?.kinds) || payload.kinds.length === 0) {
+      return { success: false, results: [], error: 'Invalid kinds: must be a non-empty array' };
+    }
+    try {
+      this.logger.log(
+        `[footprint:remove] projectPath=${projectPath}, kinds=${payload.kinds.join(',')}`
+      );
+      const results = await this.footprintService.removeFootprint(projectPath, payload.kinds);
+
+      // Broadcast so other clients re-fetch the (now reduced) footprint.
+      this.server.emit(FootprintEvents.CHANGED, { projectPath });
+
+      const success = results.every(r => r.ok);
+      return { success, results };
+    } catch (error) {
+      this.logger.error('Error removing footprint:', error);
+      return { success: false, results: [], error: extractErrorMessage(error, 'Removal failed') };
+    }
+  }
+
+  /**
+   * Handle set passive mode request — when on, Omniscribe writes nothing into
+   * the project on session launch. Broadcasts footprint:changed.
+   */
+  @SkipThrottle()
+  @SubscribeMessage(FootprintEvents.SET_PASSIVE_MODE)
+  handleSetPassiveMode(
+    @MessageBody() payload: FootprintSetPassiveModePayload,
+    @ConnectedSocket() _client: Socket
+  ): FootprintSetPassiveModeResponse {
+    const projectPath = payload?.projectPath;
+    if (!projectPath || typeof projectPath !== 'string') {
+      return {
+        success: false,
+        enabled: false,
+        error: 'Invalid projectPath: must be a non-empty string',
+      };
+    }
+    if (typeof payload?.enabled !== 'boolean') {
+      return { success: false, enabled: false, error: 'Invalid enabled: must be a boolean' };
+    }
+    try {
+      this.logger.debug(
+        `[footprint:set-passive-mode] projectPath=${projectPath}, enabled=${payload.enabled}`
+      );
+      this.footprintService.setPassiveMode(projectPath, payload.enabled);
+
+      // Broadcast so other clients reflect the new passive-mode state.
+      this.server.emit(FootprintEvents.CHANGED, { projectPath });
+
+      return { success: true, enabled: payload.enabled };
+    } catch (error) {
+      this.logger.error('Error setting passive mode:', error);
+      return {
+        success: false,
+        enabled: false,
+        error: extractErrorMessage(error, 'Failed to set passive mode'),
+      };
+    }
+  }
+
+  /**
+   * Handle get passive mode request.
+   */
+  @SkipThrottle()
+  @SubscribeMessage(FootprintEvents.GET_PASSIVE_MODE)
+  handleGetPassiveMode(
+    @MessageBody() payload: FootprintGetPassiveModePayload,
+    @ConnectedSocket() _client: Socket
+  ): FootprintGetPassiveModeResponse {
+    const projectPath = payload?.projectPath;
+    if (!projectPath || typeof projectPath !== 'string') {
+      return { enabled: false, error: 'Invalid projectPath: must be a non-empty string' };
+    }
+    try {
+      this.logger.debug(`[footprint:get-passive-mode] projectPath=${projectPath}`);
+      return { enabled: this.footprintService.isPassiveMode(projectPath) };
+    } catch (error) {
+      this.logger.error('Error getting passive mode:', error);
+      return { enabled: false, error: extractErrorMessage(error, 'Failed to get passive mode') };
+    }
   }
 }

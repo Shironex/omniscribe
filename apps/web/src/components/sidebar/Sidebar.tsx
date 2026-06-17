@@ -20,6 +20,12 @@ interface SidebarProps {
   onReorderTabs?: (activeId: string, overId: string) => void;
   currentBranch: string;
   onTransitionEnd?: () => void;
+  /** Whether the attached side panel is open. */
+  sidePanelOpen?: boolean;
+  /** Toggle the attached side panel (Files / Source Control). */
+  onToggleSidePanel?: () => void;
+  /** Whether a project is active (the side-panel toggle is hidden otherwise). */
+  hasProject?: boolean;
 }
 
 export function Sidebar({
@@ -31,6 +37,9 @@ export function Sidebar({
   onReorderTabs,
   currentBranch,
   onTransitionEnd,
+  sidePanelOpen,
+  onToggleSidePanel,
+  hasProject,
 }: SidebarProps) {
   const collapsed = useAppUIStore(state => state.isSidebarCollapsed);
   const toggleSidebar = useAppUIStore(state => state.toggleSidebar);
@@ -59,7 +68,7 @@ export function Sidebar({
       <SidebarHeader collapsed={collapsed} onToggle={toggleSidebar} onNewProject={onNewTab} />
 
       {/* Separator */}
-      <div className="mx-3 h-px bg-sidebar-border/60" />
+      <div className="mx-3 h-px bg-sidebar-border" />
 
       <SidebarProjectList
         tabs={tabs}
@@ -70,7 +79,13 @@ export function Sidebar({
         onReorderTabs={onReorderTabs}
       />
 
-      <SidebarFooter currentBranch={currentBranch} collapsed={collapsed} />
+      <SidebarFooter
+        currentBranch={currentBranch}
+        collapsed={collapsed}
+        sidePanelOpen={sidePanelOpen}
+        onToggleSidePanel={onToggleSidePanel}
+        hasProject={hasProject}
+      />
     </div>
   );
 }

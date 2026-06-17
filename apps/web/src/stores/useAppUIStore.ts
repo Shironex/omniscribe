@@ -1,12 +1,23 @@
 import { create } from 'zustand';
 import { devtools } from './utils/devtools';
 
+/**
+ * Which surface the workspace pane (right column under the toolbar) shows.
+ * The three views are siblings selected by {@link WorkspaceTabs}:
+ *  - `'terminal'` — the pinned Terminal tab (session grids stay mounted).
+ *  - `'editor'`   — an open file (EditorPanel).
+ *  - `'settings'` — the full-pane SettingsView.
+ */
+export type ShellView = 'terminal' | 'editor' | 'settings';
+
 interface AppUIState {
   isHistoryOpen: boolean;
   isLaunchModalOpen: boolean;
   isDiffPanelOpen: boolean;
   diffPanelSessionId: string | null;
   isSidebarCollapsed: boolean;
+  /** Active workspace surface (terminal grid / editor / settings). */
+  shellView: ShellView;
 }
 
 interface AppUIActions {
@@ -20,18 +31,21 @@ interface AppUIActions {
   toggleDiffPanel: (sessionId: string) => void;
   toggleSidebar: () => void;
   setSidebarCollapsed: (collapsed: boolean) => void;
+  /** Switch the active workspace surface. */
+  setShellView: (view: ShellView) => void;
 }
 
 type AppUIStore = AppUIState & AppUIActions;
 
 export const useAppUIStore = create<AppUIStore>()(
   devtools(
-    set => ({
+    (set, get) => ({
       isHistoryOpen: false,
       isLaunchModalOpen: false,
       isDiffPanelOpen: false,
       diffPanelSessionId: null,
       isSidebarCollapsed: false,
+      shellView: 'terminal',
 
       toggleHistory: () => {
         set(
@@ -108,6 +122,11 @@ export const useAppUIStore = create<AppUIStore>()(
       setSidebarCollapsed: (collapsed: boolean) => {
         set({ isSidebarCollapsed: collapsed }, undefined, 'appUI/setSidebarCollapsed');
       },
+
+      setShellView: (view: ShellView) => {
+        if (get().shellView === view) return;
+        set({ shellView: view }, undefined, 'appUI/setShellView');
+      },
     }),
     { name: 'appUI' }
   )
@@ -118,3 +137,4 @@ export const selectIsLaunchModalOpen = (state: AppUIStore) => state.isLaunchModa
 export const selectIsDiffPanelOpen = (state: AppUIStore) => state.isDiffPanelOpen;
 export const selectDiffPanelSessionId = (state: AppUIStore) => state.diffPanelSessionId;
 export const selectIsSidebarCollapsed = (state: AppUIStore) => state.isSidebarCollapsed;
+export const selectShellView = (state: AppUIStore) => state.shellView;

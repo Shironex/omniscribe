@@ -1,9 +1,17 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { Server, Socket } from 'socket.io';
+
+// FootprintService transitively imports the MCP module barrel, which pulls in
+// electron-store → electron. Stub both so the gateway spec can load it.
+jest.mock('electron', () => ({ app: { getPath: jest.fn(() => '/mock/userData') } }));
+jest.mock('electron-store', () => ({ __esModule: true, default: class {} }));
+
 import { WorkspaceGateway } from './workspace.gateway';
 import { QuickActionService, QuickActionResult } from './quick-action.service';
 import { WorkspaceService, WorkspaceState } from './workspace.service';
+import { FootprintService } from './footprint.service';
+import { FootprintEvents } from '@omniscribe/shared';
 import type { QuickAction, ProjectTabDTO, UserPreferences } from '@omniscribe/shared';
 
 // ---------------------------------------------------------------------------
@@ -64,6 +72,7 @@ describe('WorkspaceGateway', () => {
   let gateway: WorkspaceGateway;
   let quickActionService: jest.Mocked<QuickActionService>;
   let workspaceService: jest.Mocked<WorkspaceService>;
+  let footprintService: jest.Mocked<FootprintService>;
   let mockServer: Server;
 
   beforeEach(async () => {
@@ -95,12 +104,20 @@ describe('WorkspaceGateway', () => {
       getPreferences: jest.fn().mockReturnValue({ theme: 'dark' }),
     } as unknown as jest.Mocked<WorkspaceService>;
 
+    footprintService = {
+      getFootprint: jest.fn().mockResolvedValue([]),
+      removeFootprint: jest.fn().mockResolvedValue([]),
+      setPassiveMode: jest.fn(),
+      isPassiveMode: jest.fn().mockReturnValue(false),
+    } as unknown as jest.Mocked<FootprintService>;
+
     const module: TestingModule = await Test.createTestingModule({
       imports: [ThrottlerModule.forRoot([])],
       providers: [
         WorkspaceGateway,
         { provide: QuickActionService, useValue: quickActionService },
         { provide: WorkspaceService, useValue: workspaceService },
+        { provide: FootprintService, useValue: footprintService },
       ],
     }).compile();
 
@@ -660,6 +677,103 @@ describe('WorkspaceGateway', () => {
       gateway.onAiPrompt(event as any);
 
       expect(mockServer.emit).toHaveBeenCalledWith('quickaction:prompt', event);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Footprint handlers
+  // -------------------------------------------------------------------------
+
+  describe('Footprint handlers', () => {
+    const projectPath = '/projects/app';
+    const client = createMockSocket();
+
+    describe('handleGetFootprint', () => {
+      it('returns the footprint entries from the service', async () => {
+        const entries = [
+          {
+            kind: 'mcp-config' as const,
+            path: `${projectPath}/.mcp.json`,
+            description: 'x',
+            count: 1,
+          },
+        ];
+        footprintService.getFootprint.mockResolvedValue(entries);
+
+        const res = await gateway.handleGetFootprint({ projectPath }, client);
+
+        expect(res).toEqual({ entries });
+        expect(footprintService.getFootprint).toHaveBeenCalledWith(projectPath);
+      });
+
+      it('rejects an invalid projectPath', async () => {
+        const res = await gateway.handleGetFootprint({ projectPath: '' }, client);
+        expect(res.error).toMatch(/Invalid projectPath/);
+        expect(footprintService.getFootprint).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('handleRemoveFootprint', () => {
+      it('delegates removal and broadcasts footprint:changed', async () => {
+        footprintService.removeFootprint.mockResolvedValue([{ kind: 'mcp-config', ok: true }]);
+
+        const res = await gateway.handleRemoveFootprint(
+          { projectPath, kinds: ['mcp-config'] },
+          client
+        );
+
+        expect(res.success).toBe(true);
+        expect(footprintService.removeFootprint).toHaveBeenCalledWith(projectPath, ['mcp-config']);
+        expect(mockServer.emit).toHaveBeenCalledWith(FootprintEvents.CHANGED, { projectPath });
+      });
+
+      it('reports success=false when any kind failed', async () => {
+        footprintService.removeFootprint.mockResolvedValue([
+          { kind: 'mcp-config', ok: true },
+          { kind: 'worktrees', ok: false, error: 'boom' },
+        ]);
+
+        const res = await gateway.handleRemoveFootprint(
+          { projectPath, kinds: ['mcp-config', 'worktrees'] },
+          client
+        );
+
+        expect(res.success).toBe(false);
+        expect(res.results).toHaveLength(2);
+      });
+
+      it('rejects an empty kinds array without touching the service', async () => {
+        const res = await gateway.handleRemoveFootprint({ projectPath, kinds: [] }, client);
+        expect(res.success).toBe(false);
+        expect(res.error).toMatch(/Invalid kinds/);
+        expect(footprintService.removeFootprint).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('passive mode handlers', () => {
+      it('sets passive mode and broadcasts footprint:changed', () => {
+        const res = gateway.handleSetPassiveMode({ projectPath, enabled: true }, client);
+
+        expect(res).toEqual({ success: true, enabled: true });
+        expect(footprintService.setPassiveMode).toHaveBeenCalledWith(projectPath, true);
+        expect(mockServer.emit).toHaveBeenCalledWith(FootprintEvents.CHANGED, { projectPath });
+      });
+
+      it('rejects a non-boolean enabled flag', () => {
+        const res = gateway.handleSetPassiveMode(
+          { projectPath, enabled: 'yes' as unknown as boolean },
+          client
+        );
+        expect(res.success).toBe(false);
+        expect(footprintService.setPassiveMode).not.toHaveBeenCalled();
+      });
+
+      it('returns the current passive-mode state', () => {
+        footprintService.isPassiveMode.mockReturnValue(true);
+        const res = gateway.handleGetPassiveMode({ projectPath }, client);
+        expect(res).toEqual({ enabled: true });
+        expect(footprintService.isPassiveMode).toHaveBeenCalledWith(projectPath);
+      });
     });
   });
 });

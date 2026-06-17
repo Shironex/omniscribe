@@ -3,6 +3,7 @@ import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import { SearchAddon } from '@xterm/addon-search';
 import { createLogger } from '@omniscribe/shared';
+import { requestWebgl } from '@/lib/webglPool';
 
 const logger = createLogger('TerminalInit');
 
@@ -12,42 +13,32 @@ export interface LoadedAddons {
 }
 
 /**
- * Load WebGL rendering after the terminal opens. The addon is split off
- * the eager bundle: it pulls in shaders + GL boilerplate (~5–20 KB gzip)
- * and is best-effort anyway, so a tiny delay before WebGL kicks in is
- * fine — the canvas renderer paints meanwhile.
+ * Request WebGL acceleration for the terminal through the shared pool. Browsers
+ * cap live WebGL contexts, so the pool attaches at most MAX_WEBGL_CONTEXTS
+ * addons across all terminals — the rest run on xterm's default renderer. The
+ * addon module is code-split and loaded lazily inside the pool; the canvas
+ * renderer paints meanwhile. See `lib/webglPool.ts`.
  */
-function loadWebglAsync(terminal: Terminal): void {
-  void import('@xterm/addon-webgl')
-    .then(mod => {
-      try {
-        const webglAddon = new mod.WebglAddon();
-        webglAddon.onContextLoss(() => {
-          webglAddon.dispose();
-        });
-        terminal.loadAddon(webglAddon);
-        logger.debug('WebGL addon loaded successfully');
-      } catch {
-        logger.debug('WebGL addon failed, using canvas fallback');
-      }
-    })
-    .catch(() => {
-      // Module-load failure (offline cache miss, etc.) — canvas fallback continues.
-      logger.debug('WebGL addon dynamic import failed, using canvas fallback');
-    });
+function loadWebglAsync(terminal: Terminal, sessionId: number, isVisible: boolean): void {
+  requestWebgl(String(sessionId), terminal, isVisible);
 }
 
 /**
  * Load all addons onto a Terminal instance and open it in the container.
- * Includes FitAddon, WebLinksAddon, SearchAddon, and WebGL (loaded
- * asynchronously with canvas fallback).
+ * Includes FitAddon, WebLinksAddon, SearchAddon, and pooled WebGL (attached
+ * via the shared WebGL pool, with default-renderer fallback).
+ *
+ * `isVisible` seeds the pool's LRU bookkeeping — a terminal can initialize
+ * while its project tab is hidden (inactive grids stay mounted), so we must not
+ * assume freshly-opened terminals are visible.
  *
  * Factory function — no React hooks. Performs terminal DOM setup as a side effect.
  */
 export function loadTerminalAddons(
   terminal: Terminal,
   container: HTMLElement,
-  sessionId: number
+  sessionId: number,
+  isVisible = true
 ): LoadedAddons {
   const fitAddon = new FitAddon();
   // URI is validated by Electron's setWindowOpenHandler in the main process
@@ -64,8 +55,8 @@ export function loadTerminalAddons(
   logger.info('Terminal opened for session', sessionId);
   terminal.open(container);
 
-  // Defer WebGL — see loadWebglAsync above for the why.
-  loadWebglAsync(terminal);
+  // Route WebGL through the shared pool — see loadWebglAsync above for the why.
+  loadWebglAsync(terminal, sessionId, isVisible);
 
   return { fitAddon, searchAddon };
 }

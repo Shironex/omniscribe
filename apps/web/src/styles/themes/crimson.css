@@ -1,0 +1,110 @@
+/* Crimson Theme — wine-dark shell × ruby-crimson primary, gold accent */
+
+:root.crimson {
+  /* Backgrounds */
+  --background: oklch(0.12 0.03 20);
+  --background-50: oklch(0.12 0.03 20 / 0.5);
+  --background-80: oklch(0.12 0.03 20 / 0.8);
+
+  /* Text */
+  --foreground: oklch(0.95 0.01 20);
+  --foreground-secondary: oklch(0.72 0.025 20);
+  --foreground-muted: oklch(0.55 0.025 20);
+
+  /* Surfaces */
+  --card: oklch(0.16 0.035 20);
+  --card-foreground: oklch(0.95 0.01 20);
+  --popover: oklch(0.1 0.03 20);
+  --popover-foreground: oklch(0.95 0.01 20);
+
+  /* Brand — ruby crimson */
+  --primary: oklch(0.64 0.21 18);
+  --primary-foreground: oklch(0.98 0.01 20);
+  --brand-400: oklch(0.68 0.19 18);
+  --brand-500: oklch(0.64 0.21 18);
+  --brand-600: oklch(0.57 0.22 18);
+
+  /* Muted/secondary */
+  --secondary: oklch(0.18 0.035 20);
+  --secondary-foreground: oklch(0.95 0.01 20);
+  --muted: oklch(0.22 0.03 20);
+  --muted-foreground: oklch(0.62 0.025 20);
+  --accent: oklch(0.79 0.13 70);
+  --accent-foreground: oklch(0.12 0.03 20);
+
+  /* Borders */
+  --destructive: oklch(0.62 0.22 25);
+  --border: oklch(0.26 0.03 20);
+  --border-glass: oklch(1 0 0 / 0.08);
+  --input: oklch(0.14 0.03 20);
+  --ring: oklch(0.64 0.21 18);
+
+  /* Charts */
+  --chart-1: oklch(0.64 0.21 18);
+  --chart-2: oklch(0.79 0.13 70);
+  --chart-3: oklch(0.65 0.2 145);
+  --chart-4: oklch(0.66 0.13 250);
+  --chart-5: oklch(0.72 0.18 320);
+
+  /* Sidebar */
+  --sidebar: oklch(0.1 0.03 20 / 0.6);
+  --sidebar-foreground: oklch(0.95 0.01 20);
+  --sidebar-primary: oklch(0.64 0.21 18);
+  --sidebar-primary-foreground: oklch(0.98 0.01 20);
+  --sidebar-accent: oklch(1 0 0 / 0.05);
+  --sidebar-accent-foreground: oklch(0.95 0.01 20);
+  --sidebar-border: oklch(1 0 0 / 0.08);
+  --sidebar-ring: oklch(0.64 0.21 18);
+
+  /* Actions */
+  --action-view: oklch(0.64 0.21 18);
+  --action-view-hover: oklch(0.6 0.22 18);
+  --action-followup: oklch(0.79 0.13 70);
+  --action-followup-hover: oklch(0.74 0.15 70);
+  --action-commit: oklch(0.6 0.18 145);
+  --action-commit-hover: oklch(0.55 0.2 145);
+  --action-verify: oklch(0.6 0.18 145);
+  --action-verify-hover: oklch(0.55 0.2 145);
+
+  --running-indicator: oklch(0.64 0.21 18);
+  --running-indicator-text: oklch(0.7 0.19 18);
+
+  /* Status */
+  --status-success: oklch(0.65 0.2 145);
+  --status-success-bg: oklch(0.65 0.2 145 / 0.2);
+  --status-warning: oklch(0.79 0.13 70);
+  --status-warning-bg: oklch(0.79 0.13 70 / 0.2);
+  --status-error: oklch(0.62 0.24 28);
+  --status-error-bg: oklch(0.62 0.24 28 / 0.2);
+  --status-info: oklch(0.66 0.13 250);
+  --status-info-bg: oklch(0.66 0.13 250 / 0.2);
+  --status-pending: oklch(0.79 0.13 70);
+  --status-pending-bg: oklch(0.79 0.13 70 / 0.2);
+  --status-accent: oklch(0.72 0.18 320);
+  --status-accent-bg: oklch(0.72 0.18 320 / 0.2);
+  --status-backlog: oklch(0.58 0.02 20);
+  --status-in-progress: oklch(0.79 0.13 70);
+  --status-waiting: oklch(0.74 0.15 60);
+
+  /* Shadows */
+  --shadow-xs: 0 1px 2px rgba(18, 6, 8, 0.4);
+  --shadow-sm: 0 1px 3px rgba(18, 6, 8, 0.45), 0 1px 2px rgba(18, 6, 8, 0.35);
+  --shadow-md: 0 4px 6px -1px rgba(18, 6, 8, 0.45), 0 2px 4px -1px rgba(18, 6, 8, 0.35);
+  --shadow-lg: 0 10px 15px -3px rgba(18, 6, 8, 0.5), 0 4px 6px -2px rgba(18, 6, 8, 0.3);
+  --shadow-xl: 0 20px 25px -5px rgba(18, 6, 8, 0.55), 0 10px 10px -5px rgba(18, 6, 8, 0.35);
+
+  /* Swatch quartet exposed for the appearance grid */
+  --swatch-1: #1f1013;
+  --swatch-2: #2b161a;
+  --swatch-3: #e84459;
+  --swatch-4: #e4ac57;
+}
+
+.crimson .content-bg {
+  background: linear-gradient(
+    135deg,
+    oklch(0.12 0.03 20),
+    oklch(0.16 0.035 20),
+    oklch(0.12 0.03 20)
+  );
+}

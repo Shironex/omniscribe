@@ -41,6 +41,7 @@ coverage/
 .nyc_output/
 playwright-report/
 test-results/
+.playwright-mcp/
 
 # Electron
 electron-builder.env

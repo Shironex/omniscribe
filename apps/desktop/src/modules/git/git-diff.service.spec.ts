@@ -269,7 +269,7 @@ describe('GitDiffService', () => {
       expect(result[0].hunks[0].lines.every(l => l.type === 'deletion')).toBe(true);
     });
 
-    it('should skip "no newline at end of file" markers', () => {
+    it('should not push "no newline at end of file" markers as content lines', () => {
       const rawDiff = [
         'diff --git a/file.ts b/file.ts',
         'index abc..def 100644',
@@ -289,6 +289,115 @@ describe('GitDiffService', () => {
       expect(result[0].hunks[0].lines).toHaveLength(2);
       expect(result[0].hunks[0].lines[0].type).toBe('deletion');
       expect(result[0].hunks[0].lines[1].type).toBe('addition');
+      // Marker content must never leak into the line list.
+      expect(result[0].hunks[0].lines.some(l => l.content.includes('No newline'))).toBe(false);
+    });
+
+    it('sets both side flags when the marker follows a deletion and an addition', () => {
+      const rawDiff = [
+        'diff --git a/file.ts b/file.ts',
+        '--- a/file.ts',
+        '+++ b/file.ts',
+        '@@ -1 +1 @@',
+        '-old content',
+        '\\ No newline at end of file',
+        '+new content',
+        '\\ No newline at end of file',
+      ].join('\n');
+
+      const hunk = service.parseUnifiedDiff(rawDiff)[0].hunks[0];
+      expect(hunk.oldNoNewlineAtEof).toBe(true);
+      expect(hunk.newNoNewlineAtEof).toBe(true);
+    });
+
+    it('sets only the old-side flag when the marker follows the last deletion (new side keeps newline)', () => {
+      // Old file had no trailing newline; new content adds one (single trailing marker on old side).
+      const rawDiff = [
+        'diff --git a/file.ts b/file.ts',
+        '--- a/file.ts',
+        '+++ b/file.ts',
+        '@@ -1 +1 @@',
+        '-old content',
+        '\\ No newline at end of file',
+        '+old content',
+      ].join('\n');
+
+      const hunk = service.parseUnifiedDiff(rawDiff)[0].hunks[0];
+      expect(hunk.oldNoNewlineAtEof).toBe(true);
+      expect(hunk.newNoNewlineAtEof).toBeFalsy();
+    });
+
+    it('sets only the new-side flag when the marker follows the last addition (old side keeps newline)', () => {
+      // Old file had a trailing newline; new content strips it (single trailing marker on new side).
+      const rawDiff = [
+        'diff --git a/file.ts b/file.ts',
+        '--- a/file.ts',
+        '+++ b/file.ts',
+        '@@ -1 +1 @@',
+        '-old content',
+        '+old content',
+        '\\ No newline at end of file',
+      ].join('\n');
+
+      const hunk = service.parseUnifiedDiff(rawDiff)[0].hunks[0];
+      expect(hunk.newNoNewlineAtEof).toBe(true);
+      expect(hunk.oldNoNewlineAtEof).toBeFalsy();
+    });
+
+    it('sets both side flags when the marker follows a trailing context line', () => {
+      // A pure addition above an unchanged final line that lacks a newline on both sides.
+      const rawDiff = [
+        'diff --git a/file.ts b/file.ts',
+        '--- a/file.ts',
+        '+++ b/file.ts',
+        '@@ -1 +1,2 @@',
+        '+inserted',
+        ' last line no newline',
+        '\\ No newline at end of file',
+      ].join('\n');
+
+      const hunk = service.parseUnifiedDiff(rawDiff)[0].hunks[0];
+      expect(hunk.oldNoNewlineAtEof).toBe(true);
+      expect(hunk.newNoNewlineAtEof).toBe(true);
+    });
+
+    it('leaves both flags falsy when no marker is present', () => {
+      const rawDiff = [
+        'diff --git a/file.ts b/file.ts',
+        '--- a/file.ts',
+        '+++ b/file.ts',
+        '@@ -1 +1 @@',
+        '-old content',
+        '+new content',
+      ].join('\n');
+
+      const hunk = service.parseUnifiedDiff(rawDiff)[0].hunks[0];
+      expect(hunk.oldNoNewlineAtEof).toBeFalsy();
+      expect(hunk.newNoNewlineAtEof).toBeFalsy();
+    });
+
+    it('tolerates CRLF line endings around the no-newline marker', () => {
+      const rawDiff = [
+        'diff --git a/file.ts b/file.ts',
+        '--- a/file.ts',
+        '+++ b/file.ts',
+        '@@ -1 +1 @@',
+        '-old content\r',
+        '+new content\r',
+        '\\ No newline at end of file\r',
+      ].join('\n');
+
+      const file = service.parseUnifiedDiff(rawDiff)[0];
+      const hunk = file.hunks[0];
+      // The marker is recognized despite the trailing CR and attributed to the new side.
+      expect(hunk.newNoNewlineAtEof).toBe(true);
+      expect(hunk.oldNoNewlineAtEof).toBeFalsy();
+      // Content bytes (including the CR that is genuinely part of a CRLF file's
+      // line) are preserved so a reconstructed patch round-trips byte-for-byte.
+      expect(hunk.lines[0]).toMatchObject({ type: 'deletion', content: 'old content\r' });
+      expect(hunk.lines[1]).toMatchObject({ type: 'addition', content: 'new content\r' });
+      // Marker line itself is never a content line.
+      expect(hunk.lines).toHaveLength(2);
     });
 
     it('should handle mixed additions and deletions with correct line numbering', () => {

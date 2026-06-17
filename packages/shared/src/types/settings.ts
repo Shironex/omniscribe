@@ -8,8 +8,9 @@ import type { AiMode } from './session';
  * Theme - Curated set of built-in color themes.
  *
  * The catalog was simplified from 41 alphabetical themes (21 dark + 20 light)
- * down to 8 hand-tuned palettes. Persisted IDs from the old catalog are
- * remapped via {@link LEGACY_THEME_MIGRATION} on first load.
+ * down to a curated set of hand-tuned palettes (currently 14: 13 dark + 1 light).
+ * Persisted IDs from the old catalog are remapped via
+ * {@link LEGACY_THEME_MIGRATION} on first load.
  */
 export type Theme =
   | 'forge'
@@ -21,7 +22,11 @@ export type Theme =
   | 'gruvbox'
   | 'dracula'
   | 'plum'
-  | 'abyss';
+  | 'abyss'
+  | 'obsidian'
+  | 'crimson'
+  | 'tokyonight'
+  | 'matcha';
 
 /**
  * Theme metadata used by both the renderer (gradient swatches) and any
@@ -91,13 +96,37 @@ export const BUILT_IN_THEMES: readonly ThemeMeta[] = [
     value: 'plum',
     label: 'Plum',
     isDark: true,
-    swatch: { bg: '#1a161f', surface: '#241d2b', primary: '#d46cb1', accent: '#5b9cf2' },
+    swatch: { bg: '#1a161f', surface: '#241d2b', primary: '#d46cb1', accent: '#c061c4' },
   },
   {
     value: 'abyss',
     label: 'Abyss',
     isDark: true,
     swatch: { bg: '#0a1d1f', surface: '#0f292c', primary: '#5fc7bf', accent: '#e89143' },
+  },
+  {
+    value: 'obsidian',
+    label: 'Obsidian',
+    isDark: true,
+    swatch: { bg: '#040506', surface: '#131417', primary: '#3fc1e6', accent: '#7f8894' },
+  },
+  {
+    value: 'crimson',
+    label: 'Crimson',
+    isDark: true,
+    swatch: { bg: '#1f1013', surface: '#2b161a', primary: '#e84459', accent: '#e4ac57' },
+  },
+  {
+    value: 'tokyonight',
+    label: 'Tokyo Night',
+    isDark: true,
+    swatch: { bg: '#1a1b26', surface: '#24283b', primary: '#7aa2f7', accent: '#bb9af7' },
+  },
+  {
+    value: 'matcha',
+    label: 'Matcha',
+    isDark: true,
+    swatch: { bg: '#0f1a13', surface: '#17251b', primary: '#34c389', accent: '#dac987' },
   },
 ];
 
@@ -119,7 +148,6 @@ export const LEGACY_THEME_MIGRATION = {
   // ── Carbon-ish neutrals ───────────────────────────────────────────
   gray: 'carbon',
   onedark: 'carbon',
-  tokyonight: 'iceberg',
   // ── Warm / red palettes → Ember ───────────────────────────────────
   red: 'ember',
   sunset: 'ember',
@@ -132,7 +160,6 @@ export const LEGACY_THEME_MIGRATION = {
   solarized: 'iceberg',
   // ── Greens → Nord ─────────────────────────────────────────────────
   forest: 'nord',
-  matcha: 'nord',
   // ── Yellow/orange dark → Gruvbox ──────────────────────────────────
   'ayu-dark': 'gruvbox',
   // ── Light themes → Paper ──────────────────────────────────────────
@@ -172,6 +199,54 @@ export interface ChromeSettings {
 export const DEFAULT_CHROME_SETTINGS: ChromeSettings = {
   showStatusBar: true,
 };
+
+/**
+ * Background surface kind for the appearance "blend" layer.
+ * - 'none': plain theme background (default)
+ * - 'image': user-supplied image rendered as a translucent overlay
+ */
+export type BackgroundKind = 'none' | 'image';
+
+/**
+ * Appearance background ("blend") settings. The image itself is stored
+ * in IndexedDB and referenced by `imageId`; only this small config blob
+ * is persisted to localStorage so the surface can paint on first frame.
+ */
+export interface AppearanceBackgroundSettings {
+  kind: BackgroundKind;
+  /** IndexedDB record id of the active background image, if any. */
+  imageId: string | null;
+  /** User-facing opacity 0..1. Rendered opacity is capped via {@link BG_OPACITY_RENDER_FACTOR}. */
+  opacity: number;
+  /** Blur radius in px applied to the background image (0 = off). */
+  blur: number;
+}
+
+/**
+ * Hard cap factor between the user's opacity slider and the rendered
+ * overlay opacity, so the background can never fully obscure the UI
+ * (rendered = opacity × factor, i.e. max 50%).
+ */
+export const BG_OPACITY_RENDER_FACTOR = 0.5;
+
+export const DEFAULT_APPEARANCE_BACKGROUND: AppearanceBackgroundSettings = {
+  kind: 'none',
+  imageId: null,
+  opacity: 0.5,
+  blur: 0,
+};
+
+/**
+ * Native window background effect.
+ * - 'none': opaque themed window (default)
+ * - 'vibrancy': macOS NSVisualEffectView blur of the desktop behind the window
+ * - 'acrylic': Windows 11 acrylic material
+ * Linux has no native effect; the renderer must treat unsupported
+ * effects as 'none'.
+ */
+export type WindowEffect = 'none' | 'vibrancy' | 'acrylic';
+
+export const DEFAULT_WINDOW_EFFECT: WindowEffect = 'none';
 
 /**
  * Claude CLI Status

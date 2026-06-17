@@ -168,8 +168,20 @@ export class GitDiffService {
       let currentHunk: GitDiffHunk | null = null;
       let oldLineNum = 0;
       let newLineNum = 0;
+      // Track the kind of the most-recently-emitted body line so a following
+      // `\ No newline at end of file` marker can be attributed to the right
+      // side(s). git prints the marker immediately AFTER the line it qualifies:
+      // after a '-' line it applies to the old side, after a '+' line the new
+      // side, and after a ' ' context line to BOTH (the final unchanged line is
+      // at EOF on each side).
+      let lastBodyType: GitDiffLine['type'] | null = null;
 
-      for (const line of lines) {
+      for (const rawLine of lines) {
+        // Tolerate CRLF diffs: each `section.split('\n')` line may retain a
+        // trailing '\r'. Strip it only for control-line detection; body content
+        // is sliced from the raw line so genuine content bytes are preserved.
+        const line = rawLine.endsWith('\r') ? rawLine.slice(0, -1) : rawLine;
+
         const hunkHeaderMatch = line.match(/^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@(.*)$/);
         if (hunkHeaderMatch) {
           if (currentHunk) hunks.push(currentHunk);
@@ -183,35 +195,54 @@ export class GitDiffService {
             header: hunkHeaderMatch[5].trim(),
             lines: [],
           };
+          lastBodyType = null;
           continue;
         }
 
         if (!currentHunk) continue;
 
-        if (line.startsWith('+')) {
+        // "\ No newline at end of file" — git's sentinel that the PRECEDING
+        // line's side(s) end without a trailing newline. Attribute it to the
+        // current hunk's side flags; never push it as a content line so it can't
+        // leak into the rendered diff text.
+        if (line.startsWith('\\')) {
+          if (lastBodyType === 'deletion') {
+            currentHunk.oldNoNewlineAtEof = true;
+          } else if (lastBodyType === 'addition') {
+            currentHunk.newNoNewlineAtEof = true;
+          } else if (lastBodyType === 'context') {
+            currentHunk.oldNoNewlineAtEof = true;
+            currentHunk.newNoNewlineAtEof = true;
+          }
+          continue;
+        }
+
+        if (rawLine.startsWith('+')) {
           const diffLine: GitDiffLine = {
             type: 'addition',
-            content: line.slice(1),
+            content: rawLine.slice(1),
             newLineNumber: newLineNum++,
           };
           currentHunk.lines.push(diffLine);
-        } else if (line.startsWith('-')) {
+          lastBodyType = 'addition';
+        } else if (rawLine.startsWith('-')) {
           const diffLine: GitDiffLine = {
             type: 'deletion',
-            content: line.slice(1),
+            content: rawLine.slice(1),
             oldLineNumber: oldLineNum++,
           };
           currentHunk.lines.push(diffLine);
-        } else if (line.startsWith(' ')) {
+          lastBodyType = 'deletion';
+        } else if (rawLine.startsWith(' ')) {
           const diffLine: GitDiffLine = {
             type: 'context',
-            content: line.slice(1),
+            content: rawLine.slice(1),
             oldLineNumber: oldLineNum++,
             newLineNumber: newLineNum++,
           };
           currentHunk.lines.push(diffLine);
+          lastBodyType = 'context';
         }
-        // Skip other lines (e.g. "\ No newline at end of file")
       }
       if (currentHunk) hunks.push(currentHunk);
 

@@ -4,6 +4,8 @@ import { ContentToolbar } from '@/components/sidebar/ContentToolbar';
 import { IdleLandingView } from '@/components/shared/IdleLandingView';
 import { WelcomeView } from '@/components/shared/WelcomeView';
 import { PersistentProjectGrid } from '@/components/terminal/PersistentProjectGrid';
+import { SidePanel, useSidePanel } from '@/components/shell';
+import { EditorPanel, CloseConfirmDialog, useDirtyClose } from '@/components/editor';
 import { useAppInitialization } from '@/hooks/useAppInitialization';
 import { useWorkspaceTabs } from '@/hooks/useWorkspaceTabs';
 import { useWorkspacePreferences } from '@/hooks/useWorkspacePreferences';
@@ -16,11 +18,13 @@ import { useQuickActionExecution } from '@/hooks/useQuickActionExecution';
 import { useUpdateToast } from '@/hooks/useUpdateToast';
 import { useNotificationNavigation } from '@/hooks/useNotificationNavigation';
 import { useSessionOrderSync } from '@/hooks/useSessionOrderSync';
+import { useWindowEffect } from '@/hooks/useWindowEffect';
 import { useSessionActions } from '@/hooks/useSessionActions';
 import { useSessionStore, selectProjectPaths } from '@/stores/useSessionStore';
 import { useWorkspaceStore } from '@/stores/useWorkspaceStore';
 import { useSettingsStore } from '@/stores/useSettingsStore';
-import { useAppUIStore } from '@/stores/useAppUIStore';
+import { useAppUIStore, selectShellView } from '@/stores/useAppUIStore';
+import { useEditorStore, selectHasOpenFiles } from '@/stores/useEditorStore';
 import { DEFAULT_WORKTREE_SETTINGS } from '@omniscribe/shared';
 import { IS_ELECTRON } from '@/lib/platform';
 import { cn } from '@/lib/utils';
@@ -50,6 +54,7 @@ function App() {
   useNotificationNavigation();
   useWorkspacePreferences();
   useSessionOrderSync();
+  useWindowEffect();
 
   const {
     tabs,
@@ -125,6 +130,20 @@ function App() {
   const isDiffPanelOpen = useAppUIStore(state => state.isDiffPanelOpen);
   const isLaunchModalOpen = useAppUIStore(state => state.isLaunchModalOpen);
   const openLaunchModal = useAppUIStore(state => state.openLaunchModal);
+
+  // Active workspace surface (terminal grids / editor / settings).
+  const shellView = useAppUIStore(selectShellView);
+
+  // Whether any editor file is open (keeps EditorPanel mounted while files exist
+  // so its fs:changed listener stays warm even when the editor isn't shown).
+  const hasOpenFiles = useEditorStore(selectHasOpenFiles);
+
+  // Side panel (Files / Source Control) open state, lifted so the rail footer
+  // toggle and the panel itself share it.
+  const sidePanel = useSidePanel();
+
+  // Shared dirty-close guard — one flow for the strip × and editor Cmd+W.
+  const dirtyClose = useDirtyClose();
 
   // Settings modal open state (for lazy-load gating)
   const isSettingsOpen = useSettingsStore(state => state.isOpen);
@@ -205,6 +224,15 @@ function App() {
     }
   }, [activeProjectPath, dispatchRefitAfterLayout]);
 
+  // Returning to the terminal surface un-hides the grids; refit so terminals
+  // recompute dimensions against the now-visible container.
+  useEffect(() => {
+    if (shellView === 'terminal') {
+      const rafId = dispatchRefitAfterLayout();
+      return () => cancelAnimationFrame(rafId);
+    }
+  }, [shellView, dispatchRefitAfterLayout]);
+
   return (
     <div
       data-testid="app-ready"
@@ -213,7 +241,7 @@ function App() {
         IS_ELECTRON && 'rounded-t-[10px]'
       )}
     >
-      {/* Left sidebar */}
+      {/* Left sidebar — narrow project rail. */}
       <Sidebar
         tabs={tabs}
         activeTabId={activeTabId}
@@ -223,6 +251,17 @@ function App() {
         onReorderTabs={handleReorderTabs}
         currentBranch={currentBranch}
         onTransitionEnd={handleSidebarTransitionEnd}
+        sidePanelOpen={sidePanel.open}
+        onToggleSidePanel={sidePanel.toggle}
+        hasProject={!!activeProjectPath}
+      />
+
+      {/* Attached side panel (Files / Source Control) — full-height, left of the
+          toolbar so rail + panel read as one sidebar unit. */}
+      <SidePanel
+        projectPath={activeProjectPath}
+        open={sidePanel.open}
+        onOpenChange={sidePanel.setOpen}
       />
 
       {/* Right content area */}
@@ -241,62 +280,84 @@ function App() {
           isLaunching={isLaunching}
           hasActiveSessions={hasActiveSessions}
           gitHubUrl={gitHubUrl}
+          onRequestCloseFile={dirtyClose.requestClose}
         />
 
         <main className="flex-1 flex overflow-hidden bg-background">
-          {/* Main content area — relative container for stacked persistent grids */}
+          {/* Workspace pane — a single relative container hosting the three
+              sibling surfaces (terminal grids / editor / settings). The active
+              surface is selected by shellView; the others stay mounted (hidden
+              via CSS) so terminals and editor listeners stay warm. */}
           <div className="flex-1 min-w-0 relative">
-            {/* Persistent terminal grids for all projects with sessions */}
-            {projectPathsWithGrids.map(projectPath => {
-              const isActiveGrid = projectPath === activeProjectPath;
-              return (
-                <PersistentProjectGrid
-                  key={projectPath}
-                  projectPath={projectPath}
-                  isActive={isActiveGrid}
-                  preLaunchSlots={isActiveGrid ? preLaunchSlots : undefined}
-                  launchingSlotIds={isActiveGrid ? launchingSlotIds : undefined}
-                  branches={isActiveGrid ? branches : undefined}
-                  worktreeMode={isActiveGrid ? worktreeMode : undefined}
-                  quickActions={isActiveGrid ? quickActionsForTerminal : undefined}
-                  onAddSlot={handleAddSession}
-                  onOpenLaunchModal={openLaunchModal}
-                  onRemoveSlot={handleRemoveSlot}
-                  onUpdateSlot={handleUpdateSlot}
-                  onLaunch={handleLaunchSlot}
-                  onKill={handleKillSession}
-                  onSessionClose={handleSessionClose}
-                  onQuickAction={handleQuickAction}
-                  onResume={handleResume}
-                  onOpenInEditor={handleOpenInEditor}
-                />
-              );
-            })}
-
-            {/* Overlay views shown on top of grids when appropriate */}
-            {activeProjectPath ? (
-              !hasContent && (
-                <div className="absolute inset-0 z-20">
-                  <IdleLandingView
-                    projectPath={activeProjectPath}
-                    onAddSession={handleAddSession}
+            {/* Terminal surface: stacked persistent grids + idle/welcome overlays.
+                Hidden (not unmounted) when another surface is active. */}
+            <div
+              className={cn('h-full w-full min-w-0 relative', shellView !== 'terminal' && 'hidden')}
+            >
+              {projectPathsWithGrids.map(projectPath => {
+                const isActiveGrid = projectPath === activeProjectPath;
+                return (
+                  <PersistentProjectGrid
+                    key={projectPath}
+                    projectPath={projectPath}
+                    isActive={isActiveGrid}
+                    preLaunchSlots={isActiveGrid ? preLaunchSlots : undefined}
+                    launchingSlotIds={isActiveGrid ? launchingSlotIds : undefined}
+                    branches={isActiveGrid ? branches : undefined}
+                    worktreeMode={isActiveGrid ? worktreeMode : undefined}
+                    quickActions={isActiveGrid ? quickActionsForTerminal : undefined}
+                    onAddSlot={handleAddSession}
                     onOpenLaunchModal={openLaunchModal}
+                    onRemoveSlot={handleRemoveSlot}
+                    onUpdateSlot={handleUpdateSlot}
+                    onLaunch={handleLaunchSlot}
+                    onKill={handleKillSession}
+                    onSessionClose={handleSessionClose}
+                    onQuickAction={handleQuickAction}
+                    onResume={handleResume}
+                    onOpenInEditor={handleOpenInEditor}
                   />
-                </div>
-              )
-            ) : (
-              <WelcomeView
-                onOpenProject={handleSelectDirectory}
-                onSelectProject={handleSelectTab}
-              />
+                );
+              })}
+
+              {/* Overlay views shown on top of grids when appropriate */}
+              {activeProjectPath ? (
+                !hasContent && (
+                  <div className="absolute inset-0 z-20">
+                    <IdleLandingView
+                      projectPath={activeProjectPath}
+                      onAddSession={handleAddSession}
+                      onOpenLaunchModal={openLaunchModal}
+                    />
+                  </div>
+                )
+              ) : (
+                <WelcomeView
+                  onOpenProject={handleSelectDirectory}
+                  onSelectProject={handleSelectTab}
+                />
+              )}
+            </div>
+
+            {/* Editor surface: kept mounted while files exist so its listeners
+                stay warm; hidden unless the editor is the active surface. */}
+            {hasOpenFiles && (
+              <div className={cn('absolute inset-0 z-10', shellView !== 'editor' && 'hidden')}>
+                <EditorPanel onRequestClose={dirtyClose.requestClose} />
+              </div>
             )}
 
-            {/* Settings view replaces the workspace pane while open. Mounted
-                here so the project rail + top toolbar stay visible. */}
+            {/* Settings surface — fills the pane (absolute inset-0 z-30), covering
+                the hidden grid. Kept MOUNTED while settings is open so its internal
+                navigation state survives switching to another tab; hidden via CSS
+                when the settings view isn't the active surface so clicking the
+                Terminal / file tabs reveals the workspace beneath it. */}
             {isSettingsOpen && (
-              <Suspense fallback={null}>
-                <SettingsView />
-              </Suspense>
+              <div className={cn('absolute inset-0 z-30', shellView !== 'settings' && 'hidden')}>
+                <Suspense fallback={null}>
+                  <SettingsView />
+                </Suspense>
+              </div>
             )}
           </div>
 
@@ -315,6 +376,15 @@ function App() {
           )}
         </main>
       </div>
+
+      {/* Shared dirty-close confirmation — one dialog for the strip × and the
+          editor-scoped Cmd/Ctrl+W. */}
+      <CloseConfirmDialog
+        fileName={dirtyClose.pendingFileName}
+        onSave={dirtyClose.handleConfirmSave}
+        onDiscard={dirtyClose.handleConfirmDiscard}
+        onCancel={dirtyClose.handleConfirmCancel}
+      />
 
       {isLaunchModalOpen && (
         <Suspense fallback={null}>

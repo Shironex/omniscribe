@@ -5,6 +5,8 @@ import * as os from 'os';
 import { TERM_PROGRAM, createLogger, normalizePath } from '@omniscribe/shared';
 import { InternalTerminalEvents } from '../shared/events';
 import { buildSafeEnv } from '../shared/env-utils';
+import { OscAgentDetector, OscTransition } from './osc-agent-detector';
+import { ShellIntegrationService } from './shell-integration.service';
 
 // Performance constants
 const OUTPUT_THROTTLE_MS = 32; // ~30fps — frontend RAF batches at 60fps anyway
@@ -26,6 +28,8 @@ interface PtySession {
   writeChain: Promise<void>;
   /** Whether the PTY stream is paused (backpressure) */
   paused: boolean;
+  /** Per-PTY OSC agent-status detector, fed the raw data stream pre-batching */
+  oscDetector: OscAgentDetector;
 }
 
 @Injectable()
@@ -35,8 +39,13 @@ export class TerminalService implements OnModuleDestroy {
   private nextSessionId = 1;
   private readonly isWindows = os.platform() === 'win32';
   private isShuttingDown = false;
+  /** Timestamp of the last OSC-detector error warning (for rate limiting) */
+  private lastOscWarnAt = 0;
 
-  constructor(private readonly eventEmitter: EventEmitter2) {}
+  constructor(
+    private readonly eventEmitter: EventEmitter2,
+    private readonly shellIntegration: ShellIntegrationService
+  ) {}
 
   /**
    * Spawn a new terminal session with a shell
@@ -127,13 +136,22 @@ export class TerminalService implements OnModuleDestroy {
       LC_ALL: process.env.LC_ALL || process.env.LANG || 'en_US.UTF-8',
     };
 
+    // App-owned shell integration for PLAIN shells (zsh/bash). Runs AFTER
+    // buildSafeEnv so our trusted ZDOTDIR / OMNISCRIBE_* survive the env filter
+    // (buildSafeEnv blocks ZDOTDIR from untrusted callers; the app setting its
+    // own is the intended trust boundary). For non-zsh/bash commands — including
+    // AI provider CLIs (claude/codex) — decorate() returns the spawn unchanged,
+    // so AI sessions keep their hook-based arming. Failure-safe: any error
+    // inside decorate() falls back to the original command/args/env.
+    const decorated = this.shellIntegration.decorate(command, args, finalEnv);
+
     // Build pty options with Windows-specific settings
     const ptyOptions: pty.IPtyForkOptions = {
       name: 'xterm-256color',
       cols: 80,
       rows: 24,
       cwd: resolvedCwd,
-      env: finalEnv,
+      env: decorated.env,
     };
 
     // On Windows, always use winpty instead of ConPTY
@@ -154,7 +172,7 @@ export class TerminalService implements OnModuleDestroy {
     let ptyProcess: pty.IPty;
     try {
       this.logger.debug(`[spawnCommand] Calling pty.spawn()...`);
-      ptyProcess = pty.spawn(command, args, ptyOptions);
+      ptyProcess = pty.spawn(decorated.command, decorated.args, ptyOptions);
       this.logger.log(`[spawnCommand] pty.spawn() succeeded, PID: ${ptyProcess.pid}`);
     } catch (spawnError) {
       this.logger.error('[spawnCommand] pty.spawn() FAILED', spawnError);
@@ -169,6 +187,7 @@ export class TerminalService implements OnModuleDestroy {
       scrollbackBuffer: '',
       writeChain: Promise.resolve(),
       paused: false,
+      oscDetector: new OscAgentDetector(),
     };
 
     this.sessions.set(sessionId, session);
@@ -178,6 +197,12 @@ export class TerminalService implements OnModuleDestroy {
     ptyProcess.onData((data: string) => {
       // Shutdown guard: prevent processing during shutdown
       if (this.isShuttingDown) return;
+
+      // Feed the OSC agent detector the RAW data stream BEFORE batching, so
+      // OSC sequences are never split or dropped by the output coalescer.
+      // Isolated from the output path: a detector fault must never break
+      // terminal output.
+      this.feedOscDetector(sessionId, session, data);
 
       try {
         session.outputBuffer += data;
@@ -210,6 +235,10 @@ export class TerminalService implements OnModuleDestroy {
 
       this.logger.log(`[onExit] Session ${sessionId} exited (code=${exitCode}, signal=${signal})`);
 
+      // Report `exited` from the detector if an agent was still armed, so the
+      // session doesn't leave a stale working/needs_input state behind.
+      this.finishOscDetector(sessionId, session);
+
       this.cleanup(sessionId);
       this.eventEmitter.emit(InternalTerminalEvents.CLOSED, {
         sessionId,
@@ -221,6 +250,52 @@ export class TerminalService implements OnModuleDestroy {
 
     this.logger.debug(`[spawnCommand] Session ${sessionId} fully initialized, returning`);
     return sessionId;
+  }
+
+  /**
+   * Feed a raw PTY data chunk to the session's OSC agent detector and emit an
+   * internal `terminal.oscSignal` event for each detected transition.
+   *
+   * Runs on the hot data path before batching. Must never throw — a detector
+   * fault is swallowed (rate-limited warn) so terminal output keeps flowing.
+   */
+  private feedOscDetector(sessionId: number, session: PtySession, data: string): void {
+    try {
+      session.oscDetector.process(data, (signal: OscTransition) => {
+        this.eventEmitter.emit(InternalTerminalEvents.OSC_SIGNAL, {
+          terminalId: sessionId,
+          signal,
+        });
+      });
+    } catch (err) {
+      this.warnOscDetector(sessionId, err);
+    }
+  }
+
+  /**
+   * Flush a final `exited` transition from the detector when the PTY closes.
+   * Isolated and fault-tolerant like {@link feedOscDetector}.
+   */
+  private finishOscDetector(sessionId: number, session: PtySession): void {
+    try {
+      session.oscDetector.finish((signal: OscTransition) => {
+        this.eventEmitter.emit(InternalTerminalEvents.OSC_SIGNAL, {
+          terminalId: sessionId,
+          signal,
+        });
+      });
+    } catch (err) {
+      this.warnOscDetector(sessionId, err);
+    }
+  }
+
+  /** Rate-limited warning for OSC-detector faults (at most once per 5s). */
+  private warnOscDetector(sessionId: number, err: unknown): void {
+    const now = Date.now();
+    if (now - this.lastOscWarnAt > 5000) {
+      this.lastOscWarnAt = now;
+      this.logger.warn(`[osc] Detector error for session ${sessionId}`, err);
+    }
   }
 
   /**
