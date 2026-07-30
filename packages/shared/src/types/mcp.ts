@@ -141,12 +141,7 @@ export interface McpServerState {
  * Session status states for MCP status reporting
  */
 export type SessionStatusState =
-  | 'idle'
-  | 'working'
-  | 'planning'
-  | 'needs_input'
-  | 'finished'
-  | 'error';
+  'idle' | 'working' | 'planning' | 'needs_input' | 'finished' | 'error';
 
 /**
  * Status payload received from MCP server via HTTP POST

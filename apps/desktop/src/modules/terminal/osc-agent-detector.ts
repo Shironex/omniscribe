@@ -97,13 +97,7 @@ export type DetectedAgent = 'claude' | 'codex';
  * to Working/Idle session status and never arm the detector.
  */
 export type OscTransitionKind =
-  | 'started'
-  | 'working'
-  | 'attention'
-  | 'finished'
-  | 'exited'
-  | 'shell-busy'
-  | 'shell-idle';
+  'started' | 'working' | 'attention' | 'finished' | 'exited' | 'shell-busy' | 'shell-idle';
 
 /**
  * A typed agent-status transition. `agent` is only present on `started`

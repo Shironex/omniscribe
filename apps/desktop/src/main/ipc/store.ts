@@ -117,8 +117,7 @@ type SizeCheckResult = 'ok' | 'oversize' | 'unserializable';
  * instead of silently dropping persisted state.
  */
 export type StoreSetResult =
-  | { ok: true }
-  | { ok: false; reason: 'unauthorized' | 'oversize' | 'unserializable' };
+  { ok: true } | { ok: false; reason: 'unauthorized' | 'oversize' | 'unserializable' };
 
 /**
  * Find the nearest registered size cap walking up the key tree.

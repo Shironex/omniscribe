@@ -37,15 +37,7 @@ import type { FsEntryKind } from '@omniscribe/shared';
 
 /** Color family → tokenized Tailwind text class (see `--icon-*` in globals.css). */
 type IconColor =
-  | 'code'
-  | 'data'
-  | 'style'
-  | 'markup'
-  | 'doc'
-  | 'media'
-  | 'shell'
-  | 'db'
-  | 'neutral';
+  'code' | 'data' | 'style' | 'markup' | 'doc' | 'media' | 'shell' | 'db' | 'neutral';
 
 const COLOR_CLASS: Record<IconColor, string> = {
   code: 'text-icon-code',

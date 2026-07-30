@@ -16,11 +16,7 @@
  * - `'*'`               - Always activate (equivalent to onStartup)
  */
 export type ActivationEvent =
-  | 'onStartup'
-  | 'onSessionCreate'
-  | 'onSettingsOpen'
-  | 'onThemeChange'
-  | '*';
+  'onStartup' | 'onSessionCreate' | 'onSettingsOpen' | 'onThemeChange' | '*';
 
 /**
  * Parameterized activation event for mode-specific activation.

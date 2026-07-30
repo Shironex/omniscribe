@@ -53,8 +53,7 @@ export interface ScmPending {
 
 /** Which diff is currently selected for the diff surface. */
 export type ScmDiffSource =
-  | { kind: 'file'; path: string; staged: boolean }
-  | { kind: 'commit'; sha: string; path: string };
+  { kind: 'file'; path: string; staged: boolean } | { kind: 'commit'; sha: string; path: string };
 
 export interface ScmSelectedDiff {
   source: ScmDiffSource;

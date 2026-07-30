@@ -56,8 +56,7 @@ export class UsageService {
       let rawUsage: ClaudeUsage | undefined;
       if (hasProviderMethod(provider, 'getUsageFetcher')) {
         const fetcher = provider.getUsageFetcher() as
-          | { lastFetchedUsage?: ClaudeUsage }
-          | undefined;
+          { lastFetchedUsage?: ClaudeUsage } | undefined;
         if (fetcher?.lastFetchedUsage) {
           rawUsage = fetcher.lastFetchedUsage;
         }
@@ -102,8 +101,7 @@ export class UsageService {
       // For Claude, use the richer getFullStatus() for backward compat with frontend
       if (hasProviderMethod(provider, 'getCliDetectionService')) {
         const detectionService = provider.getCliDetectionService() as
-          | { getFullStatus?: () => Promise<ClaudeCliStatus> }
-          | undefined;
+          { getFullStatus?: () => Promise<ClaudeCliStatus> } | undefined;
         if (detectionService?.getFullStatus) {
           return await detectionService.getFullStatus();
         }

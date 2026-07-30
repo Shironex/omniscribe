@@ -22,9 +22,4 @@
  * - `'error'`       - Session encountered an error
  */
 export type ProviderSessionStatus =
-  | 'idle'
-  | 'working'
-  | 'planning'
-  | 'needs_input'
-  | 'finished'
-  | 'error';
+  'idle' | 'working' | 'planning' | 'needs_input' | 'finished' | 'error';

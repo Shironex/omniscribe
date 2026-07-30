@@ -5,13 +5,7 @@ import type { SessionStatus } from '../types/session';
  * Maps the various backend/MCP statuses to simplified UI states
  */
 export type UISessionStatus =
-  | 'idle'
-  | 'starting'
-  | 'working'
-  | 'planning'
-  | 'needsInput'
-  | 'done'
-  | 'error';
+  'idle' | 'starting' | 'working' | 'planning' | 'needsInput' | 'done' | 'error';
 
 /**
  * Maps backend session status (including MCP values) to UI session status

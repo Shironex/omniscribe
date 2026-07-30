@@ -43,12 +43,7 @@ export type UsageStatus = 'idle' | 'fetching' | 'success' | 'error';
  * Error types for usage fetching
  */
 export type UsageError =
-  | 'auth_required'
-  | 'cli_not_found'
-  | 'timeout'
-  | 'parse_error'
-  | 'trust_prompt'
-  | 'unknown';
+  'auth_required' | 'cli_not_found' | 'timeout' | 'parse_error' | 'trust_prompt' | 'unknown';
 
 /**
  * Payload for requesting usage data

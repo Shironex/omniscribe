@@ -3,13 +3,7 @@ import { cn } from '@/lib/utils';
 import { animationVariants } from '@/lib/animations';
 
 export type SessionStatus =
-  | 'starting'
-  | 'idle'
-  | 'working'
-  | 'planning'
-  | 'needsInput'
-  | 'done'
-  | 'error';
+  'starting' | 'idle' | 'working' | 'planning' | 'needsInput' | 'done' | 'error';
 
 export interface StatusCounts {
   starting: number;

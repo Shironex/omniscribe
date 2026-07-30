@@ -95,14 +95,7 @@ export interface RemoteInfo {
  * Git file status
  */
 export type GitFileStatus =
-  | 'modified'
-  | 'added'
-  | 'deleted'
-  | 'renamed'
-  | 'copied'
-  | 'untracked'
-  | 'ignored'
-  | 'conflicted';
+  'modified' | 'added' | 'deleted' | 'renamed' | 'copied' | 'untracked' | 'ignored' | 'conflicted';
 
 /**
  * Git file change
