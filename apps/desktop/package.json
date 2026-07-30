@@ -1,6 +1,6 @@
 {
   "name": "@omniscribe/desktop",
-  "version": "1.8.0",
+  "version": "1.9.0-beta.1",
   "description": "Omniscribe - AI coding assistant orchestration desktop app",
   "author": {
     "name": "Shironex",

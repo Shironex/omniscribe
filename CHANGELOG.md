@@ -2,6 +2,53 @@
 
 All notable changes to this project will be documented in this file.
 
+## 1.9.0-beta.1 (2026-07-30)
+
+> **Prerelease.** This is the first beta of the v2 experience. It ships only to users on the **beta** update channel (Settings → About → Update channel); stable users stay on 1.8.0 until 1.9.0 is promoted. Please report anything that breaks.
+
+### Features
+
+- **Unified workspace tabs and merged sidebar shell** — The window chrome was rebuilt around a single tab strip and one merged sidebar. Editors, the explorer, source control, and settings now live as peer tabs in the same shell instead of separate top-level surfaces, with per-project editor stacks and drag-to-reorder tabs.
+- **In-app code editor** — A CodeMirror 6 editor with its own tabs and a resizable split, so files can be read and edited without leaving the session that produced them.
+- **File explorer** — A virtualized project tree backed by a path-secured filesystem service, with file icons colour-coded by type.
+- **Source control panel** — Stage and unstage files, stage individual hunks, write commits, and page through commit history from inside the app. Backed by new git staging, hunk, and paginated-history operations in the Git module.
+- **Agent status detection via terminal escape codes** — Sessions now read OSC 133/777 sequences to tell Working from NeedsInput from Idle, rather than inferring status from output heuristics alone. Ships hardened Claude hooks, plus shell-integration scripts that arm the same detection for plain (non-agent) shells.
+- **Project footprint detection** — Detects what a project has written to disk outside the repo, supports removing it, and offers a passive mode that reports without touching anything.
+- **Custom user themes** — Author your own theme and import/export it as validated JSON. Adds 4 new dark themes and recolours Plum's blue accent.
+- **Background image and window blur** — An optional background image blend layer plus native window blur, configurable in Appearance settings.
+
+### Performance
+
+- **Terminal WebGL context pooling** — Terminals now share a pool of at most 6 WebGL contexts with LRU stealing, instead of each grid holding its own. Removes the context-exhaustion ceiling on how many terminals can be open at once.
+
+### Fixes
+
+- **Terminal:** plain-shell prompt-cycle semantics are layered under agent OSC detection, so a plain shell no longer reports agent-style status transitions.
+- **Terminal:** WebGL pool slots are released when grids hide behind workspace tabs, instead of being held by invisible terminals.
+- **Source control:** staging a hunk on a file with no trailing newline no longer corrupts the patch.
+- **Filesystem:** NUL separators are escaped when listing watched files, so `fs-watch.service.ts` is detected as text rather than binary.
+- **Settings:** the settings pane responds to its content column width rather than the viewport width.
+- **Workspace:** the settings tab no longer blocks navigation away from itself.
+- **Editor:** split panel sizes use percent strings, fixing split ratios that drifted on resize.
+- **Theming:** switch tracks and source-control diff colours are theme-proof instead of assuming the default palette.
+
+### Security
+
+- **Transitive CVE remediation** — Two dependency passes took `pnpm audit` from 1 critical / 28 high / 24 moderate / 3 low to **2 high**. This included the critical `tar` DoS (CVE-2026-59873) in the packaging chain, an `engine.io` connection-exhaustion DoS (CVE-2026-59725) reachable at runtime through Socket.io, and clusters in `next`, `axios`, `undici`, `fast-uri`, `js-yaml`, and `postcss`.
+- **Remaining:** 2 high-severity `brace-expansion` findings (CVE-2026-14257) reachable only through `@electron/asar` and `@electron/universal` at packaging time. No patch exists for the 1.x/2.x lines upstream, so these are accepted and tracked rather than force-upgraded.
+
+### Dependencies
+
+- **Override hygiene** — 8 stale `pnpm.overrides` floors were raised to versions that actually carry the fix (several sat just below the patched release, so packages resolved inside the allowed range and stayed vulnerable), and 9 previously-uncovered packages gained entries.
+- **Upper bounds on every override** — All 16 previously-unbounded overrides now declare an explicit ceiling, closing the class of bug where an unbounded `>=X` silently admits a breaking major.
+- **Bumps** — `next` 16.2.12, `@nestjs/*` 11.1.28, `electron-builder` 26.15.3, `@modelcontextprotocol/sdk` 1.30.0, `concurrently` 10.0.4, `eslint` 10.8.0.
+
+### Internal
+
+- Removed the dead `TopBar`, `ProjectTabs`, `StatusBar`, and `ActionBar` chrome left over from the pre-v2 shell.
+- Unified v2 chrome borders, focus rings, and explorer icon tokens.
+- Scaffolded `fs`, `scm`, and `footprint` event domains with their payload contracts in the shared package.
+
 ## 1.8.0 (2026-06-08)
 
 ### Security
