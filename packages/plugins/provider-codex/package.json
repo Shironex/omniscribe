@@ -37,7 +37,7 @@
     "@omniscribe/plugin-api": "workspace:*",
     "@omniscribe/shared": "workspace:*",
     "@types/jest": "^30.0.0",
-    "@types/node": "^25.6.0",
+    "@types/node": "^26.1.2",
     "@types/react": "^18.3.28",
     "jest": "^30.3.0",
     "lucide-react": "^1.8.0",
