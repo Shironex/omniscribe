@@ -193,6 +193,12 @@ jobs:
         run: npx playwright install-deps
         working-directory: apps/desktop
 
+      # Electron 42+ no longer downloads its binary at install time; fetch it
+      # up front so the first launch does not eat the e2e launch timeout.
+      - name: Install Electron binary
+        run: node node_modules/electron/install.js
+        working-directory: apps/desktop
+
       - name: Run E2E tests
         run: xvfb-run --auto-servernum -- pnpm --filter @omniscribe/desktop test:e2e
 
