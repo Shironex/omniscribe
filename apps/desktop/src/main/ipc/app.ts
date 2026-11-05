@@ -64,11 +64,11 @@ export function registerAppHandlers(): void {
     await shell.openPath(logsPath);
   });
 
-  ipcMain.handle('app:clipboard-write', (_event, text: string) => {
+  ipcMain.handle('app:clipboard-write', async (_event, text: string) => {
     if (typeof text !== 'string') {
       throw new Error('clipboard-write expects a string');
     }
-    clipboard.writeText(text);
+    await clipboard.writeText(text);
   });
 
   ipcMain.handle('app:get-backend-port', () => {

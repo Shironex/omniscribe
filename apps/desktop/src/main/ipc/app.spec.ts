@@ -77,7 +77,7 @@ jest.mock('electron', () => ({
     openPath: jest.fn(),
   },
   clipboard: {
-    writeText: jest.fn(),
+    writeText: jest.fn().mockResolvedValue(undefined),
   },
 }));
 
@@ -218,19 +218,26 @@ describe('IPC:App', () => {
   // app:clipboard-write
   // ================================================================
   describe('app:clipboard-write', () => {
-    it('should write string to clipboard', () => {
-      handlers['app:clipboard-write'](mockEvent, 'hello world');
+    it('should write string to clipboard', async () => {
+      await handlers['app:clipboard-write'](mockEvent, 'hello world');
       expect(clipboard.writeText).toHaveBeenCalledWith('hello world');
     });
 
-    it('should throw for non-string input', () => {
-      expect(() => handlers['app:clipboard-write'](mockEvent, 42)).toThrow(
+    it('should propagate a failed clipboard write', async () => {
+      (clipboard.writeText as jest.Mock).mockRejectedValueOnce(new Error('write failed'));
+      await expect(handlers['app:clipboard-write'](mockEvent, 'hello')).rejects.toThrow(
+        'write failed'
+      );
+    });
+
+    it('should reject for non-string input', async () => {
+      await expect(handlers['app:clipboard-write'](mockEvent, 42)).rejects.toThrow(
         'clipboard-write expects a string'
       );
     });
 
-    it('should throw for undefined input', () => {
-      expect(() => handlers['app:clipboard-write'](mockEvent, undefined)).toThrow(
+    it('should reject for undefined input', async () => {
+      await expect(handlers['app:clipboard-write'](mockEvent, undefined)).rejects.toThrow(
         'clipboard-write expects a string'
       );
     });
