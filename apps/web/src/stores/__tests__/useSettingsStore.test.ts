@@ -218,6 +218,12 @@ describe('useSettingsStore', () => {
         expect(useSettingsStore.getState().activeSection).toBe(section);
       }
     });
+
+    it('redirects the retired notifications section to sessions', () => {
+      useSettingsStore.getState().navigateToSection('notifications');
+
+      expect(useSettingsStore.getState().activeSection).toBe('sessions');
+    });
   });
 
   describe('setTheme', () => {
