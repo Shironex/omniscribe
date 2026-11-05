@@ -2,7 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 1.9.0 (2026-11-05)
+
+> **Stable promotion of the v2 experience.** Includes everything from 1.9.0-beta.1 plus the changes below.
 
 ### Breaking
 
