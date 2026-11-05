@@ -7,9 +7,9 @@
 
 [![GitHub Release](https://img.shields.io/github/v/release/Shironex/omniscribe?style=flat&color=blue)](https://github.com/Shironex/omniscribe/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/Shironex/omniscribe/total?style=flat&color=green)](https://github.com/Shironex/omniscribe/releases/latest)
-[![Electron](https://img.shields.io/badge/Electron-41.5-47848F?logo=electron&logoColor=white)](https://www.electronjs.org/)
+[![Electron](https://img.shields.io/badge/Electron-45.1-47848F?logo=electron&logoColor=white)](https://www.electronjs.org/)
 [![React](https://img.shields.io/badge/React-18.3-61DAFB?logo=react&logoColor=white)](https://react.dev/)
-[![NestJS](https://img.shields.io/badge/NestJS-10.4-E0234E?logo=nestjs&logoColor=white)](https://nestjs.com/)
+[![NestJS](https://img.shields.io/badge/NestJS-11.1-E0234E?logo=nestjs&logoColor=white)](https://nestjs.com/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![OS](https://img.shields.io/badge/OS-Windows%20%7C%20macOS-0078D4)](https://github.com/Shironex/omniscribe)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
@@ -40,6 +40,8 @@
 
 Omniscribe is a desktop application for managing multiple AI coding assistant sessions simultaneously. With a plugin-based architecture supporting Claude Code and OpenAI Codex CLI, you can run up to 12 sessions in parallel, each with its own GPU-accelerated terminal, optional git worktree isolation, and MCP server configuration.
 
+Since v1.9 the window is a single workspace: one tab strip and one merged sidebar, with an in-app code editor, a file explorer and a source control panel sitting next to your sessions, so you can read, edit and commit what an agent just wrote without leaving the app.
+
 ## Screenshots
 
 <table>
@@ -54,7 +56,7 @@ Omniscribe is a desktop application for managing multiple AI coding assistant se
     <td width="50%"><img src="assets/screenshots/history.png" alt="Session history panel with branch filtering" /></td>
   </tr>
   <tr>
-    <td align="center"><sub>Settings — 10 UI themes, terminal tuning, and per-project AI capabilities.</sub></td>
+    <td align="center"><sub>Settings — 14 UI themes, terminal tuning, and per-project AI capabilities.</sub></td>
     <td align="center"><sub>Session History — search, filter by branch, and resume or fork past sessions.</sub></td>
   </tr>
   <tr>
@@ -67,25 +69,33 @@ Omniscribe is a desktop application for managing multiple AI coding assistant se
 
 ## Features
 
-| Feature                | Description                                                                                                                        |
-| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| **Multi-Session Grid** | Run up to 12 AI sessions in parallel with GPU-accelerated terminal views                                                           |
-| **Real-Time Status**   | Track session states: idle, working, planning, needs_input, finished                                                               |
-| **Session History**    | Browse, search, and filter past Claude Code sessions with branch filtering and sort controls                                       |
-| **Resume & Fork**      | Resume any previous session or fork it into a new conversation branch                                                              |
-| **Continue Last**      | One-click button to continue the most recent Claude Code conversation                                                              |
-| **Drag & Drop**        | Rearrange terminals by dragging; resizable panels with drag dividers                                                               |
-| **Terminal Search**    | Ctrl+Shift+F search bar with regex and case-sensitive modes                                                                        |
-| **12 Terminal Themes** | dracula, nord, gruvbox, and more                                                                                                   |
-| **10 UI Themes**       | Forge (default, dark), Carbon, Ember, Iceberg, Nord, Gruvbox, Dracula, Plum, Abyss, Paper (light) — plus plugin-contributed themes |
-| **Terminal Settings**  | Font family/size, cursor style, scrollback, theme — all applied live                                                               |
-| **Smart Copy/Paste**   | Ctrl+C copies selection or sends ^C; Ctrl+V pastes from clipboard                                                                  |
-| **Quick Actions**      | AI-powered shortcuts for git workflows (commit, push, pull, resolve conflicts) and development tasks                               |
-| **Git Worktrees**      | Isolate each session in its own git worktree for parallel development                                                              |
-| **MCP Integration**    | Configure Model Context Protocol servers per session                                                                               |
-| **Hooks Integration**  | Automatic Claude Code hooks for instant session detection via SessionStart/SessionEnd events                                       |
-| **Project Tabs**       | Manage multiple projects with persistent recent history                                                                            |
-| **Cross-Platform**     | Native support for Windows and macOS                                                                                               |
+| Feature                | Description                                                                                                                         |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| **Multi-Session Grid** | Run up to 12 AI sessions in parallel with GPU-accelerated terminal views                                                            |
+| **Real-Time Status**   | Track session states: idle, working, planning, needs_input, finished                                                                |
+| **Session History**    | Browse, search, and filter past Claude Code sessions with branch filtering and sort controls                                        |
+| **Resume & Fork**      | Resume any previous session or fork it into a new conversation branch                                                               |
+| **Continue Last**      | One-click button to continue the most recent Claude Code conversation                                                               |
+| **Drag & Drop**        | Rearrange terminals by dragging; resizable panels with drag dividers                                                                |
+| **Terminal Search**    | Ctrl+Shift+F search bar with regex and case-sensitive modes                                                                         |
+| **12 Terminal Themes** | dracula, nord, gruvbox, and more                                                                                                    |
+| **Workspace Tabs**     | One tab strip and merged sidebar for sessions, editors, the explorer, source control and settings, with drag-to-reorder tabs        |
+| **Code Editor**        | Built-in CodeMirror 6 editor with its own tabs and a resizable split                                                                |
+| **File Explorer**      | Virtualized project tree with color-coded file icons                                                                                |
+| **Source Control**     | Stage files and individual hunks, write commits and page through history without leaving the app                                    |
+| **Agent Detection**    | Reads terminal escape codes (OSC 133/777) to tell working from needs-input from idle, for agents and plain shells                   |
+| **Project Footprint**  | See what a project wrote to disk outside the repo and remove it, or watch passively                                                 |
+| **14 UI Themes**       | Forge (default), Carbon, Ember, Iceberg, Nord, Gruvbox, Dracula, Plum, Abyss, Obsidian, Crimson, Tokyo Night, Matcha, Paper (light) |
+| **Custom Themes**      | Author your own theme and import or export it as JSON; plugins can contribute themes too                                            |
+| **Background & Blur**  | Optional background image layer and native window blur in Appearance settings                                                       |
+| **Terminal Settings**  | Font family/size, cursor style, scrollback, theme — all applied live                                                                |
+| **Smart Copy/Paste**   | Ctrl+C copies selection or sends ^C; Ctrl+V pastes from clipboard                                                                   |
+| **Quick Actions**      | AI-powered shortcuts for git workflows (commit, push, pull, resolve conflicts) and development tasks                                |
+| **Git Worktrees**      | Isolate each session in its own git worktree for parallel development                                                               |
+| **MCP Integration**    | Configure Model Context Protocol servers per session                                                                                |
+| **Hooks Integration**  | Automatic Claude Code hooks for instant session detection via SessionStart/SessionEnd events                                        |
+| **Project Tabs**       | Manage multiple projects with persistent recent history                                                                             |
+| **Cross-Platform**     | Native support for Windows and macOS                                                                                                |
 
 ## Keyboard Shortcuts
 
@@ -98,15 +108,17 @@ Omniscribe is a desktop application for managing multiple AI coding assistant se
 | `Ctrl/Cmd + K`         | Stop all running sessions        |
 | `Ctrl/Cmd + ,`         | Toggle settings                  |
 | `Ctrl/Cmd + Shift + H` | Toggle session history panel     |
-| `Ctrl/Cmd + W`         | Close current project tab        |
+| `Ctrl/Cmd + B`         | Toggle sidebar                   |
+| `Ctrl/Cmd + Shift + R` | Resume last session (idle view)  |
+| `Ctrl/Cmd + W`         | Close current tab                |
 | `Ctrl/Cmd + 1-9`       | Switch project tab by index      |
 | `Ctrl/Cmd + L`         | Clear focused terminal           |
 | `Ctrl/Cmd + F`         | Toggle terminal search bar       |
 
 ## Requirements
 
-- **Node.js** >= 22.0.0
-- **pnpm** >= 9.0.0
+- **Node.js** >= 22.22.1
+- **pnpm** 10.x
 
 ## Quick Start
 
@@ -173,7 +185,8 @@ omniscribe/
 ├── apps/
 │   ├── desktop/       # Electron + NestJS backend
 │   ├── web/           # React frontend
-│   └── mcp-server/    # MCP status server
+│   ├── mcp-server/    # MCP status server
+│   └── docs/          # Documentation site
 └── packages/
     ├── plugin-api/    # Plugin API contracts and base classes
     ├── plugins/
@@ -208,12 +221,13 @@ omniscribe/
 
 | Layer    | Technology                 |
 | -------- | -------------------------- |
-| Desktop  | Electron 41                |
-| Backend  | NestJS 10                  |
+| Desktop  | Electron 45                |
+| Backend  | NestJS 11                  |
 | Frontend | React 18, Zustand 5        |
 | Terminal | xterm.js (WebGL), node-pty |
-| Styling  | Tailwind CSS               |
-| Build    | Vite, esbuild              |
+| Editor   | CodeMirror 6               |
+| Styling  | Tailwind CSS 4             |
+| Build    | Vite 8, esbuild            |
 | IPC      | Socket.io, Electron IPC    |
 
 ## Beta Releases
@@ -228,7 +242,7 @@ Omniscribe supports a beta update channel for testing new features before stable
 
 **To opt out:** Switch back to **Stable** in the same settings panel. If a stable version is older than your current beta, a downgrade will be offered.
 
-Beta releases are tagged with a `-beta` suffix (e.g. `v0.5.0-beta.1`) and marked as pre-release on the [Releases page](https://github.com/Shironex/omniscribe/releases).
+Beta releases are tagged with a `-beta` suffix (e.g. `v1.9.0-beta.1`) and marked as pre-release on the [Releases page](https://github.com/Shironex/omniscribe/releases).
 
 ## Roadmap
 
