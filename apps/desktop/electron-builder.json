@@ -32,7 +32,8 @@
   "mac": {
     "category": "public.app-category.developer-tools",
     "icon": "resources/icon.png",
-    "target": ["dmg"]
+    "target": ["dmg"],
+    "minimumSystemVersion": "13.0"
   },
   "win": {
     "icon": "resources/icon.ico",

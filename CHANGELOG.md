@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+### Breaking
+
+- **macOS 13 (Ventura) is now the minimum supported macOS version.** Electron 44 dropped macOS 12, so the app declares a minimum system version of 13.0 and the auto-updater will not offer this release to macOS 12 users.
+
+### Under the Hood
+
+- **Electron upgraded from 41 to 45.1.0** (Chromium 156, Node 24.22), clearing every open Electron security advisory. Windows ia32 builds are no longer possible upstream; Omniscribe only ships x64 on Windows, so no installer goes away.
+
 ## 1.9.0-beta.1 (2026-07-30)
 
 > **Prerelease.** This is the first beta of the v2 experience. It ships only to users on the **beta** update channel (Settings → About → Update channel); stable users stay on 1.8.0 until 1.9.0 is promoted. Please report anything that breaks.
