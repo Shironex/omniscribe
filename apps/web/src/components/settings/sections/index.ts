@@ -7,4 +7,3 @@ export { WorktreesSection } from './WorktreesSection';
 export { SessionsSection } from './SessionsSection';
 export { QuickActionsSection } from './QuickActionsSection';
 export { TerminalSection } from './TerminalSection';
-export { NotificationsSection } from './NotificationsSection';

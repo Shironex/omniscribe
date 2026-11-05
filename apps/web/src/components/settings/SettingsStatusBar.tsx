@@ -11,7 +11,6 @@ const SECTION_LABELS: Record<string, string> = {
   sessions: 'Sessions',
   quickActions: 'Quick actions',
   worktrees: 'Worktrees',
-  notifications: 'Notifications',
   appearance: 'Appearance',
   terminal: 'Terminal',
   general: 'About',

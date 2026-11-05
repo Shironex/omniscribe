@@ -83,7 +83,6 @@ interface ElectronAPI {
     onChannelChanged: (callback: (channel: UpdateChannel) => void) => () => void;
   };
   notification?: {
-    sendTest: () => Promise<{ success: boolean; reason?: string }>;
     onNavigate: (callback: (data: { sessionId?: string; tabId?: string }) => void) => () => void;
   };
   thumbnail?: {

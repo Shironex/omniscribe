@@ -5,11 +5,12 @@ import { normalizePath } from '@omniscribe/shared';
 
 /**
  * Listen for notification:navigate IPC events from the main process
- * and switch to the correct project tab when a notification is clicked.
+ * (sent when an omniscribe://session/<id> deep link is opened) and switch
+ * to the correct project tab.
  *
  * Handles both tabId (direct tab switch) and sessionId (resolve the
- * session's project path to find the matching tab). This ensures
- * zombie-cleanup notifications (which only have sessionId) still navigate.
+ * session's project path to find the matching tab), since the `tab`
+ * query parameter is optional.
  */
 export function useNotificationNavigation(): void {
   const selectTab = useWorkspaceStore(state => state.selectTab);

@@ -20,7 +20,6 @@ import {
   SessionsSection,
   QuickActionsSection,
   TerminalSection,
-  NotificationsSection,
 } from './sections';
 
 /**
@@ -36,7 +35,6 @@ const coreSections: Record<string, ComponentType> = {
   sessions: SessionsSection,
   quickActions: QuickActionsSection,
   worktrees: WorktreesSection,
-  notifications: NotificationsSection,
   // ── Interface ─────────────────────────────────────────────────────
   appearance: AppearanceSection,
   terminal: TerminalSection,
