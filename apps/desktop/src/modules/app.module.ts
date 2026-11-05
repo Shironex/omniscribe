@@ -10,7 +10,6 @@ import { McpModule } from './mcp';
 import { UsageModule } from './usage';
 import { ChangelogModule } from './changelog';
 import { HealthModule } from './health';
-import { NotificationModule } from './notification';
 import { PluginModule } from './plugin';
 import { ClaudeProviderPlugin } from '@omniscribe/provider-claude';
 import { CodexProviderPlugin } from '@omniscribe/provider-codex';
@@ -76,7 +75,6 @@ import { CodexProviderPlugin } from '@omniscribe/provider-codex';
     UsageModule,
     ChangelogModule,
     HealthModule,
-    NotificationModule,
   ],
   controllers: [],
   providers: [],

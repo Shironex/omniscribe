@@ -10,7 +10,6 @@ import { createMainWindow } from './window';
 import { cleanupIpcHandlers } from './ipc-handlers';
 import { logger, getLogPath, flushLogs } from './logger';
 import { initializeAutoUpdater } from './updater';
-import { EventEmitter2 } from '@nestjs/event-emitter';
 import { corsOriginCallback } from '../modules/shared/cors.config';
 import { NestLoggerAdapter } from '../modules/shared/nest-logger';
 import { LOCALHOST, APP_USER_MODEL_ID } from '@omniscribe/shared';
@@ -52,10 +51,10 @@ protocol.registerSchemesAsPrivileged([
 ]);
 
 // Must be the first Windows shell registration call so subsequent
-// protocol / notification registrations are tagged with the correct AUMID.
+// protocol registrations are tagged with the correct AUMID.
 app.setAppUserModelId(APP_USER_MODEL_ID);
 
-// Register custom protocol for deep linking (notification click-to-navigate)
+// Register custom protocol for deep linking (omniscribe://session/<id>)
 if (process.defaultApp) {
   // Dev mode: register with the path to the electron binary
   app.setAsDefaultProtocolClient('omniscribe', process.execPath, [process.argv[1]]);
@@ -115,8 +114,7 @@ async function shutdownNestApp(): Promise<void> {
 }
 
 function setupAutoUpdater(window: BrowserWindow): void {
-  const emitter = nestApp?.get(EventEmitter2);
-  initializeAutoUpdater(window, process.env.NODE_ENV === 'development', emitter);
+  initializeAutoUpdater(window, process.env.NODE_ENV === 'development');
 }
 
 /** Validate thumbnail filename: no path traversal, only safe chars */
@@ -253,7 +251,7 @@ function handleProtocolUrl(url: string): void {
 }
 
 // Windows/Linux: second-instance event fires when another instance is launched
-// (e.g., from a notification protocol click). The previous version focused
+// (e.g., from an omniscribe:// deep link). The previous version focused
 // the window unconditionally before checking the URL, so any process could
 // launch Omniscribe with a hostile/garbage `omniscribe://...` arg and
 // steal focus from the user. Now: parse first, focus inside

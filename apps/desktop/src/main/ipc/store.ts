@@ -34,7 +34,6 @@ const ALLOWED_STORE_KEYS = new Set<string>([
   'preferences.autoSave',
   'preferences.updateChannel',
   'preferences.worktree',
-  'preferences.notifications',
   // Recent projects
   'recentProjects',
   // MCP settings
@@ -100,7 +99,6 @@ const STORE_SIZE_CAPS_BYTES: Record<string, number> = {
   'preferences.autoSave': 64,
   'preferences.updateChannel': 64,
   'preferences.worktree': 16_384,
-  'preferences.notifications': 16_384,
   recentProjects: 256_000,
   'mcp.enabledServers': 1_048_576,
   'session.defaultModel': 1024,

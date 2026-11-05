@@ -101,7 +101,6 @@ describe('IPC:Store', () => {
         'preferences.autoSave',
         'preferences.updateChannel',
         'preferences.worktree',
-        'preferences.notifications',
         'recentProjects',
         'mcp.enabledServers',
         'session.defaultModel',

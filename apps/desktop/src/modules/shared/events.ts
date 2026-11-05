@@ -66,14 +66,6 @@ export const InternalZombieEvents = {
 } as const;
 
 // ============================================
-// Updater Internal Events (for notification integration)
-// ============================================
-export const InternalUpdaterEvents = {
-  UPDATE_AVAILABLE: 'updater.update-available',
-  UPDATE_DOWNLOADED: 'updater.update-downloaded',
-} as const;
-
-// ============================================
 // Plugin Internal Events
 // ============================================
 export const InternalPluginEvents = {
