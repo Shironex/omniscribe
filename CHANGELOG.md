@@ -8,6 +8,10 @@ All notable changes to this project will be documented in this file.
 
 - **macOS 13 (Ventura) is now the minimum supported macOS version.** Electron 44 dropped macOS 12, so the app declares a minimum system version of 13.0 and the auto-updater will not offer this release to macOS 12 users.
 
+### Removed
+
+- **Native OS notifications.** Desktop notifications for session status, zombie cleanup and app updates, plus the Settings → Notifications section, have been removed. Electron 42+ only delivers macOS notifications for code-signed apps, which Omniscribe is not. In-app toasts, session status indicators and `omniscribe://` deep links are unchanged; previously saved notification preferences are ignored.
+
 ### Under the Hood
 
 - **Electron upgraded from 41 to 45.1.0** (Chromium 156, Node 24.22), clearing every open Electron security advisory. Windows ia32 builds are no longer possible upstream; Omniscribe only ships x64 on Windows, so no installer goes away.
