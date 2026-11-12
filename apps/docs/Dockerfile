@@ -5,7 +5,7 @@
 
 # ─── Stage 1: Install dependencies ──────────────────────────────────────────
 FROM node:22-alpine AS deps
-RUN corepack enable && corepack prepare pnpm@10.9.0 --activate
+RUN corepack enable && corepack prepare pnpm@10.34.9 --activate
 WORKDIR /app
 
 # Copy workspace config and all package.json files needed for install
@@ -18,7 +18,7 @@ RUN pnpm install --frozen-lockfile --filter @omniscribe/docs... --filter @omnisc
 
 # ─── Stage 2: Build ─────────────────────────────────────────────────────────
 FROM node:22-alpine AS builder
-RUN corepack enable && corepack prepare pnpm@10.9.0 --activate
+RUN corepack enable && corepack prepare pnpm@10.34.9 --activate
 WORKDIR /app
 
 COPY --from=deps /app/ ./
